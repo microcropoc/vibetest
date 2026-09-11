@@ -1,0 +1,85 @@
+---
+description: VibeTest — Angular 22 SPA/PWA, доменные срезы, тесты, git по запросу
+alwaysApply: true
+---
+
+# VibeTest — Angular 22 SPA/PWA
+
+SPA + PWA для прохождения курсов. Спецификация: `docs/SPECIFICATION.md`. Задачи: `docs/tasks/`.
+
+## Инициализация
+
+- Проект: `ng new vibetest-app --routing --style=scss`
+- В проекте только **standalone**-компоненты; NgModules не используются
+- PWA: подключать через `ng add @angular/pwa`; дальнейшие правки `manifest` / `ngsw-config` — точечно вручную
+- LTS Node.js, `@angular/cli` 22.x; не править `angular.json` / `tsconfig*.json` без нужды
+
+## Генерация и структура
+
+**CLI** — для Angular-артефактов, когда есть schematic: component, service, guard, pipe (и interface через `ng g`, если удобно).
+
+**Вручную** — доменные модели, Dexie-схема, JSON-валидаторы, Web Workers, чистые функции, adapters, константы.
+
+**Доменные области** (вертикальные срезы; UI / application / infrastructure — по смыслу, **не создавать слои заранее**: выделять папку только когда внутри области несколько файлов одного назначения):
+
+- `courses/` — каталог (`catalog/`), импорт JSON (`import/`), валидация (`validation/`)
+- `player/` — прохождение шагов модуля
+- `progress/` — статус прохождения, сохранённые ответы и черновики кода
+- `execution/` — движки javascript / sqlite / regex (Workers)
+- `storage/` — Dexie / IndexedDB
+- `shared/ui/` — переиспользуемый UI без привязки к одной фиче
+
+Вычисления и правила — **чистые функции** или доменные типы; в **сервисы** — DI, orchestration, side-effects (HTTP позже, IndexedDB, Workers). Один компонент — одна зона ответственности; не превращать всё в injectable «service soup».
+
+**Smart / dumb** — рекомендация: страницы и оркестрация тянут данные и состояние; переиспользуемый UI предпочтительно через `input()` / `output()`. Допустимы «умные» виджеты с локальной UI-логикой; не тянуть HTTP/хранилище в `shared/ui` без явной причины.
+
+## Стиль кода
+
+- TypeScript strict; `any` только на границе с нетипизированным внешним API (sql.js, Worker messages); иначе `unknown` + runtime-проверка
+- В проекте: `signal()` / `computed()`, `inject()`; control flow `@if`, `@for`, `@switch`
+- Observables: `async` pipe или `toSignal()` — по месту
+- Формы: reactive forms для нетривиального ввода
+- SCSS, BEM-подобные классы, без inline-стилей в шаблонах
+
+## PWA
+
+- Service Worker — production build (`ng build`), не по умолчанию в `ng serve`
+- Кэш в `ngsw-config.json`; обновления через `SwUpdate`
+
+## Тесты
+
+```bash
+ng test
+```
+
+- Обязательны для: доменной логики, хранилища, валидатора курсов, execution engines, guards, pipes, нетривиальной логики компонентов
+- Тесты проверяют **поведение**, не детали реализации
+- Конфиг, типы, простая вёрстка — без обязательного test-first
+- Перед завершением задачи: `ng test` зелёный (если тесты уже настроены)
+- `*.spec.ts` рядом с исходником
+
+## Задачи и git
+
+Задачи в `docs/tasks/` — контекст для агента. **Статус задачи = папка** (`backlog` → `in-progress` → `done`); не дублировать статус в `REPORT.md`.
+
+- `backlog/vt-{n}-{slug}.md` — план
+- `in-progress/vt-{n}-{slug}/` — `TASK.md` + `REPORT.md` (`branch:` во frontmatter REPORT)
+- `done/vt-{n}-{slug}/` — после мерджа в `main`
+- `archive/{YYYY-MM}/` — перенос старых `done` **пакетно**, только по запросу
+- Шаблоны: `_template/backlog-task.md`, `REPORT.md`
+- `{n}`: max среди всех `vt-*` + 1; slug — kebab-case
+
+**Коммиты** — только после явного запроса («закоммить» и т.п.): агент показывает diff и предлагает сообщение; без подтверждения не делает `git commit`.
+
+**Merge** — только после явного запроса («мердж vt-{n}», «мердж в main»). Запрос на merge **одновременно** разрешает: (1) последний коммит на feature-ветке с переносом `in-progress/vt-{n}-{slug}/` → `done/vt-{n}-{slug}/` и финальным `REPORT.md`; (2) merge ветки в `main`. В `main` не должно попадать смерженное состояние, пока папка задачи ещё в `in-progress/`.
+
+**Bootstrap (до первой feature-задачи):** в `main` нужен хотя бы один коммит (`.gitignore`, `.cursor/`, `docs/`). Bootstrap-коммит — отдельное явное подтверждение (даже если дальше «реализуй vt-…»).
+
+**Работа над vt-{n}:** ветка `feature/vt-{n}-{slug}` от `main`; перенос backlog → `in-progress/` + `REPORT.md`; читать `TASK.md` и спецификацию; обновлять `REPORT.md`; одна задача — одна ветка. Готово к ревью: заполнен `REPORT.md`, тесты зелёные; пользователь смотрит `main..feature/...`.
+
+## Запреты
+
+- NgModules
+- Дублирование логики между областями
+- Секреты, `.env`, `node_modules/` в git
+- Обход официальных Angular-паттернов там, где подходит CLI/schematic

@@ -10,7 +10,7 @@ branch: feature/vt-1-angular-scaffold
 - Задача перенесена из `backlog/` в `in-progress/`, затем в `done/` после merge в `main`
 - Сгенерирован Angular 22.1.8 проект в `vibetest-app/` командой CLI (standalone, routing, SCSS, без SSR и без вложенного git)
 - Корневой `.gitignore` уже покрывает `node_modules/`, `dist/`, `.angular/` — правки не нужны
-- Дефолтный welcome-scaffold оставлен без доменных фич VibeTest
+- Дефолтный welcome-scaffold оставлен без доменных фич vibetest
 
 ### Как запустить
 

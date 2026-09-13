@@ -13,7 +13,7 @@
 - Создать приложение командой из rule: `ng new vibetest-app --routing --style=scss` (CLI 22.x, LTS Node)
 - Только standalone-комponentы (дефолт CLI для Angular 22); NgModules не добавлять
 - Проект лежит в каталоге `vibetest-app/` в корне репозитория (рядом с `docs/`)
-- Оставить стандартный welcome/routing scaffold без доменных фич VibeTest
+- Оставить стандартный welcome/routing scaffold без доменных фич vibetest
 - Убедиться, что корневой `.gitignore` покрывает артефакты приложения (`node_modules/`, `dist/`, `.angular/` в `vibetest-app/` или через общие паттерны)
 - README в корне репозитория не обязателен; при необходимости краткая заметка в `REPORT.md` задачи — как запустить (`cd vibetest-app && ng serve`)
 

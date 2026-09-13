@@ -1,85 +1,74 @@
 ---
-description: VibeTest — Angular 22 SPA/PWA, доменные срезы, тесты, git по запросу
+description: VibeTest — Angular 22 SPA/PWA, domain slices, tests, git on explicit request
 alwaysApply: true
 ---
 
 # VibeTest — Angular 22 SPA/PWA
 
-SPA + PWA для прохождения курсов. Спецификация: `docs/SPECIFICATION.md`. Задачи: `docs/tasks/`.
+Offline-first course PWA. Spec: `docs/SPECIFICATION.md`. Tasks: `docs/tasks/`.
 
-## Инициализация
+## Architecture & generation
 
-- Проект: `ng new vibetest-app --routing --style=scss`
-- В проекте только **standalone**-компоненты; NgModules не используются
-- PWA: подключать через `ng add @angular/pwa`; дальнейшие правки `manifest` / `ngsw-config` — точечно вручную
-- LTS Node.js, `@angular/cli` 22.x; не править `angular.json` / `tsconfig*.json` без нужды
+- **Standalone only** — no NgModules
+- **CLI** — Angular artifacts with a schematic: component, service, guard, pipe (interface via `ng g` when convenient)
+- **Manual** — domain models, validators, Web Workers, pure functions, adapters, constants
+- **Domain folders** (vertical slices; UI / application / infrastructure as needed — **do not pre-create layers**: add a subfolder only when an area has several files of the same role):
+  - `courses/`, `player/`, `progress/`, `execution/`, `storage/`, `shared/ui/`
+- Domain behavior — **pure functions** or domain types; **services** — DI, orchestration, side-effects (storage, Workers, HTTP later). One component, one responsibility; avoid injectable “service soup”
+- **Smart / dumb** (guideline): pages and orchestration own data and state; reusable UI via `input()` / `output()`. Smart widgets with local UI logic are fine; do not pull HTTP/storage into `shared/ui` without a clear reason
 
-## Генерация и структура
+## Code style
 
-**CLI** — для Angular-артефактов, когда есть schematic: component, service, guard, pipe (и interface через `ng g`, если удобно).
-
-**Вручную** — доменные модели, Dexie-схема, JSON-валидаторы, Web Workers, чистые функции, adapters, константы.
-
-**Доменные области** (вертикальные срезы; UI / application / infrastructure — по смыслу, **не создавать слои заранее**: выделять папку только когда внутри области несколько файлов одного назначения):
-
-- `courses/` — каталог (`catalog/`), импорт JSON (`import/`), валидация (`validation/`)
-- `player/` — прохождение шагов модуля
-- `progress/` — статус прохождения, сохранённые ответы и черновики кода
-- `execution/` — движки javascript / sqlite / regex (Workers)
-- `storage/` — Dexie / IndexedDB
-- `shared/ui/` — переиспользуемый UI без привязки к одной фиче
-
-Вычисления и правила — **чистые функции** или доменные типы; в **сервисы** — DI, orchestration, side-effects (HTTP позже, IndexedDB, Workers). Один компонент — одна зона ответственности; не превращать всё в injectable «service soup».
-
-**Smart / dumb** — рекомендация: страницы и оркестрация тянут данные и состояние; переиспользуемый UI предпочтительно через `input()` / `output()`. Допустимы «умные» виджеты с локальной UI-логикой; не тянуть HTTP/хранилище в `shared/ui` без явной причины.
-
-## Стиль кода
-
-- TypeScript strict; `any` только на границе с нетипизированным внешним API (sql.js, Worker messages); иначе `unknown` + runtime-проверка
-- В проекте: `signal()` / `computed()`, `inject()`; control flow `@if`, `@for`, `@switch`
-- Observables: `async` pipe или `toSignal()` — по месту
-- Формы: reactive forms для нетривиального ввода
-- SCSS, BEM-подобные классы, без inline-стилей в шаблонах
+- TypeScript strict; `any` only at untyped external API boundaries; otherwise `unknown` + runtime checks
+- `signal()` / `computed()`, `inject()`; control flow `@if`, `@for`, `@switch`
+- Observables: `async` pipe or `toSignal()` as appropriate
+- Reactive forms for non-trivial input
+- SCSS, BEM-like classes, no inline styles in templates
+- Do not edit `angular.json` / `tsconfig*.json` without need
 
 ## PWA
 
-- Service Worker — production build (`ng build`), не по умолчанию в `ng serve`
-- Кэш в `ngsw-config.json`; обновления через `SwUpdate`
+- Service Worker in production build (`ng build`), not by default in `ng serve`; updates via `SwUpdate`
 
-## Тесты
+## Tests
 
 ```bash
 ng test
 ```
 
-- Обязательны для: доменной логики, хранилища, валидатора курсов, execution engines, guards, pipes, нетривиальной логики компонентов
-- Тесты проверяют **поведение**, не детали реализации
-- Конфиг, типы, простая вёрстка — без обязательного test-first
-- Перед завершением задачи: `ng test` зелёный (если тесты уже настроены)
-- `*.spec.ts` рядом с исходником
+- Required for: domain logic, storage, guards, pipes, non-trivial component logic
+- Tests assert **behavior**, not implementation details
+- Config, types, simple markup — no mandatory test-first
+- Before finishing a task: `ng test` green (when tests are set up)
+- `*.spec.ts` next to source
 
-## Задачи и git
+## Tasks & git
 
-Задачи в `docs/tasks/` — контекст для агента. **Статус задачи = папка** (`backlog` → `in-progress` → `done`); не дублировать статус в `REPORT.md`.
+Tasks under `docs/tasks/` are agent context. **Task status = folder** (`backlog` → `in-progress` → `done`); do not duplicate status in `REPORT.md`.
 
-- `backlog/vt-{n}-{slug}.md` — план
-- `in-progress/vt-{n}-{slug}/` — `TASK.md` + `REPORT.md` (`branch:` во frontmatter REPORT)
-- `done/vt-{n}-{slug}/` — после мерджа в `main`
-- `archive/{YYYY-MM}/` — перенос старых `done` **пакетно**, только по запросу
-- Шаблоны: `_template/backlog-task.md`, `REPORT.md`
-- `{n}`: max среди всех `vt-*` + 1; slug — kebab-case
+- `backlog/vt-{n}-{slug}.md` — plan
+- `in-progress/vt-{n}-{slug}/` — `TASK.md` + `REPORT.md` (`branch:` in REPORT frontmatter)
+- `done/vt-{n}-{slug}/` — after merge to `main`
+- `archive/{YYYY-MM}/` — move old `done` **in batches**, only on request
+- Templates: `_template/backlog-task.md`, `REPORT.md`
+- `{n}`: max among all `vt-*` + 1; slug — kebab-case
 
-**Коммиты** — только после явного запроса («закоммить» и т.п.): агент показывает diff и предлагает сообщение; без подтверждения не делает `git commit`.
+**Commits** — WIP commits on `feature/vt-{n}-{slug}` are free and need no confirmation (they get squashed away). Never commit directly to `main`.
 
-**Merge** — только после явного запроса («мердж vt-{n}», «мердж в main»). Запрос на merge **одновременно** разрешает: (1) последний коммит на feature-ветке с переносом `in-progress/vt-{n}-{slug}/` → `done/vt-{n}-{slug}/` и финальным `REPORT.md`; (2) merge ветки в `main`. В `main` не должно попадать смерженное состояние, пока папка задачи ещё в `in-progress/`.
+**Merge** — only after explicit request (“merge vt-{n}”, “merge to main”): **rebase + squash**, one commit per task, linear `main`. The request also authorizes the doc move, the squash commit and pushing `main`:
 
-**Bootstrap (до первой feature-задачи):** в `main` нужен хотя бы один коммит (`.gitignore`, `.cursor/`, `docs/`). Bootstrap-коммит — отдельное явное подтверждение (даже если дальше «реализуй vt-…»).
+1. Last branch commit: `in-progress/vt-{n}-{slug}/` → `done/vt-{n}-{slug}/` + final `REPORT.md`
+2. `git rebase main` — resolve conflicts on the branch, never in `main`
+3. Squash the branch into one commit (`git reset --soft main && git commit`); message `vt-{n}: {short summary}` — show it before committing
+4. `git switch main && git merge --ff-only feature/vt-{n}-{slug}`, push, delete the branch
 
-**Работа над vt-{n}:** ветка `feature/vt-{n}-{slug}` от `main`; перенос backlog → `in-progress/` + `REPORT.md`; читать `TASK.md` и спецификацию; обновлять `REPORT.md`; одна задача — одна ветка. Готово к ревью: заполнен `REPORT.md`, тесты зелёные; пользователь смотрит `main..feature/...`.
+No merge commits; merged state must not land in `main` while the task folder is still under `in-progress/`.
 
-## Запреты
+**Working on vt-{n}:** branch `feature/vt-{n}-{slug}` from `main`; move backlog → `in-progress/` + `REPORT.md`; read `TASK.md` and spec; update `REPORT.md`; one task — one branch. Ready for review: filled `REPORT.md`, green tests; user reviews `main..feature/...`.
 
-- NgModules
-- Дублирование логики между областями
-- Секреты, `.env`, `node_modules/` в git
-- Обход официальных Angular-паттернов там, где подходит CLI/schematic
+## Never
+
+- Direct commits to `main`
+- Merge commits in `main` (history stays linear)
+- Duplicate logic across domain areas
+- Secrets, `.env`, `node_modules/` in git

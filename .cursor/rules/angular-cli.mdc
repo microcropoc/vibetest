@@ -1,9 +1,9 @@
 ---
-description: VibeTest — Angular 22 SPA/PWA, domain slices, tests, git on explicit request
+description: vibetest — Angular 22 SPA/PWA, domain slices, tests, git on explicit request
 alwaysApply: true
 ---
 
-# VibeTest — Angular 22 SPA/PWA
+# vibetest — Angular 22 SPA/PWA
 
 Offline-first course PWA. Spec: `docs/SPECIFICATION.md`. Tasks: `docs/tasks/`.
 

@@ -12,7 +12,7 @@ Offline-first course PWA. Spec: `docs/SPECIFICATION.md`. Tasks: `docs/tasks/`.
 - **Standalone only** — no NgModules
 - **CLI** (`ng g`): component, service, guard, pipe. **Manual:** domain models, validators, Web Workers, pure functions, adapters, constants
 - **Domain folders** (vertical slices; add subfolders only when several files share a role — do not pre-create layers): `courses/`, `player/`, `progress/`, `execution/`, `storage/`, `shared/ui/`. **`storage/`** — infrastructure: Dexie schema, migrations, queries only here; domain types never import Dexie. **`execution/`** — Workers, message types, one wrapper service; components do not call `postMessage` directly
-- Domain: **pure functions** / types; **services:** DI, orchestration, side-effects (storage, Workers, HTTP later). One component, one job; no “service soup”
+- Domain: **pure functions** / types; **services:** DI, orchestration, side-effects (storage, Workers, HTTP later); `providedIn: 'root'` unless route-scoped `providers` when state must die with the route. One component, one job; no “service soup”
 - **Smart / dumb:** pages orchestrate; reusable UI via `input()` / `output()`; no HTTP/storage in `shared/ui` without reason
 - **Lazy:** pages via `loadComponent` / `loadChildren` — never eager-import a page in `app.ts` or `app.routes.ts`; wire new pages with `loadComponent`, not parent `imports`. Heavy step UIs in player: `@defer` or dynamic `import()`. Eager: shell, layout, `shared/ui`. No NgModules or barrel `index.ts` re-exporting lazy pages/steps
 
@@ -21,7 +21,7 @@ Offline-first course PWA. Spec: `docs/SPECIFICATION.md`. Tasks: `docs/tasks/`.
 - TypeScript strict. **`any` forbidden** (`any[]`, `Record<string, any>`, `as any`, `input<any>()`, `$any()`), with or without eslint
 - **`unknown` at boundaries only:** `JSON.parse` (course import), Worker `MessageEvent.data`, IndexedDB rows (Dexie generics ≠ runtime), HTTP when added, untyped third-party. Immediately **`parseX(unknown): X`** (throws on mismatch) **/ `isX(v): v is X`** next to domain types (`courses/`, `execution/`, …); components get **`X`**, not `unknown`
 - No domain **`as T`** instead of parse; ok: `as const`, `as unknown` at boundary; **`as unknown as T` only inside `parseX`**
-- **Zoneless** (no `zone.js`): state — `signal()`, derived — `computed()` (not `effect()`). `effect()` only to sync outward (Dexie, Worker, DOM); never write a signal the effect reads
+- **Zoneless** (no `zone.js`): state — `signal()`, derived — `computed()` (not `effect()`). `effect()` only to sync outward (Dexie, Worker, DOM); never write a signal the effect reads. Domain types `readonly`; update via new objects, not mutation
 - `signal()` / `computed()`, `inject()`; `@if` / `@for` / `@switch`; Observables: `async` pipe or `toSignal()`; reactive forms for non-trivial input; SCSS, BEM-like, no inline template styles; avoid editing `angular.json` / `tsconfig*` without need
 
 ## PWA
@@ -38,7 +38,7 @@ ng test
 
 ## Tasks & git
 
-Tasks in `docs/tasks/` — **status = folder** (`backlog` → `in-progress` → `done`); no status in `REPORT.md`. `backlog/vt-{n}-{slug}.md`; `in-progress/…/` → `TASK.md` + `REPORT.md` (`branch:`); `done/` after merge; `archive/{YYYY-MM}/` in batches on request; `_template/`; `{n}` = max `vt-*` + 1, kebab-case slug.
+Tasks in `docs/tasks/` — **status = folder** (`backlog` → `in-progress` → `done`); no status in `REPORT.md`. `backlog/vt-{n}-{slug}.md`; `in-progress/…/` → `TASK.md` + `REPORT.md` (`branch:`); `done/` after merge; `archive/{YYYY-MM}/` in batches on request; `_template/`; `{n}` = max `vt-*` in backlog, in-progress, done, and `archive/` + 1; kebab-case slug.
 
 **vt-{n}:** branch `feature/vt-{n}-{slug}` from `main`; backlog → `in-progress/` + `REPORT.md`; read `TASK.md` + spec; update `REPORT.md`; one task per branch. WIP commits on feature branch need no confirmation (squashed on merge). **Merge** only on explicit request (“merge vt-{n}”, “merge to main”) — also authorizes doc move, squash, push:
 
@@ -47,7 +47,7 @@ Tasks in `docs/tasks/` — **status = folder** (`backlog` → `in-progress` → 
 3. Squash (`git reset --soft main && git commit`); message `vt-{n}: {short summary}` — show before commit
 4. `git switch main && git merge --ff-only feature/…`, push, delete branch
 
-Merged code must not land in `main` while folder is still `in-progress/`. Review: filled `REPORT.md`, green tests; diff `main..feature/…`.
+Merged code must not land in `main` while folder is still `in-progress/`. Review: `REPORT.md` filled per `_template/` (all sections), green tests; diff `main..feature/…`.
 
 ## Never
 

@@ -22,7 +22,7 @@
 
 ## План работ
 
-- [ ] `SvgStepEngine` + registry
+- [ ] `SvgStepEngine` + factory по контракту vt-3
 - [ ] Тесты complete/retry
 - [ ] `ng test --watch=false` зелёный
 

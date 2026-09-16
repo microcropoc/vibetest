@@ -16,9 +16,49 @@ Backend и авторизация — вне MVP.
 - Web Workers; sql.js для SQLite
 - Zod — runtime-валидация импорта; типы из сгенерированных Zod-схем
 
+## Структура приложения
+
+Целевая раскладка `vibetest-app/` (имена файлов могут уточняться задачами; границы доменов — нет):
+
+```text
+vibetest-app/
+├── tools/                          # генерация Zod из JSON Schema (npm script)
+├── src/
+│   ├── assets/schemas/             # bundled course.schema.json
+│   └── app/
+│       ├── app.ts, app.routes.ts   # shell, lazy routes
+│       ├── courses/                # типы, parse, import, списки курса/модулей
+│       │   └── generated/          # Zod/types — не редактировать вручную
+│       ├── player/                 # orchestration, навигация, step UI по type
+│       ├── execution/              # Worker protocol, wrapper, runners, *.worker.ts
+│       ├── progress/               # агрегации, индикаторы — pure functions
+│       ├── storage/                # Dexie, migrations, repositories
+│       ├── statistics/             # страница статистики
+│       ├── import/                 # страница импорта
+│       ├── info/                   # страница схемы
+│       └── shared/ui/              # переиспользуемые dumb-компоненты
+```
+
+- `*.spec.ts` — рядом с кодом; domain/storage logic без TestBed где возможно.
+- Dexie — **только** `storage/`; domain не импортирует Dexie.
+- `postMessage` / Worker — **только** через `execution/` (компоненты не вызывают Worker напрямую).
+- Страницы — lazy (`loadComponent`); тяжёлые step UI — `@defer` или dynamic import.
+
+```mermaid
+flowchart TD
+  Schema[BundledJsonSchema] --> Courses[CoursesDomain]
+  Courses --> Engines[StepEngines]
+  Engines --> Player[PlayerOrchestration]
+  Execution[ExecutionWorkers] --> Player
+  Storage[DexieStorage] --> Player
+  Progress[ProgressDomain] --> Player
+  Player --> StepUI[StepUI]
+  Storage --> Pages[CoursesStatisticsImportInfo]
+```
+
 ## Формат курса
 
-Структура полей и ограничения — [course.schema.json](./schemas/course.schema.json) (draft-07, **источник истины** в репозитории). В приложении хранится та же JSON Schema (bundle) и **сгенерированные** Zod-схемы и TypeScript-типы; generated-файлы не редактируют вручную. На сборке: JSON Schema → Zod + типы. Курс: корень → модули → шаги; `content` зависит от `type`.
+Структура полей и ограничения — [course.schema.json](./schemas/course.schema.json) (draft **2020-12**, **источник истины** в репозитории). В приложении хранится та же JSON Schema (bundle) и **сгенерированные** Zod-схемы и TypeScript-типы; generated-файлы не редактируют вручную. На сборке: JSON Schema → Zod + типы. Курс: корень → модули → шаги; `content` зависит от `type`.
 
 **UUID v4** (`courseId`, `moduleId`, `stepId`): канонический RFC 4122, задаются автором, не меняются после публикации. В файле: один `courseId`; уникальные `moduleId` и пары `(moduleId, stepId)`. Невалидный UUID или дубликат → отклонение импорта.
 
@@ -59,7 +99,7 @@ Inline SVG (SMIL/CSS внутри допустимы). MVP: без внешни�
 
 ### `quiz`
 
-Один индекс в `correctIndices` → radio; несколько → checkbox. Локальная проверка; успех → `completed`.
+Один индекс в `correctIndices` → radio; несколько → checkbox. В схеме: уникальные индексы; при импорте дополнительно проверять, что каждый индекс `< options.length`. Локальная проверка; успех → `completed`.
 
 ```json
 {
@@ -80,17 +120,18 @@ Inline SVG (SMIL/CSS внутри допустимы). MVP: без внешни�
 
 `reset` — только очистка среды, перед **каждым** элементом `tests` (включая первый). Для `regex` при отсутствии среды `setup` — `""`.
 
+**Подготовка (один раз на прогон шага):** в **двух изолированных** средах (код пользователя и эталон) выполнить `setup`, затем загрузить `starterCode` / `referenceSolution` соответственно (повторное объявление `const`/`let` на каждый кейс не требуется).
+
 **На каждый элемент `tests`:**
 
-1. При первом тесте: `setup` (один раз на прогон).
-2. `reset`, если задан и не пустой.
-3. `sqlite`: `tests[i].seed`.
-4. `starterCode` и `referenceSolution` в изолированных средах с одинаковым состоянием → сравнение.
+1. `reset`, если задан и не пустой (в обеих средах).
+2. `sqlite`: `tests[i].seed` (в обеих средах).
+3. Вызов / выполнение и сравнение результатов.
 
 | Тип | Сравнение | `setup` / `reset` / кейс |
 |-----|-----------|---------------------------|
-| `javascript` | возврат `functionName(...args)` | JS; тест `{ "args": … }`; обязателен `functionName` |
-| `sqlite` | набор строк результата запроса | DDL в `setup`; `DELETE`/`TRUNCATE` в `reset`; `{ "seed": … }` после reset. Порядок строк — только если требует задание |
+| `javascript` | возврат `functionName(...args)` — только **JSON-совместимые** значения; структурное сравнение | JS; тест `{ "args": … }`; обязателен `functionName` |
+| `sqlite` | набор строк результата запроса; порядок учитывается, если `orderMatters: true`, иначе сравнение как multiset | DDL в `setup`; `DELETE`/`TRUNCATE` в `reset`; `{ "seed": … }`; обязателен `orderMatters` |
 | `regex` | `RegExp.test(input)` | `setup`/`reset` часто `""`; `{ "input": string }` |
 
 ```json
@@ -121,6 +162,7 @@ Inline SVG (SMIL/CSS внутри допустимы). MVP: без внешни�
     "reset": "DELETE FROM users;",
     "starterCode": "SELECT * FROM users WHERE id = 1;",
     "referenceSolution": "SELECT id, name FROM users WHERE id = 1;",
+    "orderMatters": false,
     "tests": [
       { "seed": "INSERT INTO users VALUES(1, 'Anna');" },
       { "seed": "INSERT INTO users VALUES(1, 'Bob');" }
@@ -148,7 +190,7 @@ Inline SVG (SMIL/CSS внутри допустимы). MVP: без внешни�
 
 Вкладка **Импорт**: многострочное поле JSON, кнопки **Взять из буфера** (вставить текст из clipboard в поле) и **Импортировать**.
 
-- **Импортировать**: разбор JSON → валидация **Zod** (сгенерированная схема курса) → доп. правила: UUID, уникальность id в документе; у практики — непустой `tests`, поля кейса по `type`; `reset` без seed-данных.
+- **Импортировать**: разбор JSON → валидация **Zod** (сгенерированная схема курса) → доп. правила: UUID, уникальность id в документе; у quiz — индексы в `correctIndices` в пределах `options`; у практики — непустой `tests`, поля кейса по `type`; `reset` без seed-данных.
 - Успех — сохранение в IndexedDB; ошибки — сообщение пользователю, курс не сохраняется.
 - Существующий `courseId` — «заменить» или «отменить»; замена удаляет прогресс курса.
 
@@ -173,7 +215,7 @@ Inline SVG (SMIL/CSS внутри допустимы). MVP: без внешни�
 
 ### Плеер
 
-Над контентом — ряд **квадратиков** (по одному на шаг); клик переходит на шаг. Цвета: **зелёный** — шаг пройден (`completed`); **серый** — текущий; **красный** — последняя проверка неудачна (quiz/практика); **нейтральный** — ещё не пройден. Кнопка **Повторить** — перепройти текущий шаг (сброс черновика и флага неудачной проверки; пройденный шаг можно открыть снова для тренировки).
+Над контентом — ряд **квадратиков** (по одному на шаг); клик переходит на шаг. Состояния: **текущий** (серый), **ошибка последней проверки** (красный, quiz/практика), **пройден** (`completed`, зелёный), **не тронут** (нейтральный). При пересечении — приоритет отображения: **текущий → ошибка → пройден → не тронут**. Кнопка **Повторить** — перепройти текущий шаг (сброс черновика и флага неудачной проверки; пройденный шаг можно открыть снова для тренировки).
 
 Навигация в пределах модуля: кнопки **Назад** / **Далее** и клавиши «вперёд» / «назад». На **последнем** шаге вместо «Далее» — **Выход** → список **модулей** курса. На экране модулей — **Выход** → список **курсов**.
 

@@ -14,7 +14,8 @@
 - Добавить npm-скрипт (например `npm run generate:schema` или `generate:zod`) — одна команда для регенерации из JSON Schema.
 - Generated-файлы помечены/лежат в отдельном каталоге; **не редактировать вручную**.
 - `parseCourse(unknown): Course` и `isCourse(v): v is Course` — тонкие обёртки над Zod (`parse` / `safeParse`), рядом с доменом `courses/`.
-- Тесты: минимум один валидный фрагмент курса; невалидные кейсы (лишние поля, неверный `type`, битый UUID); при необходимости — smoke, что generated-схема соответствует текущему JSON Schema (checksum или fixture).
+- Тесты: минимум один валидный фрагмент курса; невалидные кейсы (лишние поля, неверный `type`, битый UUID); smoke, что generated-схема актуальна (checksum/fixture или CI-check после `generate:*`).
+- **Semantic validation** поверх Zod (отдельные pure functions): уникальность `courseId`/`moduleId`/`stepId` в документе; у quiz — каждый `correctIndices[i] < options.length` (схема уже задаёт `uniqueItems` на индексы).
 
 ## Технические заметки
 

@@ -6,7 +6,7 @@
 
 ## Цель
 
-В домене появляется типизированный контракт step engine (pure functions / readonly state): инициализация из шага курса, переходы, признак `completed`, неудачная проверка (для quiz/практики), сброс «Повторить»; фабрика или registry по `type` — заглушки для ещё не реализованных типов допустимы.
+В домене появляется типизированный контракт step engine (pure functions / readonly state): инициализация из parsed step + опционального сохранённого прогресса, команды, переходы, признак `completed`, неудачная проверка (quiz/практика), сброс «Повторить». **Без registry** и без знания конкретных типов шагов — только общие типы, reduce/helpers и discriminated union расширений.
 
 ## Требования
 
@@ -25,8 +25,7 @@
 
 - [ ] Определить типы `StepEngineState`, команды, результаты
 - [ ] Реализить core reduce/transition helpers
-- [ ] Registry `createStepEngine(type)` с not-implemented для vt-4+
-- [ ] Unit-тесты инвариантов и retry
+- [ ] Unit-тесты инвариантов и retry на mock/minimal engine states
 - [ ] `ng test --watch=false` зелёный
 
 ## Критерии готовности (Definition of Done)

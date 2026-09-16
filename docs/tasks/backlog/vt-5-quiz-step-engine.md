@@ -25,7 +25,7 @@ Quiz — локальная проверка ответа по `correctIndices`;
 ## План работ
 
 - [ ] Логика submit и normalize indices
-- [ ] Интеграция в registry
+- [ ] Factory/create quiz по контракту vt-3
 - [ ] Тесты: single, multi, wrong, retry
 - [ ] `ng test --watch=false` зелёный
 

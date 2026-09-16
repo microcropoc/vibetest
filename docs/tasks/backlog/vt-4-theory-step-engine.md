@@ -13,7 +13,7 @@
 - Соответствие `$defs/theoryContent` (строка markdown).
 - `completed` только после явной команды advance/complete (не автоматически при открытии).
 - Retry: сброс локального состояния попытки, повторное прохождение без снятия `completed`, если уже был успех (спецификация плеера).
-- Тесты: happy path, повтор после completed, интеграция с registry vt-3.
+- Тесты: happy path, повтор после completed; engine реализует контракт vt-3 (без central registry).
 
 ## Технические заметки
 
@@ -24,7 +24,7 @@
 ## План работ
 
 - [ ] `TheoryStepEngine` как functions + types
-- [ ] Подключить в registry vt-3
+- [ ] Экспорт factory/create для theory по контракту vt-3
 - [ ] `*.spec.ts` colocated
 - [ ] `ng test --watch=false` зелёный
 

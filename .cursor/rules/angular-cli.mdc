@@ -19,7 +19,7 @@ Offline-first course PWA. Spec: `docs/SPECIFICATION.md`. Tasks: `docs/tasks/`.
 ## Code style
 
 - TypeScript strict. **`any` forbidden** (`any[]`, `Record<string, any>`, `as any`, `input<any>()`, `$any()`), with or without eslint
-- **`unknown` at boundaries only:** `JSON.parse` (course import), Worker `MessageEvent.data`, IndexedDB rows (Dexie generics ≠ runtime), HTTP when added, untyped third-party. Immediately **`parseX(unknown): X`** (throws on mismatch) **/ `isX(v): v is X`** next to domain types (`courses/`, `execution/`, …); components get **`X`**, not `unknown`
+- **`unknown` at boundaries only:** `JSON.parse` (course import), Worker `MessageEvent.data`, IndexedDB rows (Dexie generics ≠ runtime), HTTP when added, untyped third-party. Immediately **`parseX(unknown): X`** (throws on mismatch) **/ `isX(v): v is X`** next to domain types (`courses/`, `execution/`, …); components get **`X`**, not `unknown`. Runtime validation: **Zod** — **`parseX`** / **`isX`** thin wrappers over generated schemas (`Schema.parse()` / `Schema.safeParse().success`); JSON Schema is source of truth, Zod schemas generated at build — do not edit generated files by hand
 - No domain **`as T`** instead of parse; ok: `as const`, `as unknown` at boundary; **`as unknown as T` only inside `parseX`**
 - **Zoneless** (no `zone.js`): state — `signal()`, derived — `computed()` (not `effect()`). `effect()` only to sync outward (Dexie, Worker, DOM); never write a signal the effect reads. Domain types `readonly`; update via new objects, not mutation
 - `signal()` / `computed()`, `inject()`; `@if` / `@for` / `@switch`; Observables: `async` pipe or `toSignal()`; reactive forms for non-trivial input; SCSS, BEM-like, no inline template styles; avoid editing `angular.json` / `tsconfig*` without need
@@ -40,6 +40,8 @@ ng test
 
 Tasks in `docs/tasks/` — **status = folder** (`backlog` → `in-progress` → `done`); no status in `REPORT.md`. `backlog/vt-{n}-{slug}.md`; `in-progress/…/` → `TASK.md` + `REPORT.md` (`branch:`); `done/` after merge; `archive/{YYYY-MM}/` in batches on request; `_template/`; `{n}` = max `vt-*` in backlog, in-progress, done, and `archive/` + 1; kebab-case slug.
 
+**Protected app:** never modify anything in `vibetest-app/` unless the current branch is `feature/vt-{n}-{slug}` and the matching task exists in `docs/tasks/in-progress/vt-{n}-{slug}/`. Changes outside `vibetest-app/` may be made and committed on `main` without a task.
+
 **vt-{n}:** branch `feature/vt-{n}-{slug}` from `main`; backlog → `in-progress/` + `REPORT.md`; read `TASK.md` + spec; update `REPORT.md`; one task per branch. WIP commits on feature branch need no confirmation (squashed on merge). **Merge** only on explicit request (“merge vt-{n}”, “merge to main”) — also authorizes doc move, squash, push:
 
 1. Move `in-progress/vt-{n}-{slug}/` → `done/` + final `REPORT.md`
@@ -51,6 +53,6 @@ Merged code must not land in `main` while folder is still `in-progress/`. Review
 
 ## Never
 
-- Direct commits or merge commits on `main`
+- Direct commits touching `vibetest-app/` on `main` (merge commits on `main` only via explicit merge workflow)
 - Duplicate logic across domains
 - Secrets, `.env`, `node_modules/` in git

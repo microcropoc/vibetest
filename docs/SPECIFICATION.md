@@ -22,32 +22,11 @@ Backend и авторизация — вне MVP.
 
 ## Формат курса
 
-### Корень документа
+Курс — JSON-документ: корень (`schemaVersion`, `courseId`, `title`, `description`, `modules`), модуль (`moduleId`, `title`, `steps`), шаг (`stepId`, `type`, `title`, `content`). Структура `content` задаётся полем `type`.
 
-| Поле | Тип | Описание |
-|------|-----|----------|
-| `schemaVersion` | number | Версия формата файла (MVP: `1`) |
-| `courseId` | string (UUID) | Стабильный id курса |
-| `title` | string | Название |
-| `description` | string | Краткое описание |
-| `modules` | array | Модули по порядку прохождения |
+### JSON Schema (draft-07)
 
-### Модуль
-
-| Поле | Тип | Описание |
-|------|-----|----------|
-| `moduleId` | string (UUID) | Стабильный id модуля в рамках курса |
-| `title` | string | Название модуля |
-| `steps` | array | Шаги по порядку |
-
-### Шаг (общие поля)
-
-| Поле | Тип | Описание |
-|------|-----|----------|
-| `stepId` | string (UUID) | Стабильный id шага в рамках модуля |
-| `type` | string | Один из: `theory`, `svg`, `quiz`, `javascript`, `sqlite`, `regex` |
-| `title` | string | Заголовок в плеере |
-| `content` | см. ниже | Структура зависит от `type` |
+[course.schema.json](./schemas/course.schema.json)
 
 ### Идентификаторы (UUID)
 
@@ -84,13 +63,7 @@ Backend и авторизация — вне MVP.
 
 ### `svg`
 
-Визуальный шаг: статичная SVG или анимация (SMIL, CSS `@keyframes` внутри SVG и т.п.). `content` — **объект**.
-
-| Поле | Тип | Обяз. | Описание |
-|------|-----|-------|----------|
-| `svg` | string | да | Разметка SVG (корневой элемент `<svg>…</svg>`), inline в JSON |
-| `caption` | string | нет | Подпись под картинкой (plain text или markdown — на усмотрение UI) |
-| `description` | string | нет | Пояснение над/рядом с SVG (markdown) |
+Визуальный шаг: статичная SVG или анимация (SMIL, CSS `@keyframes` внутри SVG и т.п.). `content` — **объект** (см. `$defs/svgContent` в [course.schema.json](./schemas/course.schema.json)).
 
 - В MVP: только inline SVG в JSON; внешние URL и `<script>` в SVG **не** загружаются/не исполняются (санитизация при рендере).
 - Шаг без автопроверки: пользователь отмечает просмотр кнопкой «Далее» (прогресс — `completed` по явному переходу, как для theory без квиза).
@@ -127,13 +100,7 @@ Backend и авторизация — вне MVP.
 
 ### `quiz`
 
-Вопрос с вариантами. `content` — **объект**.
-
-| Поле | Тип | Обяз. | Описание |
-|------|-----|-------|----------|
-| `question` | string | да | Текст вопроса |
-| `options` | string[] | да | Варианты (минимум 2) |
-| `correctIndices` | number[] | да | Индексы правильных вариантов (0-based) |
+Вопрос с вариантами. `content` — **объект** (см. `$defs/quizContent` в [course.schema.json](./schemas/course.schema.json)).
 
 - Один правильный ответ: один элемент в `correctIndices`; UI — radio.
 - Несколько правильных: несколько индексов; UI — checkbox.
@@ -156,18 +123,9 @@ Backend и авторизация — вне MVP.
 
 ### Практика: общая схема (`javascript`, `sqlite`, `regex`)
 
-Типы `javascript`, `sqlite` и `regex` используют один каркас `content`. Проверка в Web Worker; при таймауте Worker завершается.
+Типы `javascript`, `sqlite` и `regex` используют один каркас `content` (см. `$defs/javascriptContent`, `sqliteContent`, `regexContent` в [course.schema.json](./schemas/course.schema.json)). Проверка в Web Worker; при таймауте Worker завершается.
 
-| Поле | Тип | Обяз. | Описание |
-|------|-----|-------|----------|
-| `description` | string | да | Условие (markdown) |
-| `starterCode` | string | да | Ответ ученика: JS-код, SQL-запрос или regex-паттерн |
-| `referenceSolution` | string | да | Эталон того же вида (не показывается ученику) |
-| `setup` | string | да* | Однократная инициализация среды перед прогоном `tests` |
-| `reset` | string | нет | **Только очистка** среды; выполняется перед каждым элементом `tests` (включая первый). Без инициализации данных |
-| `tests` | array | да | Сценарии (минимум 1); каждый элемент задаёт свой кейс — пустые `{}` недопустимы |
-
-\* Для `regex` — пустая строка `""`, если среда не нужна.
+Для `regex` поле `setup` — пустая строка `""`, если среда не нужна. Поле `reset` — **только очистка** среды; выполняется перед каждым элементом `tests` (включая первый), без инициализации данных.
 
 **Порядок на каждый элемент `tests`:**
 
@@ -180,13 +138,7 @@ Backend и авторизация — вне MVP.
 |-----------|--------------|----------|---------|
 | Что сравниваем | возврат `functionName(...args)` | набор строк запроса | результат `RegExp.test(input)` |
 
-Дополнительно только для `javascript`: поле `functionName` (string, обяз.) — имя функции, которую вызывают все тесты в коде пользователя и в эталоне.
-
-| | `setup` | `reset` | элемент `tests` |
-|--|---------|---------|-----------------|
-| `javascript` | JS: объявления, общее mutable state | JS: сброс state между тестами | `{ "args": unknown[] }` |
-| `sqlite` | SQL: DDL, базовые таблицы | SQL: только очистка (`DELETE` / `TRUNCATE`) | `{ "seed": string }` — SQL с данными сценария после `reset` |
-| `regex` | `""` | omit или `""` | `{ "input": string }` |
+Дополнительно только для `javascript`: поле `functionName` — имя функции, которую вызывают все тесты в коде пользователя и в эталоне. Содержимое `setup` / `reset` / элементов `tests`: для `javascript` — JS (объявления и mutable state / сброс state / `{ "args": … }`); для `sqlite` — SQL DDL в `setup`, очистка (`DELETE` / `TRUNCATE`) в `reset`, данные сценария в `tests[i].seed` после `reset`; для `regex` — `setup` и опциональный `reset` как `""`, в тестах `{ "input": string }`.
 
 Для `sqlite` порядок строк в результате учитывается только если это явно требует задание.
 
@@ -365,7 +317,7 @@ Backend и авторизация — вне MVP.
 ## Импорт
 
 - Выбор `.json` (файл или drag-and-drop).
-- Валидация: схема, обязательные поля, типы, формат UUID, уникальность id, лимиты размера (в т.ч. длина inline SVG); у практики — непустой `tests`, у каждого элемента обязательные поля по `type` (`args` / `seed` / `input`); `reset` без seed-данных.
+- Валидация по [course.schema.json](./schemas/course.schema.json) (`minLength` / `maxLength` / `minItems` / `maxItems`), плюс формат UUID, уникальность `courseId` / `moduleId` / `stepId` в файле; у практики — непустой `tests` и обязательные поля кейса по `type`; `reset` без seed-данных.
 - При существующем `courseId` — «заменить» или «отменить». Замена удаляет прогресс по этому курсу.
 
 ## Хранилище (IndexedDB)

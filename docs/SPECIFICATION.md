@@ -4,12 +4,7 @@
 
 Offline-first PWA для прохождения курсов, импортированных из JSON.
 
-Курс: модули → шаги. Типы шагов (`type`):
-
-- **theory** — markdown-текст;
-- **svg** — SVG-картинка или анимация (разметка inline);
-- **quiz** — вопрос с вариантами;
-- **javascript** | **sqlite** | **regex** — практика с проверкой.
+Курс: модули → шаги. Типы шагов (`type`): **theory** (markdown), **svg** (inline SVG/анимация), **quiz**, **javascript** | **sqlite** | **regex** (практика с проверкой).
 
 Backend и авторизация — вне MVP.
 
@@ -22,183 +17,109 @@ Backend и авторизация — вне MVP.
 
 ## Формат курса
 
-Курс — JSON-документ: корень (`schemaVersion`, `courseId`, `title`, `description`, `modules`), модуль (`moduleId`, `title`, `steps`), шаг (`stepId`, `type`, `title`, `content`). Структура `content` задаётся полем `type`.
+Структура полей и ограничения — [course.schema.json](./schemas/course.schema.json) (draft-07, источник истины). Курс: корень → модули → шаги; `content` зависит от `type`.
 
-### JSON Schema (draft-07)
+**UUID v4** (`courseId`, `moduleId`, `stepId`): канонический RFC 4122, задаются автором, не меняются после публикации. В файле: один `courseId`; уникальные `moduleId` и пары `(moduleId, stepId)`. Невалидный UUID или дубликат → отклонение импорта.
 
-[course.schema.json](./schemas/course.schema.json)
-
-### Идентификаторы (UUID)
-
-`courseId`, `moduleId`, `stepId` — **UUID v4** в каноническом виде (RFC 4122): строчные hex, дефисы, 36 символов, например `a1b2c3d4-e5f6-4789-a012-3456789abcde`.
-
-- Задаются автором курса при создании; **не меняются** после публикации.
-- В пределах импортируемого файла: `courseId` один; пары `(moduleId)`, `(moduleId, stepId)` уникальны.
-- При импорте: невалидный UUID или дубликат → отклонение.
-
-### Общие правила
-
-- `type` задаёт структуру `content`.
-- Порядок модулей и шагов — порядок элементов в массивах.
-- Неизвестный `type` или невалидный JSON → импорт отклоняется.
-
----
+Порядок модулей и шагов — порядок в массивах. Неизвестный `type` или невалидный JSON → отклонение.
 
 ## Типы шагов
 
+Поля `content` — см. `$defs/*Content` в схеме.
+
 ### `theory`
 
-Текстовый шаг. `content` — **строка** с markdown (рендер в плеере).
+`content` — строка markdown. Прогресс `completed` по «Далее».
 
 ```json
 {
   "stepId": "11111111-1111-4111-8111-111111111101",
   "type": "theory",
   "title": "Стрелочные функции",
-  "content": "Стрелочная функция: `(x) => x * 2`.\n\nКраткий синтаксис без своего `this`."
+  "content": "Стрелочная функция: `(x) => x * 2`."
 }
 ```
 
----
-
 ### `svg`
 
-Визуальный шаг: статичная SVG или анимация (SMIL, CSS `@keyframes` внутри SVG и т.п.). `content` — **объект** (см. `$defs/svgContent` в [course.schema.json](./schemas/course.schema.json)).
-
-- В MVP: только inline SVG в JSON; внешние URL и `<script>` в SVG **не** загружаются/не исполняются (санитизация при рендере).
-- Шаг без автопроверки: пользователь отмечает просмотр кнопкой «Далее» (прогресс — `completed` по явному переходу, как для theory без квиза).
-
-Пример (статичная иконка):
+Inline SVG (SMIL/CSS внутри допустимы). MVP: без внешних URL и `<script>` (санитизация). Без автопроверки — как theory.
 
 ```json
 {
   "stepId": "11111111-1111-4111-8111-111111111102",
   "type": "svg",
-  "title": "Схема потока",
+  "title": "Схема",
   "content": {
-    "description": "Упрощённая схема вызова функции.",
-    "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 120 40\" width=\"120\" height=\"40\"><rect x=\"2\" y=\"10\" width=\"30\" height=\"20\" fill=\"#4a90d9\" rx=\"2\"/><text x=\"17\" y=\"24\" text-anchor=\"middle\" fill=\"white\" font-size=\"8\">fn</text><path d=\"M32 20h20\" stroke=\"#333\" marker-end=\"url(#a)\"/><defs><marker id=\"a\" markerWidth=\"6\" markerHeight=\"6\" refX=\"5\" refY=\"3\" orient=\"auto\"><path d=\"M0,0 L6,3 L0,6\" fill=\"#333\"/></marker></defs><rect x=\"52\" y=\"10\" width=\"30\" height=\"20\" fill=\"#7cb342\" rx=\"2\"/></svg>",
-    "caption": "Вызов → выполнение"
+    "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 64 64\"><circle cx=\"32\" cy=\"32\" r=\"24\" fill=\"#4a90d9\"/></svg>",
+    "caption": "Опционально"
   }
 }
 ```
-
-Пример (анимация, SMIL):
-
-```json
-{
-  "stepId": "11111111-1111-4111-8111-111111111103",
-  "type": "svg",
-  "title": "Пульсация",
-  "content": {
-    "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 64 64\"><circle cx=\"32\" cy=\"32\" r=\"20\" fill=\"#e91e63\"><animate attributeName=\"r\" values=\"16;24;16\" dur=\"1.2s\" repeatCount=\"indefinite\"/></circle></svg>"
-  }
-}
-```
-
----
 
 ### `quiz`
 
-Вопрос с вариантами. `content` — **объект** (см. `$defs/quizContent` в [course.schema.json](./schemas/course.schema.json)).
-
-- Один правильный ответ: один элемент в `correctIndices`; UI — radio.
-- Несколько правильных: несколько индексов; UI — checkbox.
-- Проверка локально; после успеха шаг — `completed`.
+Один индекс в `correctIndices` → radio; несколько → checkbox. Локальная проверка; успех → `completed`.
 
 ```json
 {
   "stepId": "11111111-1111-4111-8111-111111111104",
   "type": "quiz",
-  "title": "Проверка знаний",
+  "title": "Проверка",
   "content": {
     "question": "Как объявить стрелочную функцию?",
-    "options": ["x => x * 2", "function(x) { return x }", "function => x"],
+    "options": ["x => x * 2", "function(x) { return x }"],
     "correctIndices": [0]
   }
 }
 ```
 
----
+### Практика (`javascript`, `sqlite`, `regex`)
 
-### Практика: общая схема (`javascript`, `sqlite`, `regex`)
+Проверка в Web Worker; таймаут → завершение Worker. Курсы **доверенные**; Worker защищает от зависания, не от произвольного кода в origin.
 
-Типы `javascript`, `sqlite` и `regex` используют один каркас `content` (см. `$defs/javascriptContent`, `sqliteContent`, `regexContent` в [course.schema.json](./schemas/course.schema.json)). Проверка в Web Worker; при таймауте Worker завершается.
+`reset` — только очистка среды, перед **каждым** элементом `tests` (включая первый). Для `regex` при отсутствии среды `setup` — `""`.
 
-Для `regex` поле `setup` — пустая строка `""`, если среда не нужна. Поле `reset` — **только очистка** среды; выполняется перед каждым элементом `tests` (включая первый), без инициализации данных.
+**На каждый элемент `tests`:**
 
-**Порядок на каждый элемент `tests`:**
+1. При первом тесте: `setup` (один раз на прогон).
+2. `reset`, если задан и не пустой.
+3. `sqlite`: `tests[i].seed`.
+4. `starterCode` и `referenceSolution` в изолированных средах с одинаковым состоянием → сравнение.
 
-1. При первом тесте: выполнить `setup` (один раз на весь прогон).
-2. Выполнить `reset`, если поле задано и не пустое.
-3. Для `sqlite`: выполнить обязательный `tests[i].seed` (данные сценария).
-4. Выполнить `starterCode` и `referenceSolution` в изолированных средах с одинаковым состоянием; сравнить результаты.
-
-| Сравнение | `javascript` | `sqlite` | `regex` |
-|-----------|--------------|----------|---------|
-| Что сравниваем | возврат `functionName(...args)` | набор строк запроса | результат `RegExp.test(input)` |
-
-Дополнительно только для `javascript`: поле `functionName` — имя функции, которую вызывают все тесты в коде пользователя и в эталоне. Содержимое `setup` / `reset` / элементов `tests`: для `javascript` — JS (объявления и mutable state / сброс state / `{ "args": … }`); для `sqlite` — SQL DDL в `setup`, очистка (`DELETE` / `TRUNCATE`) в `reset`, данные сценария в `tests[i].seed` после `reset`; для `regex` — `setup` и опциональный `reset` как `""`, в тестах `{ "input": string }`.
-
-Для `sqlite` порядок строк в результате учитывается только если это явно требует задание.
-
-#### `javascript`
+| Тип | Сравнение | `setup` / `reset` / кейс |
+|-----|-----------|---------------------------|
+| `javascript` | возврат `functionName(...args)` | JS; тест `{ "args": … }`; обязателен `functionName` |
+| `sqlite` | набор строк результата запроса | DDL в `setup`; `DELETE`/`TRUNCATE` в `reset`; `{ "seed": … }` после reset. Порядок строк — только если требует задание |
+| `regex` | `RegExp.test(input)` | `setup`/`reset` часто `""`; `{ "input": string }` |
 
 ```json
 {
   "stepId": "11111111-1111-4111-8111-111111111105",
   "type": "javascript",
-  "title": "Удвоение числа",
+  "title": "Удвоение",
   "content": {
-    "description": "Реализуйте функцию `double`.",
+    "description": "Реализуйте `double`.",
     "starterCode": "const double = (x) => x;",
     "referenceSolution": "const double = (x) => x * 2;",
     "setup": "let calls = 0;",
     "reset": "calls = 0;",
     "functionName": "double",
-    "tests": [
-      { "args": [2] },
-      { "args": [0] }
-    ]
+    "tests": [{ "args": [2] }, { "args": [0] }]
   }
 }
 ```
-
-#### `sqlite`
-
-Один тест:
 
 ```json
 {
   "stepId": "11111111-1111-4111-8111-111111111106",
   "type": "sqlite",
-  "title": "Поиск пользователя",
+  "title": "Пользователь",
   "content": {
     "description": "Найдите пользователя с id = 1.",
     "setup": "CREATE TABLE users(id INT, name TEXT);",
     "reset": "DELETE FROM users;",
     "starterCode": "SELECT * FROM users WHERE id = 1;",
     "referenceSolution": "SELECT id, name FROM users WHERE id = 1;",
-    "tests": [
-      { "seed": "INSERT INTO users VALUES(1, 'Anna');" }
-    ]
-  }
-}
-```
-
-Два теста с разным `seed`:
-
-```json
-{
-  "stepId": "11111111-1111-4111-8111-111111111108",
-  "type": "sqlite",
-  "title": "Имена по id",
-  "content": {
-    "description": "Верните имя пользователя с заданным id.",
-    "setup": "CREATE TABLE users(id INT, name TEXT);",
-    "reset": "DELETE FROM users;",
-    "starterCode": "SELECT name FROM users WHERE id = 1;",
-    "referenceSolution": "SELECT name FROM users WHERE id = 1;",
     "tests": [
       { "seed": "INSERT INTO users VALUES(1, 'Anna');" },
       { "seed": "INSERT INTO users VALUES(1, 'Bob');" }
@@ -207,137 +128,45 @@ Backend и авторизация — вне MVP.
 }
 ```
 
-#### `regex`
-
 ```json
 {
   "stepId": "11111111-1111-4111-8111-111111111107",
   "type": "regex",
-  "title": "Поиск числа",
+  "title": "Цифры",
   "content": {
-    "description": "Выражение для строки из цифр.",
+    "description": "Строка из цифр.",
     "starterCode": "^\\d+$",
     "referenceSolution": "^\\d+$",
     "setup": "",
-    "tests": [
-      { "input": "123" },
-      { "input": "abc" }
-    ]
+    "tests": [{ "input": "123" }, { "input": "abc" }]
   }
 }
 ```
 
----
-
-### Пример курса (фрагмент)
-
-Один модуль с одним шагом каждого типа; id — UUID.
-
-```json
-{
-  "schemaVersion": 1,
-  "courseId": "550e8400-e29b-41d4-a716-446655440000",
-  "title": "Основы JavaScript",
-  "description": "Короткий вводный курс",
-  "modules": [
-    {
-      "moduleId": "6ba7b810-9dad-11d1-80b4-00c04fd430c8",
-      "title": "Функции",
-      "steps": [
-        {
-          "stepId": "11111111-1111-4111-8111-111111111101",
-          "type": "theory",
-          "title": "Стрелочные функции",
-          "content": "Стрелочная функция: `(x) => x * 2`."
-        },
-        {
-          "stepId": "11111111-1111-4111-8111-111111111102",
-          "type": "svg",
-          "title": "Схема",
-          "content": {
-            "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 64 64\"><circle cx=\"32\" cy=\"32\" r=\"24\" fill=\"#4a90d9\"/></svg>"
-          }
-        },
-        {
-          "stepId": "11111111-1111-4111-8111-111111111104",
-          "type": "quiz",
-          "title": "Проверка",
-          "content": {
-            "question": "Как объявить стрелочную функцию?",
-            "options": ["x => x * 2", "function => x"],
-            "correctIndices": [0]
-          }
-        },
-        {
-          "stepId": "11111111-1111-4111-8111-111111111105",
-          "type": "javascript",
-          "title": "Удвоение",
-          "content": {
-            "description": "Реализуйте функцию double.",
-            "starterCode": "const double = (x) => x;",
-            "referenceSolution": "const double = (x) => x * 2;",
-            "setup": "",
-            "functionName": "double",
-            "tests": [{ "args": [2] }]
-          }
-        },
-        {
-          "stepId": "11111111-1111-4111-8111-111111111106",
-          "type": "sqlite",
-          "title": "Пользователь",
-          "content": {
-            "description": "Найдите пользователя с id = 1.",
-            "setup": "CREATE TABLE users(id INT, name TEXT);",
-            "reset": "DELETE FROM users;",
-            "starterCode": "SELECT * FROM users WHERE id = 1;",
-            "referenceSolution": "SELECT id, name FROM users WHERE id = 1;",
-            "tests": [{ "seed": "INSERT INTO users VALUES(1, 'Anna');" }]
-          }
-        },
-        {
-          "stepId": "11111111-1111-4111-8111-111111111107",
-          "type": "regex",
-          "title": "Цифры",
-          "content": {
-            "description": "Строка из цифр.",
-            "starterCode": "^\\d+$",
-            "referenceSolution": "^\\d+$",
-            "setup": "",
-            "tests": [{ "input": "123" }, { "input": "abc" }]
-          }
-        }
-      ]
-    }
-  ]
-}
-```
-
-Импортированные курсы считаются **доверенными**. Worker защищает от зависания, не от произвольного кода в origin приложения.
-
 ## Импорт
 
 - Выбор `.json` (файл или drag-and-drop).
-- Валидация по [course.schema.json](./schemas/course.schema.json) (`minLength` / `maxLength` / `minItems` / `maxItems`), плюс формат UUID, уникальность `courseId` / `moduleId` / `stepId` в файле; у практики — непустой `tests` и обязательные поля кейса по `type`; `reset` без seed-данных.
-- При существующем `courseId` — «заменить» или «отменить». Замена удаляет прогресс по этому курсу.
+- Валидация по [course.schema.json](./schemas/course.schema.json), плюс UUID и уникальность id в файле; у практики — непустой `tests`, поля кейса по `type`; `reset` без seed-данных.
+- Существующий `courseId` — «заменить» или «отменить»; замена удаляет прогресс курса.
 
 ## Хранилище (IndexedDB)
 
 | Таблица        | Содержимое |
 |----------------|------------|
-| `courses`      | JSON курса целиком, key `courseId` (UUID) |
-| `stepProgress` | key `${courseId}::${moduleId}::${stepId}`; `status`: `not-started` \| `in-progress` \| `completed`; черновики ответа/кода по типу шага |
+| `courses`      | JSON курса целиком, key `courseId` |
+| `stepProgress` | key `${courseId}::${moduleId}::${stepId}`; `status`: `not-started` \| `in-progress` \| `completed`; черновики по типу шага |
 
-Статус модуля и курса — агрегация по шагам. Удаление курса — одной транзакцией (курс + весь прогресс).
+Статус модуля и курса — агрегация по шагам. Удаление курса — одной транзакцией (курс + прогресс).
 
 ## Экраны
 
 1. **Список курсов** — импорт, открыть, удалить, статус.
 2. **Модули курса** — список модулей и статус.
-3. **Плеер** — шаги модуля (переход по индикатору и «Назад»/«Далее»; на последнем шаге «Выйти» → модули).
+3. **Плеер** — шаги модуля («Назад»/«Далее»; на последнем шаге «Выйти» → модули).
 
 ## Offline / PWA
 
-Контент курсов в IndexedDB после импорта; app shell и статика — через SW. sql.js/WASM кэшируется при первом использовании.
+Контент курсов в IndexedDB после импорта; app shell и статика — SW. sql.js/WASM кэшируется при первом использовании.
 
 ## Вне MVP
 
@@ -345,4 +174,4 @@ Backend и авторизация — вне MVP.
 - Визуальный редактор курсов
 - Рейтинги, соц. функции
 - Песочница для недоверенного JavaScript
-- Внешние ресурсы в шагах `svg` (URL, `<image href="…">` к CDN)
+- Внешние ресурсы в `svg` (URL, CDN)

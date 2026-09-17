@@ -14,7 +14,7 @@ Backend и авторизация — вне MVP.
 - Dexie.js / IndexedDB
 - `@angular/pwa` (Service Worker только в production build)
 - Web Workers; sql.js для SQLite
-- Zod — runtime-валидация импорта; типы из сгенерированных Zod-схем
+- Zod — runtime-валидация import- и канонического формата; типы из сгенерированных Zod-схем
 
 ## Структура приложения
 
@@ -24,7 +24,7 @@ Backend и авторизация — вне MVP.
 vibetest-app/
 ├── tools/                          # генерация Zod из JSON Schema (npm script)
 ├── src/
-│   ├── assets/schemas/             # bundled course.schema.json
+│   ├── assets/schemas/             # bundled course-import + course (canonical)
 │   └── app/
 │       ├── app.ts, app.routes.ts   # shell, lazy routes
 │       ├── courses/                # типы, parse, import, списки курса/модулей
@@ -58,11 +58,18 @@ flowchart TD
 
 ## Формат курса
 
-Структура полей и ограничения — [course.schema.json](./schemas/course.schema.json) (draft **2020-12**, **источник истины** в репозитории). В приложении хранится та же JSON Schema (bundle) и **сгенерированные** Zod-схемы и TypeScript-типы; generated-файлы не редактируют вручную. На сборке: JSON Schema → Zod + типы. Курс: корень → модули → шаги; `content` зависит от `type`.
+Две JSON Schema (draft **2020-12**):
 
-**UUID v4** (`courseId`, `moduleId`, `stepId`): канонический RFC 4122, задаются автором, не меняются после публикации. В файле: один `courseId`; уникальные `moduleId` и пары `(moduleId, stepId)`. Невалидный UUID или дубликат → отклонение импорта.
+| Схема | Назначение |
+|-------|------------|
+| [course-import.schema.json](./schemas/course-import.schema.json) | **Ввод** при импорте (автор, нейросеть): `schemaVersion`, `courseId`, `moduleId`, `stepId` **опциональны** |
+| [course.schema.json](./schemas/course.schema.json) | **Канон** после нормализации: все ID и `schemaVersion: 1` **обязательны**; так хранится курс в IndexedDB и так типизирован domain `Course` |
 
-Порядок модулей и шагов — порядок в массивах. `schemaVersion` ≠ 1 → отклонение импорта. Неизвестный `type` или невалидный JSON → отклонение.
+Ограничения `content` по `type` — общие (`$ref` из import-схемы в каноническую). В bundle приложения обе схемы + **сгенерированные** Zod и TypeScript; generated-файлы не редактируют вручную.
+
+**UUID v4** (если указаны во входе): RFC 4122. Дубликаты **предоставленных** `courseId` / `moduleId` / `stepId` → отклонение. После нормализации: один `courseId`, уникальные `moduleId`, уникальные `stepId` в документе.
+
+Порядок модулей и шагов — порядок в массивах. Во входе: если `schemaVersion` указан и ≠ 1 → отклонение. Неизвестный `type` или невалидный JSON → отклонение.
 
 ## Типы шагов
 
@@ -74,7 +81,6 @@ flowchart TD
 
 ```json
 {
-  "stepId": "11111111-1111-4111-8111-111111111101",
   "type": "theory",
   "title": "Стрелочные функции",
   "content": "Стрелочная функция: `(x) => x * 2`."
@@ -87,7 +93,6 @@ Inline SVG (SMIL/CSS и т.п.); рендер **без санитизации** 
 
 ```json
 {
-  "stepId": "11111111-1111-4111-8111-111111111102",
   "type": "svg",
   "title": "Схема",
   "content": {
@@ -103,7 +108,6 @@ Inline SVG (SMIL/CSS и т.п.); рендер **без санитизации** 
 
 ```json
 {
-  "stepId": "11111111-1111-4111-8111-111111111104",
   "type": "quiz",
   "title": "Проверка",
   "content": {
@@ -143,7 +147,6 @@ Inline SVG (SMIL/CSS и т.п.); рендер **без санитизации** 
 
 ```json
 {
-  "stepId": "11111111-1111-4111-8111-111111111105",
   "type": "javascript",
   "title": "Сумма",
   "content": {
@@ -165,7 +168,6 @@ Inline SVG (SMIL/CSS и т.п.); рендер **без санитизации** 
 
 ```json
 {
-  "stepId": "11111111-1111-4111-8111-111111111106",
   "type": "sqlite",
   "title": "Пользователь",
   "content": {
@@ -186,7 +188,6 @@ Inline SVG (SMIL/CSS и т.п.); рендер **без санитизации** 
 
 ```json
 {
-  "stepId": "11111111-1111-4111-8111-111111111107",
   "type": "regex",
   "title": "Цифры",
   "content": {
@@ -203,9 +204,18 @@ Inline SVG (SMIL/CSS и т.п.); рендер **без санитизации** 
 
 Вкладка **Импорт**: многострочное поле JSON, кнопки **Взять из буфера** (вставить текст из clipboard в поле) и **Импортировать**.
 
-- **Импортировать**: разбор JSON → валидация **Zod** → semantic rules (UUID, уникальность id; quiz indices; практика — `tests`, `timeoutMs`, у JS — `argsGenerator`, `reset` без seed-данных; у JS `setup` не для таблиц кейсов — проверочные аргументы только в `argsGenerator`; `schemaVersion` только `1`).
-- Успех — сохранение в IndexedDB. При ошибках — **список всех** найденных проблем (JSON parse, Zod, semantic) **под полем импорта**; курс не сохраняется.
-- Существующий `courseId` — «заменить» или «отменить»; замена удаляет прогресс курса.
+Поток **Импортировать**:
+
+1. Разбор JSON.
+2. Валидация **import**-Zod ([course-import.schema.json](./schemas/course-import.schema.json)).
+3. **Нормализация** (pure): отсутствующий `schemaVersion` → `1`; отсутствующие `courseId` / `moduleId` / `stepId` → `crypto.randomUUID()`; переданные ID сохраняются.
+4. Валидация **канонического** Zod ([course.schema.json](./schemas/course.schema.json)).
+5. Semantic rules: уникальность всех ID в документе; quiz indices; практика — `tests`, `timeoutMs`, у JS — `argsGenerator`, `reset` без seed-данных; у JS `setup` не для таблиц кейсов.
+6. Успех — сохранение **канонического** JSON в IndexedDB.
+
+При ошибках — **список всех** проблем (JSON parse, import Zod, normalize, canonical Zod, semantic) **под полем импорта**; курс не сохраняется.
+
+**Create / replace:** без `courseId` во входе — всегда **новый** курс (новые UUID на шаге нормализации). Диалог «заменить» — только если во **входе** указан `courseId`, он уже есть в хранилище; замена удаляет прогресс курса. Повторный импорт того же текста без ID снова создаёт новый курс (MVP).
 
 ## Хранилище (IndexedDB)
 
@@ -242,7 +252,7 @@ Inline SVG (SMIL/CSS и т.п.); рендер **без санитизации** 
 
 ### Инфо
 
-Просмотр формата курса: **bundled** [course.schema.json](./schemas/course.schema.json) — форматированный JSON (read-only). На MVP без отдельного UI-рендера полей.
+Просмотр формата для авторов: **bundled** [course-import.schema.json](./schemas/course-import.schema.json) — форматированный JSON (read-only). Каноническая [course.schema.json](./schemas/course.schema.json) — для хранения после нормализации; на вкладке **Инфо** не показывается. На MVP без отдельного UI-рендера полей.
 
 ## Offline / PWA
 

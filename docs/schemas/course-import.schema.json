@@ -1,0 +1,57 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://vibetest.app/schemas/course-import.schema.json",
+  "title": "VibeTest Course Import",
+  "description": "Входной формат для импорта (автор/нейросеть). ID и schemaVersion опциональны; после нормализации документ должен соответствовать course.schema.json.",
+  "type": "object",
+  "required": ["title", "description", "modules"],
+  "additionalProperties": false,
+  "properties": {
+    "schemaVersion": { "type": "integer", "const": 1 },
+    "courseId": { "$ref": "./course.schema.json#/$defs/uuid" },
+    "title": { "type": "string", "minLength": 1, "maxLength": 120 },
+    "description": { "type": "string", "minLength": 1, "maxLength": 2000 },
+    "modules": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 100,
+      "items": { "$ref": "#/$defs/importModule" }
+    }
+  },
+  "$defs": {
+    "importModule": {
+      "type": "object",
+      "required": ["title", "steps"],
+      "additionalProperties": false,
+      "properties": {
+        "moduleId": { "$ref": "./course.schema.json#/$defs/uuid" },
+        "title": { "type": "string", "minLength": 1, "maxLength": 120 },
+        "steps": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 200,
+          "items": { "$ref": "#/$defs/importStep" }
+        }
+      }
+    },
+    "importStep": {
+      "type": "object",
+      "required": ["type", "title", "content"],
+      "additionalProperties": false,
+      "properties": {
+        "stepId": { "$ref": "./course.schema.json#/$defs/uuid" },
+        "type": { "enum": ["theory", "svg", "quiz", "javascript", "sqlite", "regex"] },
+        "title": { "type": "string", "minLength": 1, "maxLength": 200 },
+        "content": true
+      },
+      "allOf": [
+        { "if": { "properties": { "type": { "const": "theory" } } }, "then": { "properties": { "content": { "$ref": "./course.schema.json#/$defs/theoryContent" } } } },
+        { "if": { "properties": { "type": { "const": "svg" } } }, "then": { "properties": { "content": { "$ref": "./course.schema.json#/$defs/svgContent" } } } },
+        { "if": { "properties": { "type": { "const": "quiz" } } }, "then": { "properties": { "content": { "$ref": "./course.schema.json#/$defs/quizContent" } } } },
+        { "if": { "properties": { "type": { "const": "javascript" } } }, "then": { "properties": { "content": { "$ref": "./course.schema.json#/$defs/javascriptContent" } } } },
+        { "if": { "properties": { "type": { "const": "sqlite" } } }, "then": { "properties": { "content": { "$ref": "./course.schema.json#/$defs/sqliteContent" } } } },
+        { "if": { "properties": { "type": { "const": "regex" } } }, "then": { "properties": { "content": { "$ref": "./course.schema.json#/$defs/regexContent" } } } }
+      ]
+    }
+  }
+}

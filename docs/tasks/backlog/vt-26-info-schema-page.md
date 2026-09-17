@@ -2,16 +2,16 @@
 
 ## Контекст
 
-Вкладка **Инфо**: read-only formatted JSON Schema из bundle (**vt-2**).
+Вкладка **Инфо**: read-only formatted JSON Schema для **авторов** (import format) из bundle (**vt-2**).
 
 ## Цель
 
-Page loads bundled `course.schema.json`, displays pretty-printed JSON; no hand-maintained duplicate text.
+Page loads bundled `course-import.schema.json`, displays pretty-printed JSON; no hand-maintained duplicate text.
 
 ## Требования
 
 - Read-only `<pre>` or scrollable code block.
-- Source = same artifact as app validation.
+- Source = `course-import.schema.json` (не каноническая `course.schema.json`).
 - Lazy route.
 
 ## Технические заметки
@@ -20,7 +20,7 @@ Page loads bundled `course.schema.json`, displays pretty-printed JSON; no hand-m
 
 ## План работ
 
-- [ ] Load schema asset/json
+- [ ] Load import schema asset/json
 - [ ] InfoPage template
 - [ ] Smoke test optional
 - [ ] `ng build` includes asset
@@ -32,3 +32,4 @@ Page loads bundled `course.schema.json`, displays pretty-printed JSON; no hand-m
 ## Вне рамок задачи
 
 - Human-readable schema renderer (post-MVP)
+- Показ канонической схемы

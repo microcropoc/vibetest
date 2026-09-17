@@ -6,7 +6,7 @@
 
 ## Цель
 
-Page wired to **vt-15** ImportService: paste clipboard, **вывести под формой все** ошибки валидации/parse/semantic, confirm replace when `courseId` exists.
+Page wired to **vt-15** ImportService: paste clipboard, **вывести под формой все** ошибки; confirm replace **только** когда во входном JSON указан `courseId`, совпадающий с существующим курсом (импорт без `courseId` — без диалога replace).
 
 ## Требования
 

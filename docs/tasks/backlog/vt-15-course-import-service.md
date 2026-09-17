@@ -2,30 +2,31 @@
 
 ## Контекст
 
-Импорт: JSON → Zod → semantic rules → сохранение; замена курса удаляет прогресс. Без UI.
+Импорт: JSON → import Zod → normalize → canonical Zod → semantic → storage; замена курса удаляет прогресс. Без UI.
 
 ## Цель
 
-Сервис в `courses/`: `importCourse(text: string): Result` — parse JSON, `parseCourse`, semantic validation (UUID uniqueness, quiz indices, practice rules из спецификации), detect existing `courseId`, replace via **vt-12** (progress wipe on replace).
+Сервис в `courses/`: `importCourse(text: string): Result` — parse JSON, `parseCourseImportDraft`, `normalizeCourseImport`, `parseCourse`, semantic validation, detect existing **provided** `courseId`, replace via **vt-12**.
 
 ## Требования
 
-- **Собрать все ошибки** (JSON parse, Zod, semantic) в один список для UI; не останавливаться на первой.
-- Structured errors (validation vs parse vs duplicate policy); unsupported `schemaVersion` всегда reject.
-- Replace flow: delete progress + upsert course (reuse vt-12 transaction semantics).
+- **Собрать все ошибки** (JSON parse, import Zod, normalize, canonical Zod, semantic) в один список; не останавливаться на первой.
+- `schemaVersion` во входе: если указан и ≠ 1 — reject.
+- **Create:** вход без `courseId` → normalize с новым UUID → всегда новый курс.
+- **Replace:** только если во **входе** был `courseId` и он уже в хранилище → delete progress + upsert.
 - Cancel path без записи.
-- Zod отклоняет устаревший JS `{ "args": … }`; semantic — непустой `argsGenerator` на JS-кейсах.
-- Тесты: valid import, invalid JSON, semantic fail, replace removes progress.
-- Без clipboard и textarea (vt-24).
+- Сохранять только **канонический** JSON.
+- Тесты: import без ID, с ID create/replace, invalid JSON, semantic fail, replace wipes progress.
+- Без clipboard (vt-24).
 
 ## Технические заметки
 
-- Зависимости: **vt-2**, **vt-12** (и косвенно vt-14 для wipe).
+- Зависимости: **vt-2**, **vt-12** (vt-14 для wipe).
 
 ## План работ
 
 - [ ] ImportService + error types
-- [ ] Wire semantic validators from vt-2
+- [ ] Wire vt-2 parse/normalize/semantic
 - [ ] Tests
 - [ ] `ng test --watch=false` зелёный
 

@@ -2,45 +2,45 @@
 
 ## Контекст
 
-Спецификация и [`docs/schemas/course.schema.json`](../../schemas/course.schema.json) задают формат курса. Импорт и домен должны валидировать через Zod; типы — из сгенерированных схем. Сейчас в приложении этого нет.
+Спецификация: [`course-import.schema.json`](../../schemas/course-import.schema.json) (ввод) и [`course.schema.json`](../../schemas/course.schema.json) (канон). Импорт и домен должны валидировать через Zod; типы — из сгенерированных схем. Сейчас в приложении этого нет.
 
 ## Цель
 
-В `vibetest-app/` появляется воспроизводимый pipeline: repo JSON Schema → bundle в приложении → **консольная команда** генерации Zod + TypeScript-типов; `parseCourse` / `isCourse` на Zod; тесты на валидные и невалидные документы.
+В `vibetest-app/` воспроизводимый pipeline: обе JSON Schema из репо → bundle → **консольная команда** генерации Zod + TypeScript; `parseCourseImportDraft` / `parseCourse` и `normalizeCourseImport` (pure); тесты.
 
 ## Требования
 
-- Скопировать или синхронизировать схему из `docs/schemas/course.schema.json` в артефакт приложения (bundle/assets), без расхождения с источником в репо.
-- Добавить npm-скрипт (например `npm run generate:schema` или `generate:zod`) — одна команда для регенерации из JSON Schema.
-- Generated-файлы помечены/лежат в отдельном каталоге; **не редактировать вручную**.
-- `parseCourse(unknown): Course` и `isCourse(v): v is Course` — тонкие обёртки над Zod (`parse` / `safeParse`), рядом с доменом `courses/`.
-- Тесты: минимум один валидный фрагмент курса; невалидные кейсы (лишние поля, неверный `type`, битый UUID); smoke, что generated-схема актуальна (checksum/fixture или CI-check после `generate:*`).
-- **Semantic validation** поверх Zod (отдельные pure functions): уникальность `courseId`/`moduleId`/`stepId` в документе; у quiz — каждый `correctIndices[i] < options.length` (схема уже задаёт `uniqueItems` на индексы); у практики — непустой `tests`, поля кейса по `type` (JS: **`argsGenerator`**, не `args`), `reset` без seed-данных; **`schemaVersion` ≠ 1** — отклонение (Zod `const: 1` + явное сообщение при необходимости).
+- Bundle **обеих** схем в assets без расхождения с `docs/schemas/`.
+- npm-скрипт (например `generate:zod`) — регенерация Zod/types для import + canonical.
+- Generated-файлы в отдельном каталоге; **не редактировать вручную**.
+- `parseCourseImportDraft(unknown): CourseImportDraft` — import Zod.
+- `normalizeCourseImport(draft): unknown` — `schemaVersion` по умолчанию `1`; отсутствующие ID → `crypto.randomUUID()`; сохранять переданные ID.
+- `parseCourse(unknown): Course` / `isCourse` — канонический Zod (после normalize).
+- Тесты: import draft без ID; normalize → canonical parse; невалидные кейсы; smoke актуальности generated.
+- **Semantic validation** (pure, на каноническом `Course`): уникальность всех ID; quiz indices; практика (JS `argsGenerator`, `reset` без seed); дубликаты **предоставленных** ID во входе — отдельная проверка на draft до normalize (если указаны).
 
 ## Технические заметки
 
-- Домен: `courses/` (типы, parse), скрипт генерации — корень `vibetest-app/` или `tools/`.
-- Выбор генератора (json-schema-to-zod и т.п.) — на усмотрение исполнителя; зафиксировать в `REPORT.md`.
+- Домен: `courses/` (типы, parse, normalize), скрипт — `vibetest-app/tools/` или корень.
 - Strict TS, без `any`; граница `unknown` только в parse.
-- Зависимость: **vt-1** (scaffold).
+- Зависимость: **vt-1**.
 
 ## План работ
 
-- [ ] Выбрать и подключить tool JSON Schema → Zod
-- [ ] Bundle схемы + npm-скрипт генерации
-- [ ] `parseCourse` / `isCourse` + экспорт типа `Course`
+- [ ] Tool JSON Schema → Zod (две схемы)
+- [ ] Bundle + npm-скрипт
+- [ ] `parseCourseImportDraft`, `normalizeCourseImport`, `parseCourse` / `isCourse`
 - [ ] Colocated `*.spec.ts` без TestBed
 - [ ] `ng test --watch=false` зелёный
 
 ## Критерии готовности (Definition of Done)
 
-- [ ] Команда генерации документирована в задаче/`REPORT.md`
-- [ ] Тесты валид/невалид зелёные
-- [ ] Generated не правятся руками после merge
-- [ ] Соответствие [`docs/SPECIFICATION.md`](../../SPECIFICATION.md) (формат курса, Zod)
+- [ ] Команда генерации в `REPORT.md`
+- [ ] Тесты зелёные
+- [ ] Соответствие [`docs/SPECIFICATION.md`](../../SPECIFICATION.md)
 
 ## Вне рамок задачи
 
-- UI импорта, Dexie, доп. правила импорта (уникальность UUID в файле) — отдельные задачи
+- UI импорта, Dexie, ImportService orchestration (vt-15)
 - Движки шагов
-- Редактирование содержимого `docs/schemas/course.schema.json` (только потребление)
+- Редактирование `docs/schemas/*.json` (только потребление)

@@ -10,10 +10,10 @@
 
 ## Требования
 
-- **Собрать все ошибки** (JSON parse, import Zod, normalize, canonical Zod, semantic) в один список; не останавливаться на первой.
+- **Собрать все ошибки достигнутого этапа** (JSON parse → import Zod → normalize → canonical Zod → semantic); после сбоя этапа следующие не выполнять; в UI — один список.
 - `schemaVersion` во входе: если указан и ≠ 1 — reject.
 - **Create:** вход без `courseId` → normalize с новым UUID → всегда новый курс.
-- **Replace:** только если во **входе** был `courseId` и он уже в хранилище → delete progress + upsert.
+- **Replace:** только если во **входе** был `courseId` и он уже в хранилище → `ProgressRepository.deleteAllByCourseId` + upsert course (vt-12), одна транзакция.
 - Cancel path без записи.
 - Сохранять только **канонический** JSON.
 - Тесты: import без ID, с ID create/replace, invalid JSON, semantic fail, replace wipes progress.
@@ -21,7 +21,7 @@
 
 ## Технические заметки
 
-- Зависимости: **vt-2**, **vt-12** (vt-14 для wipe).
+- Зависимости: **vt-2**, **vt-12**, **vt-14** (progress wipe API).
 
 ## План работ
 

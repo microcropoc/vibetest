@@ -23,7 +23,7 @@ Dumb step components: markdown render for theory; inline SVG as trusted HTML/SVG
 
 - [ ] Markdown step component
 - [ ] Svg step component
-- [ ] Player outlet switching by type
+- [ ] Register components in **vt-19** player outlet (no separate orchestrator)
 - [ ] `ng test --watch=false` зелёный
 
 ## Критерии готовности (Definition of Done)

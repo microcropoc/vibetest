@@ -11,7 +11,7 @@ Regex Worker runner + оркестрация; boolean compare user vs reference 
 ## Требования
 
 - `$defs/regexContent` с обязательным **`timeoutMs`**.
-- Кейсы по порядку; одинаковый boolean test user vs reference; **стоп на первом** fail/error/timeout.
+- Кейсы по порядку; для каждого `input` — `RegExp.test(input)` у user и reference; **успех, если оба boolean совпадают**; **стоп на первом** fail/error/timeout.
 - Таймаут **`timeoutMs`** через vt-7; retry через vt-3.
 - Тесты: match/mismatch, invalid pattern, early stop после первого fail.
 

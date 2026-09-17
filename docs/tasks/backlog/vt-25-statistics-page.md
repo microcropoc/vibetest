@@ -10,13 +10,13 @@ Page loads all courses + progress aggregates via **vt-13** + repositories; read-
 
 ## Требования
 
-- Per course: title, modules completed/total, steps completed/total (define in REPORT if needed).
+- Per course: title, modules completed/total, steps completed/total — через **vt-13** (не дублировать агрегацию на странице).
 - Empty state when no courses.
 - Signals; lazy route.
 
 ## Технические заметки
 
-- Зависимости: **vt-14**, **vt-16** (vt-12 for course list).
+- Зависимости: **vt-12**, **vt-13**, **vt-14**, **vt-16**.
 
 ## План работ
 

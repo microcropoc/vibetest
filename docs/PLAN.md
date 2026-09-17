@@ -30,21 +30,21 @@
 | vt-12 | [course-repository](tasks/backlog/vt-12-course-repository.md) | vt-11 |
 | vt-13 | [progress-domain](tasks/backlog/vt-13-progress-domain.md) | vt-3 |
 | vt-14 | [progress-repository](tasks/backlog/vt-14-progress-repository.md) | vt-11, vt-13 |
-| vt-15 | [course-import-service](tasks/backlog/vt-15-course-import-service.md) | vt-2, vt-12 |
+| vt-15 | [course-import-service](tasks/backlog/vt-15-course-import-service.md) | vt-2, vt-12, vt-14 |
 | vt-16 | [app-shell-routes](tasks/backlog/vt-16-app-shell-routes.md) | vt-1 |
-| vt-17 | [course-list-page](tasks/backlog/vt-17-course-list-page.md) | vt-12, vt-14, vt-16 |
-| vt-18 | [module-list-page](tasks/backlog/vt-18-module-list-page.md) | vt-12, vt-14, vt-16 |
-| vt-19 | [player-orchestration](tasks/backlog/vt-19-player-orchestration.md) | vt-4–vt-10, vt-14, vt-16 |
-| vt-20 | [player-navigation-ui](tasks/backlog/vt-20-player-navigation-ui.md) | vt-19 |
+| vt-17 | [course-list-page](tasks/backlog/vt-17-course-list-page.md) | vt-12, vt-13, vt-14, vt-16 |
+| vt-18 | [module-list-page](tasks/backlog/vt-18-module-list-page.md) | vt-12, vt-13, vt-14, vt-16 |
+| vt-19 | [player-orchestration](tasks/backlog/vt-19-player-orchestration.md) | vt-4–vt-10, vt-12, vt-13, vt-14, vt-16 |
+| vt-20 | [player-navigation-ui](tasks/backlog/vt-20-player-navigation-ui.md) | vt-13, vt-19 |
 | vt-21 | [theory-svg-step-ui](tasks/backlog/vt-21-theory-svg-step-ui.md) | vt-4, vt-6, vt-19 |
 | vt-22 | [quiz-step-ui](tasks/backlog/vt-22-quiz-step-ui.md) | vt-5, vt-19 |
 | vt-23 | [practice-step-ui](tasks/backlog/vt-23-practice-step-ui.md) | vt-8–vt-10, vt-19 |
 | vt-24 | [import-page](tasks/backlog/vt-24-import-page.md) | vt-15, vt-16 |
-| vt-25 | [statistics-page](tasks/backlog/vt-25-statistics-page.md) | vt-14, vt-16 |
+| vt-25 | [statistics-page](tasks/backlog/vt-25-statistics-page.md) | vt-12, vt-13, vt-14, vt-16 |
 | vt-26 | [info-schema-page](tasks/backlog/vt-26-info-schema-page.md) | vt-2, vt-16 |
 | vt-27 | [pwa-offline](tasks/backlog/vt-27-pwa-offline.md) | vt-16, vt-23 |
 
-**Параллельно после vt-3:** vt-4–vt-6, vt-7; после vt-7: vt-8–vt-10; после vt-11: vt-12, vt-14 (vt-13 параллельно с vt-11+); vt-16 можно начать после vt-1 независимо от движков.
+**Параллельно после vt-3:** vt-4–vt-6, vt-7, vt-13; после vt-7: vt-8–vt-10; после vt-11: vt-12 и vt-13 (если ещё не готов); **vt-14** только после vt-11 **и** vt-13; vt-16 — отдельная ветка после vt-1.
 
 ## Решения и допущения
 
@@ -55,7 +55,8 @@
 - Практика: обязательный **`timeoutMs`** (100–30000); кейсы **fail-fast**; regex **без** `setup`/`reset`.
 - JavaScript: **`argsGenerator`** — самодостаточная `() => …` на кейс; `setup` без проверочных данных; evaluate в изолированной среде.
 - Две схемы: **course-import** (ввод, ID опциональны) → normalize → **course** (канон в IndexedDB).
-- Импорт: **все** ошибки под формой; без `courseId` — всегда новый курс; replace только при переданном существующем `courseId`.
+- Импорт: все ошибки **достигнутого этапа** под формой; без `courseId` — всегда новый курс; replace только при переданном существующем `courseId`.
+- Bundled schemas: `public/schemas/`.
 - **Инфо:** показывать import-схему.
 - Контент курса доверенный: markdown/SVG **без** санитизации в MVP.
 - Плеер: навигация **touch** (кнопки + индикаторы); **`completed`** не снимается при неудачном повторе.

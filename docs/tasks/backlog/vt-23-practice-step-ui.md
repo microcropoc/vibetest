@@ -15,7 +15,7 @@ Shared practice shell + thin adapters for three types; calls orchestrator/engine
 - Show results from engine (fail-fast: после первого провала — итог без «прогона всех»).
 - Отображать timeout/error; лимит из `timeoutMs` content (через engine/vt-7).
 - `@defer` for heavy parts if needed.
-- Tests for component states (mock orchestrator).
+- Tests for component states (mock orchestrator). Retry — только через **vt-20** «Повторить», не отдельная кнопка в practice shell.
 
 ## Технические заметки
 

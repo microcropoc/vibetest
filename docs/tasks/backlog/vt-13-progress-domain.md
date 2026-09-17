@@ -6,7 +6,7 @@ UI и плеер показывают прогресс курса/модуля, 
 
 ## Цель
 
-В `progress/`: функции агрегации (модуль completed?, курс: N модулей / M пройдено), `firstIncompleteStepIndex`, `stepIndicatorState` с приоритетом **current → failed → completed → untouched** ([SPECIFICATION.md](../../SPECIFICATION.md)).
+В `progress/`: функции агрегации (модуль completed?, курс: N модулей / M пройдено; **steps completed/total** на модуль и курс для списков и статистики), `firstIncompleteStepIndex`, `stepIndicatorState` с приоритетом **current → failed → completed → untouched** ([SPECIFICATION.md](../../SPECIFICATION.md)).
 
 ## Требования
 

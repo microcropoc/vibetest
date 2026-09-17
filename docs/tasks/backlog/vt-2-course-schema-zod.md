@@ -10,14 +10,16 @@
 
 ## Требования
 
-- Bundle **обеих** схем в assets без расхождения с `docs/schemas/`.
+- Bundle **обеих** схем в `public/schemas/` без расхождения с `docs/schemas/`.
+- Ранний spike: выбранный JSON Schema → Zod должен поддержать external `$ref` (import → canonical) и `if`/`then` на шагах; зафиксировать tool в `REPORT.md`.
+- Включить **`strict: true`** (и связанные флаги) в `tsconfig` приложения.
 - npm-скрипт (например `generate:zod`) — регенерация Zod/types для import + canonical.
 - Generated-файлы в отдельном каталоге; **не редактировать вручную**.
 - `parseCourseImportDraft(unknown): CourseImportDraft` — import Zod.
 - `normalizeCourseImport(draft): unknown` — `schemaVersion` по умолчанию `1`; отсутствующие ID → `crypto.randomUUID()`; сохранять переданные ID.
 - `parseCourse(unknown): Course` / `isCourse` — канонический Zod (после normalize).
 - Тесты: import draft без ID; normalize → canonical parse; невалидные кейсы; smoke актуальности generated.
-- **Semantic validation** (pure, на каноническом `Course`): уникальность всех ID; quiz indices; практика (JS `argsGenerator`, `reset` без seed); дубликаты **предоставленных** ID во входе — отдельная проверка на draft до normalize (если указаны).
+- **Semantic validation** (pure, на каноническом `Course`): уникальность всех ID; quiz indices; практика (JS `argsGenerator`; JS/SQLite `reset` без SQL seed/`INSERT` — seed только в `tests[].seed`); дубликаты **предоставленных** ID на draft до normalize. **Не** проверять содержимое JS `setup` (авторская конвенция).
 
 ## Технические заметки
 

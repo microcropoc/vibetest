@@ -12,16 +12,17 @@ Dumb/smart split: step indicator bar, footer nav (кнопки); binds to orches
 
 - Клик по квадратику → jump step (orchestrator).
 - Last step: «Выход» вместо «Далее» → modules.
+- Кнопка **Повторить** → `orchestrator.retry()` (quiz/практика/theory/svg по контракту vt-3); не дублировать retry в vt-21–23.
 - Indicator colors via vt-13 `stepIndicatorState`.
 - a11y: labels on indicators/touch targets (без keyboard shortcuts навигации по шагам).
 
 ## Технические заметки
 
-- Зависимость: **vt-19**.
+- Зависимости: **vt-13**, **vt-19**.
 
 ## План работ
 
-- [ ] StepIndicatorComponent, PlayerNavComponent
+- [ ] StepIndicatorComponent, PlayerNavComponent (incl. Повторить)
 - [ ] Component tests + whenStable
 - [ ] `ng test --watch=false` зелёный
 

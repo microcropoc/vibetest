@@ -6,7 +6,7 @@
 
 ## Цель
 
-Repository в `storage/`: get/put по ключу шага, list by course, bulk delete by courseId; маппинг row ↔ domain progress types из **vt-13**.
+Repository в `storage/`: get/put по ключу шага, list by course, **`deleteAllByCourseId(courseId)`** (единый API для vt-12 delete/replace и vt-15 replace); маппинг row ↔ domain progress types из **vt-3** / **vt-13**.
 
 ## Требования
 

@@ -23,8 +23,9 @@ Backend и авторизация — вне MVP.
 ```text
 vibetest-app/
 ├── tools/                          # генерация Zod из JSON Schema (npm script)
+├── public/
+│   └── schemas/                    # bundled course-import + course (canonical)
 ├── src/
-│   ├── assets/schemas/             # bundled course-import + course (canonical)
 │   └── app/
 │       ├── app.ts, app.routes.ts   # shell, lazy routes
 │       ├── courses/                # типы, parse, import, списки курса/модулей
@@ -65,7 +66,7 @@ flowchart TD
 | [course-import.schema.json](./schemas/course-import.schema.json) | **Ввод** при импорте (автор, нейросеть): `schemaVersion`, `courseId`, `moduleId`, `stepId` **опциональны** |
 | [course.schema.json](./schemas/course.schema.json) | **Канон** после нормализации: все ID и `schemaVersion: 1` **обязательны**; так хранится курс в IndexedDB и так типизирован domain `Course` |
 
-Ограничения `content` по `type` — общие (`$ref` из import-схемы в каноническую). В bundle приложения обе схемы + **сгенерированные** Zod и TypeScript; generated-файлы не редактируют вручную.
+Ограничения `content` по `type` — общие (`$ref` из import-схемы в каноническую). В bundle приложения (`public/schemas/`) обе схемы + **сгенерированные** Zod и TypeScript; generated-файлы не редактируют вручную.
 
 **UUID v4** (если указаны во входе): RFC 4122. Дубликаты **предоставленных** `courseId` / `moduleId` / `stepId` → отклонение. После нормализации: один `courseId`, уникальные `moduleId`, уникальные `stepId` в документе.
 
@@ -124,26 +125,26 @@ Inline SVG (SMIL/CSS и т.п.); рендер **без санитизации** 
 
 Кейсы `tests` выполняются **по порядку**; при первом провале, runtime-ошибке или timeout дальнейшие кейсы **не** запускаются.
 
-`reset` (только `javascript` / `sqlite`) — очистка среды перед **каждым** элементом `tests` (включая первый). У `regex` полей `setup` / `reset` нет.
+`reset` (только `javascript` / `sqlite`) — очистка среды перед **каждым** элементом `tests` (включая первый), если поле задано и не пустое; **отсутствие или пустая строка** — no-op. У `regex` полей `setup` / `reset` нет.
 
 **Подготовка (один раз на прогон):**
 
-- **JavaScript:** две изолированные среды — код пользователя и эталон: `setup` (только подготовка к выполнению решения, **без** проверочных данных), затем загрузка `starterCode` / `referenceSolution`. Каждый **`argsGenerator`** — самодостаточная строка с **полным** выражением функции без параметров (например `"() => [2, 3]"`); движок **не** дописывает обёртку. Вызов — в **отдельной изолированной** среде на каждый кейс (без `setup`/`reset` шага, без starter/reference).
+- **JavaScript:** две изолированные среды — код пользователя и эталон: `setup` (подготовка к выполнению решения; **не** класть проверочные данные в `setup` — авторская конвенция, не проверяется при импорте), затем загрузка `starterCode` / `referenceSolution`. Каждый **`argsGenerator`** — самодостаточная строка с **полным** выражением функции без параметров (например `"() => [2, 3]"`); движок **не** дописывает обёртку. Вызов — в **отдельной изолированной** среде на каждый кейс (без `setup`/`reset` шага, без starter/reference).
 - **SQLite:** две среды, `setup` + load starter/reference.
 - **Regex:** только паттерны и `tests`.
 
 **На каждый элемент `tests`:**
 
 1. **JavaScript:** evaluate `argsGenerator` → массив аргументов (≤ 20 элементов, только JSON-совместимые значения); иначе ошибка кейса и стоп. Затем `reset` в средах пользователя и эталона (если задан и не пустой), вызов `functionName(...args)` с **одним и тем же** сгенерированным массивом.
-2. **SQLite:** `reset` (обе среды), `tests[i].seed`, выполнение и сравнение.
-3. **Regex:** выполнение и сравнение.
+2. **SQLite:** `reset` в обеих средах (no-op, если не задан или пустой), `tests[i].seed`, выполнение и сравнение.
+3. **Regex:** `RegExp.test(input)` у паттерна пользователя и эталона на одном `input`; успех, если оба boolean **совпадают**.
 4. При fail / runtime error / timeout — стоп (fail-fast).
 
 | Тип | Сравнение | Прочее |
 |-----|-----------|--------|
 | `javascript` | возврат `functionName(...args)` — JSON-совместимые значения; структурное сравнение | `setup`/`reset`; `{ "argsGenerator": "…" }`; `functionName`; `timeoutMs` |
 | `sqlite` | строки результата; порядок при `orderMatters: true`, иначе multiset | DDL `setup`; `reset`; `{ "seed": … }`; `orderMatters`; `timeoutMs` |
-| `regex` | `RegExp.test(input)` | `{ "input": string }`; `timeoutMs` |
+| `regex` | `RegExp.test(input)` user vs reference — одинаковый boolean | `{ "input": string }`; `timeoutMs` |
 
 ```json
 {
@@ -210,10 +211,10 @@ Inline SVG (SMIL/CSS и т.п.); рендер **без санитизации** 
 2. Валидация **import**-Zod ([course-import.schema.json](./schemas/course-import.schema.json)).
 3. **Нормализация** (pure): отсутствующий `schemaVersion` → `1`; отсутствующие `courseId` / `moduleId` / `stepId` → `crypto.randomUUID()`; переданные ID сохраняются.
 4. Валидация **канонического** Zod ([course.schema.json](./schemas/course.schema.json)).
-5. Semantic rules: уникальность всех ID в документе; quiz indices; практика — `tests`, `timeoutMs`, у JS — `argsGenerator`, `reset` без seed-данных; у JS `setup` не для таблиц кейсов.
+5. Semantic rules: уникальность всех ID в документе; quiz indices; практика — `tests`, `timeoutMs`, у JS — `argsGenerator`; у JS/SQLite — `reset` не должен содержать seed-данные кейсов (SQL `INSERT`/`seed` только в `tests[].seed`).
 6. Успех — сохранение **канонического** JSON в IndexedDB.
 
-При ошибках — **список всех** проблем (JSON parse, import Zod, normalize, canonical Zod, semantic) **под полем импорта**; курс не сохраняется.
+При ошибках — **все проблемы достигнутого этапа** (JSON parse → import Zod → normalize → canonical Zod → semantic) **под полем импорта**; после сбоя этапа следующие шаги не выполняются; курс не сохраняется.
 
 **Create / replace:** без `courseId` во входе — всегда **новый** курс (новые UUID на шаге нормализации). Диалог «заменить» — только если во **входе** указан `courseId`, он уже есть в хранилище; замена удаляет прогресс курса. Повторный импорт того же текста без ID снова создаёт новый курс (MVP).
 
@@ -232,7 +233,7 @@ Inline SVG (SMIL/CSS и т.п.); рендер **без санитизации** 
 
 ### Курсы
 
-Список карточек: **название**, **прогресс** (число модулей и сколько модулей полностью пройдено), кнопка **Пройти** → экран **модулей** этого курса. На карточках модулей — то же (название, прогресс по шагам модуля, **Пройти**).
+Список карточек: **название**, **прогресс** (число модулей и сколько модулей полностью пройдено), кнопка **Пройти** → экран **модулей** этого курса, **Удалить** с подтверждением (курс + весь прогресс, одна транзакция). На карточках модулей — то же (название, прогресс по шагам модуля, **Пройти**).
 
 **Пройти** у модуля → **плеер** на **первом непройденном** шаге; если все шаги `completed` — с **первого** шага модуля.
 

@@ -6,7 +6,7 @@
 
 ## Цель
 
-Route-scoped service/page logic: load course + progress, open **first incomplete** step (else step 0), dispatch commands to engines, persist via **vt-14**, expose state for UI (vt-20–23).
+Route-scoped service/page logic: load course (**vt-12**) + progress (**vt-14**), **first incomplete** via **vt-13**, dispatch to engines, persist via **vt-14**; **player shell** с outlet для step UI (vt-21–23), без дублирования orchestration в step-компонентах.
 
 ## Требования
 
@@ -17,7 +17,7 @@ Route-scoped service/page logic: load course + progress, open **first incomplete
 
 ## Технические заметки
 
-- Зависимости: **vt-4–vt-10**, **vt-14**, **vt-16** (routes).
+- Зависимости: **vt-4–vt-10**, **vt-12**, **vt-13**, **vt-14**, **vt-16** (routes).
 - Components не вызы Worker напрямую.
 
 ## План работ

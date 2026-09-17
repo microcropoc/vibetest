@@ -6,7 +6,7 @@
 
 ## Цель
 
-Page loads bundled `course-import.schema.json`, displays pretty-printed JSON; no hand-maintained duplicate text.
+Page loads bundled `public/schemas/course-import.schema.json`, displays pretty-printed JSON; no hand-maintained duplicate text.
 
 ## Требования
 

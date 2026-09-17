@@ -11,7 +11,7 @@ SQL Worker runner + оркестрация; движок на **vt-3**; срав
 ## Требования
 
 - `$defs/sqliteContent` включая обязательные `orderMatters` и **`timeoutMs`**.
-- Порядок: load/setup в средах → на кейс reset → seed → execute starter vs reference; **стоп на первом** fail/error/timeout.
+- Порядок: load/setup в средах → на кейс **reset** (no-op, если поле отсутствует или пустое) → seed → execute starter vs reference; **стоп на первом** fail/error/timeout.
 - Таймаут и SQL-ошибки → fail; retry через vt-3.
 - Только **vt-7** wrapper для Worker.
 - Тесты: один/два seed, wrong query, `orderMatters` true/false.

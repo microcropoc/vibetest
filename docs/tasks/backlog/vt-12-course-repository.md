@@ -12,12 +12,13 @@
 
 - API возвращает domain `Course` (parsed), не raw unknown без parse на границе read.
 - Replace = upsert по `courseId`.
-- Delete course + all progress atomically.
+- Delete course + all progress atomically (вызов **vt-14** `deleteAllByCourseId` внутри транзакции Dexie, без дублирования SQL).
+- Replace import (vt-15): upsert course only; progress wipe — ответственность ImportService через vt-14.
 - Тесты с in-memory/fake IndexedDB.
 
 ## Технические заметки
 
-- Зависимость: **vt-11**.
+- Зависимости: **vt-11**, **vt-14** (для delete cascade; можно stub до vt-14, но DoD delete — после vt-14).
 - `providedIn: 'root'` или storage module pattern по convention проекта.
 
 ## План работ

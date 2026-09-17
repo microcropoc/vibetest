@@ -6,30 +6,33 @@
 
 ## Цель
 
-Repository в `storage/`: get/put по ключу шага, list by course, **`deleteAllByCourseId(courseId)`** (единый API для vt-12 delete/replace и vt-15 replace); маппинг row ↔ domain progress types из **vt-3** / **vt-13**.
+Repository в `storage/`: get/put по ключу шага, list by course, **`deleteAllByCourseId(courseId)`** — публичный API для vt-15 replace и UI delete; внутри вызывает **тот же storage helper**, что и `CourseRepository.delete` (**vt-12**), без дублирования Dexie-запроса.
 
 ## Требования
 
 - Ключ `${courseId}::${moduleId}::${stepId}`.
 - Поля: `not-started` | `in-progress` | `completed`, draft payload по типу (discriminated), `lastCheckFailed`.
 - Parse rows at boundary (`unknown` → typed).
+- `deleteAllByCourseId` — обёртка над helper из vt-12 (можно вызывать отдельно от delete course, напр. import replace).
 - Тесты storage.
 
 ## Технические заметки
 
-- Зависимости: **vt-11**, **vt-13**.
+- Зависимости: **vt-11**, **vt-12** (helper), **vt-13** (domain types для mapping).
+- **Не** создавать второй bulk-delete query.
 
 ## План работ
 
 - [ ] ProgressRepository
-- [ ] Integration with Dexie schema
+- [ ] `deleteAllByCourseId` → reuse vt-12 helper
 - [ ] Tests
 - [ ] `ng test --watch=false` зелёный
 
 ## Критерии готовности (Definition of Done)
 
 - [ ] CRUD прогресса соответствует спецификации
+- [ ] Bulk delete не дублирует vt-12
 
 ## Вне рамок задачи
 
-- Player UI, orchestration
+- Player UI, orchestration, delete course row (vt-12)

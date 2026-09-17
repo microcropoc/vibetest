@@ -29,7 +29,7 @@
 | vt-11 | [dexie-schema-migrations](tasks/backlog/vt-11-dexie-schema-migrations.md) | vt-2 |
 | vt-12 | [course-repository](tasks/backlog/vt-12-course-repository.md) | vt-11 |
 | vt-13 | [progress-domain](tasks/backlog/vt-13-progress-domain.md) | vt-3 |
-| vt-14 | [progress-repository](tasks/backlog/vt-14-progress-repository.md) | vt-11, vt-13 |
+| vt-14 | [progress-repository](tasks/backlog/vt-14-progress-repository.md) | vt-11, vt-12, vt-13 |
 | vt-15 | [course-import-service](tasks/backlog/vt-15-course-import-service.md) | vt-2, vt-12, vt-14 |
 | vt-16 | [app-shell-routes](tasks/backlog/vt-16-app-shell-routes.md) | vt-1 |
 | vt-17 | [course-list-page](tasks/backlog/vt-17-course-list-page.md) | vt-12, vt-13, vt-14, vt-16 |
@@ -44,7 +44,7 @@
 | vt-26 | [info-schema-page](tasks/backlog/vt-26-info-schema-page.md) | vt-2, vt-16 |
 | vt-27 | [pwa-offline](tasks/backlog/vt-27-pwa-offline.md) | vt-16, vt-23 |
 
-**Параллельно после vt-3:** vt-4–vt-6, vt-7, vt-13; после vt-7: vt-8–vt-10; после vt-11: vt-12 и vt-13 (если ещё не готов); **vt-14** только после vt-11 **и** vt-13; vt-16 — отдельная ветка после vt-1.
+**Параллельно после vt-3:** vt-4–vt-6, vt-7, vt-13; после vt-7: vt-8–vt-10; после vt-11: **vt-12** (строго до vt-14); vt-13 параллельно с vt-11+; **vt-14** после vt-11, vt-12 **и** vt-13; vt-16 — отдельная ветка после vt-1.
 
 ## Решения и допущения
 
@@ -57,6 +57,7 @@
 - Две схемы: **course-import** (ввод, ID опциональны) → normalize → **course** (канон в IndexedDB).
 - Импорт: все ошибки **достигнутого этапа** под формой; без `courseId` — всегда новый курс; replace только при переданном существующем `courseId`.
 - Bundled schemas: `public/schemas/`.
+- Каскадное удаление progress: storage helper в **vt-12**; **vt-14** `deleteAllByCourseId` — обёртка, не обратная зависимость.
 - **Инфо:** показывать import-схему.
 - Контент курса доверенный: markdown/SVG **без** санитизации в MVP.
 - Плеер: навигация **touch** (кнопки + индикаторы); **`completed`** не снимается при неудачном повторе.

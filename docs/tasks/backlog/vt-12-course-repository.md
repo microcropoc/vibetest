@@ -6,32 +6,35 @@
 
 ## Цель
 
-Сервис/repository в `storage/`: list, get by `courseId`, put/replace, delete; при delete — одна транзакция с удалением всего `stepProgress` курса (координация с progress repo или inline в storage — без дублирования логики).
+Сервис/repository в `storage/`: list, get by `courseId`, put/replace, delete; при delete — одна транзакция с удалением всего `stepProgress` курса.
 
 ## Требования
 
 - API возвращает domain `Course` (parsed), не raw unknown без parse на границе read.
-- Replace = upsert по `courseId`.
-- Delete course + all progress atomically (вызов **vt-14** `deleteAllByCourseId` внутри транзакции Dexie, без дублирования SQL).
-- Replace import (vt-15): upsert course only; progress wipe — ответственность ImportService через vt-14.
-- Тесты с in-memory/fake IndexedDB.
+- Replace = upsert по `courseId` (только документ курса; прогресс не трогать).
+- **Storage helper** (pure query в `storage/`, создаётся в этой задаче): удаление всех строк `stepProgress` по `courseId` — для использования в транзакции и переиспользования в **vt-14**.
+- `CourseRepository.delete(courseId)`: одна Dexie-транзакция — helper (progress) + delete course row.
+- Replace import (vt-15): upsert course only; progress wipe — через **vt-14** (который вызывает тот же helper).
+- Тесты с in-memory/fake IndexedDB (delete cascade включая helper).
 
 ## Технические заметки
 
-- Зависимости: **vt-11**, **vt-14** (для delete cascade; можно stub до vt-14, но DoD delete — после vt-14).
+- Зависимость: **vt-11** только.
+- Helper экспортировать из `storage/` (не из domain); **vt-14** не является зависимостью vt-12.
 - `providedIn: 'root'` или storage module pattern по convention проекта.
 
 ## План работ
 
-- [ ] CourseRepository queries
-- [ ] Delete + progress cascade (transaction)
+- [ ] `deleteStepProgressByCourseId` (или аналог) в `storage/`
+- [ ] CourseRepository queries + delete transaction
 - [ ] Tests
 - [ ] `ng test --watch=false` зелёный
 
 ## Критерии готовности (Definition of Done)
 
 - [ ] Транзакционное удаление как в спецификации
+- [ ] Helper задокументирован в `REPORT.md` для vt-14
 
 ## Вне рамок задачи
 
-- Import UI, progress domain aggregates (vt-13)
+- Import UI, progress domain aggregates (vt-13), ProgressRepository CRUD (vt-14)

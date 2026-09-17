@@ -15,7 +15,7 @@
 - Generated-файлы помечены/лежат в отдельном каталоге; **не редактировать вручную**.
 - `parseCourse(unknown): Course` и `isCourse(v): v is Course` — тонкие обёртки над Zod (`parse` / `safeParse`), рядом с доменом `courses/`.
 - Тесты: минимум один валидный фрагмент курса; невалидные кейсы (лишние поля, неверный `type`, битый UUID); smoke, что generated-схема актуальна (checksum/fixture или CI-check после `generate:*`).
-- **Semantic validation** поверх Zod (отдельные pure functions): уникальность `courseId`/`moduleId`/`stepId` в документе; у quiz — каждый `correctIndices[i] < options.length` (схема уже задаёт `uniqueItems` на индексы).
+- **Semantic validation** поверх Zod (отдельные pure functions): уникальность `courseId`/`moduleId`/`stepId` в документе; у quiz — каждый `correctIndices[i] < options.length` (схема уже задаёт `uniqueItems` на индексы); у практики — непустой `tests`, поля кейса по `type` (JS: **`argsGenerator`**, не `args`), `reset` без seed-данных; **`schemaVersion` ≠ 1** — отклонение (Zod `const: 1` + явное сообщение при необходимости).
 
 ## Технические заметки
 

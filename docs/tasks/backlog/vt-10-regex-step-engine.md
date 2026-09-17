@@ -2,7 +2,7 @@
 
 ## Контекст
 
-Практика regex через Worker (**vt-7**): паттерны в starter/reference, `RegExp.test(input)` на кейс; `setup` — `""` по схеме.
+Практика regex через Worker (**vt-7**): паттерны в starter/reference, `RegExp.test(input)` на кейс; **без** `setup`/`reset` (только `timeoutMs` + `tests`).
 
 ## Цель
 
@@ -10,10 +10,10 @@ Regex Worker runner + оркестрация; boolean compare user vs reference 
 
 ## Требования
 
-- `$defs/regexContent`.
-- Каждый кейс: одинаковый boolean test у user и reference → OK.
-- Таймаут через vt-7; retry через vt-3.
-- Тесты: match/mismatch, invalid pattern, multiple inputs.
+- `$defs/regexContent` с обязательным **`timeoutMs`**.
+- Кейсы по порядку; одинаковый boolean test user vs reference; **стоп на первом** fail/error/timeout.
+- Таймаут **`timeoutMs`** через vt-7; retry через vt-3.
+- Тесты: match/mismatch, invalid pattern, early stop после первого fail.
 
 ## Технические заметки
 

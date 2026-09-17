@@ -2,19 +2,18 @@
 
 ## Контекст
 
-Плеер: квадратики шагов, Назад/Далее/Выход, клавиши, **Повторить**; приоритет цветов из спецификации.
+Плеер: квадратики шагов (tap/клик), Назад/Далее/Выход, **Повторить**; приоритет цветов из спецификации; **mobile/touch-first**, без горячих клавиш стрелок.
 
 ## Цель
 
-Dumb/smart split: step indicator bar, footer nav, keyboard handlers; binds to orchestrator **vt-19**.
+Dumb/smart split: step indicator bar, footer nav (кнопки); binds to orchestrator **vt-19**.
 
 ## Требования
 
 - Клик по квадратику → jump step (orchestrator).
 - Last step: «Выход» вместо «Далее» → modules.
-- Keyboard forward/back.
 - Indicator colors via vt-13 `stepIndicatorState`.
-- a11y: focus, labels on indicators.
+- a11y: labels on indicators/touch targets (без keyboard shortcuts навигации по шагам).
 
 ## Технические заметки
 
@@ -23,7 +22,6 @@ Dumb/smart split: step indicator bar, footer nav, keyboard handlers; binds to or
 ## План работ
 
 - [ ] StepIndicatorComponent, PlayerNavComponent
-- [ ] Keyboard listener (host/page)
 - [ ] Component tests + whenStable
 - [ ] `ng test --watch=false` зелёный
 

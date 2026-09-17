@@ -12,7 +12,8 @@ Shared practice shell + thin adapters for three types; calls orchestrator/engine
 
 - Reuse one editor area (textarea MVP OK).
 - Run triggers engine via vt-19.
-- Show per-test or summary results from engine.
+- Show results from engine (fail-fast: после первого провала — итог без «прогона всех»).
+- Отображать timeout/error; лимит из `timeoutMs` content (через engine/vt-7).
 - `@defer` for heavy parts if needed.
 - Tests for component states (mock orchestrator).
 

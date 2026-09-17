@@ -11,7 +11,7 @@ Route-scoped service/page logic: load course + progress, open **first incomplete
 ## Требования
 
 - Зависимости engines: theory, quiz, svg, javascript, sqlite, regex (vt-4–vt-10).
-- Save on transitions; retry, complete, run practice.
+- Save on transitions; retry, complete, run practice; **retry не снимает `completed`**, если шаг уже был успешно пройден.
 - `providers` on player route (state dies with route).
 - Unit tests orchestration with fake engines/repos.
 
@@ -34,4 +34,4 @@ Route-scoped service/page logic: load course + progress, open **first incomplete
 
 ## Вне рамок задачи
 
-- Step visual components (vt-20–23), keyboard UI (vt-20)
+- Step visual components (vt-20–23), navigation UI (vt-20, touch-only)

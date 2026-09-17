@@ -6,7 +6,7 @@
 
 ## Цель
 
-Page wired to **vt-15** ImportService: paste clipboard, show validation errors, confirm replace when `courseId` exists.
+Page wired to **vt-15** ImportService: paste clipboard, **вывести под формой все** ошибки валидации/parse/semantic, confirm replace when `courseId` exists.
 
 ## Требования
 

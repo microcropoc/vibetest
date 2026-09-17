@@ -10,9 +10,11 @@
 
 ## Требования
 
-- Structured errors (validation vs parse vs duplicate policy).
+- **Собрать все ошибки** (JSON parse, Zod, semantic) в один список для UI; не останавливаться на первой.
+- Structured errors (validation vs parse vs duplicate policy); unsupported `schemaVersion` всегда reject.
 - Replace flow: delete progress + upsert course (reuse vt-12 transaction semantics).
 - Cancel path без записи.
+- Zod отклоняет устаревший JS `{ "args": … }`; semantic — непустой `argsGenerator` на JS-кейсах.
 - Тесты: valid import, invalid JSON, semantic fail, replace removes progress.
 - Без clipboard и textarea (vt-24).
 

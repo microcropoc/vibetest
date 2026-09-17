@@ -2,7 +2,7 @@
 
 ## Контекст
 
-Практика JS: Worker (через **vt-7**), `setup`/`reset`, тесты с `args`. Спецификация: две изолированные среды, код загружается один раз, на кейс — reset и вызов `functionName(...args)`.
+Практика JS: Worker (через **vt-7**), `setup`/`reset`, тесты с **`argsGenerator`**. Спецификация: две среды user/reference + **отдельная изолированная** evaluate-среда на каждый кейс; `setup` без проверочных данных; на кейс — evaluate self-contained `argsGenerator` → reset user/ref → `functionName(...args)`.
 
 ## Цель
 
@@ -10,11 +10,11 @@ Worker runner для JS + оркестрация прогона; движок ш
 
 ## Требования
 
-- `$defs/javascriptContent`; порядок: подготовка `setup` + load starter/reference в двух средах → на каждый кейс `reset` → вызов и сравнение.
+- `$defs/javascriptContent` включая обязательный **`timeoutMs`** и **`argsGenerator`** (полная функция `() => …` на кейс); порядок: `setup` + load starter/reference в user/ref → на кейс: evaluate `argsGenerator` в изолированной среде → validate JSON args array → `reset` user/ref → вызов и сравнение; **стоп на первом** fail/error/timeout.
 - Результат — **только JSON-совместимые** значения; структурное сравнение (зафиксировать правила для `undefined`/`NaN` в `REPORT.md` — по умолчанию только JSON types).
 - `functionName` обязателен.
-- Таймаут через **vt-7** wrapper.
-- Тесты: все кейсы OK, один fail, timeout, неверный код.
+- Таймаут: **`timeoutMs`** через **vt-7** wrapper.
+- Тесты: все кейсы OK, fail-fast, timeout, неверный код, invalid generator / non-array result, self-contained generators per test.
 
 ## Технические заметки
 

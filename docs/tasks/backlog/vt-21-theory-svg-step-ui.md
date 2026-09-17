@@ -2,18 +2,18 @@
 
 ## Контекст
 
-Display-шаги: markdown (theory) и inline SVG (svg) с санитизацией MVP.
+Display-шаги: markdown (theory) и inline SVG (svg); контент курса **доверенный**, без санитизации в MVP.
 
 ## Цель
 
-Dumb step components + sanitizer для SVG (no `<script>`, no external URL loads per spec); markdown render for theory; wired from player shell **vt-19**.
+Dumb step components: markdown render for theory; inline SVG as trusted HTML/SVG; wired from player shell **vt-19**.
 
 ## Требования
 
 - Theory: render `content` string as markdown (library choice in REPORT).
-- SVG: render sanitized inline SVG; optional caption/description.
+- SVG: render inline SVG from `content`; optional caption/description.
 - `@defer` or lazy import if bundle heavy.
-- Tests: sanitizer strips/blocks forbidden patterns; theory renders sample.
+- Tests: theory/svg render sample content (no sanitizer tests).
 
 ## Технические заметки
 
@@ -22,13 +22,13 @@ Dumb step components + sanitizer для SVG (no `<script>`, no external URL load
 ## План работ
 
 - [ ] Markdown step component
-- [ ] Svg step + sanitizer pure fn tests
+- [ ] Svg step component
 - [ ] Player outlet switching by type
 - [ ] `ng test --watch=false` зелёный
 
 ## Критерии готовности (Definition of Done)
 
-- [ ] SVG MVP security rules из спецификации
+- [ ] Trusted markdown/SVG render по спецификации (без sanitizer)
 
 ## Вне рамок задачи
 

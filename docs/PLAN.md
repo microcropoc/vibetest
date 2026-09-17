@@ -52,6 +52,11 @@
 - JSON Schema draft **2020-12**; Zod generated.
 - Dexie только в `storage/`; domain не импортирует Dexie.
 - Worker — только через `execution/` wrapper.
+- Практика: обязательный **`timeoutMs`** (100–30000); кейсы **fail-fast**; regex **без** `setup`/`reset`.
+- JavaScript: **`argsGenerator`** — самодостаточная `() => …` на кейс; `setup` без проверочных данных; evaluate в изолированной среде.
+- Импорт: **все** ошибки под формой; `schemaVersion` только `1`.
+- Контент курса доверенный: markdown/SVG **без** санитизации в MVP.
+- Плеер: навигация **touch** (кнопки + индикаторы); **`completed`** не снимается при неудачном повторе.
 
 ## Заметки
 

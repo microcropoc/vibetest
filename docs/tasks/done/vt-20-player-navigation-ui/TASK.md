@@ -22,13 +22,13 @@ Dumb/smart split: step indicator bar, footer nav (кнопки); binds to orches
 
 ## План работ
 
-- [ ] StepIndicatorComponent, PlayerNavComponent (incl. Повторить)
-- [ ] Component tests + whenStable
-- [ ] `ng test --watch=false` зелёный
+- [x] StepIndicatorComponent, PlayerNavComponent (incl. Повторить)
+- [x] Component tests + whenStable
+- [x] `ng test --watch=false` зелёный
 
 ## Критерии готовности (Definition of Done)
 
-- [ ] Навигация и индикаторы по спецификации
+- [x] Навигация и индикаторы по спецификации
 
 ## Вне рамок задачи
 

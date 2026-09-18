@@ -62,5 +62,7 @@ describe('PlayerPage', () => {
     const root = fixture.nativeElement as HTMLElement;
     expect(orchestrator.courseTitle()).toBe(course.title);
     expect(root.textContent).toContain(course.modules[0]!.title);
+    expect(root.querySelector('.step-indicator-bar')).toBeTruthy();
+    expect(root.querySelector('.player-nav')).toBeTruthy();
   });
 });

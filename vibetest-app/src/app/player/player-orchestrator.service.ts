@@ -35,8 +35,8 @@ export class PlayerOrchestratorService {
   private readonly progress = inject(ProgressRepository);
   private readonly execution = inject(ExecutionWorkerWrapperService);
 
-  private courseId = '';
-  private moduleId = '';
+  readonly sessionCourseId = signal('');
+  readonly sessionModuleId = signal('');
 
   readonly loading = signal(true);
   readonly notFound = signal(false);
@@ -60,11 +60,21 @@ export class PlayerOrchestratorService {
     return this.snapshotsByStepId()[step.stepId];
   });
 
+  readonly isFirstStep = computed(() => this.currentStepIndex() <= 0);
+
+  readonly isLastStep = computed(() => {
+    const steps = this.steps();
+    if (steps.length === 0) {
+      return false;
+    }
+    return this.currentStepIndex() >= steps.length - 1;
+  });
+
   async load(courseId: string, moduleId: string): Promise<void> {
     this.loading.set(true);
     this.notFound.set(false);
-    this.courseId = courseId;
-    this.moduleId = moduleId;
+    this.sessionCourseId.set(courseId);
+    this.sessionModuleId.set(moduleId);
 
     const course = await this.courses.get(courseId);
     const module = course?.modules.find((item) => item.moduleId === moduleId);
@@ -94,6 +104,27 @@ export class PlayerOrchestratorService {
     }
     const clamped = Math.min(Math.max(index, 0), steps.length - 1);
     this.currentStepIndex.set(clamped);
+  }
+
+  goBack(): void {
+    this.selectStep(this.currentStepIndex() - 1);
+  }
+
+  async goNext(): Promise<void> {
+    const step = this.currentStep();
+    const index = this.currentStepIndex();
+    const steps = this.steps();
+    if (!step || index >= steps.length - 1) {
+      return;
+    }
+    if (step.type === 'theory' || step.type === 'svg') {
+      await this.dispatch({ kind: 'advance' });
+    }
+    this.selectStep(index + 1);
+  }
+
+  async retry(): Promise<void> {
+    await this.dispatch({ kind: 'retry' });
   }
 
   async dispatch(command: PlayerStepCommand): Promise<void> {
@@ -155,8 +186,8 @@ export class PlayerOrchestratorService {
   private async persistStepSnapshot(step: Step, snapshot: StepProgressSnapshot): Promise<void> {
     await this.progress.put(
       {
-        courseId: this.courseId,
-        moduleId: this.moduleId,
+        courseId: this.sessionCourseId(),
+        moduleId: this.sessionModuleId(),
         stepId: step.stepId,
       },
       snapshot,
@@ -168,6 +199,8 @@ export class PlayerOrchestratorService {
   }
 
   private resetSession(): void {
+    this.sessionCourseId.set('');
+    this.sessionModuleId.set('');
     this.courseTitle.set('');
     this.moduleTitle.set('');
     this.steps.set([]);

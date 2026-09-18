@@ -1,0 +1,19 @@
+<nav class="step-indicator-bar" aria-label="Шаги модуля">
+  <ul class="step-indicator-bar__list">
+    @for (item of items(); track item.stepId) {
+      <li class="step-indicator-bar__item">
+        <button
+          type="button"
+          class="step-indicator-bar__square"
+          [class.step-indicator-bar__square--current]="item.state === 'current'"
+          [class.step-indicator-bar__square--failed]="item.state === 'failed'"
+          [class.step-indicator-bar__square--completed]="item.state === 'completed'"
+          [class.step-indicator-bar__square--untouched]="item.state === 'untouched'"
+          [attr.aria-label]="item.label"
+          [attr.aria-current]="item.state === 'current' ? 'step' : null"
+          (click)="onSelect(item.index)"
+        ></button>
+      </li>
+    }
+  </ul>
+</nav>

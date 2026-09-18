@@ -4,11 +4,22 @@
   } @else if (orchestrator.notFound()) {
     <p class="player-page__status">Курс или модуль не найден.</p>
   } @else {
+    <app-step-indicator-bar [items]="indicatorItems()" (stepSelected)="onStepSelected($event)" />
+
     <app-player-shell
       [courseTitle]="orchestrator.courseTitle()"
       [moduleTitle]="orchestrator.moduleTitle()"
       [step]="orchestrator.currentStep()"
       [snapshot]="orchestrator.currentSnapshot()"
+    />
+
+    <app-player-nav
+      [canGoBack]="!orchestrator.isFirstStep()"
+      [isLastStep]="orchestrator.isLastStep()"
+      (back)="onBack()"
+      (next)="onNext()"
+      (exit)="onExit()"
+      (retry)="onRetry()"
     />
   }
 </section>

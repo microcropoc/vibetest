@@ -54,6 +54,35 @@ describe('PlayerOrchestratorService', () => {
     expect(orchestrator.currentStep()?.stepId).toBe(FIXTURE_STEP_QUIZ_ID);
   });
 
+  describe('with empty progress', () => {
+    beforeEach(async () => {
+      TestBed.overrideProvider(ProgressRepository, {
+        useValue: {
+          listByCourseId: vi.fn().mockResolvedValue([]),
+          put: vi.fn().mockResolvedValue(undefined),
+        },
+      });
+    });
+
+    it('goNext completes theory step and moves to quiz', async () => {
+      const orchestrator = TestBed.inject(PlayerOrchestratorService);
+      await orchestrator.load(FIXTURE_COURSE_ID, FIXTURE_MODULE_ID);
+      expect(orchestrator.currentStep()?.stepId).toBe(FIXTURE_STEP_THEORY_ID);
+      await orchestrator.goNext();
+      expect(orchestrator.currentStep()?.stepId).toBe(FIXTURE_STEP_QUIZ_ID);
+      expect(orchestrator.snapshotsByStepId()[FIXTURE_STEP_THEORY_ID]?.status).toBe('completed');
+    });
+  });
+
+  it('retry dispatches retry command', async () => {
+    const orchestrator = TestBed.inject(PlayerOrchestratorService);
+    const progress = TestBed.inject(ProgressRepository);
+    await orchestrator.load(FIXTURE_COURSE_ID, FIXTURE_MODULE_ID);
+    await orchestrator.selectStep(1);
+    await orchestrator.retry();
+    expect(progress.put).toHaveBeenCalled();
+  });
+
   it('persists snapshot on dispatch', async () => {
     const orchestrator = TestBed.inject(PlayerOrchestratorService);
     const progress = TestBed.inject(ProgressRepository);

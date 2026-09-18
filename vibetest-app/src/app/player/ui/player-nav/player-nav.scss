@@ -1,0 +1,33 @@
+.player-nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 1.25rem;
+  padding-top: 1rem;
+  border-top: 1px solid #e0e0e0;
+}
+
+.player-nav__button {
+  border: 1px solid transparent;
+  border-radius: 4px;
+  padding: 0.5rem 1rem;
+  min-height: 2.75rem;
+  font: inherit;
+  cursor: pointer;
+}
+
+.player-nav__button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.player-nav__button--secondary {
+  background: #f0f0f0;
+  color: #333;
+}
+
+.player-nav__button--primary {
+  margin-left: auto;
+  background: #1565c0;
+  color: #fff;
+}

@@ -1,0 +1,40 @@
+<footer class="player-nav">
+  <button
+    type="button"
+    class="player-nav__button player-nav__button--secondary"
+    [disabled]="!canGoBack()"
+    aria-label="Назад"
+    (click)="onBack()"
+  >
+    Назад
+  </button>
+
+  <button
+    type="button"
+    class="player-nav__button player-nav__button--secondary"
+    aria-label="Повторить шаг"
+    (click)="onRetry()"
+  >
+    Повторить
+  </button>
+
+  @if (isLastStep()) {
+    <button
+      type="button"
+      class="player-nav__button player-nav__button--primary"
+      aria-label="Выход к модулям"
+      (click)="onPrimary()"
+    >
+      Выход
+    </button>
+  } @else {
+    <button
+      type="button"
+      class="player-nav__button player-nav__button--primary"
+      aria-label="Далее"
+      (click)="onPrimary()"
+    >
+      Далее
+    </button>
+  }
+</footer>

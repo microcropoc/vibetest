@@ -21,13 +21,13 @@ UI и плеер показывают прогресс курса/модуля, 
 
 ## План работ
 
-- [ ] Types + pure functions
-- [ ] Colocated specs
-- [ ] `ng test --watch=false` зелёный
+- [x] Types + pure functions
+- [x] Colocated specs
+- [x] `ng test --watch=false` зелёный
 
 ## Критерии готовности (Definition of Done)
 
-- [ ] Приоритет индикаторов покрыт тестами
+- [x] Приоритет индикаторов покрыт тестами
 
 ## Вне рамок задачи
 

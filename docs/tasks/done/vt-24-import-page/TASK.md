@@ -23,15 +23,15 @@ Page wired to **vt-15** ImportService: checkbox **включён по умолч
 
 ## План работ
 
-- [ ] ImportPage + form + checkbox (default on)
-- [ ] Clipboard + error display
-- [ ] Replace dialog (conditional)
-- [ ] Tests
-- [ ] `ng test --watch=false` зелёный
+- [x] ImportPage + form + checkbox (default on)
+- [x] Clipboard + error display
+- [x] Replace dialog (conditional)
+- [x] Tests
+- [x] `ng test --watch=false` зелёный
 
 ## Критерии готовности (Definition of Done)
 
-- [ ] Import flow из спецификации end-to-end с service
+- [x] Import flow из спецификации end-to-end с service
 
 ## Вне рамок задачи
 

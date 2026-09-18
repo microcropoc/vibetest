@@ -1,4 +1,67 @@
-<section class="page-placeholder">
-  <h1 class="page-placeholder__title">Импорт</h1>
-  <p class="page-placeholder__hint">Импорт JSON курса — vt-24.</p>
+<section class="import-page">
+  <h1 class="import-page__title">Импорт</h1>
+
+  <form class="import-page__form" (submit)="onSubmit($event)">
+    <label class="import-page__label">
+      <textarea
+        class="import-page__json"
+        name="courseJson"
+        aria-label="JSON курса"
+        [value]="jsonText()"
+        (input)="onJsonInput($event)"
+        autocomplete="off"
+        spellcheck="false"
+      ></textarea>
+    </label>
+
+    <label class="import-page__checkbox">
+      <input
+        type="checkbox"
+        name="regenerateIds"
+        [checked]="regenerateIds()"
+        (change)="onRegenerateIdsChange($event)"
+      />
+      Заменить все ID новыми UUID
+    </label>
+
+    <div class="import-page__actions">
+      <button type="button" class="import-page__button" (click)="onPasteFromClipboard()">
+        Взять из буфера
+      </button>
+      <button type="submit" class="import-page__button" [disabled]="importing()">
+        Импортировать
+      </button>
+    </div>
+  </form>
+
+  @if (clipboardMessage()) {
+    <p class="import-page__status import-page__status--info" role="status">
+      {{ clipboardMessage() }}
+    </p>
+  }
+
+  @if (successMessage()) {
+    <p class="import-page__status import-page__status--success" role="status">
+      {{ successMessage() }}
+    </p>
+  }
+
+  @if (issues().length > 0 && issueStage()) {
+    <div class="import-page__errors" role="alert">
+      <p class="import-page__errors-title">{{ stageHeading() }}</p>
+      <ul class="import-page__errors-list">
+        @for (issue of issues(); track issue.path + issue.message) {
+          <li class="import-page__errors-item">{{ formatIssue(issue) }}</li>
+        }
+      </ul>
+    </div>
+  }
 </section>
+
+<app-confirm-dialog
+  [open]="replaceDialogOpen()"
+  title="Заменить курс"
+  [message]="replaceDialogMessage()"
+  (confirmed)="onReplaceConfirmed()"
+  (cancelled)="onReplaceCancelled()"
+/>

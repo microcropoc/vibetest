@@ -1,0 +1,82 @@
+.import-page__title {
+  margin: 0 0 1rem;
+  font-size: 1.5rem;
+  font-weight: 600;
+}
+
+.import-page__form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.import-page__json {
+  width: 100%;
+  min-height: 12rem;
+  font-family: ui-monospace, monospace;
+  font-size: 0.875rem;
+  line-height: 1.4;
+  padding: 0.5rem;
+  box-sizing: border-box;
+}
+
+.import-page__checkbox {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  line-height: 1.4;
+  cursor: pointer;
+}
+
+.import-page__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.import-page__button {
+  padding: 0.5rem 1rem;
+  font-size: 1rem;
+  cursor: pointer;
+}
+
+.import-page__button:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.import-page__status {
+  margin: 1rem 0 0;
+  line-height: 1.5;
+}
+
+.import-page__status--success {
+  color: #0d6832;
+}
+
+.import-page__status--info {
+  color: #555;
+}
+
+.import-page__errors {
+  margin: 1rem 0 0;
+  padding: 0.75rem 1rem;
+  border: 1px solid #c62828;
+  border-radius: 4px;
+  background: #ffebee;
+}
+
+.import-page__errors-title {
+  margin: 0 0 0.5rem;
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.import-page__errors-list {
+  margin: 0;
+  padding-left: 1.25rem;
+}
+
+.import-page__errors-item {
+  margin: 0.25rem 0;
+}

@@ -1,21 +1,22 @@
-import 'fake-indexeddb/auto';
-
 import { parseCourse } from '../courses/parse-course';
 import { minimalValidCourseJson } from '../courses/__fixtures__/course-fixtures';
 
 import { deleteCourseAndProgress } from './course-progress-transaction';
 import { buildStepProgressKey } from './step-progress-key';
-import { createVibetestDb } from './vibetest-db';
+import { createTestVibetestDb, destroyTestVibetestDb } from './test-db-harness';
+import type { VibetestDb } from './vibetest-db';
 
 describe('VibetestDb', () => {
-  const dbName = `vibetest-test-${crypto.randomUUID()}`;
+  let db: VibetestDb | undefined;
 
   afterEach(async () => {
-    await createVibetestDb(dbName).delete();
+    if (db) {
+      await destroyTestVibetestDb(db);
+    }
   });
 
   it('opens and stores a course row', async () => {
-    const db = createVibetestDb(dbName);
+    db = createTestVibetestDb();
     const course = parseCourse(minimalValidCourseJson());
     await db.courses.put({ courseId: course.courseId, course });
     const loaded = await db.courses.get(course.courseId);
@@ -23,7 +24,7 @@ describe('VibetestDb', () => {
   });
 
   it('stores step progress and queries by courseId', async () => {
-    const db = createVibetestDb(dbName);
+    db = createTestVibetestDb();
     const course = parseCourse(minimalValidCourseJson());
     const moduleId = course.modules[0].moduleId;
     const stepId = course.modules[0].steps[0].stepId;
@@ -45,7 +46,7 @@ describe('VibetestDb', () => {
   });
 
   it('deleteCourseAndProgress removes course and progress together', async () => {
-    const db = createVibetestDb(dbName);
+    db = createTestVibetestDb();
     const course = parseCourse(minimalValidCourseJson());
     const moduleId = course.modules[0].moduleId;
     const stepId = course.modules[0].steps[0].stepId;

@@ -26,15 +26,15 @@
 
 ## План работ
 
-- [ ] `deleteStepProgressByCourseId` (или аналог) в `storage/`
-- [ ] CourseRepository queries + delete transaction
-- [ ] Tests
-- [ ] `ng test --watch=false` зелёный
+- [x] `deleteStepProgressByCourseId` (или аналог) в `storage/`
+- [x] CourseRepository queries + delete transaction
+- [x] Tests
+- [x] `ng test --watch=false` зелёный
 
 ## Критерии готовности (Definition of Done)
 
-- [ ] Транзакционное удаление как в спецификации
-- [ ] Helper задокументирован в `REPORT.md` для vt-14
+- [x] Транзакционное удаление как в спецификации
+- [x] Helper задокументирован в `REPORT.md` для vt-14
 
 ## Вне рамок задачи
 

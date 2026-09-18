@@ -23,15 +23,15 @@
 
 ## План работ
 
-- [ ] `TheoryStepEngine` как functions + types
-- [ ] Экспорт factory/create для theory по контракту vt-3
-- [ ] `*.spec.ts` colocated
-- [ ] `ng test --watch=false` зелёный
+- [x] `TheoryStepEngine` как functions + types
+- [x] Экспорт factory/create для theory по контракту vt-3
+- [x] `*.spec.ts` colocated
+- [x] `ng test --watch=false` зелёный
 
 ## Критерии готовности (Definition of Done)
 
-- [ ] Все требования покрыты тестами
-- [ ] Нет компонентов и TestBed для домена
+- [x] Все требования покрыты тестами
+- [x] Нет компонентов и TestBed для домена
 
 ## Вне рамок задачи
 

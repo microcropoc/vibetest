@@ -29,3 +29,11 @@ export {
 } from './step-engine-helpers';
 
 export { stubViewableStepEngine, type ViewableEngineState } from './stub-viewable-engine';
+
+export {
+  createTheoryStepEngine,
+  theoryStepEngine,
+  type TheoryEngineState,
+  type TheoryStep,
+  type TheoryStepCommand,
+} from './theory';

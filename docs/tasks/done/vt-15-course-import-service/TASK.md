@@ -25,14 +25,14 @@
 
 ## План работ
 
-- [ ] ImportService + error types + `ImportOptions`
-- [ ] Wire vt-2 parse/semantic/regenerateCourseIds (в т.ч. SQLite-only reset validator)
-- [ ] Tests
-- [ ] `ng test --watch=false` зелёный
+- [x] ImportService + error types + `ImportOptions`
+- [x] Wire vt-2 parse/semantic/regenerateCourseIds (в т.ч. SQLite-only reset validator)
+- [x] Tests
+- [x] `ng test --watch=false` зелёный
 
 ## Критерии готовности (Definition of Done)
 
-- [ ] Поведение импорта из спецификации без UI
+- [x] Поведение импорта из спецификации без UI
 
 ## Вне рамок задачи
 

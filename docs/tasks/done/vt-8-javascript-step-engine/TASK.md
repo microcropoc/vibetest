@@ -22,14 +22,14 @@ Worker runner для JS + оркестрация прогона; движок ш
 
 ## План работ
 
-- [ ] JS Worker runner + messages (extends vt-7 protocol)
-- [ ] JavaScript step engine + factory по vt-3
-- [ ] Tests with mock Worker
-- [ ] `ng test --watch=false` зелёный
+- [x] JS Worker runner + messages (extends vt-7 protocol)
+- [x] JavaScript step engine + factory по vt-3
+- [x] Tests with mock Worker
+- [x] `ng test --watch=false` зелёный
 
 ## Критерии готовности (Definition of Done)
 
-- [ ] Семантика выполнения совпадает со [SPECIFICATION.md](../../SPECIFICATION.md)
+- [x] Семантика выполнения совпадает со [SPECIFICATION.md](../../../SPECIFICATION.md)
 
 ## Вне рамок задачи
 

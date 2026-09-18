@@ -56,3 +56,16 @@ export {
   type SvgStep,
   type SvgStepCommand,
 } from './svg';
+
+export {
+  applyJavascriptPracticeResult,
+  createJavascriptStepEngine,
+  javascriptStepEngine,
+  jsonCompatibleEqual,
+  runJavascriptPractice,
+  type JavascriptEngineState,
+  type JavascriptPracticeResult,
+  type JavascriptPracticeRunnerDeps,
+  type JavascriptStep,
+  type JavascriptStepCommand,
+} from './javascript';

@@ -1,0 +1,7 @@
+<article class="module-list-card">
+  <h2 class="module-list-card__title">{{ item().title }}</h2>
+  <p class="module-list-card__progress">
+    Шаги: {{ item().completedSteps }} / {{ item().totalSteps }} пройдено
+  </p>
+  <button type="button" class="module-list-card__button" (click)="onProceed()">Пройти</button>
+</article>

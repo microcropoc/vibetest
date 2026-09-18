@@ -21,14 +21,14 @@ Page для `:courseId/modules`: карточки модулей, progress per m
 
 ## План работ
 
-- [ ] Module list page + card
-- [ ] Routing from vt-17
-- [ ] Tests
-- [ ] `ng test --watch=false` зелёный
+- [x] Module list page + card
+- [x] Routing from vt-17
+- [x] Tests
+- [x] `ng test --watch=false` зелёный
 
 ## Критерии готовности (Definition of Done)
 
-- [ ] Exit и карточки по спецификации
+- [x] Exit и карточки по спецификации
 
 ## Вне рамок задачи
 

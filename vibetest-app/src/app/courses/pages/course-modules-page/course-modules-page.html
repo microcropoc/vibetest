@@ -1,4 +1,22 @@
-<section class="page-placeholder">
-  <h1 class="page-placeholder__title">Модули курса</h1>
-  <p class="page-placeholder__hint">courseId: {{ courseId() }} — vt-18.</p>
+<section class="course-modules-page">
+  <header class="course-modules-page__header">
+    <h1 class="course-modules-page__title">{{ courseTitle() || 'Модули' }}</h1>
+    <button type="button" class="course-modules-page__exit" (click)="onExit()">Выход</button>
+  </header>
+
+  @if (loading()) {
+    <p class="course-modules-page__status">Загрузка…</p>
+  } @else if (notFound()) {
+    <p class="course-modules-page__status">Курс не найден.</p>
+  } @else if (items().length === 0) {
+    <p class="course-modules-page__status">В курсе нет модулей.</p>
+  } @else {
+    <ul class="course-modules-page__list">
+      @for (item of items(); track item.moduleId) {
+        <li class="course-modules-page__item">
+          <app-module-list-card [item]="item" (proceed)="onProceed($event)" />
+        </li>
+      }
+    </ul>
+  }
 </section>

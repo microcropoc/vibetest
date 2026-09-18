@@ -1,0 +1,45 @@
+<div class="practice-step-shell">
+  <p class="practice-step-shell__description">{{ step().content.description }}</p>
+  <p class="practice-step-shell__hint">{{ labels().hint }}</p>
+  <p class="practice-step-shell__timeout">Лимит выполнения: {{ timeoutMs() }} мс</p>
+
+  <label class="practice-step-shell__label">
+    {{ labels().editorLabel }}
+    <textarea
+      class="practice-step-shell__editor"
+      [value]="draft()"
+      [disabled]="running()"
+      rows="10"
+      spellcheck="false"
+      (input)="onDraftInput($event)"
+    ></textarea>
+  </label>
+
+  @if (running()) {
+    <p class="practice-step-shell__status" role="status">Выполнение…</p>
+  }
+
+  @if (feedback(); as result) {
+    <p
+      class="practice-step-shell__result"
+      [class.practice-step-shell__result--success]="result.kind === 'success'"
+      [class.practice-step-shell__result--error]="result.kind === 'error'"
+      role="status"
+    >
+      {{ result.message }}
+    </p>
+  } @else if (showFailure()) {
+    <p class="practice-step-shell__result practice-step-shell__result--error" role="alert">
+      Последняя проверка не пройдена. Исправьте решение или нажмите «Повторить».
+    </p>
+  }
+
+  <button
+    type="button"
+    class="practice-step-shell__run"
+    [disabled]="running()"
+    (click)="onRun()"
+  >
+    Запустить
+  </button>
+</div>

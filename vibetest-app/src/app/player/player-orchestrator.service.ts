@@ -8,6 +8,11 @@ import { stepProgressLookupFromSnapshots } from '../progress/progress-lookup';
 import { CourseRepository } from '../storage/course-repository';
 import { ProgressRepository } from '../storage/progress-repository';
 
+import {
+  practiceFailureMessage,
+  practiceSuccessMessage,
+  type PracticeFeedback,
+} from './practice-step-view';
 import type { PlayerStepCommand } from './player-step-command';
 import { applyPracticeResultToStep, reducePlayerStep } from './player-step-reducer';
 import type { StepProgressSnapshot } from './step-engine/step-progress-snapshot';
@@ -45,6 +50,8 @@ export class PlayerOrchestratorService {
   readonly steps = signal<readonly Step[]>([]);
   readonly currentStepIndex = signal(0);
   readonly snapshotsByStepId = signal<Readonly<Record<string, StepProgressSnapshot>>>({});
+  readonly practiceRunning = signal(false);
+  readonly practiceFeedback = signal<PracticeFeedback | null>(null);
 
   readonly currentStep = computed((): Step | undefined => {
     const steps = this.steps();
@@ -104,6 +111,7 @@ export class PlayerOrchestratorService {
     }
     const clamped = Math.min(Math.max(index, 0), steps.length - 1);
     this.currentStepIndex.set(clamped);
+    this.practiceFeedback.set(null);
   }
 
   goBack(): void {
@@ -124,7 +132,22 @@ export class PlayerOrchestratorService {
   }
 
   async retry(): Promise<void> {
+    this.practiceFeedback.set(null);
     await this.dispatch({ kind: 'retry' });
+  }
+
+  async setPracticeDraft(text: string): Promise<void> {
+    const step = this.currentStep();
+    if (!step) {
+      return;
+    }
+    if (step.type === 'regex') {
+      await this.dispatch({ kind: 'setDraftPattern', pattern: text });
+      return;
+    }
+    if (step.type === 'javascript' || step.type === 'sqlite') {
+      await this.dispatch({ kind: 'setDraftCode', draftCode: text });
+    }
   }
 
   async dispatch(command: PlayerStepCommand): Promise<void> {
@@ -142,45 +165,61 @@ export class PlayerOrchestratorService {
     if (!step) {
       return;
     }
-    const saved = this.snapshotsByStepId()[step.stepId];
-    const deps = {
-      wrapper: this.execution,
-      createWorker: defaultWorkerFactory,
-    };
+    this.practiceRunning.set(true);
+    this.practiceFeedback.set(null);
 
-    let result;
-    switch (step.type) {
-      case 'javascript': {
-        const state = stepEnginesByType.javascript.createInitial(step, saved);
-        result = await runJavascriptPractice(step as JavascriptStep, state.draft.draftCode, {
-          ...deps,
-          workerScriptUrl: javascriptPracticeWorkerUrl(),
-        });
-        break;
+    try {
+      const saved = this.snapshotsByStepId()[step.stepId];
+      const deps = {
+        wrapper: this.execution,
+        createWorker: defaultWorkerFactory,
+      };
+
+      let result;
+      switch (step.type) {
+        case 'javascript': {
+          const state = stepEnginesByType.javascript.createInitial(step, saved);
+          result = await runJavascriptPractice(step as JavascriptStep, state.draft.draftCode, {
+            ...deps,
+            workerScriptUrl: javascriptPracticeWorkerUrl(),
+          });
+          break;
+        }
+        case 'sqlite': {
+          const state = stepEnginesByType.sqlite.createInitial(step, saved);
+          result = await runSqlitePractice(step as SqliteStep, state.draft.draftCode, {
+            ...deps,
+            workerScriptUrl: sqlitePracticeWorkerUrl(),
+            wasmUrl: sqliteWasmAssetUrl(),
+          });
+          break;
+        }
+        case 'regex': {
+          const state = stepEnginesByType.regex.createInitial(step, saved);
+          result = await runRegexPractice(step as RegexStep, state.draft.pattern, {
+            ...deps,
+            workerScriptUrl: regexPracticeWorkerUrl(),
+          });
+          break;
+        }
+        default:
+          return;
       }
-      case 'sqlite': {
-        const state = stepEnginesByType.sqlite.createInitial(step, saved);
-        result = await runSqlitePractice(step as SqliteStep, state.draft.draftCode, {
-          ...deps,
-          workerScriptUrl: sqlitePracticeWorkerUrl(),
-          wasmUrl: sqliteWasmAssetUrl(),
+
+      const snapshot = applyPracticeResultToStep(step, saved, result);
+      await this.persistStepSnapshot(step, snapshot);
+
+      if (result.ok) {
+        this.practiceFeedback.set({ kind: 'success', message: practiceSuccessMessage() });
+      } else {
+        this.practiceFeedback.set({
+          kind: 'error',
+          message: practiceFailureMessage(result),
         });
-        break;
       }
-      case 'regex': {
-        const state = stepEnginesByType.regex.createInitial(step, saved);
-        result = await runRegexPractice(step as RegexStep, state.draft.pattern, {
-          ...deps,
-          workerScriptUrl: regexPracticeWorkerUrl(),
-        });
-        break;
-      }
-      default:
-        return;
+    } finally {
+      this.practiceRunning.set(false);
     }
-
-    const snapshot = applyPracticeResultToStep(step, saved, result);
-    await this.persistStepSnapshot(step, snapshot);
   }
 
   private async persistStepSnapshot(step: Step, snapshot: StepProgressSnapshot): Promise<void> {
@@ -206,6 +245,8 @@ export class PlayerOrchestratorService {
     this.steps.set([]);
     this.currentStepIndex.set(0);
     this.snapshotsByStepId.set({});
+    this.practiceRunning.set(false);
+    this.practiceFeedback.set(null);
   }
 }
 

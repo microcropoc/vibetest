@@ -37,7 +37,21 @@
             }
           }
           @default {
-            <p class="player-shell__placeholder">Step UI — vt-23.</p>
+            @if (isPracticeStep(currentStep)) {
+              @defer {
+                <app-practice-step-shell
+                  [step]="currentStep"
+                  [draft]="practiceDraft()"
+                  [running]="orchestrator.practiceRunning()"
+                  [feedback]="orchestrator.practiceFeedback()"
+                  [showFailure]="practiceShowFailure()"
+                  (draftChange)="onPracticeDraft($event)"
+                  (run)="onPracticeRun()"
+                />
+              } @placeholder {
+                <p class="player-shell__loading">Загрузка…</p>
+              }
+            }
           }
         }
       </article>

@@ -23,14 +23,14 @@ Shared practice shell + thin adapters for three types; calls orchestrator/engine
 
 ## План работ
 
-- [ ] PracticeStepShellComponent
-- [ ] Type-specific labels/hints
-- [ ] Tests
-- [ ] `ng test --watch=false` зелёный
+- [x] PracticeStepShellComponent
+- [x] Type-specific labels/hints
+- [x] Tests
+- [x] `ng test --watch=false` зелёный
 
 ## Критерии готовности (Definition of Done)
 
-- [ ] Три типа практики отображаются через общий shell
+- [x] Три типа практики отображаются через общий shell
 
 ## Вне рамок задачи
 

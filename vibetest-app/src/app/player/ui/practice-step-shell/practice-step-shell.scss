@@ -1,0 +1,73 @@
+.practice-step-shell__description {
+  margin: 0 0 0.75rem;
+  line-height: 1.5;
+}
+
+.practice-step-shell__hint {
+  margin: 0 0 0.5rem;
+  line-height: 1.45;
+}
+
+.practice-step-shell__timeout {
+  margin: 0 0 1rem;
+  color: #666;
+  font-size: 0.875rem;
+}
+
+.practice-step-shell__label {
+  display: block;
+  margin-bottom: 1rem;
+  font-weight: 600;
+}
+
+.practice-step-shell__editor {
+  display: block;
+  width: 100%;
+  margin-top: 0.35rem;
+  padding: 0.65rem 0.75rem;
+  font-family: ui-monospace, 'Cascadia Code', 'Consolas', monospace;
+  font-size: 0.9375rem;
+  line-height: 1.45;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  resize: vertical;
+  min-height: 8rem;
+}
+
+.practice-step-shell__status {
+  margin: 0 0 0.75rem;
+  color: #555;
+}
+
+.practice-step-shell__result {
+  margin: 0 0 0.75rem;
+  padding: 0.65rem 0.85rem;
+  border-radius: 4px;
+  line-height: 1.45;
+}
+
+.practice-step-shell__result--success {
+  background: #e8f5e9;
+  color: #1b5e20;
+}
+
+.practice-step-shell__result--error {
+  background: #ffebee;
+  color: #b71c1c;
+}
+
+.practice-step-shell__run {
+  border: 1px solid transparent;
+  border-radius: 4px;
+  padding: 0.5rem 1rem;
+  min-height: 2.75rem;
+  font: inherit;
+  cursor: pointer;
+  background: #1565c0;
+  color: #fff;
+}
+
+.practice-step-shell__run:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}

@@ -37,3 +37,14 @@ export {
   type TheoryStep,
   type TheoryStepCommand,
 } from './theory';
+
+export {
+  createQuizStepEngine,
+  quizStepEngine,
+  isValidSelection,
+  normalizeIndices,
+  quizAnswersMatch,
+  type QuizEngineState,
+  type QuizStep,
+  type QuizStepCommand,
+} from './quiz';

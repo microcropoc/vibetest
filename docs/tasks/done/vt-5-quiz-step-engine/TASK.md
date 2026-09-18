@@ -24,14 +24,14 @@ Quiz — локальная проверка ответа по `correctIndices`;
 
 ## План работ
 
-- [ ] Логика submit и normalize indices
-- [ ] Factory/create quiz по контракту vt-3
-- [ ] Тесты: single, multi, wrong, retry
-- [ ] `ng test --watch=false` зелёный
+- [x] Логика submit и normalize indices
+- [x] Factory/create quiz по контракту vt-3
+- [x] Тесты: single, multi, wrong, retry
+- [x] `ng test --watch=false` зелёный
 
 ## Критерии готовности (Definition of Done)
 
-- [ ] Поведение совпадает со [SPECIFICATION.md](../../SPECIFICATION.md) (quiz)
+- [x] Поведение совпадает со [SPECIFICATION.md](../../../SPECIFICATION.md) (quiz)
 
 ## Вне рамок задачи
 

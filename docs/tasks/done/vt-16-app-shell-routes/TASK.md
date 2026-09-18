@@ -22,16 +22,16 @@ Shell layout + `loadComponent` routes для четырёх вкладок и ne
 
 ## План работ
 
-- [ ] Layout + nav
-- [ ] `app.routes.ts` lazy wiring
-- [ ] Smoke: app boots, nav works
-- [ ] Обновить scaffold **`app.spec.ts`** (убрать проверку «Hello, vibetest-app» / welcome `h1`) под новый shell
-- [ ] `ng test --watch=false` зелёный
+- [x] Layout + nav
+- [x] `app.routes.ts` lazy wiring
+- [x] Smoke: app boots, nav works
+- [x] Обновить scaffold **`app.spec.ts`** (убрать проверку «Hello, vibetest-app» / welcome `h1`) под новый shell
+- [x] `ng test --watch=false` зелёный
 
 ## Критерии готовности (Definition of Done)
 
-- [ ] Lazy loading соблюдён
-- [ ] Четыре вкладки доступны
+- [x] Lazy loading соблюдён
+- [x] Четыре вкладки доступны
 
 ## Вне рамок задачи
 

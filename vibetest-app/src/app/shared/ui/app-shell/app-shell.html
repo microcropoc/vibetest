@@ -1,0 +1,18 @@
+<div class="app-shell">
+  <header class="app-shell__header">
+    <nav class="app-shell__nav" aria-label="Основная навигация">
+      @for (item of navItems; track item.path) {
+        <a
+          class="app-shell__link"
+          routerLinkActive="app-shell__link--active"
+          [routerLink]="item.path"
+        >
+          {{ item.label }}
+        </a>
+      }
+    </nav>
+  </header>
+  <main class="app-shell__main">
+    <router-outlet />
+  </main>
+</div>

@@ -21,14 +21,14 @@ Dumb quiz component: options binding, submit to orchestrator **vt-19** / engine 
 
 ## План работ
 
-- [ ] QuizStepComponent
-- [ ] Wire submit/retry
-- [ ] Tests
-- [ ] `ng test --watch=false` зелёный
+- [x] QuizStepComponent
+- [x] Wire submit/retry
+- [x] Tests
+- [x] `ng test --watch=false` зелёный
 
 ## Критерии готовности (Definition of Done)
 
-- [ ] UX соответствует quiz в спецификации
+- [x] UX соответствует quiz в спецификации
 
 ## Вне рамок задачи
 

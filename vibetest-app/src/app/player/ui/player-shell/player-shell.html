@@ -23,8 +23,21 @@
               <p class="player-shell__loading">Загрузка…</p>
             }
           }
+          @case ('quiz') {
+            @defer {
+              <app-quiz-step-ui
+                [step]="currentStep"
+                [selectedIndices]="quizSelectedIndices()"
+                [showFailure]="quizShowFailure()"
+                (selectionChange)="onQuizSelection($event)"
+                (submitAnswer)="onQuizSubmit()"
+              />
+            } @placeholder {
+              <p class="player-shell__loading">Загрузка…</p>
+            }
+          }
           @default {
-            <p class="player-shell__placeholder">Step UI — vt-22–23.</p>
+            <p class="player-shell__placeholder">Step UI — vt-23.</p>
           }
         }
       </article>

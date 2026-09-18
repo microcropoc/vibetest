@@ -1,0 +1,58 @@
+.quiz-step-ui__question {
+  margin: 0 0 1rem;
+  font-size: 1.0625rem;
+  line-height: 1.5;
+}
+
+.quiz-step-ui__error {
+  margin: 0 0 1rem;
+  padding: 0.65rem 0.85rem;
+  border-radius: 4px;
+  background: #ffebee;
+  color: #b71c1c;
+}
+
+.quiz-step-ui__options {
+  margin: 0 0 1rem;
+  padding: 0;
+  border: 0;
+}
+
+.quiz-step-ui__legend {
+  margin-bottom: 0.5rem;
+  font-weight: 600;
+}
+
+.quiz-step-ui__option {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+  cursor: pointer;
+}
+
+.quiz-step-ui__input {
+  margin-top: 0.2rem;
+  min-width: 1.125rem;
+  min-height: 1.125rem;
+}
+
+.quiz-step-ui__label {
+  line-height: 1.45;
+}
+
+.quiz-step-ui__submit {
+  border: 1px solid transparent;
+  border-radius: 4px;
+  padding: 0.5rem 1rem;
+  min-height: 2.75rem;
+  font: inherit;
+  cursor: pointer;
+  background: #1565c0;
+  color: #fff;
+}
+
+.quiz-step-ui__submit:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}

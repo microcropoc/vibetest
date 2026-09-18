@@ -1,0 +1,20 @@
+<section class="player-shell">
+  <header class="player-shell__header">
+    <p class="player-shell__context">{{ courseTitle() }} · {{ moduleTitle() }}</p>
+  </header>
+
+  <div class="player-shell__outlet">
+    @if (step(); as currentStep) {
+      <article class="player-shell__step">
+        <h2 class="player-shell__step-title">{{ currentStep.title }}</h2>
+        <p class="player-shell__step-meta">
+          Тип: {{ currentStep.type }}
+          @if (snapshot(); as progress) {
+            · Статус: {{ progress.status }}
+          }
+        </p>
+        <p class="player-shell__placeholder">Step UI — vt-21–23.</p>
+      </article>
+    }
+  </div>
+</section>

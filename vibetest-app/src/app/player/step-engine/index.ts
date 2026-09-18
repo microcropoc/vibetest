@@ -20,6 +20,13 @@ export { isCoreStepCommand } from './step-engine-command';
 export type { StepEngine } from './step-engine-contract';
 
 export {
+  assertRegisteredStepType,
+  isRegisteredStepType,
+  stepEnginesByType,
+  type RegisteredStepType,
+} from './step-engine-registry';
+
+export {
   applyAdvanceViewable,
   applyCheckFailure,
   applyCheckSuccess,

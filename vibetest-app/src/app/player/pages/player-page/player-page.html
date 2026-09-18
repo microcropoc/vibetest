@@ -1,6 +1,14 @@
-<section class="page-placeholder">
-  <h1 class="page-placeholder__title">Плеер</h1>
-  <p class="page-placeholder__hint">
-    courseId: {{ courseId() }}, moduleId: {{ moduleId() }} — vt-19.
-  </p>
+<section class="player-page">
+  @if (orchestrator.loading()) {
+    <p class="player-page__status">Загрузка…</p>
+  } @else if (orchestrator.notFound()) {
+    <p class="player-page__status">Курс или модуль не найден.</p>
+  } @else {
+    <app-player-shell
+      [courseTitle]="orchestrator.courseTitle()"
+      [moduleTitle]="orchestrator.moduleTitle()"
+      [step]="orchestrator.currentStep()"
+      [snapshot]="orchestrator.currentSnapshot()"
+    />
+  }
 </section>

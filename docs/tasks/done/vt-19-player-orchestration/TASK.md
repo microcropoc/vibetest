@@ -22,15 +22,15 @@ Route-scoped service/page logic: load course (**vt-12**) + progress (**vt-14**),
 
 ## План работ
 
-- [ ] Player route + scoped orchestrator
-- [ ] Engine registry by `type`
-- [ ] Progress read/write
-- [ ] Tests
-- [ ] `ng test --watch=false` зелёный
+- [x] Player route + scoped orchestrator
+- [x] Engine registry by `type`
+- [x] Progress read/write
+- [x] Tests
+- [x] `ng test --watch=false` зелёный
 
 ## Критерии готовности (Definition of Done)
 
-- [ ] First incomplete step rule из спецификации
+- [x] First incomplete step rule из спецификации
 
 ## Вне рамок задачи
 

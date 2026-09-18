@@ -23,6 +23,28 @@ const javascriptRunCaseSchema = z
   })
   .strict();
 
+const sqliteInitSchema = z
+  .object({
+    type: z.literal('sqliteInit'),
+    id: messageIdSchema,
+    wasmUrl: z.string().url(),
+    setup: z.string(),
+    userQuery: z.string(),
+    referenceQuery: z.string(),
+    orderMatters: z.boolean(),
+  })
+  .strict();
+
+const sqliteRunCaseSchema = z
+  .object({
+    type: z.literal('sqliteRunCase'),
+    id: messageIdSchema,
+    seed: z.string(),
+    userReset: z.string().optional(),
+    referenceReset: z.string().optional(),
+  })
+  .strict();
+
 export const ExecutionRequestSchema = z.discriminatedUnion('type', [
   z
     .object({
@@ -39,6 +61,8 @@ export const ExecutionRequestSchema = z.discriminatedUnion('type', [
     .strict(),
   javascriptInitSchema,
   javascriptRunCaseSchema,
+  sqliteInitSchema,
+  sqliteRunCaseSchema,
 ]);
 
 export const ExecutionResponseSchema = z.discriminatedUnion('type', [
@@ -68,6 +92,22 @@ export const ExecutionResponseSchema = z.discriminatedUnion('type', [
       pass: z.boolean(),
       userValue: z.unknown().optional(),
       referenceValue: z.unknown().optional(),
+      message: z.string().optional(),
+    })
+    .strict(),
+  z
+    .object({
+      type: z.literal('sqliteInited'),
+      id: messageIdSchema,
+    })
+    .strict(),
+  z
+    .object({
+      type: z.literal('sqliteCaseResult'),
+      id: messageIdSchema,
+      pass: z.boolean(),
+      userRows: z.array(z.string()).optional(),
+      referenceRows: z.array(z.string()).optional(),
       message: z.string().optional(),
     })
     .strict(),

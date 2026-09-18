@@ -2,7 +2,7 @@ import { parseExecutionRequest } from './execution-messages';
 
 /// <reference lib="webworker" />
 
-const ctx: DedicatedWorkerGlobalScope = self as unknown as DedicatedWorkerGlobalScope;
+declare const self: Worker;
 
 interface PracticeRuntime {
   readonly invokeUser: (args: readonly unknown[]) => unknown;
@@ -56,7 +56,7 @@ function jsonCompatibleEqual(a: unknown, b: unknown): boolean {
   return JSON.stringify(a) === JSON.stringify(b);
 }
 
-ctx.addEventListener('message', (event: MessageEvent<unknown>) => {
+self.addEventListener('message', (event: MessageEvent<unknown>) => {
   try {
     const request = parseExecutionRequest(event.data);
     switch (request.type) {
@@ -73,12 +73,12 @@ ctx.addEventListener('message', (event: MessageEvent<unknown>) => {
           applyUserReset: (reset) => user.applyReset(reset, user.recompile),
           applyReferenceReset: (reset) => reference.applyReset(reset, reference.recompile),
         };
-        ctx.postMessage({ type: 'javascriptInited', id: request.id });
+        self.postMessage({ type: 'javascriptInited', id: request.id });
         break;
       }
       case 'javascriptRunCase': {
         if (!runtime) {
-          ctx.postMessage({
+          self.postMessage({
             type: 'error',
             id: request.id,
             message: 'Worker not initialized',
@@ -91,7 +91,7 @@ ctx.addEventListener('message', (event: MessageEvent<unknown>) => {
           const userValue = runtime.invokeUser(request.args);
           const referenceValue = runtime.invokeReference(request.args);
           const pass = jsonCompatibleEqual(userValue, referenceValue);
-          ctx.postMessage({
+          self.postMessage({
             type: 'javascriptCaseResult',
             id: request.id,
             pass,
@@ -101,7 +101,7 @@ ctx.addEventListener('message', (event: MessageEvent<unknown>) => {
           });
         } catch (error: unknown) {
           const message = error instanceof Error ? error.message : 'Runtime error';
-          ctx.postMessage({
+          self.postMessage({
             type: 'javascriptCaseResult',
             id: request.id,
             pass: false,
@@ -114,7 +114,7 @@ ctx.addEventListener('message', (event: MessageEvent<unknown>) => {
         break;
     }
   } catch {
-    ctx.postMessage({
+    self.postMessage({
       type: 'error',
       id: 'unknown',
       message: 'Invalid request',

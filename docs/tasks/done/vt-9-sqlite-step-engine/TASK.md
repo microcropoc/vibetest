@@ -23,15 +23,15 @@ SQL Worker runner + оркестрация; движок на **vt-3**; срав
 
 ## План работ
 
-- [ ] sql.js + WASM asset + `locateFile` in Worker
-- [ ] SQL Worker + messages
-- [ ] Sqlite step engine + factory
-- [ ] Tests
-- [ ] `ng test --watch=false` зелёный
+- [x] sql.js + WASM asset + `locateFile` in Worker
+- [x] SQL Worker + messages
+- [x] Sqlite step engine + factory
+- [x] Tests
+- [x] `ng test --watch=false` зелёный
 
 ## Критерии готовности (Definition of Done)
 
-- [ ] `orderMatters` поведение покрыто тестами
+- [x] `orderMatters` поведение покрыто тестами
 
 ## Вне рамок задачи
 

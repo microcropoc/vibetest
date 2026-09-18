@@ -69,3 +69,18 @@ export {
   type JavascriptStep,
   type JavascriptStepCommand,
 } from './javascript';
+
+export {
+  applySqlitePracticeResult,
+  compareSqliteResultRows,
+  createSqliteStepEngine,
+  runSqlitePractice,
+  sqlitePracticeWorkerUrl,
+  sqliteStepEngine,
+  sqliteWasmAssetUrl,
+  type SqliteEngineState,
+  type SqlitePracticeResult,
+  type SqlitePracticeRunnerDeps,
+  type SqliteStep,
+  type SqliteStepCommand,
+} from './sqlite';

@@ -48,3 +48,11 @@ export {
   type QuizStep,
   type QuizStepCommand,
 } from './quiz';
+
+export {
+  createSvgStepEngine,
+  svgStepEngine,
+  type SvgEngineState,
+  type SvgStep,
+  type SvgStepCommand,
+} from './svg';

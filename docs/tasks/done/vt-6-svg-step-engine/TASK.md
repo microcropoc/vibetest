@@ -22,13 +22,13 @@
 
 ## План работ
 
-- [ ] `SvgStepEngine` + factory по контракту vt-3
-- [ ] Тесты complete/retry
-- [ ] `ng test --watch=false` зелёный
+- [x] `SvgStepEngine` + factory по контракту vt-3
+- [x] Тесты complete/retry
+- [x] `ng test --watch=false` зелёный
 
 ## Критерии готовности (Definition of Done)
 
-- [ ] Движок отделён от UI и санитизации
+- [x] Движок отделён от UI и санитизации
 
 ## Вне рамок задачи
 

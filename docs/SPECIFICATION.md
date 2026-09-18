@@ -124,20 +124,20 @@ Inline SVG (SMIL/CSS и т.п.); рендер **без санитизации** 
 
 **Подготовка (один раз на прогон):**
 
-- **JavaScript:** две изолированные среды — код пользователя и эталон: `setup` (подготовка к выполнению решения; **не** класть проверочные данные в `setup` — авторская конвенция, не проверяется при импорте), затем загрузка `starterCode` / `referenceSolution`. Каждый **`argsGenerator`** — самодостаточная строка с **полным** выражением функции без параметров (например `"() => [2, 3]"`); движок **не** дописывает обёртку. Вызов — в **отдельной изолированной** среде на каждый кейс (без `setup`/`reset` шага, без starter/reference).
+- **JavaScript:** две изолированные среды — код пользователя и эталон: `setup` (подготовка к выполнению решения; **не** класть проверочные данные в `setup` — авторская конвенция, не проверяется при импорте), затем загрузка `starterCode` / `referenceSolution`.
 - **SQLite:** две среды, `setup` + load starter/reference.
 - **Regex:** только паттерны и `tests`.
 
 **На каждый элемент `tests`:**
 
-1. **JavaScript:** evaluate `argsGenerator` → массив аргументов (≤ 20 элементов, только JSON-совместимые значения); иначе ошибка кейса и стоп. Затем `reset` в средах пользователя и эталона (если задан и не пустой), вызов `functionName(...args)` с **одним и тем же** сгенерированным массивом.
+1. **JavaScript:** `reset` в средах пользователя и эталона (если задан и не пустой), вызов `functionName(...args)` с массивом из `tests[i].args` (≤ 20 элементов, только JSON-совместимые значения) в обеих средах; сравнение возвращаемых значений.
 2. **SQLite:** `reset` в обеих средах (no-op, если не задан или пустой), `tests[i].seed`, выполнение и сравнение.
 3. **Regex:** `RegExp.test(input)` у паттерна пользователя и эталона на одном `input`; успех, если оба boolean **совпадают**.
 4. При fail / runtime error / timeout — стоп (fail-fast).
 
 | Тип | Сравнение | Прочее |
 |-----|-----------|--------|
-| `javascript` | возврат `functionName(...args)` — JSON-совместимые значения; структурное сравнение | `setup`/`reset`; `{ "argsGenerator": "…" }`; `functionName`; `timeoutMs` |
+| `javascript` | возврат `functionName(...args)` — JSON-совместимые значения; структурное сравнение | `setup`/`reset`; `{ "args": … }`; `functionName`; `timeoutMs` |
 | `sqlite` | строки результата; порядок при `orderMatters: true`, иначе multiset | DDL `setup`; `reset`; `{ "seed": … }`; `orderMatters`; `timeoutMs` |
 | `regex` | `RegExp.test(input)` user vs reference — одинаковый boolean | `{ "input": string }`; `timeoutMs` |
 
@@ -154,9 +154,9 @@ Inline SVG (SMIL/CSS и т.п.); рендер **без санитизации** 
     "functionName": "add",
     "timeoutMs": 2000,
     "tests": [
-      { "argsGenerator": "() => [2, 3]" },
-      { "argsGenerator": "() => [0, 5]" },
-      { "argsGenerator": "() => [4, 1]" }
+      { "args": [2, 3] },
+      { "args": [0, 5] },
+      { "args": [4, 1] }
     ]
   }
 }
@@ -204,7 +204,7 @@ Inline SVG (SMIL/CSS и т.п.); рендер **без санитизации** 
 
 1. Разбор JSON.
 2. Валидация Zod ([course.schema.json](./schemas/course.schema.json)).
-3. Semantic rules: уникальность всех ID в документе; quiz indices; практика — `tests`, `timeoutMs`, у JS — `argsGenerator`; у JS/SQLite — `reset` не должен содержать seed-данные кейсов (SQL `INSERT`/`seed` только в `tests[].seed`).
+3. Semantic rules: уникальность всех ID в документе; quiz indices; практика — `tests`, `timeoutMs`; у JS/SQLite — `reset` не должен содержать seed-данные кейсов (SQL `INSERT`/`seed` только в `tests[].seed`).
 4. Если включён **Заменить все ID новыми UUID** (pure): новый `courseId`, новые `moduleId` и `stepId` для всех модулей и шагов через `crypto.randomUUID()`; иначе ID из JSON сохраняются.
 5. Успех — сохранение JSON курса в IndexedDB.
 

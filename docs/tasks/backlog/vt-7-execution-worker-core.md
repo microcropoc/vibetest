@@ -12,7 +12,7 @@
 
 - Discriminated union сообщений; strict parse на границе (`unknown` → typed).
 - Timeout: вызывающий передаёт лимит из `timeoutMs` content; по истечении → terminate worker, ошибка наверх без зависания UI-потока.
-- Один публичный сервис для оркестраторов шагов (vt-8 … vt-10); протокол должен позволять vt-8 передавать ошибки evaluate **`argsGenerator`** (syntax/runtime) наверх как fail кейса.
+- Один публичный сервис для оркестраторов шагов (vt-8 … vt-10).
 - Unit-тесты протокола и wrapper с mock Worker (без TestBed для pure parse).
 - Зависимость: **vt-3** (контракт шага не обязателен для transport, но задача после core engine).
 

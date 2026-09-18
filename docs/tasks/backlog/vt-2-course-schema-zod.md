@@ -18,7 +18,7 @@
 - `parseCourse(unknown): Course` / `isCourse` — Zod по `course.schema.json`.
 - `regenerateCourseIds(course: Course): Course` (pure): новый `courseId`, новые `moduleId` и `stepId` для всех модулей и шагов через `crypto.randomUUID()`; остальное содержимое без изменений.
 - Тесты: valid course parse; invalid JSON/schema; `regenerateCourseIds` меняет все ID и сохраняет контент; smoke актуальности generated.
-- **Semantic validation** (pure, на `Course`): уникальность всех ID; quiz indices; практика (JS `argsGenerator`; JS/SQLite `reset` без SQL seed/`INSERT` — seed только в `tests[].seed`). **Не** проверять содержимое JS `setup` (авторская конвенция).
+- **Semantic validation** (pure, на `Course`): уникальность всех ID; quiz indices; практика (JS `args` — лимит массива в Zod/schema); JS/SQLite `reset` без SQL seed/`INSERT` — seed только в `tests[].seed`. **Не** проверять содержимое JS `setup` (авторская конвенция).
 
 ## Технические заметки
 

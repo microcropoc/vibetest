@@ -106,10 +106,10 @@
           "maxItems": 50,
           "items": {
             "type": "object",
-            "required": ["argsGenerator"],
+            "required": ["args"],
             "additionalProperties": false,
             "properties": {
-              "argsGenerator": { "type": "string", "minLength": 1, "maxLength": 2000 }
+              "args": { "type": "array", "maxItems": 20 }
             }
           }
         }

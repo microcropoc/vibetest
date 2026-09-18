@@ -25,7 +25,8 @@ Shell layout + `loadComponent` routes для четырёх вкладок и ne
 - [ ] Layout + nav
 - [ ] `app.routes.ts` lazy wiring
 - [ ] Smoke: app boots, nav works
-- [ ] `ng test --watch=false` зелёный (shell tests по необходимости)
+- [ ] Обновить scaffold **`app.spec.ts`** (убрать проверку «Hello, vibetest-app» / welcome `h1`) под новый shell
+- [ ] `ng test --watch=false` зелёный
 
 ## Критерии готовности (Definition of Done)
 

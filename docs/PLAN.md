@@ -39,7 +39,7 @@
 | vt-21 | [theory-svg-step-ui](tasks/backlog/vt-21-theory-svg-step-ui.md) | vt-4, vt-6, vt-19 |
 | vt-22 | [quiz-step-ui](tasks/backlog/vt-22-quiz-step-ui.md) | vt-5, vt-19 |
 | vt-23 | [practice-step-ui](tasks/backlog/vt-23-practice-step-ui.md) | vt-8–vt-10, vt-19 |
-| vt-24 | [import-page](tasks/backlog/vt-24-import-page.md) | vt-15, vt-16 |
+| vt-24 | [import-page](tasks/backlog/vt-24-import-page.md) | vt-15, vt-16, vt-17 |
 | vt-25 | [statistics-page](tasks/backlog/vt-25-statistics-page.md) | vt-12, vt-13, vt-14, vt-16 |
 | vt-26 | [info-schema-page](tasks/backlog/vt-26-info-schema-page.md) | vt-2, vt-16 |
 | vt-27 | [pwa-offline](tasks/backlog/vt-27-pwa-offline.md) | vt-16, vt-23 |

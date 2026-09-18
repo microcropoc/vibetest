@@ -11,14 +11,17 @@
 ## Требования
 
 - Bundle схемы в `public/schemas/` без расхождения с `docs/schemas/course.schema.json`.
-- Ранний spike: JSON Schema → Zod должен поддержать `if`/`then` на шагах; зафиксировать tool в `REPORT.md`.
-- Включить **`strict: true`** (и связанные флаги) в `tsconfig` приложения.
+- **Первое изменение в коде:** включить **`strict: true`** (и связанные флаги) в `tsconfig` приложения — до domain/generated кода.
+- Ранний spike: JSON Schema → Zod и `if`/`then` / `uniqueItems` на шагах; зафиксировать tool в `REPORT.md`.
+- **Fallback**, если конвертер не покрывает `if/then`: сгенерировать `$defs/*Content` + обёртки; для `Step` — ручной `z.discriminatedUnion('type', …)`; TypeScript-типы через json-schema-to-typescript (или эквивалент); **smoke** эквивалентности Zod ↔ JSON Schema через **Ajv** на общей матрице валидных/невалидных фикстур (зафиксировать в `REPORT.md`).
 - npm-скрипт (например `generate:zod`) — регенерация Zod/types.
 - Generated-файлы в отдельном каталоге; **не редактировать вручную**.
 - `parseCourse(unknown): Course` / `isCourse` — Zod по `course.schema.json`.
 - `regenerateCourseIds(course: Course): Course` (pure): новый `courseId`, новые `moduleId` и `stepId` для всех модулей и шагов через `crypto.randomUUID()`; остальное содержимое без изменений.
 - Тесты: valid course parse; invalid JSON/schema; `regenerateCourseIds` меняет все ID и сохраняет контент; smoke актуальности generated.
-- **Semantic validation** (pure, на `Course`): уникальность всех ID; quiz indices; практика (JS `args` — лимит массива в Zod/schema); JS/SQLite `reset` без SQL seed/`INSERT` — seed только в `tests[].seed`. **Не** проверять содержимое JS `setup` (авторская конвенция).
+- **Semantic validation** (pure, на `Course`): уникальность всех ID; quiz indices; практика (JS `args` — лимит в Zod/schema).
+- **SQLite `reset` only:** запрет seed-DML в строке `reset` — регистронезависимый поиск SQL-токенов с границей слова: `\bINSERT\b`, `\bINTO\b` (и при необходимости другие явно перечисленные DML-токены в `REPORT.md`); **не** применять к `javascript.reset` (JS-код: `insertAdjacentHTML` и т.п. не должны давать false positive).
+- **Не** проверять содержимое JS `setup` (авторская конвенция).
 
 ## Технические заметки
 
@@ -28,6 +31,7 @@
 
 ## План работ
 
+- [ ] Spike + fallback (Zod union / Ajv smoke)
 - [ ] Tool JSON Schema → Zod (одна схема)
 - [ ] Bundle + npm-скрипт
 - [ ] `parseCourse` / `isCourse`, `regenerateCourseIds`, semantic validation

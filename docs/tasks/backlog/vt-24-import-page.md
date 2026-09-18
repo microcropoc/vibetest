@@ -14,12 +14,12 @@ Page wired to **vt-15** ImportService: checkbox **включён по умолч
 - При включённом флажке — без replace-диалога.
 - Clipboard API with graceful deny message.
 - Import button calls service; success → navigate or toast (minimal).
-- Replace/cancel dialog per spec (только `regenerateIds: false` + existing course).
+- Replace/cancel — **переиспользовать** `ConfirmDialogComponent` из `shared/ui/` (**vt-17**); не дублировать разметку/логику диалога.
 - Lazy route under shell.
 
 ## Технические заметки
 
-- Зависимости: **vt-15**, **vt-16**.
+- Зависимости: **vt-15**, **vt-16**, **vt-17** (confirm dialog).
 
 ## План работ
 

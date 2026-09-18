@@ -19,9 +19,11 @@ SQL Worker runner + оркестрация; движок на **vt-3**; срав
 ## Технические заметки
 
 - Зависимости: **vt-7**, **vt-3**, **vt-2**.
+- **sql.js:** добавить зависимость; `.wasm` как Angular asset (`angular.json` / `public/` — зафиксировать в `REPORT.md`); в Worker — `locateFile` для загрузки WASM; smoke, что asset доступен при `ng build` / dev. Кэш SW — **vt-27**.
 
 ## План работ
 
+- [ ] sql.js + WASM asset + `locateFile` in Worker
 - [ ] SQL Worker + messages
 - [ ] Sqlite step engine + factory
 - [ ] Tests

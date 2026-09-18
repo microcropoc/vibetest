@@ -204,7 +204,7 @@ Inline SVG (SMIL/CSS и т.п.); рендер **без санитизации** 
 
 1. Разбор JSON.
 2. Валидация Zod ([course.schema.json](./schemas/course.schema.json)).
-3. Semantic rules: уникальность всех ID в документе; quiz indices; практика — `tests`, `timeoutMs`; у JS/SQLite — `reset` не должен содержать seed-данные кейсов (SQL `INSERT`/`seed` только в `tests[].seed`).
+3. Semantic rules: уникальность всех ID в документе; quiz indices; практика — `tests`, `timeoutMs`; у **SQLite** — поле `reset` не должно содержать seed-DML (проверка SQL-токенами с границей слова, напр. `\bINSERT\b`, `\bINTO\b`; seed только в `tests[].seed`); **JavaScript `reset`** этой SQL-эвристикой **не** проверяется.
 4. Если включён **Заменить все ID новыми UUID** (pure): новый `courseId`, новые `moduleId` и `stepId` для всех модулей и шагов через `crypto.randomUUID()`; иначе ID из JSON сохраняются.
 5. Успех — сохранение JSON курса в IndexedDB.
 

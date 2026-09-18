@@ -10,7 +10,8 @@ Smart page: загрузка курсов и прогресса, агрегац�
 
 ## Требования
 
-- Карточка: title, progress summary, Пройти, удалить (confirm).
+- Карточка: title, progress summary, Пройти, удалить (confirm через общий компонент).
+- Создать dumb **`ConfirmDialogComponent`** (или аналог) в `shared/ui/` — переиспользуемый confirm/cancel; покрыть тестами open/confirm/cancel.
 - Прогресс: число модулей и сколько модулей полностью пройдено (спецификация).
 - Signals + `@if` / `@for`; TestBed для page, domain mocked.
 - Route внутри shell (vt-16).
@@ -21,6 +22,7 @@ Smart page: загрузка курсов и прогресса, агрегац�
 
 ## План работ
 
+- [ ] `ConfirmDialogComponent` in `shared/ui/`
 - [ ] Course list page + dumb card component
 - [ ] Wire repositories
 - [ ] Tests behavior

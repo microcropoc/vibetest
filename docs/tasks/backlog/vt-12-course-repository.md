@@ -12,8 +12,9 @@
 
 - API возвращает domain `Course` (parsed), не raw unknown без parse на границе read.
 - Replace = upsert по `courseId` (только документ курса; прогресс не трогать).
-- **Storage helper** (pure query в `storage/`, создаётся в этой задаче): удаление всех строк `stepProgress` по `courseId` — для использования в транзакции и переиспользования в **vt-14**.
-- `CourseRepository.delete(courseId)`: одна Dexie-транзакция — helper (progress) + delete course row.
+- **Storage helper** (pure query в `storage/`, создаётся в этой задаче): удаление всех строк `stepProgress` по `courseId`. **Транзакционно-композабелен:** helper **не** открывает свою транзакцию; вызывается внутри переданного Dexie transaction context / `Table` (напр. `db.transaction('rw', [courses, stepProgress], …)`).
+- `CourseRepository.delete(courseId)`: одна внешняя транзакция — helper (progress) + delete course row.
+- Тест: replace/import-сценарий — helper внутри **внешней** транзакции вместе с `courses.put` (как vt-15).
 - Replace import (vt-15): upsert course only; progress wipe — через **vt-14** (который вызывает тот же helper).
 - Тесты с in-memory/fake IndexedDB (delete cascade включая helper).
 

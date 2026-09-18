@@ -13,7 +13,7 @@ Repository в `storage/`: get/put по ключу шага, list by course, **`d
 - Ключ `${courseId}::${moduleId}::${stepId}`.
 - Поля: `not-started` | `in-progress` | `completed`, draft payload по типу (discriminated), `lastCheckFailed`.
 - Parse rows at boundary (`unknown` → typed).
-- `deleteAllByCourseId` — обёртка над helper из vt-12 (можно вызывать отдельно от delete course, напр. import replace).
+- `deleteAllByCourseId` — обёртка над helper из vt-12; при import replace вызывается **внутри той же внешней транзакции**, что и `CourseRepository.put` (vt-15), без отдельного `transaction()` в helper.
 - Тесты storage.
 
 ## Технические заметки

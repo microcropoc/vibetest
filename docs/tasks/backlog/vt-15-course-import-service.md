@@ -13,7 +13,7 @@
 - **Собрать все ошибки достигнутого этапа** (JSON parse → Zod → semantic); после сбоя этапа следующие не выполнять; в UI — один список.
 - `schemaVersion` ≠ 1 — reject (на этапе Zod).
 - **`regenerateIds: true`:** после успешной semantic — `regenerateCourseIds`, всегда **create** (новый `courseId`); replace-диалог не нужен.
-- **`regenerateIds: false`:** ID из JSON сохраняются; **Replace** — если `courseId` уже в хранилище → в **одной** storage-транзакции: `ProgressRepository.deleteAllByCourseId` (vt-14, helper vt-12) + `CourseRepository.put` (vt-12); иначе create.
+- **`regenerateIds: false`:** ID из JSON сохраняются; **Replace** — если `courseId` уже в хранилище → **одна** `db.transaction('rw', [courses, stepProgress], …)`: composable helper (vt-12) / `ProgressRepository.deleteAllByCourseId` + `CourseRepository.put`; helper сам транзакцию не открывает; иначе create.
 - Cancel path без записи (replace отменён).
 - Сохранять JSON курса как после parse/semantic и опциональной регенерации ID.
 - Тесты: `regenerateIds` create; без регенерации — new `courseId` create; existing `courseId` replace wipes progress; invalid JSON; semantic fail.
@@ -26,7 +26,7 @@
 ## План работ
 
 - [ ] ImportService + error types + `ImportOptions`
-- [ ] Wire vt-2 parse/semantic/regenerateCourseIds
+- [ ] Wire vt-2 parse/semantic/regenerateCourseIds (в т.ч. SQLite-only reset validator)
 - [ ] Tests
 - [ ] `ng test --watch=false` зелёный
 

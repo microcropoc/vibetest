@@ -23,14 +23,14 @@
 
 ## План работ
 
-- [ ] Dexie app database class
-- [ ] Schema v1 + types для rows
-- [ ] Storage tests
-- [ ] `ng test --watch=false` зелёный
+- [x] Dexie app database class
+- [x] Schema v1 + types для rows
+- [x] Storage tests
+- [x] `ng test --watch=false` зелёный
 
 ## Критерии готовности (Definition of Done)
 
-- [ ] Схема соответствует спецификации хранилища
+- [x] Схема соответствует спецификации хранилища
 - [ ] Нет UI и repositories (vt-12)
 
 ## Вне рамок задачи

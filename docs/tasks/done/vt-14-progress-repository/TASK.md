@@ -23,15 +23,15 @@ Repository в `storage/`: get/put по ключу шага, list by course, **`d
 
 ## План работ
 
-- [ ] ProgressRepository
-- [ ] `deleteAllByCourseId` → reuse vt-12 helper
-- [ ] Tests
-- [ ] `ng test --watch=false` зелёный
+- [x] ProgressRepository
+- [x] `deleteAllByCourseId` → reuse vt-12 helper
+- [x] Tests
+- [x] `ng test --watch=false` зелёный
 
 ## Критерии готовности (Definition of Done)
 
-- [ ] CRUD прогресса соответствует спецификации
-- [ ] Bulk delete не дублирует vt-12
+- [x] CRUD прогресса соответствует спецификации
+- [x] Bulk delete не дублирует vt-12
 
 ## Вне рамок задачи
 

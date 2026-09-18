@@ -23,14 +23,14 @@
 
 ## План работ
 
-- [ ] Message types + parse helpers
-- [ ] WorkerWrapperService (timeout, terminate)
-- [ ] Mock Worker tests
-- [ ] `ng test --watch=false` зелёный
+- [x] Message types + parse helpers
+- [x] WorkerWrapperService (timeout, terminate)
+- [x] Mock Worker tests
+- [x] `ng test --watch=false` зелёный
 
 ## Критерии готовности (Definition of Done)
 
-- [ ] Компоненты могут зависеть только от wrapper, не от raw Worker API
+- [x] Компоненты могут зависеть только от wrapper, не от raw Worker API
 
 ## Вне рамок задачи
 

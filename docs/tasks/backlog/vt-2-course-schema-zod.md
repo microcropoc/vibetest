@@ -2,36 +2,35 @@
 
 ## Контекст
 
-Спецификация: [`course-import.schema.json`](../../schemas/course-import.schema.json) (ввод) и [`course.schema.json`](../../schemas/course.schema.json) (канон). Импорт и домен должны валидировать через Zod; типы — из сгенерированных схем. Сейчас в приложении этого нет.
+Спецификация: единственная [`course.schema.json`](../../schemas/course.schema.json) (обязательные `schemaVersion`, `courseId`, `moduleId`, `stepId`). Импорт и домен валидируют через Zod; типы — из сгенерированной схемы. Сейчас в приложении этого нет.
 
 ## Цель
 
-В `vibetest-app/` воспроизводимый pipeline: обе JSON Schema из репо → bundle → **консольная команда** генерации Zod + TypeScript; `parseCourseImportDraft` / `parseCourse` и `normalizeCourseImport` (pure); тесты.
+В `vibetest-app/` воспроизводимый pipeline: JSON Schema из репо → bundle → **консольная команда** генерации Zod + TypeScript; `parseCourse` / `isCourse`, pure `regenerateCourseIds`, semantic validation; тесты.
 
 ## Требования
 
-- Bundle **обеих** схем в `public/schemas/` без расхождения с `docs/schemas/`.
-- Ранний spike: выбранный JSON Schema → Zod должен поддержать external `$ref` (import → canonical) и `if`/`then` на шагах; зафиксировать tool в `REPORT.md`.
+- Bundle схемы в `public/schemas/` без расхождения с `docs/schemas/course.schema.json`.
+- Ранний spike: JSON Schema → Zod должен поддержать `if`/`then` на шагах; зафиксировать tool в `REPORT.md`.
 - Включить **`strict: true`** (и связанные флаги) в `tsconfig` приложения.
-- npm-скрипт (например `generate:zod`) — регенерация Zod/types для import + canonical.
+- npm-скрипт (например `generate:zod`) — регенерация Zod/types.
 - Generated-файлы в отдельном каталоге; **не редактировать вручную**.
-- `parseCourseImportDraft(unknown): CourseImportDraft` — import Zod.
-- `normalizeCourseImport(draft): unknown` — `schemaVersion` по умолчанию `1`; отсутствующие ID → `crypto.randomUUID()`; сохранять переданные ID.
-- `parseCourse(unknown): Course` / `isCourse` — канонический Zod (после normalize).
-- Тесты: import draft без ID; normalize → canonical parse; невалидные кейсы; smoke актуальности generated.
-- **Semantic validation** (pure, на каноническом `Course`): уникальность всех ID; quiz indices; практика (JS `argsGenerator`; JS/SQLite `reset` без SQL seed/`INSERT` — seed только в `tests[].seed`); дубликаты **предоставленных** ID на draft до normalize. **Не** проверять содержимое JS `setup` (авторская конвенция).
+- `parseCourse(unknown): Course` / `isCourse` — Zod по `course.schema.json`.
+- `regenerateCourseIds(course: Course): Course` (pure): новый `courseId`, новые `moduleId` и `stepId` для всех модулей и шагов через `crypto.randomUUID()`; остальное содержимое без изменений.
+- Тесты: valid course parse; invalid JSON/schema; `regenerateCourseIds` меняет все ID и сохраняет контент; smoke актуальности generated.
+- **Semantic validation** (pure, на `Course`): уникальность всех ID; quiz indices; практика (JS `argsGenerator`; JS/SQLite `reset` без SQL seed/`INSERT` — seed только в `tests[].seed`). **Не** проверять содержимое JS `setup` (авторская конвенция).
 
 ## Технические заметки
 
-- Домен: `courses/` (типы, parse, normalize), скрипт — `vibetest-app/tools/` или корень.
+- Домен: `courses/` (типы, parse, semantic, `regenerateCourseIds`), скрипт — `vibetest-app/tools/` или корень.
 - Strict TS, без `any`; граница `unknown` только в parse.
 - Зависимость: **vt-1**.
 
 ## План работ
 
-- [ ] Tool JSON Schema → Zod (две схемы)
+- [ ] Tool JSON Schema → Zod (одна схема)
 - [ ] Bundle + npm-скрипт
-- [ ] `parseCourseImportDraft`, `normalizeCourseImport`, `parseCourse` / `isCourse`
+- [ ] `parseCourse` / `isCourse`, `regenerateCourseIds`, semantic validation
 - [ ] Colocated `*.spec.ts` без TestBed
 - [ ] `ng test --watch=false` зелёный
 

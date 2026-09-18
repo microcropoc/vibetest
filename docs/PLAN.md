@@ -54,11 +54,12 @@
 - Worker — только через `execution/` wrapper.
 - Практика: обязательный **`timeoutMs`** (100–30000); кейсы **fail-fast**; regex **без** `setup`/`reset`.
 - JavaScript: **`argsGenerator`** — самодостаточная `() => …` на кейс; `setup` без проверочных данных; evaluate в изолированной среде.
-- Две схемы: **course-import** (ввод, ID опциональны) → normalize → **course** (канон в IndexedDB).
-- Импорт: все ошибки **достигнутого этапа** под формой; без `courseId` — всегда новый курс; replace только при переданном существующем `courseId`.
+- Одна схема: **course.schema.json** (обязательные ID); в IndexedDB — тот же формат.
+- Импорт: JSON parse → Zod → semantic → опционально `regenerateCourseIds`; флажок «Заменить все ID» **включён по умолчанию** (vt-24) → всегда новый курс; при выключенном флажке replace только если `courseId` уже в хранилище.
+- Импорт: все ошибки **достигнутого этапа** под формой.
 - Bundled schemas: `public/schemas/`.
 - Каскадное удаление progress: storage helper в **vt-12**; **vt-14** `deleteAllByCourseId` — обёртка, не обратная зависимость.
-- **Инфо:** показывать import-схему.
+- **Инфо:** показывать `course.schema.json`.
 - Контент курса доверенный: markdown/SVG **без** санитизации в MVP.
 - Плеер: навигация **touch** (кнопки + индикаторы); **`completed`** не снимается при неудачном повторе.
 

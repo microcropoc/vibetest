@@ -2,17 +2,19 @@
 
 ## Контекст
 
-Вкладка **Импорт**: textarea, **Взять из буфера**, **Импортировать**; ошибки; replace confirm.
+Вкладка **Импорт**: textarea, флажок **Заменить все ID новыми UUID**, **Взять из буфера**, **Импортировать**; ошибки; replace confirm при выключенном флажке.
 
 ## Цель
 
-Page wired to **vt-15** ImportService: paste clipboard, **вывести под формой все** ошибки; confirm replace **только** когда во входном JSON указан `courseId`, совпадающий с существующим курсом (импорт без `courseId` — без диалога replace).
+Page wired to **vt-15** ImportService: checkbox **включён по умолчанию** при каждом открытии формы; paste clipboard; **вывести под формой все** ошибки; confirm replace **только** когда флажок выключен и `courseId` из JSON совпадает с существующим курсом.
 
 ## Требования
 
+- Checkbox «Заменить все ID новыми UUID» → `importCourse(..., { regenerateIds: true|false })`.
+- При включённом флажке — без replace-диалога.
 - Clipboard API with graceful deny message.
 - Import button calls service; success → navigate or toast (minimal).
-- Replace/cancel dialog per spec.
+- Replace/cancel dialog per spec (только `regenerateIds: false` + existing course).
 - Lazy route under shell.
 
 ## Технические заметки
@@ -21,9 +23,9 @@ Page wired to **vt-15** ImportService: paste clipboard, **вывести под 
 
 ## План работ
 
-- [ ] ImportPage + form
+- [ ] ImportPage + form + checkbox (default on)
 - [ ] Clipboard + error display
-- [ ] Replace dialog
+- [ ] Replace dialog (conditional)
 - [ ] Tests
 - [ ] `ng test --watch=false` зелёный
 

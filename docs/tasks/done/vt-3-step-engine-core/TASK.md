@@ -19,21 +19,21 @@
 
 - Папка: `player/step-engine/` (core контракт и helpers); конкретные движки — `player/step-engine/<type>/` или рядом по соглашению в `REPORT.md`.
 - Общие типы состояния/черновика шага (discriminated по `type`) — **здесь**; **vt-13** использует их для read-model, **vt-14** — для persistence mapping.
-- Зависимость: **vt-2** (типы шага/курса из Zod).
+- Зависимость: **vt-2** (типы шага/курса из Zod). Спека: [`SPECIFICATION.md`](../../../SPECIFICATION.md).
 - Типы шагов из схемы; `unknown` только на границе до parse.
 
 ## План работ
 
-- [ ] Определить типы `StepEngineState`, команды, результаты
-- [ ] Реализить core reduce/transition helpers
-- [ ] Unit-тесты инвариантов и retry на mock/minimal engine states
-- [ ] `ng test --watch=false` зелёный
+- [x] Определить типы `StepEngineState`, команды, результаты
+- [x] Реализить core reduce/transition helpers
+- [x] Unit-тесты инвариантов и retry на mock/minimal engine states
+- [x] `ng test --watch=false` зелёный
 
 ## Критерии готовности (Definition of Done)
 
-- [ ] Контракт документирован в коде (кратко) и покрыт тестами
-- [ ] Нет UI, Worker, Dexie
-- [ ] Strict TS, signals не обязательны в домене
+- [x] Контракт документирован в коде (кратко) и покрыт тестами
+- [x] Нет UI, Worker, Dexie
+- [x] Strict TS, signals не обязательны в домене
 
 ## Вне рамок задачи
 

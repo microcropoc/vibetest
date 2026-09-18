@@ -16,5 +16,6 @@ export {
   EMPTY_STEP_PROGRESS,
   resolveStepProgress,
   stepProgressLookupFromMap,
+  stepProgressLookupFromSnapshots,
 } from './progress-lookup';
 export { stepIndicatorState } from './step-indicator-state';

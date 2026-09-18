@@ -1,0 +1,17 @@
+@if (open()) {
+  <div class="confirm-dialog" role="dialog" aria-modal="true" [attr.aria-label]="title()">
+    <div class="confirm-dialog__backdrop" (click)="onCancel()"></div>
+    <div class="confirm-dialog__panel">
+      <h2 class="confirm-dialog__title">{{ title() }}</h2>
+      <p class="confirm-dialog__message">{{ message() }}</p>
+      <div class="confirm-dialog__actions">
+        <button type="button" class="confirm-dialog__button confirm-dialog__button--secondary" (click)="onCancel()">
+          Отмена
+        </button>
+        <button type="button" class="confirm-dialog__button confirm-dialog__button--primary" (click)="onConfirm()">
+          Подтвердить
+        </button>
+      </div>
+    </div>
+  </div>
+}

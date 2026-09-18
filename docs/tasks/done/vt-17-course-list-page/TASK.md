@@ -22,15 +22,15 @@ Smart page: загрузка курсов и прогресса, агрегац�
 
 ## План работ
 
-- [ ] `ConfirmDialogComponent` in `shared/ui/`
-- [ ] Course list page + dumb card component
-- [ ] Wire repositories
-- [ ] Tests behavior
-- [ ] `ng test --watch=false` зелёный
+- [x] `ConfirmDialogComponent` in `shared/ui/`
+- [x] Course list page + dumb card component
+- [x] Wire repositories
+- [x] Tests behavior
+- [x] `ng test --watch=false` зелёный
 
 ## Критерии готовности (Definition of Done)
 
-- [ ] Соответствует разделу «Курсы» спецификации
+- [x] Соответствует разделу «Курсы» спецификации
 
 ## Вне рамок задачи
 

@@ -1,0 +1,14 @@
+<article class="course-list-card">
+  <h2 class="course-list-card__title">{{ item().title }}</h2>
+  <p class="course-list-card__progress">
+    Модули: {{ item().completedModules }} / {{ item().totalModules }} пройдено
+  </p>
+  <div class="course-list-card__actions">
+    <button type="button" class="course-list-card__button course-list-card__button--primary" (click)="onProceed()">
+      Пройти
+    </button>
+    <button type="button" class="course-list-card__button course-list-card__button--danger" (click)="onDelete()">
+      Удалить
+    </button>
+  </div>
+</article>

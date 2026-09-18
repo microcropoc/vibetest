@@ -1,4 +1,29 @@
-<section class="page-placeholder">
-  <h1 class="page-placeholder__title">Курсы</h1>
-  <p class="page-placeholder__hint">Список курсов — vt-17.</p>
+<section class="courses-page">
+  <h1 class="courses-page__title">Курсы</h1>
+
+  @if (loading()) {
+    <p class="courses-page__status">Загрузка…</p>
+  } @else if (items().length === 0) {
+    <p class="courses-page__empty">Курсов пока нет. Импортируйте курс на вкладке «Импорт».</p>
+  } @else {
+    <ul class="courses-page__list">
+      @for (item of items(); track item.courseId) {
+        <li class="courses-page__item">
+          <app-course-list-card
+            [item]="item"
+            (proceed)="onProceed($event)"
+            (deleteRequested)="onDeleteRequested($event)"
+          />
+        </li>
+      }
+    </ul>
+  }
 </section>
+
+<app-confirm-dialog
+  [open]="deleteDialogOpen()"
+  title="Удалить курс"
+  [message]="deleteDialogMessage()"
+  (confirmed)="onDeleteConfirmed()"
+  (cancelled)="onDeleteCancelled()"
+/>

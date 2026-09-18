@@ -1,0 +1,42 @@
+.course-list-card {
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  padding: 1rem;
+  background: #fff;
+}
+
+.course-list-card__title {
+  margin: 0 0 0.5rem;
+  font-size: 1.125rem;
+  font-weight: 600;
+}
+
+.course-list-card__progress {
+  margin: 0 0 1rem;
+  color: #555;
+}
+
+.course-list-card__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.course-list-card__button {
+  border: 1px solid transparent;
+  border-radius: 4px;
+  padding: 0.45rem 0.85rem;
+  font: inherit;
+  cursor: pointer;
+}
+
+.course-list-card__button--primary {
+  background: #1565c0;
+  color: #fff;
+}
+
+.course-list-card__button--danger {
+  background: #fff;
+  border-color: #c62828;
+  color: #c62828;
+}

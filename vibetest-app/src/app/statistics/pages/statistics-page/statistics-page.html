@@ -1,4 +1,17 @@
-<section class="page-placeholder">
-  <h1 class="page-placeholder__title">Статистика</h1>
-  <p class="page-placeholder__hint">Сводка прогресса — vt-25.</p>
+<section class="statistics-page">
+  <h1 class="statistics-page__title">Статистика</h1>
+
+  @if (loading()) {
+    <p class="statistics-page__status">Загрузка…</p>
+  } @else if (items().length === 0) {
+    <p class="statistics-page__empty">Курсов пока нет. Импортируйте курс на вкладке «Импорт».</p>
+  } @else {
+    <ul class="statistics-page__list">
+      @for (item of items(); track item.courseId) {
+        <li class="statistics-page__item">
+          <app-course-statistics-card [item]="item" />
+        </li>
+      }
+    </ul>
+  }
 </section>

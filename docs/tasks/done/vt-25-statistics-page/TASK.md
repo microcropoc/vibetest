@@ -20,14 +20,14 @@ Page loads all courses + progress aggregates via **vt-13** + repositories; read-
 
 ## План работ
 
-- [ ] StatisticsPage
-- [ ] Aggregate helpers reuse vt-13
-- [ ] Tests
-- [ ] `ng test --watch=false` зелёный
+- [x] StatisticsPage
+- [x] Aggregate helpers reuse vt-13
+- [x] Tests
+- [x] `ng test --watch=false` зелёный
 
 ## Критерии готовности (Definition of Done)
 
-- [ ] Показывает осмысленные агрегаты из stepProgress
+- [x] Показывает осмысленные агрегаты из stepProgress
 
 ## Вне рамок задачи
 

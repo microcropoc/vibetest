@@ -1,0 +1,21 @@
+.course-statistics-card {
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  padding: 1rem;
+  background: #fff;
+}
+
+.course-statistics-card__title {
+  margin: 0 0 0.5rem;
+  font-size: 1.125rem;
+  font-weight: 600;
+}
+
+.course-statistics-card__line {
+  margin: 0 0 0.35rem;
+  color: #555;
+}
+
+.course-statistics-card__line:last-child {
+  margin-bottom: 0;
+}

@@ -1,6 +1,6 @@
 import { TestBed, type ComponentFixture } from '@angular/core/testing';
 
-import { BUNDLED_COURSE_SCHEMA_URL } from '../../bundled-course-schema';
+import { bundledCourseSchemaUrl } from '../../bundled-course-schema';
 
 import { InfoPage } from './info-page';
 
@@ -39,7 +39,7 @@ describe('InfoPage', () => {
     const fixture = TestBed.createComponent(InfoPage);
     await whenPageReady(fixture);
 
-    expect(fetchMock).toHaveBeenCalledWith(BUNDLED_COURSE_SCHEMA_URL);
+    expect(fetchMock).toHaveBeenCalledWith(bundledCourseSchemaUrl());
     const pre = fixture.nativeElement.querySelector('.info-page__schema') as HTMLElement;
     expect(pre.textContent).toContain('"schemaVersion": 1');
     expect(pre.getAttribute('aria-readonly')).toBe('true');

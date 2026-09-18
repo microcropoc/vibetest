@@ -1,5 +1,5 @@
 import {
-  BUNDLED_COURSE_SCHEMA_URL,
+  bundledCourseSchemaUrl,
   loadBundledCourseSchema,
   prettyPrintJson,
 } from './bundled-course-schema';
@@ -7,6 +7,24 @@ import {
 describe('bundled-course-schema', () => {
   it('pretty-prints JSON with indentation', () => {
     expect(prettyPrintJson({ schemaVersion: 1 })).toBe('{\n  "schemaVersion": 1\n}');
+  });
+
+  it('resolves schema URL from document baseURI', () => {
+    const previousBase = document.baseURI;
+    Object.defineProperty(document, 'baseURI', {
+      configurable: true,
+      value: 'https://example.test/vibetest/',
+    });
+    try {
+      expect(bundledCourseSchemaUrl()).toBe(
+        'https://example.test/vibetest/schemas/course.schema.json',
+      );
+    } finally {
+      Object.defineProperty(document, 'baseURI', {
+        configurable: true,
+        value: previousBase,
+      });
+    }
   });
 
   it('loads schema from bundled URL', async () => {
@@ -17,7 +35,7 @@ describe('bundled-course-schema', () => {
 
     const schema = await loadBundledCourseSchema(fetchFn);
 
-    expect(fetchFn).toHaveBeenCalledWith(BUNDLED_COURSE_SCHEMA_URL);
+    expect(fetchFn).toHaveBeenCalledWith(bundledCourseSchemaUrl());
     expect(schema).toEqual({ $schema: 'https://json-schema.org/draft/2020-12/schema' });
   });
 

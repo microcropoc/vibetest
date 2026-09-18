@@ -1,5 +1,7 @@
-import { Component } from '@angular/core';
+import { Component, inject } from '@angular/core';
 import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
+
+import { PwaUpdateService } from '../../pwa/pwa-update.service';
 
 @Component({
   selector: 'app-shell',
@@ -8,6 +10,8 @@ import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
   styleUrl: './app-shell.scss',
 })
 export class AppShell {
+  protected readonly pwaUpdate = inject(PwaUpdateService);
+
   protected readonly navItems = [
     { label: 'Курсы', path: '/courses' },
     { label: 'Статистика', path: '/statistics' },

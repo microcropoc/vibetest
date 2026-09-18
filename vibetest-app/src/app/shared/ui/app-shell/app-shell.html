@@ -1,4 +1,12 @@
 <div class="app-shell">
+  @if (pwaUpdate.updateReady()) {
+    <div class="app-shell__update" role="status">
+      <span class="app-shell__update-text">Доступна новая версия приложения.</span>
+      <button type="button" class="app-shell__update-button" (click)="pwaUpdate.applyUpdate()">
+        Обновить
+      </button>
+    </div>
+  }
   <header class="app-shell__header">
     <nav class="app-shell__nav" aria-label="Основная навигация">
       @for (item of navItems; track item.path) {

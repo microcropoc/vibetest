@@ -4,6 +4,30 @@
   flex-direction: column;
 }
 
+.app-shell__update {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem 1rem;
+  padding: 0.5rem 1rem;
+  background: #fff8e1;
+  border-bottom: 1px solid #ffe082;
+}
+
+.app-shell__update-text {
+  flex: 1;
+  min-width: 12rem;
+}
+
+.app-shell__update-button {
+  padding: 0.35rem 0.85rem;
+  font: inherit;
+  cursor: pointer;
+  border: 1px solid #f9a825;
+  border-radius: 4px;
+  background: #fff;
+}
+
 .app-shell__header {
   border-bottom: 1px solid #e0e0e0;
   padding: 0.75rem 1rem;

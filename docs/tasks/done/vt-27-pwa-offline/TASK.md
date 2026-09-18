@@ -22,14 +22,14 @@ MVP offline: app shell, lazy chunks, sql.js/WASM cache; production SW via `@angu
 
 ## План работ
 
-- [ ] Add/configure PWA
-- [ ] SwUpdate hook (minimal)
-- [ ] Offline checklist in REPORT
-- [ ] `ng build` production succeeds
+- [x] Add/configure PWA
+- [x] SwUpdate hook (minimal)
+- [x] Offline checklist in REPORT
+- [x] `ng build` production succeeds
 
 ## Критерии готовности (Definition of Done)
 
-- [ ] Offline section спецификации выполнен на уровне MVP
+- [x] Offline section спецификации выполнен на уровне MVP
 
 ## Вне рамок задачи
 

@@ -45,6 +45,23 @@ const sqliteRunCaseSchema = z
   })
   .strict();
 
+const regexInitSchema = z
+  .object({
+    type: z.literal('regexInit'),
+    id: messageIdSchema,
+    userPattern: z.string(),
+    referencePattern: z.string(),
+  })
+  .strict();
+
+const regexRunCaseSchema = z
+  .object({
+    type: z.literal('regexRunCase'),
+    id: messageIdSchema,
+    input: z.string(),
+  })
+  .strict();
+
 export const ExecutionRequestSchema = z.discriminatedUnion('type', [
   z
     .object({
@@ -63,6 +80,8 @@ export const ExecutionRequestSchema = z.discriminatedUnion('type', [
   javascriptRunCaseSchema,
   sqliteInitSchema,
   sqliteRunCaseSchema,
+  regexInitSchema,
+  regexRunCaseSchema,
 ]);
 
 export const ExecutionResponseSchema = z.discriminatedUnion('type', [
@@ -108,6 +127,22 @@ export const ExecutionResponseSchema = z.discriminatedUnion('type', [
       pass: z.boolean(),
       userRows: z.array(z.string()).optional(),
       referenceRows: z.array(z.string()).optional(),
+      message: z.string().optional(),
+    })
+    .strict(),
+  z
+    .object({
+      type: z.literal('regexInited'),
+      id: messageIdSchema,
+    })
+    .strict(),
+  z
+    .object({
+      type: z.literal('regexCaseResult'),
+      id: messageIdSchema,
+      pass: z.boolean(),
+      userResult: z.boolean().optional(),
+      referenceResult: z.boolean().optional(),
       message: z.string().optional(),
     })
     .strict(),

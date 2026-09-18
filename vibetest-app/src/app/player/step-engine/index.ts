@@ -84,3 +84,18 @@ export {
   type SqliteStep,
   type SqliteStepCommand,
 } from './sqlite';
+
+export {
+  applyRegexPracticeResult,
+  compileRegexPattern,
+  createRegexStepEngine,
+  regexPracticeWorkerUrl,
+  regexStepEngine,
+  regexTestMatch,
+  runRegexPractice,
+  type RegexEngineState,
+  type RegexPracticeResult,
+  type RegexPracticeRunnerDeps,
+  type RegexStep,
+  type RegexStepCommand,
+} from './regex';

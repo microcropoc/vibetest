@@ -18,6 +18,8 @@ self.addEventListener('message', (event: MessageEvent<unknown>) => {
       case 'javascriptRunCase':
       case 'sqliteInit':
       case 'sqliteRunCase':
+      case 'regexInit':
+      case 'regexRunCase':
         self.postMessage({
           type: 'error',
           id: request.id,

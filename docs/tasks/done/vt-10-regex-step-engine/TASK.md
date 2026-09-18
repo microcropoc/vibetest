@@ -21,14 +21,14 @@ Regex Worker runner + оркестрация; boolean compare user vs reference 
 
 ## План работ
 
-- [ ] Regex worker + messages
-- [ ] Regex step engine + factory
-- [ ] Unit tests + mock Worker
-- [ ] `ng test --watch=false` зелёный
+- [x] Regex worker + messages
+- [x] Regex step engine + factory
+- [x] Unit tests + mock Worker
+- [x] `ng test --watch=false` зелёный
 
 ## Критерии готовности (Definition of Done)
 
-- [ ] Соответствие спецификации regex-практики
+- [x] Соответствие спецификации regex-практики
 
 ## Вне рамок задачи
 

@@ -20,14 +20,14 @@ Page loads bundled `public/schemas/course.schema.json`, displays pretty-printed 
 
 ## План работ
 
-- [ ] Load schema asset/json
-- [ ] InfoPage template
-- [ ] Smoke test optional
-- [ ] `ng build` includes asset
+- [x] Load schema asset/json
+- [x] InfoPage template
+- [x] Smoke test optional
+- [x] `ng build` includes asset
 
 ## Критерии готовности (Definition of Done)
 
-- [ ] Соответствует разделу «Инфо» спецификации
+- [x] Соответствует разделу «Инфо» спецификации
 
 ## Вне рамок задачи
 

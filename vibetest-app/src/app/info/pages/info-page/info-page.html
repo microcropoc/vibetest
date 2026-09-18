@@ -1,4 +1,14 @@
-<section class="page-placeholder">
-  <h1 class="page-placeholder__title">Инфо</h1>
-  <p class="page-placeholder__hint">Схема курса — vt-26.</p>
+<section class="info-page">
+  <h1 class="info-page__title">Инфо</h1>
+  <p class="info-page__hint">
+    Формат JSON курса для авторов (read-only). Источник: bundled <code>course.schema.json</code>.
+  </p>
+
+  @if (loading()) {
+    <p class="info-page__status">Загрузка схемы…</p>
+  } @else if (errorMessage()) {
+    <p class="info-page__error" role="alert">{{ errorMessage() }}</p>
+  } @else {
+    <pre class="info-page__schema" aria-readonly="true">{{ schemaText() }}</pre>
+  }
 </section>

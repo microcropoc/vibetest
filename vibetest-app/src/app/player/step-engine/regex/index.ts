@@ -1,6 +1,6 @@
 export { compileRegexPattern, regexTestMatch } from '../../../execution/regex-pattern';
 export {
-  regexPracticeWorkerUrl,
+  createRegexPracticeWorker,
   runRegexPractice,
   type RegexPracticeResult,
   type RegexPracticeRunnerDeps,

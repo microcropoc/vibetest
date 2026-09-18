@@ -87,7 +87,6 @@ describe('runRegexPractice', () => {
     const result = await runRegexPractice(regexStep, regexStep.content.starterCode, {
       wrapper,
       createWorker: () => mock as unknown as Worker,
-      workerScriptUrl: new URL('https://example.test/worker.js'),
     });
     expect(result).toEqual({ ok: true });
     expect(mock.terminated).toBe(true);
@@ -100,7 +99,6 @@ describe('runRegexPractice', () => {
     const result = await runRegexPractice(regexStep, regexStep.content.starterCode, {
       wrapper,
       createWorker: () => mock as unknown as Worker,
-      workerScriptUrl: new URL('https://example.test/worker.js'),
     });
     expect(result).toEqual({ ok: false, failedTestIndex: 0, message: 'mock fail' });
   });
@@ -112,7 +110,6 @@ describe('runRegexPractice', () => {
     const result = await runRegexPractice(regexStep, '(', {
       wrapper,
       createWorker: () => mock as unknown as Worker,
-      workerScriptUrl: new URL('https://example.test/worker.js'),
     });
     expect(result).toEqual({
       ok: false,

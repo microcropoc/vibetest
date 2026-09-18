@@ -78,7 +78,6 @@ describe('runJavascriptPractice', () => {
     const result = await runJavascriptPractice(javascriptStep, javascriptStep.content.starterCode, {
       wrapper,
       createWorker: () => mock as unknown as Worker,
-      workerScriptUrl: new URL('https://example.test/worker.js'),
     });
     expect(result).toEqual({ ok: true });
     expect(mock.terminated).toBe(true);
@@ -91,7 +90,6 @@ describe('runJavascriptPractice', () => {
     const result = await runJavascriptPractice(javascriptStep, javascriptStep.content.starterCode, {
       wrapper,
       createWorker: () => mock as unknown as Worker,
-      workerScriptUrl: new URL('https://example.test/worker.js'),
     });
     expect(result).toEqual({ ok: false, failedTestIndex: 1, message: 'mock fail' });
   });

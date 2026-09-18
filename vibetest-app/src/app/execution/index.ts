@@ -13,10 +13,6 @@ export {
   parseExecutionResponse,
 } from './execution-messages';
 
-export {
-  createModuleWorker,
-  defaultWorkerFactory,
-  type WorkerFactory,
-} from './worker-factory';
+export { type WorkerFactory } from './worker-factory';
 
 export { ExecutionWorkerWrapperService } from './execution-worker-wrapper.service';

@@ -10,12 +10,7 @@ export type SqlitePracticeResult =
 export interface SqlitePracticeRunnerDeps {
   readonly wrapper: ExecutionWorkerWrapperService;
   readonly createWorker: WorkerFactory;
-  readonly workerScriptUrl: URL;
   readonly wasmUrl: string;
-}
-
-export function sqlitePracticeWorkerUrl(): URL {
-  return new URL('../../../execution/sqlite-practice.worker.ts', import.meta.url);
 }
 
 export function sqliteWasmAssetUrl(): string {
@@ -40,7 +35,7 @@ export async function runSqlitePractice(
 ): Promise<SqlitePracticeResult> {
   const { content } = step;
   const deadlineMs = Date.now() + content.timeoutMs;
-  const worker = deps.createWorker(deps.workerScriptUrl);
+  const worker = deps.createWorker();
   const wasmUrl = deps.wasmUrl;
 
   try {

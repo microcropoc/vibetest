@@ -5,7 +5,6 @@ export {
 } from '../../../execution/sqlite-result-rows';
 export {
   runSqlitePractice,
-  sqlitePracticeWorkerUrl,
   sqliteWasmAssetUrl,
   type SqlitePracticeResult,
   type SqlitePracticeRunnerDeps,

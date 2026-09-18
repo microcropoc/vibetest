@@ -82,7 +82,6 @@ describe('runSqlitePractice', () => {
     const result = await runSqlitePractice(sqliteStep, sqliteStep.content.starterCode, {
       wrapper,
       createWorker: () => mock as unknown as Worker,
-      workerScriptUrl: new URL('https://example.test/worker.js'),
       wasmUrl: 'https://example.test/sql-wasm.wasm',
     });
     expect(result).toEqual({ ok: true });
@@ -96,7 +95,6 @@ describe('runSqlitePractice', () => {
     const result = await runSqlitePractice(sqliteStep, sqliteStep.content.starterCode, {
       wrapper,
       createWorker: () => mock as unknown as Worker,
-      workerScriptUrl: new URL('https://example.test/worker.js'),
       wasmUrl: 'https://example.test/sql-wasm.wasm',
     });
     expect(result).toEqual({ ok: false, failedTestIndex: 1, message: 'mock fail' });

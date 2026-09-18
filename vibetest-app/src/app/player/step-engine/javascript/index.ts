@@ -1,6 +1,6 @@
 export { jsonCompatibleEqual } from './json-value-equal';
 export {
-  javascriptPracticeWorkerUrl,
+  createJavascriptPracticeWorker,
   runJavascriptPractice,
   type JavascriptPracticeResult,
   type JavascriptPracticeRunnerDeps,

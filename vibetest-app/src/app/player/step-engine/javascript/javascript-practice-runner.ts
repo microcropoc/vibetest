@@ -10,11 +10,13 @@ export type JavascriptPracticeResult =
 export interface JavascriptPracticeRunnerDeps {
   readonly wrapper: ExecutionWorkerWrapperService;
   readonly createWorker: WorkerFactory;
-  readonly workerScriptUrl: URL;
 }
 
-export function javascriptPracticeWorkerUrl(): URL {
-  return new URL('../../../execution/javascript-practice.worker.ts', import.meta.url);
+/** Static worker URL in runner module for Angular worker bundling. */
+export function createJavascriptPracticeWorker(): Worker {
+  return new Worker(new URL('../../../execution/javascript-practice.worker.ts', import.meta.url), {
+    type: 'module',
+  });
 }
 
 function nextMessageId(testIndex: number, suffix: string): string {
@@ -32,7 +34,7 @@ export async function runJavascriptPractice(
 ): Promise<JavascriptPracticeResult> {
   const { content } = step;
   const deadlineMs = Date.now() + content.timeoutMs;
-  const worker = deps.createWorker(deps.workerScriptUrl);
+  const worker = deps.createWorker();
 
   try {
     const initId = nextMessageId(-1, 'init');

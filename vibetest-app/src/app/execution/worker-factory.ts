@@ -1,8 +1,2 @@
-/** Creates module Workers (see REPORT: `new URL(..., import.meta.url)` + `{ type: 'module' }`). */
-export function createModuleWorker(scriptUrl: URL): Worker {
-  return new Worker(scriptUrl, { type: 'module' });
-}
-
-export type WorkerFactory = (scriptUrl: URL) => Worker;
-
-export const defaultWorkerFactory: WorkerFactory = createModuleWorker;
+/** Zero-arg factory injected into practice runners (see runner `create*PracticeWorker` helpers). */
+export type WorkerFactory = () => Worker;

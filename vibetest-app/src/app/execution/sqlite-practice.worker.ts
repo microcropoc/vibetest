@@ -1,15 +1,14 @@
-import initSqlJs, { type Database, type SqlJsStatic } from 'sql.js';
-
 import { parseExecutionRequest } from './execution-messages';
 import { collectRowsFromExecResults, compareSqliteResultRows } from './sqlite-result-rows';
+import type { InitSqlJs, SqlJsDatabase, SqlJsStatic } from './sqlite-worker-types';
 
 /// <reference lib="webworker" />
 
 declare const self: Worker;
 
 interface SqliteRuntime {
-  readonly userDb: Database;
-  readonly referenceDb: Database;
+  readonly userDb: SqlJsDatabase;
+  readonly referenceDb: SqlJsDatabase;
   readonly userQuery: string;
   readonly referenceQuery: string;
   readonly orderMatters: boolean;
@@ -18,14 +17,22 @@ interface SqliteRuntime {
 let sqlModulePromise: Promise<SqlJsStatic> | undefined;
 let runtime: SqliteRuntime | undefined;
 
-function loadSqlModule(wasmUrl: string): Promise<SqlJsStatic> {
-  if (sqlModulePromise === undefined) {
-    sqlModulePromise = initSqlJs({ locateFile: () => wasmUrl });
-  }
-  return sqlModulePromise as Promise<SqlJsStatic>;
+function sqlWasmScriptUrl(wasmUrl: string): string {
+  return new URL('sql-wasm.js', wasmUrl).href;
 }
 
-function runOptionalSql(db: Database, sql: string | undefined): void {
+async function loadSqlModule(wasmUrl: string): Promise<SqlJsStatic> {
+  if (sqlModulePromise === undefined) {
+    const scriptUrl = sqlWasmScriptUrl(wasmUrl);
+    const module = (await import(/* @vite-ignore */ scriptUrl)) as {
+      default: InitSqlJs;
+    };
+    sqlModulePromise = module.default({ locateFile: () => wasmUrl });
+  }
+  return sqlModulePromise;
+}
+
+function runOptionalSql(db: SqlJsDatabase, sql: string | undefined): void {
   const trimmed = (sql ?? '').trim();
   if (trimmed === '') {
     return;
@@ -33,7 +40,7 @@ function runOptionalSql(db: Database, sql: string | undefined): void {
   db.exec(trimmed);
 }
 
-function queryResultRows(db: Database, sql: string): readonly string[] {
+function queryResultRows(db: SqlJsDatabase, sql: string): readonly string[] {
   const results = db.exec(sql);
   return collectRowsFromExecResults(results);
 }

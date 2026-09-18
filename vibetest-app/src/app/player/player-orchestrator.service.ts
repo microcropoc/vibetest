@@ -1,7 +1,6 @@
 import { computed, Injectable, inject, signal } from '@angular/core';
 
 import type { Step } from '../courses/course.model';
-import { defaultWorkerFactory } from '../execution/worker-factory';
 import { ExecutionWorkerWrapperService } from '../execution/execution-worker-wrapper.service';
 import { firstIncompleteStepIndex } from '../progress/progress-aggregation';
 import { stepProgressLookupFromSnapshots } from '../progress/progress-lookup';
@@ -17,18 +16,17 @@ import type { PlayerStepCommand } from './player-step-command';
 import { applyPracticeResultToStep, reducePlayerStep } from './player-step-reducer';
 import type { StepProgressSnapshot } from './step-engine/step-progress-snapshot';
 import {
-  javascriptPracticeWorkerUrl,
+  createJavascriptPracticeWorker,
   runJavascriptPractice,
   type JavascriptStep,
 } from './step-engine/javascript';
 import {
-  regexPracticeWorkerUrl,
+  createRegexPracticeWorker,
   runRegexPractice,
   type RegexStep,
 } from './step-engine/regex';
 import {
   runSqlitePractice,
-  sqlitePracticeWorkerUrl,
   sqliteWasmAssetUrl,
   type SqliteStep,
 } from './step-engine/sqlite';
@@ -170,26 +168,24 @@ export class PlayerOrchestratorService {
 
     try {
       const saved = this.snapshotsByStepId()[step.stepId];
-      const deps = {
-        wrapper: this.execution,
-        createWorker: defaultWorkerFactory,
-      };
-
       let result;
       switch (step.type) {
         case 'javascript': {
           const state = stepEnginesByType.javascript.createInitial(step, saved);
           result = await runJavascriptPractice(step as JavascriptStep, state.draft.draftCode, {
-            ...deps,
-            workerScriptUrl: javascriptPracticeWorkerUrl(),
+            wrapper: this.execution,
+            createWorker: createJavascriptPracticeWorker,
           });
           break;
         }
         case 'sqlite': {
+          const { createSqlitePracticeWorker } = await import(
+            './step-engine/sqlite/sqlite-practice-worker.bootstrap'
+          );
           const state = stepEnginesByType.sqlite.createInitial(step, saved);
           result = await runSqlitePractice(step as SqliteStep, state.draft.draftCode, {
-            ...deps,
-            workerScriptUrl: sqlitePracticeWorkerUrl(),
+            wrapper: this.execution,
+            createWorker: createSqlitePracticeWorker,
             wasmUrl: sqliteWasmAssetUrl(),
           });
           break;
@@ -197,8 +193,8 @@ export class PlayerOrchestratorService {
         case 'regex': {
           const state = stepEnginesByType.regex.createInitial(step, saved);
           result = await runRegexPractice(step as RegexStep, state.draft.pattern, {
-            ...deps,
-            workerScriptUrl: regexPracticeWorkerUrl(),
+            wrapper: this.execution,
+            createWorker: createRegexPracticeWorker,
           });
           break;
         }

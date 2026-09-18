@@ -2,7 +2,7 @@
 
 ## Контекст
 
-Спецификация: единственная [`course.schema.json`](../../schemas/course.schema.json) (обязательные `schemaVersion`, `courseId`, `moduleId`, `stepId`). Импорт и домен валидируют через Zod; типы — из сгенерированной схемы. Сейчас в приложении этого нет.
+Спецификация: единственная [`course.schema.json`](../../../schemas/course.schema.json) (обязательные `schemaVersion`, `courseId`, `moduleId`, `stepId`). Импорт и домен валидируют через Zod; типы — из сгенерированной схемы. Сейчас в приложении этого нет.
 
 ## Цель
 
@@ -31,18 +31,18 @@
 
 ## План работ
 
-- [ ] Spike + fallback (Zod union / Ajv smoke)
-- [ ] Tool JSON Schema → Zod (одна схема)
-- [ ] Bundle + npm-скрипт
-- [ ] `parseCourse` / `isCourse`, `regenerateCourseIds`, semantic validation
-- [ ] Colocated `*.spec.ts` без TestBed
-- [ ] `ng test --watch=false` зелёный
+- [x] Spike + fallback (Zod union / Ajv smoke)
+- [x] Tool JSON Schema → Zod (одна схема)
+- [x] Bundle + npm-скрипт
+- [x] `parseCourse` / `isCourse`, `regenerateCourseIds`, semantic validation
+- [x] Colocated `*.spec.ts` без TestBed
+- [x] `ng test --watch=false` зелёный
 
 ## Критерии готовности (Definition of Done)
 
-- [ ] Команда генерации в `REPORT.md`
-- [ ] Тесты зелёные
-- [ ] Соответствие [`docs/SPECIFICATION.md`](../../SPECIFICATION.md)
+- [x] Команда генерации в `REPORT.md`
+- [x] Тесты зелёные
+- [x] Соответствие [`docs/SPECIFICATION.md`](../../../SPECIFICATION.md)
 
 ## Вне рамок задачи
 

@@ -1,0 +1,170 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://vibetest.app/schemas/course.schema.json",
+  "title": "VibeTest Course",
+  "type": "object",
+  "required": ["schemaVersion", "courseId", "title", "description", "modules"],
+  "additionalProperties": false,
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "courseId": { "$ref": "#/$defs/uuid" },
+    "title": { "type": "string", "minLength": 1, "maxLength": 120 },
+    "description": { "type": "string", "minLength": 1, "maxLength": 2000 },
+    "modules": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 100,
+      "items": { "$ref": "#/$defs/module" }
+    }
+  },
+  "$defs": {
+    "uuid": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+    },
+    "module": {
+      "type": "object",
+      "required": ["moduleId", "title", "steps"],
+      "additionalProperties": false,
+      "properties": {
+        "moduleId": { "$ref": "#/$defs/uuid" },
+        "title": { "type": "string", "minLength": 1, "maxLength": 120 },
+        "steps": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 200,
+          "items": { "$ref": "#/$defs/step" }
+        }
+      }
+    },
+    "step": {
+      "type": "object",
+      "required": ["stepId", "type", "title", "content"],
+      "additionalProperties": false,
+      "properties": {
+        "stepId": { "$ref": "#/$defs/uuid" },
+        "type": { "enum": ["theory", "svg", "quiz", "javascript", "sqlite", "regex"] },
+        "title": { "type": "string", "minLength": 1, "maxLength": 200 },
+        "content": true
+      },
+      "allOf": [
+        { "if": { "properties": { "type": { "const": "theory" } } }, "then": { "properties": { "content": { "$ref": "#/$defs/theoryContent" } } } },
+        { "if": { "properties": { "type": { "const": "svg" } } }, "then": { "properties": { "content": { "$ref": "#/$defs/svgContent" } } } },
+        { "if": { "properties": { "type": { "const": "quiz" } } }, "then": { "properties": { "content": { "$ref": "#/$defs/quizContent" } } } },
+        { "if": { "properties": { "type": { "const": "javascript" } } }, "then": { "properties": { "content": { "$ref": "#/$defs/javascriptContent" } } } },
+        { "if": { "properties": { "type": { "const": "sqlite" } } }, "then": { "properties": { "content": { "$ref": "#/$defs/sqliteContent" } } } },
+        { "if": { "properties": { "type": { "const": "regex" } } }, "then": { "properties": { "content": { "$ref": "#/$defs/regexContent" } } } }
+      ]
+    },
+    "theoryContent": { "type": "string", "minLength": 1, "maxLength": 20000 },
+    "svgContent": {
+      "type": "object",
+      "required": ["svg"],
+      "additionalProperties": false,
+      "properties": {
+        "svg": { "type": "string", "minLength": 1, "maxLength": 50000 },
+        "caption": { "type": "string", "maxLength": 300 },
+        "description": { "type": "string", "maxLength": 2000 }
+      }
+    },
+    "quizContent": {
+      "type": "object",
+      "required": ["question", "options", "correctIndices"],
+      "additionalProperties": false,
+      "properties": {
+        "question": { "type": "string", "minLength": 1, "maxLength": 1000 },
+        "options": {
+          "type": "array",
+          "minItems": 2,
+          "maxItems": 10,
+          "items": { "type": "string", "minLength": 1, "maxLength": 300 }
+        },
+        "correctIndices": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 10,
+          "uniqueItems": true,
+          "items": { "type": "integer", "minimum": 0 }
+        }
+      }
+    },
+    "javascriptContent": {
+      "type": "object",
+      "required": ["description", "starterCode", "referenceSolution", "setup", "functionName", "timeoutMs", "tests"],
+      "additionalProperties": false,
+      "properties": {
+        "description": { "type": "string", "minLength": 1, "maxLength": 5000 },
+        "starterCode": { "type": "string", "maxLength": 20000 },
+        "referenceSolution": { "type": "string", "minLength": 1, "maxLength": 20000 },
+        "setup": { "type": "string", "maxLength": 20000 },
+        "reset": { "type": "string", "maxLength": 20000 },
+        "functionName": { "type": "string", "minLength": 1, "maxLength": 100 },
+        "timeoutMs": { "type": "integer", "minimum": 100, "maximum": 30000 },
+        "tests": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 50,
+          "items": {
+            "type": "object",
+            "required": ["args"],
+            "additionalProperties": false,
+            "properties": {
+              "args": { "type": "array", "maxItems": 20 }
+            }
+          }
+        }
+      }
+    },
+    "sqliteContent": {
+      "type": "object",
+      "required": ["description", "starterCode", "referenceSolution", "setup", "orderMatters", "timeoutMs", "tests"],
+      "additionalProperties": false,
+      "properties": {
+        "description": { "type": "string", "minLength": 1, "maxLength": 5000 },
+        "starterCode": { "type": "string", "maxLength": 20000 },
+        "referenceSolution": { "type": "string", "minLength": 1, "maxLength": 20000 },
+        "setup": { "type": "string", "maxLength": 20000 },
+        "reset": { "type": "string", "maxLength": 20000 },
+        "orderMatters": { "type": "boolean" },
+        "timeoutMs": { "type": "integer", "minimum": 100, "maximum": 30000 },
+        "tests": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 50,
+          "items": {
+            "type": "object",
+            "required": ["seed"],
+            "additionalProperties": false,
+            "properties": {
+              "seed": { "type": "string", "maxLength": 5000 }
+            }
+          }
+        }
+      }
+    },
+    "regexContent": {
+      "type": "object",
+      "required": ["description", "starterCode", "referenceSolution", "timeoutMs", "tests"],
+      "additionalProperties": false,
+      "properties": {
+        "description": { "type": "string", "minLength": 1, "maxLength": 5000 },
+        "starterCode": { "type": "string", "maxLength": 2000 },
+        "referenceSolution": { "type": "string", "minLength": 1, "maxLength": 2000 },
+        "timeoutMs": { "type": "integer", "minimum": 100, "maximum": 30000 },
+        "tests": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 50,
+          "items": {
+            "type": "object",
+            "required": ["input"],
+            "additionalProperties": false,
+            "properties": {
+              "input": { "type": "string", "maxLength": 2000 }
+            }
+          }
+        }
+      }
+    }
+  }
+}

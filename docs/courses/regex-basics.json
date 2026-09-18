@@ -1,0 +1,131 @@
+{
+  "schemaVersion": 1,
+  "courseId": "a8b9c6d5-1f7e-4a4b-9d3e-2f0a1b9c8d01",
+  "title": "Regex: основы",
+  "description": "Мини-курс по регулярным выражениям: якоря, классы символов, квантификаторы. Теория, SVG, quiz и практика паттернов.",
+  "modules": [
+    {
+      "moduleId": "a8b9c6d5-1f7e-4a4b-9d3e-2f0a1b9c8d11",
+      "title": "Якоря и цифры",
+      "steps": [
+        {
+          "stepId": "a8b9c6d5-1f7e-4a4b-9d3e-2f0a1b9c8d21",
+          "type": "theory",
+          "title": "Что такое regex",
+          "content": "## Регулярное выражение\n\n**Regex** описывает **шаблон** строки. В JavaScript:\n\n```javascript\n/^\\d+$/.test('123'); // true\n/^\\d+$/.test('12a'); // false\n```\n\nПолезные символы:\n\n| Шаблон | Смысл |\n|--------|--------|\n| `^` | начало строки |\n| `$` | конец строки |\n| `\\d` | цифра 0–9 |\n| `+` | один или более раз |\n| `*` | ноль или более |\n\n**`^\\d+$`** — строка целиком из одной или нескольких цифр.\n\nВ практике вы вводите **только паттерн** (без слэшей и флагов): как в `new RegExp(pattern)`."
+        },
+        {
+          "stepId": "a8b9c6d5-1f7e-4a4b-9d3e-2f0a1b9c8d22",
+          "type": "svg",
+          "title": "Схема: ^ и $",
+          "content": {
+            "description": "Паттерн должен «накрыть» всю строку от начала до конца.",
+            "caption": "Строка «42» и шаблон ^\\d+$",
+            "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 200 50\" width=\"100%\" role=\"img\" aria-label=\"Якоря regex\"><text x=\"12\" y=\"32\" font-size=\"18\" font-family=\"ui-monospace, monospace\" fill=\"#333\">4 2</text><line x1=\"8\" y1=\"38\" x2=\"48\" y2=\"38\" stroke=\"#1565c0\" stroke-width=\"2\"/><text x=\"8\" y=\"48\" font-size=\"8\" fill=\"#1565c0\">^</text><text x=\"42\" y=\"48\" font-size=\"8\" fill=\"#1565c0\">$</text><rect x=\"70\" y=\"12\" width=\"120\" height=\"28\" rx=\"4\" fill=\"#fff9c4\" stroke=\"#f9a825\"/><text x=\"130\" y=\"30\" text-anchor=\"middle\" font-size=\"10\" font-family=\"ui-monospace, monospace\" fill=\"#333\">^\\d+$</text></svg>"
+          }
+        },
+        {
+          "stepId": "a8b9c6d5-1f7e-4a4b-9d3e-2f0a1b9c8d23",
+          "type": "quiz",
+          "title": "Тест: якоря",
+          "content": {
+            "question": "Что делает символ `^` в начале паттерна?",
+            "options": [
+              "Конец строки",
+              "Начало строки",
+              "Любой символ",
+              "Пробел"
+            ],
+            "correctIndices": [1]
+          }
+        },
+        {
+          "stepId": "a8b9c6d5-1f7e-4a4b-9d3e-2f0a1b9c8d24",
+          "type": "regex",
+          "title": "Практика: только цифры",
+          "content": {
+            "description": "Напишите паттерн: строка **целиком** состоит из одной или более цифр.",
+            "starterCode": "^\\d$",
+            "referenceSolution": "^\\d+$",
+            "timeoutMs": 2000,
+            "tests": [
+              { "input": "0" },
+              { "input": "12345" },
+              { "input": "12a" },
+              { "input": "abc" }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "moduleId": "a8b9c6d5-1f7e-4a4b-9d3e-2f0a1b9c8d12",
+      "title": "Буквы и классы",
+      "steps": [
+        {
+          "stepId": "a8b9c6d5-1f7e-4a4b-9d3e-2f0a1b9c8d31",
+          "type": "theory",
+          "title": "[A-Za-z] и {n,m}",
+          "content": "## Класс символов\n\n```text\n[A-Za-z]+   — одна или более латинских букв\n[0-9]       — одна цифра (аналог \\d)\n```\n\n**Квантификатор `{2,4}`** — от 2 до 4 повторений предыдущего фрагмента.\n\nПример: **`^[A-Za-z]{2,4}$`** — строка из 2–4 букв без пробелов.\n\nПроверка в приложении: для каждого `input` сравнивается результат **`RegExp.test(input)`** вашего паттерна и эталона — они должны **совпасть** (оба `true` или оба `false`)."
+        },
+        {
+          "stepId": "a8b9c6d5-1f7e-4a4b-9d3e-2f0a1b9c8d32",
+          "type": "svg",
+          "title": "Схема: класс [A-Za-z]",
+          "content": {
+            "caption": "Короткие коды из букв",
+            "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 180 55\" width=\"100%\" role=\"img\" aria-label=\"Класс символов\"><text x=\"10\" y=\"22\" font-size=\"9\" fill=\"#555\">match:</text><text x=\"10\" y=\"40\" font-family=\"ui-monospace, monospace\" font-size=\"14\" fill=\"#2e7d32\">OK</text><text x=\"50\" y=\"40\" font-family=\"ui-monospace, monospace\" font-size=\"14\" fill=\"#2e7d32\">abc</text><text x=\"10\" y=\"52\" font-family=\"ui-monospace, monospace\" font-size=\"14\" fill=\"#c62828\">NO: a1</text><rect x=\"95\" y=\"8\" width=\"78\" height=\"38\" rx=\"4\" fill=\"#e8f5e9\" stroke=\"#2e7d32\"/><text x=\"134\" y=\"28\" text-anchor=\"middle\" font-size=\"9\" font-family=\"ui-monospace, monospace\" fill=\"#333\">^[A-Za-z]{2,4}$</text></svg>"
+          }
+        },
+        {
+          "stepId": "a8b9c6d5-1f7e-4a4b-9d3e-2f0a1b9c8d33",
+          "type": "quiz",
+          "title": "Тест: \\d и +",
+          "content": {
+            "question": "Чему эквивалентно `\\d+`?",
+            "options": [
+              "Ровно одна цифра",
+              "Одна или более цифр подряд",
+              "Любой символ",
+              "Только пробелы"
+            ],
+            "correctIndices": [1]
+          }
+        },
+        {
+          "stepId": "a8b9c6d5-1f7e-4a4b-9d3e-2f0a1b9c8d34",
+          "type": "regex",
+          "title": "Практика: 2–4 буквы",
+          "content": {
+            "description": "Паттерн для строки из **2–4** латинских букв (A–Z, a–z), без других символов.",
+            "starterCode": "^[A-Za-z]+$",
+            "referenceSolution": "^[A-Za-z]{2,4}$",
+            "timeoutMs": 2000,
+            "tests": [
+              { "input": "ab" },
+              { "input": "Test" },
+              { "input": "a" },
+              { "input": "toolong" },
+              { "input": "x1" }
+            ]
+          }
+        },
+        {
+          "stepId": "a8b9c6d5-1f7e-4a4b-9d3e-2f0a1b9c8d35",
+          "type": "quiz",
+          "title": "Итоговый тест",
+          "content": {
+            "question": "Как в этом курсе проверяется regex-практика?",
+            "options": [
+              "Сравнивается текст совпадения (match group)",
+              "Сравнивается boolean результат test() у user и эталона на каждом input",
+              "Паттерн компилируется на сервере",
+              "Нужно 100% совпадение паттерна строкой с эталоном"
+            ],
+            "correctIndices": [1]
+          }
+        }
+      ]
+    }
+  ]
+}

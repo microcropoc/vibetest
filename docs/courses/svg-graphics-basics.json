@@ -1,0 +1,106 @@
+{
+  "schemaVersion": 1,
+  "courseId": "d5f9a3b2-8c4e-4a7f-ad2b-3e9f6a1b2c01",
+  "title": "SVG-графика: основы",
+  "description": "Мини-курс по векторной графике: координаты, фигуры, атрибуты fill и stroke. Теория, интерактивные SVG-шаги и quiz.",
+  "modules": [
+    {
+      "moduleId": "d5f9a3b2-8c4e-4a7f-ad2b-3e9f6a1b2c11",
+      "title": "Холст и viewBox",
+      "steps": [
+        {
+          "stepId": "d5f9a3b2-8c4e-4a7f-ad2b-3e9f6a1b2c21",
+          "type": "theory",
+          "title": "Что такое SVG",
+          "content": "## SVG (Scalable Vector Graphics)\n\n**SVG** — формат **векторной** графики в XML. Картинка описывается фигурами и путями, а не сеткой пикселей, поэтому масштабируется без «мыла».\n\nКорневой элемент:\n\n```xml\n<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\">\n  …\n</svg>\n```\n\n- **`viewBox=\"minX minY width height\"`** — система координат внутри холста. Часто `0 0 100 100`: слева направo X, сверху вниз Y.\n- **`width` / `height`** на `<svg>` задают размер на странице (можно в px или процентах).\n\nНа следующем шаге — простая сцена: круг и подпись."
+        },
+        {
+          "stepId": "d5f9a3b2-8c4e-4a7f-ad2b-3e9f6a1b2c22",
+          "type": "svg",
+          "title": "Круг на холсте",
+          "content": {
+            "description": "Круг с центром в (50, 50) и радиусом 30. Ось X растёт вправо, Y — вниз.",
+            "caption": "viewBox=\"0 0 100 100\", элемент `<circle>`",
+            "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\" width=\"100%\" role=\"img\" aria-label=\"Синий круг\"><rect width=\"100\" height=\"100\" fill=\"#f5f5f5\"/><circle cx=\"50\" cy=\"50\" r=\"30\" fill=\"#1565c0\"/><line x1=\"50\" y1=\"50\" x2=\"80\" y2=\"50\" stroke=\"#333\" stroke-width=\"1\" stroke-dasharray=\"3 2\"/><line x1=\"50\" y1=\"50\" x2=\"50\" y2=\"80\" stroke=\"#333\" stroke-width=\"1\" stroke-dasharray=\"3 2\"/><text x=\"82\" y=\"52\" font-size=\"6\" fill=\"#333\">x</text><text x=\"52\" y=\"78\" font-size=\"6\" fill=\"#333\">y</text><text x=\"50\" y=\"18\" text-anchor=\"middle\" font-size=\"7\" fill=\"#333\">cx=50 cy=50 r=30</text></svg>"
+          }
+        },
+        {
+          "stepId": "d5f9a3b2-8c4e-4a7f-ad2b-3e9f6a1b2c23",
+          "type": "quiz",
+          "title": "Тест: viewBox",
+          "content": {
+            "question": "Что задаёт атрибут viewBox=\"0 0 100 100\"?",
+            "options": [
+              "Только цвет фона",
+              "Логическую систему координат (ширину и высоту области отрисовки)",
+              "Толщину обводки по умолчанию",
+              "Список слоёв в Photoshop"
+            ],
+            "correctIndices": [1]
+          }
+        }
+      ]
+    },
+    {
+      "moduleId": "d5f9a3b2-8c4e-4a7f-ad2b-3e9f6a1b2c12",
+      "title": "Фигуры и стиль",
+      "steps": [
+        {
+          "stepId": "d5f9a3b2-8c4e-4a7f-ad2b-3e9f6a1b2c31",
+          "type": "theory",
+          "title": "rect, line, fill, stroke",
+          "content": "## Базовые примитивы\n\n| Элемент | Назначение |\n|---------|------------|\n| `<rect x y width height>` | Прямоугольник |\n| `<circle cx cy r>` | Круг |\n| `<line x1 y1 x2 y2>` | Отрезок |\n| `<path d=\"…\">` | Произвольный контур |\n\n**Стили:**\n\n- **`fill`** — заливка (`none` — без заливки).\n- **`stroke`** — цвет обводки.\n- **`stroke-width`** — толщина линии.\n\nПорядок элементов в SVG важен: **ниже в разметке — «ближе к зрителю»** (рисуется поверх)."
+        },
+        {
+          "stepId": "d5f9a3b2-8c4e-4a7f-ad2b-3e9f6a1b2c32",
+          "type": "svg",
+          "title": "Слои: rect + line + path",
+          "content": {
+            "description": "Жёлтый прямоугольник под синим треугольником; красная диагональ поверх. Обратите внимание на порядок тегов.",
+            "caption": "fill, stroke и порядок отрисовки",
+            "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 120 80\" width=\"100%\" role=\"img\" aria-label=\"Композиция из rect, path и line\"><rect x=\"10\" y=\"15\" width=\"70\" height=\"50\" fill=\"#fff59d\" stroke=\"#f9a825\" stroke-width=\"2\"/><path d=\"M 25 60 L 65 60 L 45 25 Z\" fill=\"#42a5f5\" stroke=\"#1565c0\" stroke-width=\"2\"/><line x1=\"10\" y1=\"15\" x2=\"80\" y2=\"65\" stroke=\"#c62828\" stroke-width=\"3\" stroke-linecap=\"round\"/><text x=\"90\" y=\"40\" font-size=\"8\" fill=\"#555\">1. rect</text><text x=\"90\" y=\"50\" font-size=\"8\" fill=\"#555\">2. path</text><text x=\"90\" y=\"60\" font-size=\"8\" fill=\"#555\">3. line</text></svg>"
+          }
+        },
+        {
+          "stepId": "d5f9a3b2-8c4e-4a7f-ad2b-3e9f6a1b2c33",
+          "type": "quiz",
+          "title": "Тест: fill и stroke",
+          "content": {
+            "question": "Какой атрибут задаёт цвет линии контура фигуры?",
+            "options": [
+              "fill",
+              "stroke",
+              "viewBox",
+              "xmlns"
+            ],
+            "correctIndices": [1]
+          }
+        },
+        {
+          "stepId": "d5f9a3b2-8c4e-4a7f-ad2b-3e9f6a1b2c34",
+          "type": "svg",
+          "title": "Мини-иконка «дом»",
+          "content": {
+            "caption": "path + rect без внешних ресурсов",
+            "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 64 64\" width=\"100%\" role=\"img\" aria-label=\"Иконка дом\"><rect width=\"64\" height=\"64\" rx=\"8\" fill=\"#eceff1\"/><path d=\"M32 12 L52 28 V48 H12 V28 Z\" fill=\"#ef5350\" stroke=\"#b71c1c\" stroke-width=\"1.5\" stroke-linejoin=\"round\"/><rect x=\"26\" y=\"34\" width=\"12\" height=\"14\" fill=\"#5d4037\"/><rect x=\"30\" y=\"38\" width=\"4\" height=\"4\" fill=\"#ffecb3\"/></svg>"
+          }
+        },
+        {
+          "stepId": "d5f9a3b2-8c4e-4a7f-ad2b-3e9f6a1b2c35",
+          "type": "quiz",
+          "title": "Финальный тест",
+          "content": {
+            "question": "Какие утверждения про SVG верны? (выберите все)",
+            "options": [
+              "SVG масштабируется как вектор",
+              "Элемент, объявленный позже в файле, рисуется поверх более ранних",
+              "fill и stroke нельзя использовать на одном элементе",
+              "<circle> задаётся центром и радиусом"
+            ],
+            "correctIndices": [0, 1, 3]
+          }
+        }
+      ]
+    }
+  ]
+}

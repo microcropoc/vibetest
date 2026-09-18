@@ -1,0 +1,127 @@
+{
+  "schemaVersion": 1,
+  "courseId": "f7a8b5c4-0e6d-4f3a-8b2c-1e9d8f7a6b01",
+  "title": "SQLite: основы SQL",
+  "description": "Мини-курс: SELECT, WHERE, COUNT. Теория, SVG-схемы таблиц, quiz и практика запросов в sql.js.",
+  "modules": [
+    {
+      "moduleId": "f7a8b5c4-0e6d-4f3a-8b2c-1e9d8f7a6b11",
+      "title": "SELECT и фильтр",
+      "steps": [
+        {
+          "stepId": "f7a8b5c4-0e6d-4f3a-8b2c-1e9d8f7a6b21",
+          "type": "theory",
+          "title": "SELECT и WHERE",
+          "content": "## Запрос строк\n\n```sql\nSELECT col1, col2 FROM table_name;\nSELECT * FROM table_name;\n```\n\n**WHERE** отбирает строки по условию:\n\n```sql\nSELECT name FROM users WHERE id = 1;\n```\n\nВ практике таблица **`users(id, name)`** создаётся в `setup`; перед каждым тестом данные сбрасываются (`reset`), затем выполняется **seed** с `INSERT`. Ваш запрос сравнивается с эталоном построчно.\n\nПишите **один** SQL-запрос в поле практики."
+        },
+        {
+          "stepId": "f7a8b5c4-0e6d-4f3a-8b2c-1e9d8f7a6b22",
+          "type": "svg",
+          "title": "Схема: таблица users",
+          "content": {
+            "description": "Столбцы id и name; каждая строка — запись.",
+            "caption": "Реляционная таблица",
+            "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 160 90\" width=\"100%\" role=\"img\" aria-label=\"Таблица users\"><rect x=\"8\" y=\"8\" width=\"144\" height=\"74\" rx=\"4\" fill=\"#fff\" stroke=\"#455a64\" stroke-width=\"2\"/><rect x=\"8\" y=\"8\" width=\"144\" height=\"22\" fill=\"#eceff1\" stroke=\"#455a64\" stroke-width=\"2\"/><text x=\"40\" y=\"23\" text-anchor=\"middle\" font-size=\"10\" font-weight=\"bold\" fill=\"#333\">id</text><text x=\"100\" y=\"23\" text-anchor=\"middle\" font-size=\"10\" font-weight=\"bold\" fill=\"#333\">name</text><line x1=\"56\" y1=\"8\" x2=\"56\" y2=\"82\" stroke=\"#455a64\"/><line x1=\"8\" y1=\"30\" x2=\"152\" y2=\"30\" stroke=\"#cfd8dc\"/><text x=\"40\" y=\"48\" text-anchor=\"middle\" font-size=\"10\" fill=\"#333\">1</text><text x=\"100\" y=\"48\" text-anchor=\"middle\" font-size=\"10\" fill=\"#333\">Anna</text><line x1=\"8\" y1=\"54\" x2=\"152\" y2=\"54\" stroke=\"#eceff1\"/><text x=\"40\" y=\"72\" text-anchor=\"middle\" font-size=\"10\" fill=\"#333\">2</text><text x=\"100\" y=\"72\" text-anchor=\"middle\" font-size=\"10\" fill=\"#333\">Bob</text></svg>"
+          }
+        },
+        {
+          "stepId": "f7a8b5c4-0e6d-4f3a-8b2c-1e9d8f7a6b23",
+          "type": "quiz",
+          "title": "Тест: SELECT",
+          "content": {
+            "question": "Какой оператор выбирает строки из таблицы?",
+            "options": ["INSERT", "SELECT", "DELETE", "CREATE"],
+            "correctIndices": [1]
+          }
+        },
+        {
+          "stepId": "f7a8b5c4-0e6d-4f3a-8b2c-1e9d8f7a6b24",
+          "type": "sqlite",
+          "title": "Практика: пользователь с id = 1",
+          "content": {
+            "description": "Верните **id** и **name** пользователя с `id = 1` (два столбца).",
+            "setup": "CREATE TABLE users(id INT, name TEXT);",
+            "reset": "DELETE FROM users;",
+            "starterCode": "SELECT id, name FROM users WHERE id = 0;",
+            "referenceSolution": "SELECT id, name FROM users WHERE id = 1;",
+            "orderMatters": false,
+            "timeoutMs": 5000,
+            "tests": [
+              { "seed": "INSERT INTO users VALUES(1, 'Anna');" },
+              { "seed": "INSERT INTO users VALUES(1, 'Anna'); INSERT INTO users VALUES(2, 'Bob');" }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "moduleId": "f7a8b5c4-0e6d-4f3a-8b2c-1e9d8f7a6b12",
+      "title": "Агрегация",
+      "steps": [
+        {
+          "stepId": "f7a8b5c4-0e6d-4f3a-8b2c-1e9d8f7a6b31",
+          "type": "theory",
+          "title": "COUNT(*)",
+          "content": "## Подсчёт строк\n\n```sql\nSELECT COUNT(*) FROM users;\n```\n\nВозвращает одну строку с числом записей в таблице (после `WHERE` — только подходящих).\n\nПример:\n\n```sql\nSELECT COUNT(*) FROM users WHERE name = 'Anna';\n```\n\nВ следующей задаче посчитайте **всех** пользователей в таблице после seed."
+        },
+        {
+          "stepId": "f7a8b5c4-0e6d-4f3a-8b2c-1e9d8f7a6b32",
+          "type": "svg",
+          "title": "Схема: COUNT",
+          "content": {
+            "caption": "COUNT(*) → одно число",
+            "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 180 70\" width=\"100%\" role=\"img\" aria-label=\"COUNT агрегация\"><rect x=\"10\" y=\"18\" width=\"70\" height=\"40\" rx=\"4\" fill=\"#e8eaf6\" stroke=\"#3949ab\"/><text x=\"45\" y=\"36\" text-anchor=\"middle\" font-size=\"9\" fill=\"#333\">users</text><text x=\"45\" y=\"50\" text-anchor=\"middle\" font-size=\"8\" fill=\"#666\">3 rows</text><text x=\"95\" y=\"40\" font-size=\"14\" fill=\"#333\">→</text><rect x=\"110\" y=\"22\" width=\"56\" height=\"32\" rx=\"4\" fill=\"#c5cae9\" stroke=\"#3949ab\"/><text x=\"138\" y=\"42\" text-anchor=\"middle\" font-size=\"11\" fill=\"#333\">COUNT = 3</text></svg>"
+          }
+        },
+        {
+          "stepId": "f7a8b5c4-0e6d-4f3a-8b2c-1e9d8f7a6b33",
+          "type": "quiz",
+          "title": "Тест: COUNT",
+          "content": {
+            "question": "Что возвращает `SELECT COUNT(*) FROM users`?",
+            "options": [
+              "Список всех имён",
+              "Число строк в таблице",
+              "Только первую строку",
+              "Схему таблицы"
+            ],
+            "correctIndices": [1]
+          }
+        },
+        {
+          "stepId": "f7a8b5c4-0e6d-4f3a-8b2c-1e9d8f7a6b34",
+          "type": "sqlite",
+          "title": "Практика: сколько пользователей",
+          "content": {
+            "description": "Верните **одну строку** с количеством записей в `users` — используйте `COUNT(*)`.",
+            "setup": "CREATE TABLE users(id INT, name TEXT);",
+            "reset": "DELETE FROM users;",
+            "starterCode": "SELECT COUNT(*) FROM users WHERE id = 0;",
+            "referenceSolution": "SELECT COUNT(*) FROM users;",
+            "orderMatters": false,
+            "timeoutMs": 5000,
+            "tests": [
+              { "seed": "INSERT INTO users VALUES(1, 'Anna');" },
+              { "seed": "INSERT INTO users VALUES(1, 'a'); INSERT INTO users VALUES(2, 'b'); INSERT INTO users VALUES(3, 'c');" }
+            ]
+          }
+        },
+        {
+          "stepId": "f7a8b5c4-0e6d-4f3a-8b2c-1e9d8f7a6b35",
+          "type": "quiz",
+          "title": "Итоговый тест",
+          "content": {
+            "question": "Где в формате курса должны быть INSERT-ы с тестовыми данными?",
+            "options": [
+              "В поле reset",
+              "В tests[].seed",
+              "В setup (CREATE только)",
+              "В title шага"
+            ],
+            "correctIndices": [1]
+          }
+        }
+      ]
+    }
+  ]
+}

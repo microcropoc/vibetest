@@ -1,0 +1,113 @@
+{
+  "schemaVersion": 1,
+  "courseId": "c4e8f2a1-7b3d-4f6e-9c1a-2d8e5f0a1b01",
+  "title": "Английский: базовые фразы",
+  "description": "Короткий курс для начинающих: приветствия, вежливые слова и простые ответы. Теория и тесты без практики кода.",
+  "modules": [
+    {
+      "moduleId": "c4e8f2a1-7b3d-4f6e-9c1a-2d8e5f0a1b11",
+      "title": "Приветствия и вежливость",
+      "steps": [
+        {
+          "stepId": "c4e8f2a1-7b3d-4f6e-9c1a-2d8e5f0a1b21",
+          "type": "theory",
+          "title": "Приветствия",
+          "content": "## Основные приветствия\n\n| English | Русский |\n|---------|--------|\n| **Hello** | Здравствуйте / Привет |\n| **Hi** | Привет (неформально) |\n| **Good morning** | Доброе утро |\n| **Good afternoon** | Добрый день |\n| **Good evening** | Добрый вечер |\n| **Goodbye** | До свидания |\n| **Bye** | Пока |\n\n**Hello** и **Hi** — самые частые варианты. **Good morning** обычно до полудня, **Good afternoon** — после обеда, **Good evening** — ближе к вечеру.\n\nПример:\n\n- *Hello! My name is Anna.* — Здравствуйте! Меня зовут Анна.\n- *Hi, Tom!* — Привет, Том!"
+        },
+        {
+          "stepId": "c4e8f2a1-7b3d-4f6e-9c1a-2d8e5f0a1b22",
+          "type": "quiz",
+          "title": "Тест: приветствия",
+          "content": {
+            "question": "Как переводится «Good morning»?",
+            "options": [
+              "Добрый вечер",
+              "Доброе утро",
+              "Добрый день",
+              "До свидания"
+            ],
+            "correctIndices": [1]
+          }
+        },
+        {
+          "stepId": "c4e8f2a1-7b3d-4f6e-9c1a-2d8e5f0a1b23",
+          "type": "theory",
+          "title": "Please, thank you, sorry",
+          "content": "## Вежливые слова\n\n- **Please** — пожалуйста (просьба): *Please help me.*\n- **Thank you** / **Thanks** — спасибо: *Thank you very much.*\n- **You're welcome** — пожалуйста (ответ на спасибо)\n- **Sorry** / **Excuse me** — извините\n\n**Excuse me** чаще, когда нужно привлечь внимание или пройти мимо. **Sorry** — когда вы виноваты или сожалеете.\n\nКороткий диалог:\n\n1. *Excuse me, where is the station?* — Извините, где вокзал?\n2. *Thank you!* — Спасибо!\n3. *You're welcome.* — Пожалуйста."
+        },
+        {
+          "stepId": "c4e8f2a1-7b3d-4f6e-9c1a-2d8e5f0a1b24",
+          "type": "quiz",
+          "title": "Тест: вежливость",
+          "content": {
+            "question": "Что уместно ответить на «Thank you»?",
+            "options": [
+              "Sorry",
+              "Goodbye",
+              "You're welcome",
+              "Good morning"
+            ],
+            "correctIndices": [2]
+          }
+        },
+        {
+          "stepId": "c4e8f2a1-7b3d-4f6e-9c1a-2d8e5f0a1b25",
+          "type": "quiz",
+          "title": "Тест: несколько верных",
+          "content": {
+            "question": "Какие варианты — неформальное «привет»? (выберите все подходящие)",
+            "options": [
+              "Hi",
+              "Hello",
+              "Good afternoon",
+              "Bye"
+            ],
+            "correctIndices": [0, 1]
+          }
+        }
+      ]
+    },
+    {
+      "moduleId": "c4e8f2a1-7b3d-4f6e-9c1a-2d8e5f0a1b12",
+      "title": "Представление",
+      "steps": [
+        {
+          "stepId": "c4e8f2a1-7b3d-4f6e-9c1a-2d8e5f0a1b31",
+          "type": "theory",
+          "title": "My name is…",
+          "content": "## Как представиться\n\n- **My name is …** — Меня зовут …\n- **I'm …** — Я … (короткая форма)\n- **Nice to meet you.** — Приятно познакомиться.\n- **Nice to meet you too.** — Мне тоже приятно.\n\nВопросы:\n\n- **What is your name?** — Как вас зовут?\n- **How are you?** — Как дела?\n- **I'm fine, thank you.** — Хорошо, спасибо.\n\nПример:\n\n> **A:** Hi! I'm Alex. What's your name?  \n> **B:** Hello! My name is Maria. Nice to meet you.  \n> **A:** Nice to meet you too."
+        },
+        {
+          "stepId": "c4e8f2a1-7b3d-4f6e-9c1a-2d8e5f0a1b32",
+          "type": "quiz",
+          "title": "Тест: представление",
+          "content": {
+            "question": "Как сказать «Меня зовут Иван»?",
+            "options": [
+              "My name is Ivan.",
+              "I name Ivan.",
+              "My Ivan name.",
+              "Name my is Ivan."
+            ],
+            "correctIndices": [0]
+          }
+        },
+        {
+          "stepId": "c4e8f2a1-7b3d-4f6e-9c1a-2d8e5f0a1b33",
+          "type": "quiz",
+          "title": "Финальный тест",
+          "content": {
+            "question": "Выберите все корректные английские фразы:",
+            "options": [
+              "How are you?",
+              "What is your name?",
+              "Thank you very much.",
+              "Please goodbye."
+            ],
+            "correctIndices": [0, 1, 2]
+          }
+        }
+      ]
+    }
+  ]
+}

@@ -7,13 +7,26 @@
     @if (step(); as currentStep) {
       <article class="player-shell__step">
         <h2 class="player-shell__step-title">{{ currentStep.title }}</h2>
-        <p class="player-shell__step-meta">
-          Тип: {{ currentStep.type }}
-          @if (snapshot(); as progress) {
-            · Статус: {{ progress.status }}
+
+        @switch (currentStep.type) {
+          @case ('theory') {
+            @defer {
+              <app-theory-step-ui [markdown]="currentStep.content" />
+            } @placeholder {
+              <p class="player-shell__loading">Загрузка…</p>
+            }
           }
-        </p>
-        <p class="player-shell__placeholder">Step UI — vt-21–23.</p>
+          @case ('svg') {
+            @defer {
+              <app-svg-step-ui [content]="currentStep.content" />
+            } @placeholder {
+              <p class="player-shell__loading">Загрузка…</p>
+            }
+          }
+          @default {
+            <p class="player-shell__placeholder">Step UI — vt-22–23.</p>
+          }
+        }
       </article>
     }
   </div>

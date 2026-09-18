@@ -1,0 +1,9 @@
+<div class="svg-step-ui">
+  @if (content().caption) {
+    <p class="svg-step-ui__caption">{{ content().caption }}</p>
+  }
+  <div class="svg-step-ui__figure" [innerHTML]="svgHtml()"></div>
+  @if (content().description) {
+    <p class="svg-step-ui__description">{{ content().description }}</p>
+  }
+</div>

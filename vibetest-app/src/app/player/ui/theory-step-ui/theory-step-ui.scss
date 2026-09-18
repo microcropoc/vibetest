@@ -1,0 +1,11 @@
+.theory-step-ui {
+  line-height: 1.55;
+}
+
+.theory-step-ui :where(p, ul, ol, pre, blockquote) {
+  margin: 0 0 0.75rem;
+}
+
+.theory-step-ui :where(p:last-child) {
+  margin-bottom: 0;
+}

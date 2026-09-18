@@ -2,12 +2,12 @@ import { Component, input } from '@angular/core';
 
 import type { Step } from '../../../courses/course.model';
 import type { StepProgressSnapshot } from '../../step-engine/step-progress-snapshot';
+import { SvgStepUiComponent } from '../svg-step-ui/svg-step-ui';
+import { TheoryStepUiComponent } from '../theory-step-ui/theory-step-ui';
 
-/**
- * Player chrome + step outlet placeholder (vt-21–23 register step UI here).
- */
 @Component({
   selector: 'app-player-shell',
+  imports: [TheoryStepUiComponent, SvgStepUiComponent],
   templateUrl: './player-shell.html',
   styleUrl: './player-shell.scss',
 })

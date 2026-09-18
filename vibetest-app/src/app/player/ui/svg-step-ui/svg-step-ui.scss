@@ -1,0 +1,20 @@
+.svg-step-ui__caption {
+  margin: 0 0 0.5rem;
+  font-weight: 600;
+}
+
+.svg-step-ui__figure {
+  max-width: 100%;
+  overflow: auto;
+}
+
+.svg-step-ui__figure :where(svg) {
+  max-width: 100%;
+  height: auto;
+}
+
+.svg-step-ui__description {
+  margin: 0.75rem 0 0;
+  color: #555;
+  line-height: 1.5;
+}

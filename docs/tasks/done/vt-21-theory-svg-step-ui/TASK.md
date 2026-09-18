@@ -21,14 +21,14 @@ Dumb step components: markdown render for theory; inline SVG as trusted HTML/SVG
 
 ## План работ
 
-- [ ] Markdown step component
-- [ ] Svg step component
-- [ ] Register components in **vt-19** player outlet (no separate orchestrator)
-- [ ] `ng test --watch=false` зелёный
+- [x] Markdown step component
+- [x] Svg step component
+- [x] Register components in **vt-19** player outlet (no separate orchestrator)
+- [x] `ng test --watch=false` зелёный
 
 ## Критерии готовности (Definition of Done)
 
-- [ ] Trusted markdown/SVG render по спецификации (без sanitizer)
+- [x] Trusted markdown/SVG render по спецификации (без sanitizer)
 
 ## Вне рамок задачи
 

@@ -34,6 +34,7 @@ describe('AppShell', () => {
     expect(compiled.textContent).toContain('Статистика');
     expect(compiled.textContent).toContain('Импорт');
     expect(compiled.textContent).toContain('Инфо');
+    expect(compiled.textContent).toContain('Генерация промта');
   });
 
   it('navigates when a tab link is clicked', async () => {

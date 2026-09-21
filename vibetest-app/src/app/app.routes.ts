@@ -40,6 +40,13 @@ export const routes: Routes = [
         loadComponent: () =>
           import('./info/pages/info-page/info-page').then((m) => m.InfoPage),
       },
+      {
+        path: 'prompt-generation',
+        loadComponent: () =>
+          import('./prompt-generation/pages/prompt-generation-page/prompt-generation-page').then(
+            (m) => m.PromptGenerationPage,
+          ),
+      },
     ],
   },
 ];

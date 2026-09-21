@@ -17,5 +17,6 @@ export class AppShell {
     { label: 'Статистика', path: '/statistics' },
     { label: 'Импорт', path: '/import' },
     { label: 'Инфо', path: '/info' },
+    { label: 'Генерация промта', path: '/prompt-generation' },
   ] as const;
 }

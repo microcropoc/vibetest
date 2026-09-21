@@ -3,33 +3,42 @@ import { Component, signal } from '@angular/core';
 import {
   loadBundledCourseImportSchema,
   prettyPrintJson,
-} from '../../bundled-course-schema';
+} from '../../../info/bundled-course-schema';
+import { buildCourseGenerationPrompt } from '../../build-course-generation-prompt';
 import {
   copyTextToClipboard,
   type CopyTextToClipboardResult,
 } from '../../../shared/clipboard/copy-text-to-clipboard';
 
 @Component({
-  selector: 'app-info-page',
-  templateUrl: './info-page.html',
-  styleUrl: './info-page.scss',
+  selector: 'app-prompt-generation-page',
+  templateUrl: './prompt-generation-page.html',
+  styleUrl: './prompt-generation-page.scss',
 })
-export class InfoPage {
+export class PromptGenerationPage {
   protected readonly loading = signal(true);
   protected readonly schemaText = signal('');
   protected readonly errorMessage = signal<string | null>(null);
+  protected readonly courseDescription = signal('');
   protected readonly copyFeedback = signal<CopyTextToClipboardResult | null>(null);
 
   constructor() {
     void this.loadSchema();
   }
 
-  protected async onCopySchema(): Promise<void> {
-    const text = this.schemaText();
-    if (!text) {
+  protected onDescriptionInput(event: Event): void {
+    const target = event.target as HTMLTextAreaElement;
+    this.courseDescription.set(target.value);
+    this.copyFeedback.set(null);
+  }
+
+  protected async onCopyPrompt(): Promise<void> {
+    const schema = this.schemaText();
+    if (!schema) {
       return;
     }
-    const result = await copyTextToClipboard(text);
+    const prompt = buildCourseGenerationPrompt(this.courseDescription(), schema);
+    const result = await copyTextToClipboard(prompt);
     this.copyFeedback.set(result);
   }
 

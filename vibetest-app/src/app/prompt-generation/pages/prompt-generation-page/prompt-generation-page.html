@@ -1,0 +1,40 @@
+<section class="prompt-generation-page">
+  <h1 class="prompt-generation-page__title">Генерация промта</h1>
+  <p class="prompt-generation-page__hint">
+    Опишите тему курса. Кнопка скопирует промт для LLM с правилами import-DTO и полной JSON Schema.
+  </p>
+
+  @if (loading()) {
+    <p class="prompt-generation-page__status">Загрузка схемы…</p>
+  } @else if (errorMessage()) {
+    <p class="prompt-generation-page__error" role="alert">{{ errorMessage() }}</p>
+  } @else {
+    <label class="prompt-generation-page__label">
+      Описание курса
+      <textarea
+        class="prompt-generation-page__description"
+        rows="6"
+        placeholder="Например: базовый курс по регулярным выражениям для начинающих"
+        [value]="courseDescription()"
+        (input)="onDescriptionInput($event)"
+      ></textarea>
+    </label>
+
+    <div class="prompt-generation-page__toolbar">
+      <button type="button" class="prompt-generation-page__copy" (click)="onCopyPrompt()">
+        Копировать в буфер обмена
+      </button>
+      @if (copyFeedback() === 'copied') {
+        <span class="prompt-generation-page__copy-status" role="status">Скопировано</span>
+      } @else if (copyFeedback() === 'unavailable') {
+        <span class="prompt-generation-page__copy-status prompt-generation-page__copy-status--error" role="alert">
+          Копирование недоступно в этом браузере
+        </span>
+      } @else if (copyFeedback() === 'failed') {
+        <span class="prompt-generation-page__copy-status prompt-generation-page__copy-status--error" role="alert">
+          Не удалось скопировать
+        </span>
+      }
+    </div>
+  }
+</section>

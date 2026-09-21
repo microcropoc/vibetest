@@ -258,7 +258,7 @@ Inline SVG (SMIL/CSS и т.п.); рендер **без санитизации** 
 
 ### Генерация промта
 
-Поле **«Описание курса»** и кнопка **«Копировать в буфер обмена»**. В clipboard — промт для внешнего LLM: описание автора, инструкции (курс **на русском языке**; в **каждом** модуле шаги `theory`, `svg`, `quiz`; ответ — только JSON **import-DTO** без UUID и `createdAt`; **экранирование** строк в JSON; запрет markdown-обёрток и trailing commas; **самопроверка** через `JSON.parse` и соответствие схеме) и полный текст bundled [course-import.schema.json](./schemas/course-import.schema.json).
+Поле **«Описание курса»** и кнопка **«Копировать в буфер обмена»**. В clipboard — промт для внешнего LLM: описание автора, инструкции (курс **на русском языке**; в **каждом** модуле шаги `theory`, `svg`, `quiz`; в **theory** программный код — Markdown fenced blocks с языком и структурированный текст; ответ — только JSON **import-DTO** без UUID и `createdAt`; **экранирование** строк в JSON; запрет markdown-обёртки **вокруг всего ответа** (fences внутри `theory.content` допустимы); **самопроверка** через `JSON.parse` и соответствие схеме) и полный текст bundled [course-import.schema.json](./schemas/course-import.schema.json).
 
 ## Offline / PWA
 

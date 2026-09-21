@@ -31,6 +31,18 @@ describe('buildCourseGenerationPrompt', () => {
     expect(prompt).toMatch(/markdown|обратных кавычек/i);
   });
 
+  it('includes theory Markdown code blocks and distinguishes outer JSON from content', () => {
+    const prompt = buildCourseGenerationPrompt('Тест', schemaSnippet);
+
+    expect(prompt).toContain('Шаги theory');
+    expect(prompt).toContain('идентификатором языка');
+    expect(prompt).toContain('javascript');
+    expect(prompt).toContain('заголовки');
+    expect(prompt).toContain('inline code');
+    expect(prompt).toContain('внутри строки content');
+    expect(prompt).toContain('обёртка markdown вокруг всего ответа');
+  });
+
   it('uses placeholder when description is empty', () => {
     const prompt = buildCourseGenerationPrompt('   ', schemaSnippet);
 

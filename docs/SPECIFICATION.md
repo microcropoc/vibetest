@@ -59,11 +59,16 @@ flowchart TD
 
 ## Формат курса
 
-Одна JSON Schema (draft **2020-12**): [course.schema.json](./schemas/course.schema.json). В документе обязательны `schemaVersion: 1`, `courseId`, у каждого модуля `moduleId`, у каждого шага `stepId`. Так же хранится курс в IndexedDB и типизируется domain `Course`.
+Две JSON Schema (draft **2020-12**), без перекрёстных `$ref`:
 
-В bundle приложения (`public/schemas/`) — эта схема + **сгенерированные** Zod и TypeScript; generated-файлы не редактируют вручную.
+| Схема | Назначение |
+|-------|------------|
+| [course-import.schema.json](./schemas/course-import.schema.json) | JSON автора для **импорта**: `schemaVersion`, `title`, `description`, `modules` / `steps` **без** UUID и без `createdAt` |
+| [course.schema.json](./schemas/course.schema.json) | **Канонический DTO** в IndexedDB и domain `Course`: обязательны `schemaVersion: 1`, `courseId`, `createdAt` (ISO 8601 date-time), у каждого модуля `moduleId`, у каждого шага `stepId` |
 
-**UUID v4**: RFC 4122. Дубликаты `courseId` / `moduleId` / `stepId` в одном документе → отклонение на этапе semantic validation.
+В bundle приложения (`public/schemas/`) — обе схемы + **сгенерированные** Zod и TypeScript; generated-файлы не редактируют вручную.
+
+**UUID v4**: RFC 4122, назначаются приложением при импорте (`crypto.randomUUID()`). Дубликаты `courseId` / `moduleId` / `stepId` в одном сохранённом документе → отклонение на этапе semantic validation.
 
 Порядок модулей и шагов — порядок в массивах. `schemaVersion` ≠ 1 → отклонение. Неизвестный `type` или невалидный JSON → отклонение.
 
@@ -203,14 +208,15 @@ Inline SVG (SMIL/CSS и т.п.); рендер **без санитизации** 
 Поток **Импортировать**:
 
 1. Разбор JSON.
-2. Валидация Zod ([course.schema.json](./schemas/course.schema.json)).
-3. Semantic rules: уникальность всех ID в документе; quiz indices; практика — `tests`, `timeoutMs`; у **SQLite** — поле `reset` не должно содержать seed-DML (проверка SQL-токенами с границей слова, напр. `\bINSERT\b`, `\bINTO\b`; seed только в `tests[].seed`); **JavaScript `reset`** этой SQL-эвристикой **не** проверяется.
-4. Если включён **Заменить все ID новыми UUID** (pure): новый `courseId`, новые `moduleId` и `stepId` для всех модулей и шагов через `crypto.randomUUID()`; иначе ID из JSON сохраняются.
-5. Успех — сохранение JSON курса в IndexedDB.
+2. Валидация Zod по [course-import.schema.json](./schemas/course-import.schema.json) (JSON **без** UUID и `createdAt`).
+3. Преобразование import-DTO → canonical `Course`: новые `courseId`, `moduleId`, `stepId` и `createdAt` (момент импорта).
+4. Semantic rules на canonical `Course`: уникальность всех ID; quiz indices; практика — `tests`, `timeoutMs`; у **SQLite** — поле `reset` не должно содержать seed-DML (проверка SQL-токенами с границей слова, напр. `\bINSERT\b`, `\bINTO\b`; seed только в `tests[].seed`); **JavaScript `reset`** этой SQL-эвристикой **не** проверяется.
+5. Если включён **Заменить все ID новыми UUID**: повторный перевыпуск всех UUID перед сохранением; иначе используются UUID из шага 3.
+6. Успех — сохранение canonical JSON курса в IndexedDB.
 
 При ошибках — **все проблемы достигнутого этапа** (JSON parse → Zod → semantic) **под полем импорта**; после сбоя этапа следующие шаги не выполняются; курс не сохраняется.
 
-**Create / replace:** при включённом флажке замены ID импорт **всегда создаёт новый** курс (диалог «заменить» не показывается). При выключенном флажке: если `courseId` из JSON уже есть в хранилище — диалог «заменить»; подтверждение заменяет документ курса и **удаляет прогресс** этого `courseId`; отмена — без записи. Если `courseId` новый — создаётся курс без диалога.
+**Create / replace:** при включённом флажке замены ID импорт **всегда создаёт новый** курс (диалог «заменить» не показывается). При выключенном флажке: если сгенерированный при шаге 3 `courseId` уже есть в хранилище (повторный импорт с тем же результатом UUID) — диалог «заменить»; подтверждение заменяет документ курса и **удаляет прогресс**; отмена — без записи. Обычно каждый импорт даёт новые UUID → создаётся новый курс.
 
 ## Хранилище (IndexedDB)
 

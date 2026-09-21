@@ -1,5 +1,9 @@
 <section class="import-page">
   <h1 class="import-page__title">Импорт</h1>
+  <p class="import-page__hint">
+    JSON по формату import-DTO (без UUID и без <code>createdAt</code>). Схема:
+    <code>course-import.schema.json</code>.
+  </p>
 
   <form class="import-page__form" (submit)="onSubmit($event)">
     <label class="import-page__label">

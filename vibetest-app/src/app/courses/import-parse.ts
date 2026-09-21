@@ -1,7 +1,8 @@
 import type { ZodError } from 'zod';
 
-import { CourseSchema } from './course-zod-schema';
 import type { Course } from './course.model';
+import { importDtoToCourse } from './import-dto-to-course';
+import { ImportCourseSchema } from './import-course-zod-schema';
 import type { ImportIssue, ImportValidationStage } from './import-types';
 import { validateCourseSemantics } from './semantic-validation';
 
@@ -35,12 +36,12 @@ export function parseImportCourseText(text: string): ImportParseResult {
     return { ok: false, stage: 'json', issues: [jsonParseIssue(error)] };
   }
 
-  const zodResult = CourseSchema.safeParse(jsonValue);
+  const zodResult = ImportCourseSchema.safeParse(jsonValue);
   if (!zodResult.success) {
     return { ok: false, stage: 'zod', issues: zodIssues(zodResult.error) };
   }
 
-  const course = zodResult.data;
+  const course = importDtoToCourse(zodResult.data);
   const semanticIssues = validateCourseSemantics(course);
   if (semanticIssues.length > 0) {
     return { ok: false, stage: 'semantic', issues: semanticIssues };

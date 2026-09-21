@@ -7,15 +7,13 @@ import {
   SqliteContentSchema,
   SvgContentSchema,
   TheoryContentSchema,
-  UuidSchema,
 } from './generated/content-schemas.zod';
 
 const stepTitleSchema = z.string().min(1).max(200);
 
-export const StepSchema = z.discriminatedUnion('type', [
+export const ImportStepSchema = z.discriminatedUnion('type', [
   z
     .object({
-      stepId: UuidSchema,
       type: z.literal('theory'),
       title: stepTitleSchema,
       content: TheoryContentSchema,
@@ -23,7 +21,6 @@ export const StepSchema = z.discriminatedUnion('type', [
     .strict(),
   z
     .object({
-      stepId: UuidSchema,
       type: z.literal('svg'),
       title: stepTitleSchema,
       content: SvgContentSchema,
@@ -31,7 +28,6 @@ export const StepSchema = z.discriminatedUnion('type', [
     .strict(),
   z
     .object({
-      stepId: UuidSchema,
       type: z.literal('quiz'),
       title: stepTitleSchema,
       content: QuizContentSchema,
@@ -39,7 +35,6 @@ export const StepSchema = z.discriminatedUnion('type', [
     .strict(),
   z
     .object({
-      stepId: UuidSchema,
       type: z.literal('javascript'),
       title: stepTitleSchema,
       content: JavascriptContentSchema,
@@ -47,7 +42,6 @@ export const StepSchema = z.discriminatedUnion('type', [
     .strict(),
   z
     .object({
-      stepId: UuidSchema,
       type: z.literal('sqlite'),
       title: stepTitleSchema,
       content: SqliteContentSchema,
@@ -55,7 +49,6 @@ export const StepSchema = z.discriminatedUnion('type', [
     .strict(),
   z
     .object({
-      stepId: UuidSchema,
       type: z.literal('regex'),
       title: stepTitleSchema,
       content: RegexContentSchema,
@@ -63,21 +56,20 @@ export const StepSchema = z.discriminatedUnion('type', [
     .strict(),
 ]);
 
-export const ModuleSchema = z
+export const ImportModuleSchema = z
   .object({
-    moduleId: UuidSchema,
     title: z.string().min(1).max(120),
-    steps: z.array(StepSchema).min(1).max(200),
+    steps: z.array(ImportStepSchema).min(1).max(200),
   })
   .strict();
 
-export const CourseSchema = z
+export const ImportCourseSchema = z
   .object({
     schemaVersion: z.literal(1),
-    courseId: UuidSchema,
-    createdAt: z.string().datetime(),
     title: z.string().min(1).max(120),
     description: z.string().min(1).max(2000),
-    modules: z.array(ModuleSchema).min(1).max(100),
+    modules: z.array(ImportModuleSchema).min(1).max(100),
   })
   .strict();
+
+export type ImportCourse = z.infer<typeof ImportCourseSchema>;

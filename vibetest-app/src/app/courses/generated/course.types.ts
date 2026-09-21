@@ -29,6 +29,7 @@ export type Step = {
 export interface VibeTestCourse {
   schemaVersion: 1;
   courseId: Uuid;
+  createdAt: string;
   title: string;
   description: string;
   /**

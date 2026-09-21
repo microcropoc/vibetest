@@ -1,21 +1,17 @@
 {
   "schemaVersion": 1,
-  "courseId": "e6f7b4c3-9d5e-4f6e-9c1a-2d8e5f0a0e01",
   "title": "JavaScript: старт",
   "description": "Мини-курс: функции, стрелочный синтаксис, массивы. Теория, SVG-схемы, quiz и практика в песочнице JS.",
   "modules": [
     {
-      "moduleId": "e6f7b4c3-9d5e-4f6e-9c1a-2d8e5f0a0e11",
       "title": "Функции",
       "steps": [
         {
-          "stepId": "e6f7b4c3-9d5e-4f6e-9c1a-2d8e5f0a0e21",
           "type": "theory",
           "title": "Функции и стрелки",
           "content": "## Функция\n\nФункция принимает **аргументы** и **возвращает** значение (или `undefined`).\n\n```javascript\nfunction add(a, b) {\n  return a + b;\n}\n```\n\n**Стрелочная функция** — короткая запись:\n\n```javascript\nconst add = (a, b) => a + b;\n```\n\nЕсли тело из одного выражения, `return` можно опустить. Для нескольких строк нужны `{` и `return`.\n\nВ практике ниже вы реализуете функцию **`double`**: она должна вернуть число, умноженное на 2."
         },
         {
-          "stepId": "e6f7b4c3-9d5e-4f6e-9c1a-2d8e5f0a0e22",
           "type": "svg",
           "title": "Схема: вызов функции",
           "content": {
@@ -25,7 +21,6 @@
           }
         },
         {
-          "stepId": "e6f7b4c3-9d5e-4f6e-9c1a-2d8e5f0a0e23",
           "type": "quiz",
           "title": "Тест: стрелочные функции",
           "content": {
@@ -36,11 +31,12 @@
               "function double => n * 2",
               "const double = n -> n * 2;"
             ],
-            "correctIndices": [0]
+            "correctIndices": [
+              0
+            ]
           }
         },
         {
-          "stepId": "e6f7b4c3-9d5e-4f6e-9c1a-2d8e5f0a0e24",
           "type": "javascript",
           "title": "Практика: double",
           "content": {
@@ -52,27 +48,40 @@
             "functionName": "double",
             "timeoutMs": 2000,
             "tests": [
-              { "args": [0] },
-              { "args": [3] },
-              { "args": [-4] },
-              { "args": [1.5] }
+              {
+                "args": [
+                  0
+                ]
+              },
+              {
+                "args": [
+                  3
+                ]
+              },
+              {
+                "args": [
+                  -4
+                ]
+              },
+              {
+                "args": [
+                  1.5
+                ]
+              }
             ]
           }
         }
       ]
     },
     {
-      "moduleId": "e6f7b4c3-9d5e-4f6e-9c1a-2d8e5f0a0e12",
       "title": "Массивы",
       "steps": [
         {
-          "stepId": "e6f7b4c3-9d5e-4f6e-9c1a-2d8e5f0a0e31",
           "type": "theory",
           "title": "Массив и сумма",
           "content": "## Массив\n\n```javascript\nconst nums = [1, 2, 3];\nnums.length; // 3\nnums[0];     // 1\n```\n\nЧтобы **сложить все числа**, удобен цикл `for…of` или `reduce`:\n\n```javascript\nlet sum = 0;\nfor (const x of nums) {\n  sum += x;\n}\n```\n\nВ практике реализуйте **`sumArray`**: на вход — массив чисел, на выход — их сумма. Пустой массив → `0`."
         },
         {
-          "stepId": "e6f7b4c3-9d5e-4f6e-9c1a-2d8e5f0a0e32",
           "type": "svg",
           "title": "Схема: массив",
           "content": {
@@ -81,17 +90,22 @@
           }
         },
         {
-          "stepId": "e6f7b4c3-9d5e-4f6e-9c1a-2d8e5f0a0e33",
           "type": "quiz",
           "title": "Тест: массивы",
           "content": {
             "question": "Чему равно `[10, 20].length`?",
-            "options": ["1", "2", "10", "undefined"],
-            "correctIndices": [1]
+            "options": [
+              "1",
+              "2",
+              "10",
+              "undefined"
+            ],
+            "correctIndices": [
+              1
+            ]
           }
         },
         {
-          "stepId": "e6f7b4c3-9d5e-4f6e-9c1a-2d8e5f0a0e34",
           "type": "javascript",
           "title": "Практика: sumArray",
           "content": {
@@ -103,21 +117,54 @@
             "functionName": "sumArray",
             "timeoutMs": 3000,
             "tests": [
-              { "args": [[]] },
-              { "args": [[1, 2, 3]] },
-              { "args": [[-1, 1, 4]] },
-              { "args": [[0.5, 0.5]] }
+              {
+                "args": [
+                  []
+                ]
+              },
+              {
+                "args": [
+                  [
+                    1,
+                    2,
+                    3
+                  ]
+                ]
+              },
+              {
+                "args": [
+                  [
+                    -1,
+                    1,
+                    4
+                  ]
+                ]
+              },
+              {
+                "args": [
+                  [
+                    0.5,
+                    0.5
+                  ]
+                ]
+              }
             ]
           }
         },
         {
-          "stepId": "e6f7b4c3-9d5e-4f6e-9c1a-2d8e5f0a0e35",
           "type": "quiz",
           "title": "Итоговый тест",
           "content": {
             "question": "Что вернёт `double(5)`, если `const double = (n) => n * 2`?",
-            "options": ["7", "10", "25", "\"52\""],
-            "correctIndices": [1]
+            "options": [
+              "7",
+              "10",
+              "25",
+              "\"52\""
+            ],
+            "correctIndices": [
+              1
+            ]
           }
         }
       ]

@@ -1,14 +1,12 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://vibetest.app/schemas/course.schema.json",
-  "title": "VibeTest Course",
+  "$id": "https://vibetest.app/schemas/course-import.schema.json",
+  "title": "VibeTest Course Import",
   "type": "object",
-  "required": ["schemaVersion", "courseId", "createdAt", "title", "description", "modules"],
+  "required": ["schemaVersion", "title", "description", "modules"],
   "additionalProperties": false,
   "properties": {
     "schemaVersion": { "const": 1 },
-    "courseId": { "$ref": "#/$defs/uuid" },
-    "createdAt": { "type": "string", "format": "date-time" },
     "title": { "type": "string", "minLength": 1, "maxLength": 120 },
     "description": { "type": "string", "minLength": 1, "maxLength": 2000 },
     "modules": {
@@ -19,16 +17,11 @@
     }
   },
   "$defs": {
-    "uuid": {
-      "type": "string",
-      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
-    },
     "module": {
       "type": "object",
-      "required": ["moduleId", "title", "steps"],
+      "required": ["title", "steps"],
       "additionalProperties": false,
       "properties": {
-        "moduleId": { "$ref": "#/$defs/uuid" },
         "title": { "type": "string", "minLength": 1, "maxLength": 120 },
         "steps": {
           "type": "array",
@@ -40,10 +33,9 @@
     },
     "step": {
       "type": "object",
-      "required": ["stepId", "type", "title", "content"],
+      "required": ["type", "title", "content"],
       "additionalProperties": false,
       "properties": {
-        "stepId": { "$ref": "#/$defs/uuid" },
         "type": { "enum": ["theory", "svg", "quiz", "javascript", "sqlite", "regex"] },
         "title": { "type": "string", "minLength": 1, "maxLength": 200 },
         "content": true

@@ -7,7 +7,9 @@ import { jsonSchemaToZod } from 'json-schema-to-zod';
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const appRoot = join(__dirname, '..');
 const repoSchemaPath = join(appRoot, '..', 'docs', 'schemas', 'course.schema.json');
+const repoImportSchemaPath = join(appRoot, '..', 'docs', 'schemas', 'course-import.schema.json');
 const publicSchemaPath = join(appRoot, 'public', 'schemas', 'course.schema.json');
+const publicImportSchemaPath = join(appRoot, 'public', 'schemas', 'course-import.schema.json');
 const generatedDir = join(appRoot, 'src', 'app', 'courses', 'generated');
 
 const GENERATED_HEADER = `/* eslint-disable */
@@ -100,9 +102,12 @@ Step/Course Zod composition lives in \`../course-zod-schema.ts\` (manual discrim
 
 async function main(): Promise<void> {
   const raw = readFileSync(repoSchemaPath, 'utf8');
+  const importRaw = readFileSync(repoImportSchemaPath, 'utf8');
   const schema = loadSchema();
 
   bundleSchema(raw);
+  mkdirSync(dirname(publicImportSchemaPath), { recursive: true });
+  writeFileSync(publicImportSchemaPath, importRaw, 'utf8');
   mkdirSync(generatedDir, { recursive: true });
 
   writeFileSync(

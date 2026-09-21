@@ -7,14 +7,42 @@ import type { VibetestDb } from '../storage/vibetest-db';
 import {
   FIXTURE_COURSE_ID,
   FIXTURE_MODULE_ID,
+  FIXTURE_STEP_QUIZ_ID,
   FIXTURE_STEP_THEORY_ID,
-  minimalValidCourseJson,
+  minimalValidImportJson,
 } from './__fixtures__/course-fixtures';
 import { CourseImportService } from './course-import.service';
+
+const IMPORT_UUIDS = [
+  FIXTURE_COURSE_ID,
+  FIXTURE_MODULE_ID,
+  FIXTURE_STEP_THEORY_ID,
+  FIXTURE_STEP_QUIZ_ID,
+];
+
+function stubImportUuids(...queues: readonly (readonly string[])[]): void {
+  let queueIndex = 0;
+  let withinQueue = 0;
+  vi.spyOn(crypto, 'randomUUID').mockImplementation(() => {
+    const queue = queues[queueIndex] ?? IMPORT_UUIDS;
+    const id = queue[withinQueue];
+    withinQueue += 1;
+    if (withinQueue >= queue.length) {
+      withinQueue = 0;
+      queueIndex += 1;
+    }
+    if (id === undefined) {
+      throw new Error('UUID queue exhausted');
+    }
+    return id as `${string}-${string}-${string}-${string}-${string}`;
+  });
+}
+
 describe('CourseImportService', () => {
   let db: VibetestDb | undefined;
 
   afterEach(async () => {
+    vi.restoreAllMocks();
     if (db) {
       await destroyTestVibetestDb(db);
     }
@@ -23,21 +51,28 @@ describe('CourseImportService', () => {
   it('creates course with regenerateIds (new courseId)', async () => {
     db = createTestVibetestDb();
     const service = CourseImportService.forDb(db);
-    const text = JSON.stringify(minimalValidCourseJson());
+    stubImportUuids(IMPORT_UUIDS, [
+      '11111111-1111-4111-8111-111111111111',
+      '22222222-2222-4222-8222-222222222222',
+      '33333333-3333-4333-8333-333333333333',
+      '44444444-4444-4444-8444-444444444444',
+    ]);
+    const text = JSON.stringify(minimalValidImportJson());
 
     const result = await service.importCourse(text, { regenerateIds: true });
 
-    expect(result).toEqual({ ok: true, courseId: expect.any(String), action: 'created' });
+    expect(result).toEqual({ ok: true, courseId: '11111111-1111-4111-8111-111111111111', action: 'created' });
     if (result.ok) {
       expect(result.courseId).not.toBe(FIXTURE_COURSE_ID);
       expect(await CourseRepository.forDb(db).get(result.courseId)).toBeDefined();
     }
   });
 
-  it('creates course when courseId is new and regenerateIds is false', async () => {
+  it('creates course when regenerateIds is false', async () => {
     db = createTestVibetestDb();
     const service = CourseImportService.forDb(db);
-    const text = JSON.stringify(minimalValidCourseJson());
+    stubImportUuids(IMPORT_UUIDS);
+    const text = JSON.stringify(minimalValidImportJson());
 
     const result = await service.importCourse(text, { regenerateIds: false });
 
@@ -47,11 +82,12 @@ describe('CourseImportService', () => {
   it('requires replace confirmation when courseId exists', async () => {
     db = createTestVibetestDb();
     const service = CourseImportService.forDb(db);
-    const text = JSON.stringify(minimalValidCourseJson());
+    stubImportUuids(IMPORT_UUIDS, IMPORT_UUIDS);
+    const text = JSON.stringify(minimalValidImportJson());
     await service.importCourse(text, { regenerateIds: false });
 
     const second = await service.importCourse(
-      JSON.stringify({ ...minimalValidCourseJson(), title: 'Updated' }),
+      JSON.stringify({ ...minimalValidImportJson(), title: 'Updated' }),
       { regenerateIds: false },
     );
 
@@ -67,7 +103,8 @@ describe('CourseImportService', () => {
     db = createTestVibetestDb();
     const service = CourseImportService.forDb(db);
     const progressRepo = ProgressRepository.forDb(db);
-    const text = JSON.stringify(minimalValidCourseJson());
+    stubImportUuids(IMPORT_UUIDS, IMPORT_UUIDS);
+    const text = JSON.stringify(minimalValidImportJson());
 
     await service.importCourse(text, { regenerateIds: false });
     await progressRepo.put(
@@ -86,7 +123,7 @@ describe('CourseImportService', () => {
     );
 
     const result = await service.importCourse(
-      JSON.stringify({ ...minimalValidCourseJson(), title: 'Replaced title' }),
+      JSON.stringify({ ...minimalValidImportJson(), title: 'Replaced title' }),
       { regenerateIds: false, confirmReplace: true },
     );
 

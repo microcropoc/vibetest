@@ -1,21 +1,17 @@
 {
   "schemaVersion": 1,
-  "courseId": "d5f9a3b2-8c4e-4a7f-ad2b-3e9f6a1b2c01",
   "title": "SVG-графика: основы",
   "description": "Мини-курс по векторной графике: координаты, фигуры, атрибуты fill и stroke. Теория, интерактивные SVG-шаги и quiz.",
   "modules": [
     {
-      "moduleId": "d5f9a3b2-8c4e-4a7f-ad2b-3e9f6a1b2c11",
       "title": "Холст и viewBox",
       "steps": [
         {
-          "stepId": "d5f9a3b2-8c4e-4a7f-ad2b-3e9f6a1b2c21",
           "type": "theory",
           "title": "Что такое SVG",
           "content": "## SVG (Scalable Vector Graphics)\n\n**SVG** — формат **векторной** графики в XML. Картинка описывается фигурами и путями, а не сеткой пикселей, поэтому масштабируется без «мыла».\n\nКорневой элемент:\n\n```xml\n<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\">\n  …\n</svg>\n```\n\n- **`viewBox=\"minX minY width height\"`** — система координат внутри холста. Часто `0 0 100 100`: слева направo X, сверху вниз Y.\n- **`width` / `height`** на `<svg>` задают размер на странице (можно в px или процентах).\n\nНа следующем шаге — простая сцена: круг и подпись."
         },
         {
-          "stepId": "d5f9a3b2-8c4e-4a7f-ad2b-3e9f6a1b2c22",
           "type": "svg",
           "title": "Круг на холсте",
           "content": {
@@ -25,7 +21,6 @@
           }
         },
         {
-          "stepId": "d5f9a3b2-8c4e-4a7f-ad2b-3e9f6a1b2c23",
           "type": "quiz",
           "title": "Тест: viewBox",
           "content": {
@@ -36,23 +31,22 @@
               "Толщину обводки по умолчанию",
               "Список слоёв в Photoshop"
             ],
-            "correctIndices": [1]
+            "correctIndices": [
+              1
+            ]
           }
         }
       ]
     },
     {
-      "moduleId": "d5f9a3b2-8c4e-4a7f-ad2b-3e9f6a1b2c12",
       "title": "Фигуры и стиль",
       "steps": [
         {
-          "stepId": "d5f9a3b2-8c4e-4a7f-ad2b-3e9f6a1b2c31",
           "type": "theory",
           "title": "rect, line, fill, stroke",
           "content": "## Базовые примитивы\n\n| Элемент | Назначение |\n|---------|------------|\n| `<rect x y width height>` | Прямоугольник |\n| `<circle cx cy r>` | Круг |\n| `<line x1 y1 x2 y2>` | Отрезок |\n| `<path d=\"…\">` | Произвольный контур |\n\n**Стили:**\n\n- **`fill`** — заливка (`none` — без заливки).\n- **`stroke`** — цвет обводки.\n- **`stroke-width`** — толщина линии.\n\nПорядок элементов в SVG важен: **ниже в разметке — «ближе к зрителю»** (рисуется поверх)."
         },
         {
-          "stepId": "d5f9a3b2-8c4e-4a7f-ad2b-3e9f6a1b2c32",
           "type": "svg",
           "title": "Слои: rect + line + path",
           "content": {
@@ -62,7 +56,6 @@
           }
         },
         {
-          "stepId": "d5f9a3b2-8c4e-4a7f-ad2b-3e9f6a1b2c33",
           "type": "quiz",
           "title": "Тест: fill и stroke",
           "content": {
@@ -73,11 +66,12 @@
               "viewBox",
               "xmlns"
             ],
-            "correctIndices": [1]
+            "correctIndices": [
+              1
+            ]
           }
         },
         {
-          "stepId": "d5f9a3b2-8c4e-4a7f-ad2b-3e9f6a1b2c34",
           "type": "svg",
           "title": "Мини-иконка «дом»",
           "content": {
@@ -86,7 +80,6 @@
           }
         },
         {
-          "stepId": "d5f9a3b2-8c4e-4a7f-ad2b-3e9f6a1b2c35",
           "type": "quiz",
           "title": "Финальный тест",
           "content": {
@@ -97,7 +90,11 @@
               "fill и stroke нельзя использовать на одном элементе",
               "<circle> задаётся центром и радиусом"
             ],
-            "correctIndices": [0, 1, 3]
+            "correctIndices": [
+              0,
+              1,
+              3
+            ]
           }
         }
       ]

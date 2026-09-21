@@ -1,6 +1,7 @@
 import { parseCourse } from '../../../courses/parse-course';
 import {
   FIXTURE_COURSE_ID,
+  FIXTURE_CREATED_AT,
   FIXTURE_MODULE_ID,
   FIXTURE_STEP_QUIZ_ID,
   minimalValidCourseJson,
@@ -60,6 +61,7 @@ describe('quizStepEngine', () => {
     const step = parseCourse({
       schemaVersion: 1,
       courseId: FIXTURE_COURSE_ID,
+      createdAt: FIXTURE_CREATED_AT,
       title: 'T',
       description: 'D',
       modules: [

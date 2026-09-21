@@ -1,21 +1,17 @@
 {
   "schemaVersion": 1,
-  "courseId": "a8b9c6d5-1f7e-4a4b-9d3e-2f0a1b9c8d01",
   "title": "Regex: основы",
   "description": "Мини-курс по регулярным выражениям: якоря, классы символов, квантификаторы. Теория, SVG, quiz и практика паттернов.",
   "modules": [
     {
-      "moduleId": "a8b9c6d5-1f7e-4a4b-9d3e-2f0a1b9c8d11",
       "title": "Якоря и цифры",
       "steps": [
         {
-          "stepId": "a8b9c6d5-1f7e-4a4b-9d3e-2f0a1b9c8d21",
           "type": "theory",
           "title": "Что такое regex",
           "content": "## Регулярное выражение\n\n**Regex** описывает **шаблон** строки. В JavaScript:\n\n```javascript\n/^\\d+$/.test('123'); // true\n/^\\d+$/.test('12a'); // false\n```\n\nПолезные символы:\n\n| Шаблон | Смысл |\n|--------|--------|\n| `^` | начало строки |\n| `$` | конец строки |\n| `\\d` | цифра 0–9 |\n| `+` | один или более раз |\n| `*` | ноль или более |\n\n**`^\\d+$`** — строка целиком из одной или нескольких цифр.\n\nВ практике вы вводите **только паттерн** (без слэшей и флагов): как в `new RegExp(pattern)`."
         },
         {
-          "stepId": "a8b9c6d5-1f7e-4a4b-9d3e-2f0a1b9c8d22",
           "type": "svg",
           "title": "Схема: ^ и $",
           "content": {
@@ -25,7 +21,6 @@
           }
         },
         {
-          "stepId": "a8b9c6d5-1f7e-4a4b-9d3e-2f0a1b9c8d23",
           "type": "quiz",
           "title": "Тест: якоря",
           "content": {
@@ -36,11 +31,12 @@
               "Любой символ",
               "Пробел"
             ],
-            "correctIndices": [1]
+            "correctIndices": [
+              1
+            ]
           }
         },
         {
-          "stepId": "a8b9c6d5-1f7e-4a4b-9d3e-2f0a1b9c8d24",
           "type": "regex",
           "title": "Практика: только цифры",
           "content": {
@@ -49,27 +45,32 @@
             "referenceSolution": "^\\d+$",
             "timeoutMs": 2000,
             "tests": [
-              { "input": "0" },
-              { "input": "12345" },
-              { "input": "12a" },
-              { "input": "abc" }
+              {
+                "input": "0"
+              },
+              {
+                "input": "12345"
+              },
+              {
+                "input": "12a"
+              },
+              {
+                "input": "abc"
+              }
             ]
           }
         }
       ]
     },
     {
-      "moduleId": "a8b9c6d5-1f7e-4a4b-9d3e-2f0a1b9c8d12",
       "title": "Буквы и классы",
       "steps": [
         {
-          "stepId": "a8b9c6d5-1f7e-4a4b-9d3e-2f0a1b9c8d31",
           "type": "theory",
           "title": "[A-Za-z] и {n,m}",
           "content": "## Класс символов\n\n```text\n[A-Za-z]+   — одна или более латинских букв\n[0-9]       — одна цифра (аналог \\d)\n```\n\n**Квантификатор `{2,4}`** — от 2 до 4 повторений предыдущего фрагмента.\n\nПример: **`^[A-Za-z]{2,4}$`** — строка из 2–4 букв без пробелов.\n\nПроверка в приложении: для каждого `input` сравнивается результат **`RegExp.test(input)`** вашего паттерна и эталона — они должны **совпасть** (оба `true` или оба `false`)."
         },
         {
-          "stepId": "a8b9c6d5-1f7e-4a4b-9d3e-2f0a1b9c8d32",
           "type": "svg",
           "title": "Схема: класс [A-Za-z]",
           "content": {
@@ -78,7 +79,6 @@
           }
         },
         {
-          "stepId": "a8b9c6d5-1f7e-4a4b-9d3e-2f0a1b9c8d33",
           "type": "quiz",
           "title": "Тест: \\d и +",
           "content": {
@@ -89,11 +89,12 @@
               "Любой символ",
               "Только пробелы"
             ],
-            "correctIndices": [1]
+            "correctIndices": [
+              1
+            ]
           }
         },
         {
-          "stepId": "a8b9c6d5-1f7e-4a4b-9d3e-2f0a1b9c8d34",
           "type": "regex",
           "title": "Практика: 2–4 буквы",
           "content": {
@@ -102,16 +103,25 @@
             "referenceSolution": "^[A-Za-z]{2,4}$",
             "timeoutMs": 2000,
             "tests": [
-              { "input": "ab" },
-              { "input": "Test" },
-              { "input": "a" },
-              { "input": "toolong" },
-              { "input": "x1" }
+              {
+                "input": "ab"
+              },
+              {
+                "input": "Test"
+              },
+              {
+                "input": "a"
+              },
+              {
+                "input": "toolong"
+              },
+              {
+                "input": "x1"
+              }
             ]
           }
         },
         {
-          "stepId": "a8b9c6d5-1f7e-4a4b-9d3e-2f0a1b9c8d35",
           "type": "quiz",
           "title": "Итоговый тест",
           "content": {
@@ -122,7 +132,9 @@
               "Паттерн компилируется на сервере",
               "Нужно 100% совпадение паттерна строкой с эталоном"
             ],
-            "correctIndices": [1]
+            "correctIndices": [
+              1
+            ]
           }
         }
       ]

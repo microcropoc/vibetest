@@ -1,6 +1,7 @@
 import { parseCourse } from '../../../courses/parse-course';
 import {
   FIXTURE_COURSE_ID,
+  FIXTURE_CREATED_AT,
   FIXTURE_MODULE_ID,
 } from '../../../courses/__fixtures__/course-fixtures';
 
@@ -11,6 +12,7 @@ describe('regexStepEngine', () => {
     const course = parseCourse({
       schemaVersion: 1,
       courseId: FIXTURE_COURSE_ID,
+      createdAt: FIXTURE_CREATED_AT,
       title: 'T',
       description: 'D',
       modules: [
@@ -46,6 +48,7 @@ describe('regexStepEngine', () => {
     const course = parseCourse({
       schemaVersion: 1,
       courseId: FIXTURE_COURSE_ID,
+      createdAt: FIXTURE_CREATED_AT,
       title: 'T',
       description: 'D',
       modules: [

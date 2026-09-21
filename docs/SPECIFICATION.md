@@ -208,7 +208,7 @@ Inline SVG (SMIL/CSS и т.п.); рендер **без санитизации** 
 
 Поток **Импортировать**:
 
-1. Разбор JSON.
+1. Разбор JSON: чистый текст import-DTO или **один** fenced-блок ` ```json … ``` ` (без текста до/после блока).
 2. Валидация Zod по [course-import.schema.json](./schemas/course-import.schema.json) (JSON **без** UUID и `createdAt`).
 3. Преобразование import-DTO → canonical `Course`: новые `courseId`, `moduleId`, `stepId` и `createdAt` (момент импорта).
 4. Semantic rules на canonical `Course`: уникальность всех ID; quiz indices; практика — `tests`, `timeoutMs`; у **SQLite** — поле `reset` не должно содержать seed-DML (проверка SQL-токенами с границей слова, напр. `\bINSERT\b`, `\bINTO\b`; seed только в `tests[].seed`); **JavaScript `reset`** этой SQL-эвристикой **не** проверяется.
@@ -258,7 +258,7 @@ Inline SVG (SMIL/CSS и т.п.); рендер **без санитизации** 
 
 ### Генерация промта
 
-Поле **«Описание курса»** и кнопка **«Копировать в буфер обмена»**. В clipboard — промт для внешнего LLM: описание автора, инструкции (курс **на русском языке**; в **каждом** модуле шаги `theory`, `svg`, `quiz`; в **theory** программный код — Markdown fenced blocks с языком и структурированный текст; ответ — только JSON **import-DTO** без UUID и `createdAt`; **экранирование** строк в JSON; запрет markdown-обёртки **вокруг всего ответа** (fences внутри `theory.content` допустимы); **самопроверка** через `JSON.parse` и соответствие схеме) и полный текст bundled [course-import.schema.json](./schemas/course-import.schema.json).
+Поле **«Описание курса»** и кнопка **«Копировать в буфер обмена»**. В clipboard — промт для внешнего LLM: описание автора, инструкции (курс **на русском языке**; в **каждом** модуле шаги `theory`, `svg`, `quiz`; в **theory** программный код — Markdown fenced blocks с языком и структурированный текст; **ответ LLM** — один fenced-блок ` ```json ` с JSON **import-DTO** без UUID и `createdAt`; **экранирование** строк в JSON; **самопроверка** через `JSON.parse` и соответствие схеме) и полный текст bundled [course-import.schema.json](./schemas/course-import.schema.json).
 
 ## Offline / PWA
 

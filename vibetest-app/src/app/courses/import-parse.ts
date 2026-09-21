@@ -5,6 +5,10 @@ import { importDtoToCourse } from './import-dto-to-course';
 import { ImportCourseSchema } from './import-course-zod-schema';
 import type { ImportIssue, ImportValidationStage } from './import-types';
 import { validateCourseSemantics } from './semantic-validation';
+import {
+  UnwrapJsonImportTextError,
+  unwrapJsonImportText,
+} from './unwrap-json-import-text';
 
 export type ImportParseSuccess = { readonly ok: true; readonly course: Course };
 
@@ -29,9 +33,20 @@ function zodIssues(error: ZodError): readonly ImportIssue[] {
 }
 
 export function parseImportCourseText(text: string): ImportParseResult {
+  let jsonText: string;
+  try {
+    jsonText = unwrapJsonImportText(text);
+  } catch (error: unknown) {
+    const message =
+      error instanceof UnwrapJsonImportTextError
+        ? error.message
+        : 'Некорректный формат импорта.';
+    return { ok: false, stage: 'json', issues: [{ path: 'json', message }] };
+  }
+
   let jsonValue: unknown;
   try {
-    jsonValue = JSON.parse(text);
+    jsonValue = JSON.parse(jsonText);
   } catch (error: unknown) {
     return { ok: false, stage: 'json', issues: [jsonParseIssue(error)] };
   }

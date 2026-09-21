@@ -67,6 +67,34 @@ describe('parseImportCourseText', () => {
     }
   });
 
+  it('accepts import JSON wrapped in ```json fence', () => {
+    const uuids = [
+      'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11',
+      'b1eebc99-9c0b-4ef8-bb6d-6bb9bd380a22',
+      'c2eebc99-9c0b-4ef8-bb6d-6bb9bd380a33',
+      'd3eebc99-9c0b-4ef8-bb6d-6bb9bd380a44',
+    ];
+    let i = 0;
+    vi.spyOn(crypto, 'randomUUID').mockImplementation(
+      () => (uuids[i++] ?? uuids[0]!) as `${string}-${string}-${string}-${string}-${string}`,
+    );
+    vi.spyOn(Date.prototype, 'toISOString').mockReturnValue(FIXTURE_CREATED_AT);
+
+    const body = JSON.stringify(minimalValidImportJson());
+    const fenced = `\`\`\`json\n${body}\n\`\`\``;
+    const result = parseImportCourseText(fenced);
+    expect(result.ok).toBe(true);
+  });
+
+  it('returns json stage error for prose around fenced block', () => {
+    const result = parseImportCourseText('Note:\n```json\n{}\n```');
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.stage).toBe('json');
+      expect(result.issues[0]?.message).toContain('```json');
+    }
+  });
+
   it('returns course on success with createdAt', () => {
     const uuids = [
       'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11',

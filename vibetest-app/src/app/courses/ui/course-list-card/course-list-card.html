@@ -3,6 +3,10 @@
   <p class="course-list-card__progress">
     Модули: {{ item().completedModules }} / {{ item().totalModules }} пройдено
   </p>
+  <p class="course-list-card__progress">
+    Шаги: {{ item().completedSteps }} / {{ item().totalSteps }} пройдено
+  </p>
+  <p class="course-list-card__meta">Создан: {{ item().createdAtLabel }}</p>
   <div class="course-list-card__actions">
     <button type="button" class="course-list-card__button course-list-card__button--primary" (click)="onProceed()">
       Пройти

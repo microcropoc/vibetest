@@ -44,6 +44,37 @@ describe('CoursesPage', () => {
     expect(root.textContent).toContain(
       `Модули: ${view.completedModules} / ${view.totalModules} пройдено`,
     );
+    expect(root.textContent).toContain(
+      `Шаги: ${view.completedSteps} / ${view.totalSteps} пройдено`,
+    );
+    expect(root.textContent).toContain(`Создан: ${view.createdAtLabel}`);
+  });
+
+  it('lists courses newest createdAt first', async () => {
+    const older = parseCourse({
+      ...minimalValidCourseJson(),
+      courseId: 'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11',
+      title: 'Older course',
+      createdAt: '2019-06-01T00:00:00.000Z',
+    });
+    const newer = parseCourse({
+      ...minimalValidCourseJson(),
+      courseId: 'b1eebc99-9c0b-4ef8-bb6d-6bb9bd380a22',
+      title: 'Newer course',
+      createdAt: '2021-06-01T00:00:00.000Z',
+    });
+    TestBed.overrideProvider(CourseRepository, {
+      useValue: {
+        list: vi.fn().mockResolvedValue([older, newer] as readonly Course[]),
+        delete: vi.fn(),
+      },
+    });
+    const fixture = TestBed.createComponent(CoursesPage);
+    await fixture.whenStable();
+    const titles = [
+      ...fixture.nativeElement.querySelectorAll('.course-list-card__title'),
+    ].map((el: Element) => el.textContent?.trim());
+    expect(titles).toEqual(['Newer course', 'Older course']);
   });
 
   it('shows empty state when there are no courses', async () => {

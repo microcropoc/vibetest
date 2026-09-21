@@ -12,8 +12,14 @@
 }
 
 .course-list-card__progress {
-  margin: 0 0 1rem;
+  margin: 0 0 0.35rem;
   color: #555;
+}
+
+.course-list-card__meta {
+  margin: 0 0 1rem;
+  color: #777;
+  font-size: 0.875rem;
 }
 
 .course-list-card__actions {

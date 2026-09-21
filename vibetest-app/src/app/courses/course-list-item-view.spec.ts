@@ -26,6 +26,10 @@ describe('courseListItemView', () => {
       title: course.title,
       completedModules: 0,
       totalModules: 1,
+      completedSteps: 1,
+      totalSteps: 2,
+      createdAt: course.createdAt,
+      createdAtLabel: '15.01.2020, 12:00',
     });
   });
 });

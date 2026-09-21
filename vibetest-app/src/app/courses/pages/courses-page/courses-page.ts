@@ -8,6 +8,7 @@ import {
   courseListItemView,
   type CourseListItemView,
 } from '../../course-list-item-view';
+import { sortCoursesByCreatedAtDesc } from '../../sort-courses-by-created-at';
 import { CourseListCardComponent } from '../../ui/course-list-card/course-list-card';
 
 @Component({
@@ -62,7 +63,7 @@ export class CoursesPage {
 
   private async reload(): Promise<void> {
     this.loading.set(true);
-    const courseList = await this.courses.list();
+    const courseList = sortCoursesByCreatedAtDesc(await this.courses.list());
     const views = await Promise.all(
       courseList.map(async (course) => {
         const snapshots = await this.progress.listByCourseId(course.courseId);

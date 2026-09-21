@@ -1,6 +1,8 @@
 import { Component, inject } from '@angular/core';
 import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 
+import { BUILD_INFO } from '../../build-info/generated-build-info';
+import { formatBuildVersionLabel } from '../../build-info/format-build-version-label';
 import { PwaUpdateService } from '../../pwa/pwa-update.service';
 
 @Component({
@@ -11,6 +13,11 @@ import { PwaUpdateService } from '../../pwa/pwa-update.service';
 })
 export class AppShell {
   protected readonly pwaUpdate = inject(PwaUpdateService);
+
+  protected readonly buildVersionLabel = formatBuildVersionLabel(
+    BUILD_INFO.commitShort,
+    BUILD_INFO.commitSubject,
+  );
 
   protected readonly navItems = [
     { label: 'Курсы', path: '/courses' },

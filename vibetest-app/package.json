@@ -4,6 +4,8 @@
   "scripts": {
     "ng": "ng",
     "start": "ng serve",
+    "generate:build-info": "tsx tools/generate-build-info.mts",
+    "prebuild": "npm run generate:build-info",
     "build": "ng build",
     "watch": "ng build --watch --configuration development",
     "test": "ng test",

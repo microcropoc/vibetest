@@ -2,6 +2,9 @@ import { Component } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { provideRouter, Router } from '@angular/router';
 
+import { BUILD_INFO } from '../../build-info/generated-build-info';
+import { formatBuildVersionLabel } from '../../build-info/format-build-version-label';
+
 import { AppShell } from './app-shell';
 
 @Component({ template: '' })
@@ -35,6 +38,14 @@ describe('AppShell', () => {
     expect(compiled.textContent).toContain('Импорт');
     expect(compiled.textContent).toContain('Инфо');
     expect(compiled.textContent).toContain('Генерация промта');
+  });
+
+  it('shows build version in footer', async () => {
+    const fixture = TestBed.createComponent(AppShell);
+    await fixture.whenStable();
+    const version = fixture.nativeElement.querySelector('.app-shell__version') as HTMLElement;
+    const expected = formatBuildVersionLabel(BUILD_INFO.commitShort, BUILD_INFO.commitSubject);
+    expect(version.textContent?.trim()).toBe(expected);
   });
 
   it('navigates when a tab link is clicked', async () => {

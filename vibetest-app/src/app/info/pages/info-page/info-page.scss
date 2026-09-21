@@ -15,6 +15,33 @@
   color: #555;
 }
 
+.info-page__toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem;
+  margin: 0 0 0.75rem;
+}
+
+.info-page__copy {
+  border: 1px solid #1565c0;
+  border-radius: 4px;
+  padding: 0.45rem 0.85rem;
+  background: #fff;
+  color: #1565c0;
+  font: inherit;
+  cursor: pointer;
+}
+
+.info-page__copy-status {
+  color: #2e7d32;
+  font-size: 0.875rem;
+}
+
+.info-page__copy-status--error {
+  color: #c62828;
+}
+
 .info-page__schema {
   margin: 0;
   padding: 1rem;

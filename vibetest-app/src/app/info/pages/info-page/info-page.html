@@ -1,7 +1,8 @@
 <section class="info-page">
   <h1 class="info-page__title">Инфо</h1>
   <p class="info-page__hint">
-    Формат JSON курса для авторов (read-only). Источник: bundled <code>course.schema.json</code>.
+    JSON Schema для импорта курса (без UUID и <code>createdAt</code>, read-only). Источник:
+    bundled <code>course-import.schema.json</code>.
   </p>
 
   @if (loading()) {
@@ -9,6 +10,20 @@
   } @else if (errorMessage()) {
     <p class="info-page__error" role="alert">{{ errorMessage() }}</p>
   } @else {
+    <div class="info-page__toolbar">
+      <button type="button" class="info-page__copy" (click)="onCopySchema()">Копировать</button>
+      @if (copyFeedback() === 'copied') {
+        <span class="info-page__copy-status" role="status">Скопировано</span>
+      } @else if (copyFeedback() === 'unavailable') {
+        <span class="info-page__copy-status info-page__copy-status--error" role="alert">
+          Копирование недоступно в этом браузере
+        </span>
+      } @else if (copyFeedback() === 'failed') {
+        <span class="info-page__copy-status info-page__copy-status--error" role="alert">
+          Не удалось скопировать
+        </span>
+      }
+    </div>
     <pre class="info-page__schema" aria-readonly="true">{{ schemaText() }}</pre>
   }
 </section>

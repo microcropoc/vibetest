@@ -253,7 +253,7 @@ Inline SVG (SMIL/CSS и т.п.); рендер **без санитизации** 
 
 ### Инфо
 
-Просмотр формата для авторов: **bundled** [course.schema.json](./schemas/course.schema.json) — форматированный JSON (read-only). На MVP без отдельного UI-рендера полей.
+Просмотр формата для авторов: **bundled** [course-import.schema.json](./schemas/course-import.schema.json) — форматированный JSON (read-only), схема **import-DTO** (без UUID и `createdAt`). Кнопка **Копировать** — текст схемы в буфер обмена. На MVP без отдельного UI-рендера полей. Канонический [course.schema.json](./schemas/course.schema.json) в UI не показывается.
 
 ## Offline / PWA
 

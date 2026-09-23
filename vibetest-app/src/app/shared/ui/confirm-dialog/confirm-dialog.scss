@@ -12,7 +12,7 @@
 .confirm-dialog__backdrop {
   position: absolute;
   inset: 0;
-  background: rgb(0 0 0 / 40%);
+  background: var(--color-backdrop);
 }
 
 .confirm-dialog__panel {
@@ -23,8 +23,9 @@
   overflow: auto;
   padding: 1.25rem;
   border-radius: 8px;
-  background: #fff;
-  box-shadow: 0 8px 24px rgb(0 0 0 / 15%);
+  background: var(--color-card-bg);
+  color: var(--color-text);
+  box-shadow: var(--shadow-dialog);
   box-sizing: border-box;
 }
 
@@ -37,7 +38,7 @@
 
 .confirm-dialog__message {
   margin: 0 0 1.25rem;
-  color: #444;
+  color: var(--color-text-muted);
   line-height: 1.45;
   overflow-wrap: anywhere;
 }
@@ -69,11 +70,11 @@
 }
 
 .confirm-dialog__button--secondary {
-  background: #f0f0f0;
-  color: #333;
+  background: var(--color-bg-muted);
+  color: var(--color-text);
 }
 
 .confirm-dialog__button--primary {
-  background: #c62828;
-  color: #fff;
+  background: var(--color-danger);
+  color: var(--color-danger-on);
 }

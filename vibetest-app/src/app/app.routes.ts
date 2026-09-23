@@ -47,6 +47,11 @@ export const routes: Routes = [
             (m) => m.PromptGenerationPage,
           ),
       },
+      {
+        path: 'settings',
+        loadComponent: () =>
+          import('./settings/pages/settings-page/settings-page').then((m) => m.SettingsPage),
+      },
     ],
   },
 ];

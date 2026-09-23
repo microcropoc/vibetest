@@ -1,8 +1,8 @@
 .course-list-card {
-  border: 1px solid #e0e0e0;
+  border: 1px solid var(--color-border);
   border-radius: 8px;
   padding: 1rem;
-  background: #fff;
+  background: var(--color-card-bg);
 }
 
 .course-list-card__title {
@@ -13,12 +13,12 @@
 
 .course-list-card__progress {
   margin: 0 0 0.35rem;
-  color: #555;
+  color: var(--color-text-muted);
 }
 
 .course-list-card__meta {
   margin: 0 0 1rem;
-  color: #777;
+  color: var(--color-text-subtle);
   font-size: 0.875rem;
 }
 
@@ -38,12 +38,12 @@
 }
 
 .course-list-card__button--primary {
-  background: #1565c0;
-  color: #fff;
+  background: var(--color-accent);
+  color: var(--color-accent-on);
 }
 
 .course-list-card__button--danger {
-  background: #fff;
-  border-color: #c62828;
-  color: #c62828;
+  background: var(--color-card-bg);
+  border-color: var(--color-danger);
+  color: var(--color-danger);
 }

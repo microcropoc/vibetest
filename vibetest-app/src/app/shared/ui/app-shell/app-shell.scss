@@ -4,6 +4,8 @@
   display: flex;
   flex-direction: column;
   overflow-x: clip;
+  background: var(--color-bg);
+  color: var(--color-text);
 }
 
 .app-shell__update {
@@ -14,8 +16,8 @@
   padding: 0.5rem var(--page-padding);
   max-width: 100%;
   box-sizing: border-box;
-  background: #fff8e1;
-  border-bottom: 1px solid #ffe082;
+  background: var(--color-update-bg);
+  border-bottom: 1px solid var(--color-warning-border);
 }
 
 .app-shell__update-text {
@@ -28,13 +30,14 @@
   padding: 0.35rem 0.85rem;
   font: inherit;
   cursor: pointer;
-  border: 1px solid #f9a825;
+  border: 1px solid var(--color-warning-accent);
   border-radius: 4px;
-  background: #fff;
+  background: var(--color-bg);
+  color: var(--color-text);
 }
 
 .app-shell__header {
-  border-bottom: 1px solid #e0e0e0;
+  border-bottom: 1px solid var(--color-border);
   padding: 0.75rem var(--page-padding);
   max-width: 100%;
   box-sizing: border-box;
@@ -55,7 +58,7 @@
   display: inline-flex;
   align-items: center;
   min-height: var(--touch-target-min);
-  color: #333;
+  color: var(--color-text);
   text-decoration: none;
   padding: 0.35rem 0.65rem;
   border-radius: 4px;
@@ -63,7 +66,7 @@
 
 .app-shell__link--active {
   font-weight: 600;
-  background: #f0f0f0;
+  background: var(--color-nav-active-bg);
 }
 
 .app-shell__main {
@@ -77,9 +80,9 @@
 }
 
 .app-shell__footer {
-  border-top: 1px solid #e0e0e0;
+  border-top: 1px solid var(--color-border);
   padding: 0.5rem var(--page-padding);
-  background: #fafafa;
+  background: var(--color-bg-subtle);
   max-width: 100%;
   box-sizing: border-box;
 }
@@ -90,7 +93,7 @@
   margin-inline: auto;
   font-size: 0.75rem;
   line-height: 1.4;
-  color: #777;
+  color: var(--color-text-subtle);
   word-break: break-word;
   overflow-wrap: anywhere;
 }

@@ -1,8 +1,8 @@
 .module-list-card {
-  border: 1px solid #e0e0e0;
+  border: 1px solid var(--color-border);
   border-radius: 8px;
   padding: 1rem;
-  background: #fff;
+  background: var(--color-card-bg);
 }
 
 .module-list-card__title {
@@ -13,7 +13,7 @@
 
 .module-list-card__progress {
   margin: 0 0 1rem;
-  color: #555;
+  color: var(--color-text-muted);
 }
 
 .module-list-card__button {
@@ -23,6 +23,6 @@
   padding: 0.45rem 0.85rem;
   font: inherit;
   cursor: pointer;
-  background: #1565c0;
-  color: #fff;
+  background: var(--color-accent);
+  color: var(--color-accent-on);
 }

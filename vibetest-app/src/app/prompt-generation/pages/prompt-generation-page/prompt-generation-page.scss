@@ -11,18 +11,18 @@
 
 .prompt-generation-page__hint {
   margin: 0 0 1rem;
-  color: #555;
+  color: var(--color-text-muted);
   line-height: 1.5;
 }
 
 .prompt-generation-page__status {
   margin: 0;
-  color: #555;
+  color: var(--color-text-muted);
 }
 
 .prompt-generation-page__error {
   margin: 0;
-  color: #c62828;
+  color: var(--color-danger);
   line-height: 1.5;
 }
 
@@ -41,7 +41,9 @@
   box-sizing: border-box;
   font: inherit;
   line-height: 1.45;
-  border: 1px solid #e0e0e0;
+  border: 1px solid var(--color-border);
+  background: var(--color-bg);
+  color: var(--color-text);
   border-radius: 8px;
   resize: vertical;
 }
@@ -54,12 +56,12 @@
 }
 
 .prompt-generation-page__copy {
-  border: 1px solid #1565c0;
+  border: 1px solid var(--color-accent);
   border-radius: 4px;
   min-height: var(--touch-target-min);
   padding: 0.45rem 0.85rem;
-  background: #1565c0;
-  color: #fff;
+  background: var(--color-accent);
+  color: var(--color-accent-on);
   font: inherit;
   cursor: pointer;
 }
@@ -76,10 +78,10 @@
 }
 
 .prompt-generation-page__copy-status {
-  color: #2e7d32;
+  color: var(--color-success);
   font-size: 0.875rem;
 }
 
 .prompt-generation-page__copy-status--error {
-  color: #c62828;
+  color: var(--color-danger);
 }

@@ -1,12 +1,136 @@
 /* Global layout tokens (mobile-first) */
-:root {
+:root,
+[data-theme='light'] {
+  color-scheme: light;
+
   --page-padding: 1rem;
   --content-max-width: 72rem;
   --touch-target-min: 2.75rem;
+
+  --color-bg: #ffffff;
+  --color-bg-subtle: #fafafa;
+  --color-bg-muted: #f0f0f0;
+  --color-bg-highlight: #fff8e1;
+  --color-border: #e0e0e0;
+  --color-border-strong: #cccccc;
+  --color-text: #333333;
+  --color-text-muted: #555555;
+  --color-text-subtle: #777777;
+  --color-text-faint: #888888;
+  --color-accent: #1565c0;
+  --color-accent-on: #ffffff;
+  --color-danger: #c62828;
+  --color-danger-on: #ffffff;
+  --color-success: #2e7d32;
+  --color-success-bg: #e8f5e9;
+  --color-success-text: #1b5e20;
+  --color-error-bg: #ffebee;
+  --color-error-text: #b71c1c;
+  --color-error-border: #c62828;
+  --color-warning-border: #ffe082;
+  --color-warning-accent: #f9a825;
+  --color-card-bg: #ffffff;
+  --color-nav-active-bg: #f0f0f0;
+  --color-update-bg: #fff8e1;
+  --color-backdrop: rgb(0 0 0 / 40%);
+  --color-step-current: #9e9e9e;
+  --color-step-current-border: #757575;
+  --color-step-failed: #ef5350;
+  --color-step-failed-border: #c62828;
+  --color-step-completed: #66bb6a;
+  --color-step-completed-border: #2e7d32;
+  --color-step-neutral: #f5f5f5;
+  --color-step-neutral-border: #bbbbbb;
+  --shadow-dialog: 0 8px 24px rgb(0 0 0 / 15%);
+  --motion-decorative: 150ms ease;
+}
+
+[data-theme='dark'] {
+  color-scheme: dark;
+
+  --color-bg: #121212;
+  --color-bg-subtle: #1a1a1a;
+  --color-bg-muted: #2a2a2a;
+  --color-bg-highlight: #2a2410;
+  --color-border: #3d3d3d;
+  --color-border-strong: #555555;
+  --color-text: #eeeeee;
+  --color-text-muted: #cccccc;
+  --color-text-subtle: #aaaaaa;
+  --color-text-faint: #999999;
+  --color-accent: #64b5f6;
+  --color-accent-on: #0d1117;
+  --color-danger: #ef5350;
+  --color-danger-on: #0d1117;
+  --color-success: #81c784;
+  --color-success-bg: #1b3d1f;
+  --color-success-text: #c8e6c9;
+  --color-error-bg: #3d1518;
+  --color-error-text: #ffcdd2;
+  --color-error-border: #ef5350;
+  --color-warning-border: #6d5a20;
+  --color-warning-accent: #ffb300;
+  --color-card-bg: #1e1e1e;
+  --color-nav-active-bg: #2a2a2a;
+  --color-update-bg: #2a2410;
+  --color-backdrop: rgb(0 0 0 / 65%);
+  --color-step-current: #757575;
+  --color-step-current-border: #9e9e9e;
+  --color-step-failed: #c62828;
+  --color-step-failed-border: #ef5350;
+  --color-step-completed: #388e3c;
+  --color-step-completed-border: #66bb6a;
+  --color-step-neutral: #2a2a2a;
+  --color-step-neutral-border: #555555;
+  --shadow-dialog: 0 8px 24px rgb(0 0 0 / 45%);
+}
+
+[data-theme='eink'] {
+  color-scheme: light;
+
+  --color-bg: #ffffff;
+  --color-bg-subtle: #ffffff;
+  --color-bg-muted: #f5f5f5;
+  --color-bg-highlight: #ffffff;
+  --color-border: #000000;
+  --color-border-strong: #000000;
+  --color-text: #000000;
+  --color-text-muted: #000000;
+  --color-text-subtle: #222222;
+  --color-text-faint: #333333;
+  --color-accent: #000000;
+  --color-accent-on: #ffffff;
+  --color-danger: #000000;
+  --color-danger-on: #ffffff;
+  --color-success: #000000;
+  --color-success-bg: #ffffff;
+  --color-success-text: #000000;
+  --color-error-bg: #ffffff;
+  --color-error-text: #000000;
+  --color-error-border: #000000;
+  --color-warning-border: #000000;
+  --color-warning-accent: #000000;
+  --color-card-bg: #ffffff;
+  --color-nav-active-bg: #eeeeee;
+  --color-update-bg: #ffffff;
+  --color-backdrop: rgb(0 0 0 / 55%);
+  --color-step-current: #888888;
+  --color-step-current-border: #000000;
+  --color-step-failed: #ffffff;
+  --color-step-failed-border: #000000;
+  --color-step-completed: #ffffff;
+  --color-step-completed-border: #000000;
+  --color-step-neutral: #ffffff;
+  --color-step-neutral-border: #000000;
+  --shadow-dialog: none;
+  --motion-decorative: 0ms;
 }
 
 @media (min-width: 768px) {
-  :root {
+  :root,
+  [data-theme='light'],
+  [data-theme='dark'],
+  [data-theme='eink'] {
     --page-padding: 1.25rem;
   }
 }
@@ -19,4 +143,20 @@ body {
   margin: 0;
   min-width: 320px;
   overflow-x: clip;
+  background: var(--color-bg);
+  color: var(--color-text);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root,
+  [data-theme='light'],
+  [data-theme='dark'],
+  [data-theme='eink'] {
+    --motion-decorative: 0ms;
+  }
+}
+
+[data-theme='eink'] * {
+  box-shadow: none !important;
+  text-shadow: none !important;
 }

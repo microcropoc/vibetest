@@ -1,0 +1,16 @@
+.settings-page {
+  width: 100%;
+  min-width: 0;
+}
+
+.settings-page__title {
+  margin: 0 0 0.5rem;
+  font-size: 1.5rem;
+  font-weight: 600;
+}
+
+.settings-page__hint {
+  margin: 0 0 1.25rem;
+  color: var(--color-text-muted);
+  line-height: 1.5;
+}

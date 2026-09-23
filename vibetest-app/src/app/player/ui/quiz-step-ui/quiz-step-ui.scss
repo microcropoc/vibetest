@@ -13,8 +13,8 @@
   margin: 0 0 1rem;
   padding: 0.65rem 0.85rem;
   border-radius: 4px;
-  background: #ffebee;
-  color: #b71c1c;
+  background: var(--color-error-bg);
+  color: var(--color-error-text);
 }
 
 .quiz-step-ui__options {
@@ -53,8 +53,8 @@
   min-height: var(--touch-target-min);
   font: inherit;
   cursor: pointer;
-  background: #1565c0;
-  color: #fff;
+  background: var(--color-accent);
+  color: var(--color-accent-on);
 }
 
 .quiz-step-ui__submit:disabled {

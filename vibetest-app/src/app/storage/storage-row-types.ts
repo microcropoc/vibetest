@@ -12,6 +12,12 @@ export interface CourseRow {
  * IndexedDB row for one step's progress.
  * `draft` is persisted JSON matching `StepDraftByType[type]` (validated in repositories).
  */
+/** IndexedDB row for app settings keyed by `key`. */
+export interface SettingsRow {
+  readonly key: string;
+  readonly value: unknown;
+}
+
 export interface StepProgressRow {
   readonly progressKey: string;
   readonly courseId: string;

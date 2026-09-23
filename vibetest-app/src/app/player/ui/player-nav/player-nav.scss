@@ -4,7 +4,7 @@
   gap: 0.5rem;
   margin-top: 1.25rem;
   padding-top: 1rem;
-  border-top: 1px solid #e0e0e0;
+  border-top: 1px solid var(--color-border);
   max-width: 100%;
 }
 
@@ -23,14 +23,14 @@
 }
 
 .player-nav__button--secondary {
-  background: #f0f0f0;
-  color: #333;
+  background: var(--color-bg-muted);
+  color: var(--color-text);
 }
 
 .player-nav__button--primary {
   margin-left: auto;
-  background: #1565c0;
-  color: #fff;
+  background: var(--color-accent);
+  color: var(--color-accent-on);
 }
 
 @media (max-width: 479px) {

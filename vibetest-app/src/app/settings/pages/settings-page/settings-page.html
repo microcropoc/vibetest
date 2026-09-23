@@ -1,0 +1,6 @@
+<section class="settings-page">
+  <h1 class="settings-page__title">Настройки</h1>
+  <p class="settings-page__hint">Тема применяется сразу и сохраняется в этом браузере.</p>
+
+  <app-theme-picker [value]="theme()" (themeChange)="onThemeChange($event)" />
+</section>

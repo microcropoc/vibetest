@@ -9,7 +9,7 @@
 
 .player-shell__context {
   margin: 0;
-  color: #555;
+  color: var(--color-text-muted);
   font-size: 0.9375rem;
 }
 
@@ -21,12 +21,12 @@
 
 .player-shell__step-meta {
   margin: 0 0 1rem;
-  color: #666;
+  color: var(--color-text-subtle);
 }
 
 .player-shell__placeholder,
 .player-shell__loading {
   margin: 0;
-  color: #888;
+  color: var(--color-text-faint);
   font-style: italic;
 }

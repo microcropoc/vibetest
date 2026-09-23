@@ -1,0 +1,35 @@
+.theme-picker {
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.theme-picker__legend {
+  margin-bottom: 0.75rem;
+  font-weight: 600;
+}
+
+.theme-picker__options {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.theme-picker__option {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  min-height: var(--touch-target-min);
+  padding: 0.35rem 0;
+  cursor: pointer;
+}
+
+.theme-picker__input {
+  width: 1.125rem;
+  height: 1.125rem;
+  margin: 0;
+}
+
+.theme-picker__label {
+  line-height: 1.45;
+}

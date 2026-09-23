@@ -1,8 +1,8 @@
 .course-statistics-card {
-  border: 1px solid #e0e0e0;
+  border: 1px solid var(--color-border);
   border-radius: 8px;
   padding: 1rem;
-  background: #fff;
+  background: var(--color-card-bg);
 }
 
 .course-statistics-card__title {
@@ -13,7 +13,7 @@
 
 .course-statistics-card__line {
   margin: 0 0 0.35rem;
-  color: #555;
+  color: var(--color-text-muted);
 }
 
 .course-statistics-card__line:last-child {

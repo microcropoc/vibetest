@@ -73,19 +73,20 @@
 }
 
 .import-page__status--success {
-  color: #0d6832;
+  color: var(--color-success);
 }
 
 .import-page__status--info {
-  color: #555;
+  color: var(--color-text-muted);
 }
 
 .import-page__errors {
   margin: 1rem 0 0;
   padding: 0.75rem 1rem;
-  border: 1px solid #c62828;
+  border: 1px solid var(--color-error-border);
   border-radius: 4px;
-  background: #ffebee;
+  background: var(--color-error-bg);
+  color: var(--color-error-text);
 }
 
 .import-page__errors-title {

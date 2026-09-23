@@ -1,3 +1,8 @@
+.practice-step-shell {
+  max-width: 100%;
+  min-width: 0;
+}
+
 .practice-step-shell__description {
   margin: 0 0 0.75rem;
   line-height: 1.5;
@@ -60,7 +65,7 @@
   border: 1px solid transparent;
   border-radius: 4px;
   padding: 0.5rem 1rem;
-  min-height: 2.75rem;
+  min-height: var(--touch-target-min);
   font: inherit;
   cursor: pointer;
   background: #1565c0;

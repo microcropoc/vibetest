@@ -1,19 +1,30 @@
+.step-indicator-bar {
+  max-width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin;
+  margin-bottom: 1rem;
+}
+
 .step-indicator-bar__list {
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   gap: 0.5rem;
   list-style: none;
-  margin: 0 0 1rem;
+  margin: 0;
   padding: 0;
+  width: max-content;
+  min-width: 100%;
 }
 
 .step-indicator-bar__item {
   margin: 0;
+  flex-shrink: 0;
 }
 
 .step-indicator-bar__square {
-  width: 2rem;
-  height: 2rem;
+  width: var(--touch-target-min);
+  height: var(--touch-target-min);
   padding: 0;
   border: 1px solid #bbb;
   border-radius: 4px;

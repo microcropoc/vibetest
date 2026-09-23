@@ -1,1 +1,22 @@
-/* You can add global styles to this file, and also import other style files */
+/* Global layout tokens (mobile-first) */
+:root {
+  --page-padding: 1rem;
+  --content-max-width: 72rem;
+  --touch-target-min: 2.75rem;
+}
+
+@media (min-width: 768px) {
+  :root {
+    --page-padding: 1.25rem;
+  }
+}
+
+html {
+  overflow-x: clip;
+}
+
+body {
+  margin: 0;
+  min-width: 320px;
+  overflow-x: clip;
+}

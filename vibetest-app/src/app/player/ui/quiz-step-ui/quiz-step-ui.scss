@@ -1,3 +1,8 @@
+.quiz-step-ui {
+  max-width: 100%;
+  min-width: 0;
+}
+
 .quiz-step-ui__question {
   margin: 0 0 1rem;
   font-size: 1.0625rem;
@@ -45,7 +50,7 @@
   border: 1px solid transparent;
   border-radius: 4px;
   padding: 0.5rem 1rem;
-  min-height: 2.75rem;
+  min-height: var(--touch-target-min);
   font: inherit;
   cursor: pointer;
   background: #1565c0;

@@ -1,3 +1,8 @@
+.courses-page {
+  width: 100%;
+  min-width: 0;
+}
+
 .courses-page__title {
   margin: 0 0 1rem;
   font-size: 1.5rem;
@@ -22,4 +27,12 @@
 
 .courses-page__item {
   margin: 0;
+  min-width: 0;
+}
+
+@media (min-width: 768px) {
+  .courses-page__list {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }

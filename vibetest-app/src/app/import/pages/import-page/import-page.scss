@@ -1,3 +1,8 @@
+.import-page {
+  width: 100%;
+  min-width: 0;
+}
+
 .import-page__title {
   margin: 0 0 1rem;
   font-size: 1.5rem;
@@ -28,6 +33,12 @@
   cursor: pointer;
 }
 
+.import-page__checkbox :where(input) {
+  min-width: 1.125rem;
+  min-height: 1.125rem;
+  margin-top: 0.15rem;
+}
+
 .import-page__actions {
   display: flex;
   flex-wrap: wrap;
@@ -35,9 +46,20 @@
 }
 
 .import-page__button {
+  min-height: var(--touch-target-min);
   padding: 0.5rem 1rem;
   font-size: 1rem;
   cursor: pointer;
+}
+
+@media (max-width: 479px) {
+  .import-page__actions {
+    flex-direction: column;
+  }
+
+  .import-page__actions .import-page__button {
+    width: 100%;
+  }
 }
 
 .import-page__button:disabled {

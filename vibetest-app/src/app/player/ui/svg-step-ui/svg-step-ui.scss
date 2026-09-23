@@ -3,9 +3,15 @@
   font-weight: 600;
 }
 
+.svg-step-ui {
+  max-width: 100%;
+  min-width: 0;
+}
+
 .svg-step-ui__figure {
   max-width: 100%;
   overflow: auto;
+  -webkit-overflow-scrolling: touch;
 }
 
 .svg-step-ui__figure :where(svg) {

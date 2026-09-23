@@ -1,3 +1,8 @@
+.prompt-generation-page {
+  width: 100%;
+  min-width: 0;
+}
+
 .prompt-generation-page__title {
   margin: 0 0 0.5rem;
   font-size: 1.5rem;
@@ -51,11 +56,23 @@
 .prompt-generation-page__copy {
   border: 1px solid #1565c0;
   border-radius: 4px;
+  min-height: var(--touch-target-min);
   padding: 0.45rem 0.85rem;
   background: #1565c0;
   color: #fff;
   font: inherit;
   cursor: pointer;
+}
+
+@media (max-width: 479px) {
+  .prompt-generation-page__toolbar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .prompt-generation-page__copy {
+    width: 100%;
+  }
 }
 
 .prompt-generation-page__copy-status {

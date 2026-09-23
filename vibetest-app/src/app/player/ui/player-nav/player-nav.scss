@@ -5,13 +5,14 @@
   margin-top: 1.25rem;
   padding-top: 1rem;
   border-top: 1px solid #e0e0e0;
+  max-width: 100%;
 }
 
 .player-nav__button {
   border: 1px solid transparent;
   border-radius: 4px;
   padding: 0.5rem 1rem;
-  min-height: 2.75rem;
+  min-height: var(--touch-target-min);
   font: inherit;
   cursor: pointer;
 }
@@ -30,4 +31,16 @@
   margin-left: auto;
   background: #1565c0;
   color: #fff;
+}
+
+@media (max-width: 479px) {
+  .player-nav__button {
+    flex: 1 1 calc(50% - 0.25rem);
+    min-width: 0;
+  }
+
+  .player-nav__button--primary {
+    margin-left: 0;
+    flex-basis: 100%;
+  }
 }

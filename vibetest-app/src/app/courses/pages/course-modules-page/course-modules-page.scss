@@ -1,3 +1,8 @@
+.course-modules-page {
+  width: 100%;
+  min-width: 0;
+}
+
 .course-modules-page__header {
   display: flex;
   flex-wrap: wrap;
@@ -9,6 +14,8 @@
 
 .course-modules-page__title {
   margin: 0;
+  min-width: 0;
+  overflow-wrap: anywhere;
   font-size: 1.5rem;
   font-weight: 600;
 }
@@ -16,6 +23,7 @@
 .course-modules-page__exit {
   border: 1px solid #ccc;
   border-radius: 4px;
+  min-height: var(--touch-target-min);
   padding: 0.45rem 0.85rem;
   font: inherit;
   cursor: pointer;

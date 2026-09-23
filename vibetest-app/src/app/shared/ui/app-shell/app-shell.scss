@@ -1,7 +1,9 @@
 .app-shell {
   min-height: 100dvh;
+  min-width: 320px;
   display: flex;
   flex-direction: column;
+  overflow-x: clip;
 }
 
 .app-shell__update {
@@ -9,17 +11,20 @@
   flex-wrap: wrap;
   align-items: center;
   gap: 0.5rem 1rem;
-  padding: 0.5rem 1rem;
+  padding: 0.5rem var(--page-padding);
+  max-width: 100%;
+  box-sizing: border-box;
   background: #fff8e1;
   border-bottom: 1px solid #ffe082;
 }
 
 .app-shell__update-text {
   flex: 1;
-  min-width: 12rem;
+  min-width: min(12rem, 100%);
 }
 
 .app-shell__update-button {
+  min-height: var(--touch-target-min);
   padding: 0.35rem 0.85rem;
   font: inherit;
   cursor: pointer;
@@ -30,19 +35,29 @@
 
 .app-shell__header {
   border-bottom: 1px solid #e0e0e0;
-  padding: 0.75rem 1rem;
+  padding: 0.75rem var(--page-padding);
+  max-width: 100%;
+  box-sizing: border-box;
 }
 
 .app-shell__nav {
   display: flex;
-  flex-wrap: wrap;
-  gap: 0.5rem 1rem;
+  flex-wrap: nowrap;
+  gap: 0.5rem;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin;
+  max-width: 100%;
 }
 
 .app-shell__link {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--touch-target-min);
   color: #333;
   text-decoration: none;
-  padding: 0.35rem 0.5rem;
+  padding: 0.35rem 0.65rem;
   border-radius: 4px;
 }
 
@@ -53,19 +68,29 @@
 
 .app-shell__main {
   flex: 1;
-  padding: 1rem;
+  width: 100%;
+  max-width: var(--content-max-width);
+  margin-inline: auto;
+  padding: var(--page-padding);
+  box-sizing: border-box;
+  min-width: 0;
 }
 
 .app-shell__footer {
   border-top: 1px solid #e0e0e0;
-  padding: 0.5rem 1rem;
+  padding: 0.5rem var(--page-padding);
   background: #fafafa;
+  max-width: 100%;
+  box-sizing: border-box;
 }
 
 .app-shell__version {
   margin: 0;
+  max-width: var(--content-max-width);
+  margin-inline: auto;
   font-size: 0.75rem;
   line-height: 1.4;
   color: #777;
   word-break: break-word;
+  overflow-wrap: anywhere;
 }

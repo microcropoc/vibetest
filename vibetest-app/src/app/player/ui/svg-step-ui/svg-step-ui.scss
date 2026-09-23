@@ -1,22 +1,48 @@
-.svg-step-ui__caption {
-  margin: 0 0 0.5rem;
-  font-weight: 600;
-}
-
 .svg-step-ui {
   max-width: 100%;
   min-width: 0;
 }
 
+.svg-step-ui__caption {
+  margin: 0 0 0.5rem;
+  font-weight: 600;
+}
+
+.svg-step-ui__figure-row {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0.5rem;
+}
+
 .svg-step-ui__figure {
-  max-width: 100%;
-  overflow: auto;
-  -webkit-overflow-scrolling: touch;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  max-height: min(50vh, 24rem);
+  overflow: hidden;
+  box-sizing: border-box;
 }
 
 .svg-step-ui__figure :where(svg) {
+  display: block;
   max-width: 100%;
+  max-height: min(50vh, 24rem);
+  width: auto;
   height: auto;
+}
+
+.svg-step-ui__expand {
+  align-self: flex-start;
+  min-height: var(--touch-target-min);
+  padding: 0.45rem 0.85rem;
+  border: 1px solid var(--color-border-strong);
+  border-radius: 4px;
+  background: var(--color-bg-muted);
+  color: var(--color-text);
+  font: inherit;
+  cursor: pointer;
 }
 
 .svg-step-ui__description {

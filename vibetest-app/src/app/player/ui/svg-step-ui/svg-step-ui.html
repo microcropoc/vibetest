@@ -2,8 +2,29 @@
   @if (content().caption) {
     <p class="svg-step-ui__caption">{{ content().caption }}</p>
   }
-  <div class="svg-step-ui__figure" [innerHTML]="svgHtml()"></div>
+
+  <div class="svg-step-ui__figure-row">
+    <div class="svg-step-ui__figure" [innerHTML]="svgHtml()"></div>
+    <button
+      #expandButton
+      type="button"
+      class="svg-step-ui__expand"
+      aria-haspopup="dialog"
+      [attr.aria-expanded]="viewerOpen()"
+      (click)="onExpand()"
+    >
+      Развернуть
+    </button>
+  </div>
+
   @if (content().description) {
     <p class="svg-step-ui__description">{{ content().description }}</p>
   }
+
+  <app-svg-fullscreen-viewer
+    [open]="viewerOpen()"
+    [svgHtml]="svgHtml()"
+    [dialogLabel]="viewerDialogLabel()"
+    (closed)="onViewerClosed()"
+  />
 </div>

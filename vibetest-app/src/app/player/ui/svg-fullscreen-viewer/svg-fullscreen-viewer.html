@@ -1,0 +1,60 @@
+@if (open()) {
+  <div
+    class="svg-fullscreen-viewer"
+    role="dialog"
+    aria-modal="true"
+    [attr.aria-label]="dialogLabel()"
+  >
+    <button
+      type="button"
+      class="svg-fullscreen-viewer__backdrop"
+      aria-label="Закрыть просмотр"
+      (click)="onClose()"
+    ></button>
+
+    <div class="svg-fullscreen-viewer__panel">
+      <div class="svg-fullscreen-viewer__toolbar">
+        <button
+          type="button"
+          class="svg-fullscreen-viewer__tool"
+          aria-label="Уменьшить"
+          (click)="onZoomOut()"
+        >
+          −
+        </button>
+        <button
+          type="button"
+          class="svg-fullscreen-viewer__tool"
+          aria-label="Увеличить"
+          (click)="onZoomIn()"
+        >
+          +
+        </button>
+        <button type="button" class="svg-fullscreen-viewer__tool" (click)="onReset()">Сброс</button>
+        <button
+          type="button"
+          class="svg-fullscreen-viewer__close"
+          (click)="onClose()"
+        >
+          Закрыть
+        </button>
+      </div>
+
+      <div
+        class="svg-fullscreen-viewer__viewport"
+        [class.svg-fullscreen-viewer__viewport--panning]="panning()"
+        (pointerdown)="onPointerDown($event)"
+        (pointermove)="onPointerMove($event)"
+        (pointerup)="onPointerUp($event)"
+        (pointercancel)="onPointerUp($event)"
+      >
+        <div
+          class="svg-fullscreen-viewer__scene"
+          [style.transform]="viewportTransform()"
+        >
+          <div class="svg-fullscreen-viewer__svg" [innerHTML]="svgHtml()"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+}

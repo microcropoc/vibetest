@@ -14,6 +14,7 @@ interface PracticeRuntime {
 }
 
 let runtime: PracticeRuntime | undefined;
+let caseInFlight = false;
 
 self.addEventListener('message', (event: MessageEvent<unknown>) => {
   try {
@@ -40,7 +41,8 @@ self.addEventListener('message', (event: MessageEvent<unknown>) => {
         break;
       }
       case 'javascriptRunCase': {
-        if (!runtime) {
+        const active = runtime;
+        if (!active) {
           self.postMessage({
             type: 'error',
             id: request.id,
@@ -48,32 +50,49 @@ self.addEventListener('message', (event: MessageEvent<unknown>) => {
           });
           break;
         }
-        try {
-          runtime.applyUserReset(request.userReset ?? '');
-          runtime.applyReferenceReset(request.referenceReset ?? '');
-          const result = runJavascriptCaseComparison(
-            runtime.invokeUser,
-            runtime.invokeReference,
-            request.args,
-            request.calls,
-          );
+        if (caseInFlight) {
           self.postMessage({
-            type: 'javascriptCaseResult',
+            type: 'error',
             id: request.id,
-            pass: result.pass,
-            userValue: result.userValue,
-            referenceValue: result.referenceValue,
-            message: result.message,
+            message: 'Case already running',
           });
-        } catch (error: unknown) {
-          const message = error instanceof Error ? error.message : 'Runtime error';
-          self.postMessage({
-            type: 'javascriptCaseResult',
-            id: request.id,
-            pass: false,
-            message,
-          });
+          break;
         }
+        caseInFlight = true;
+        void (async () => {
+          try {
+            active.applyUserReset(request.userReset ?? '');
+            active.applyReferenceReset(request.referenceReset ?? '');
+            const result = await runJavascriptCaseComparison(
+              active.invokeUser,
+              active.invokeReference,
+              request.args,
+              request.calls,
+              {
+                rejects: request.rejects,
+                deadlineMs: request.deadlineMs,
+              },
+            );
+            self.postMessage({
+              type: 'javascriptCaseResult',
+              id: request.id,
+              pass: result.pass,
+              userValue: result.userValue,
+              referenceValue: result.referenceValue,
+              message: result.message,
+            });
+          } catch (error: unknown) {
+            const message = error instanceof Error ? error.message : 'Runtime error';
+            self.postMessage({
+              type: 'javascriptCaseResult',
+              id: request.id,
+              pass: false,
+              message,
+            });
+          } finally {
+            caseInFlight = false;
+          }
+        })();
         break;
       }
       default:

@@ -26,6 +26,8 @@ const javascriptRunCaseSchema = z
     id: messageIdSchema,
     args: z.array(z.unknown()).max(20),
     calls: z.array(javascriptCallStepSchema).max(20).optional(),
+    rejects: z.boolean().optional(),
+    deadlineMs: z.number().optional(),
     userReset: z.string().optional(),
     referenceReset: z.string().optional(),
   })

@@ -71,6 +71,8 @@ export async function runJavascriptPractice(
                 })),
               }
             : {}),
+          ...(testCase.rejects !== undefined ? { rejects: testCase.rejects } : {}),
+          deadlineMs,
           userReset: content.reset ?? '',
           referenceReset: content.reset ?? '',
         },

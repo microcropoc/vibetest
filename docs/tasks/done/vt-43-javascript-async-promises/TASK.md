@@ -20,10 +20,10 @@ Oracle по-прежнему **referenceSolution**, не static `expected`.
 ### Семантика
 
 1. Выполнение кейса как vt-42 (args → calls).
-2. На каждом шаге, если результат thenable (`typeof then === 'function'`), **await** в Worker (async handler внутри message loop или dedicated async run — без блокировки UI; таймаут через vt-7 на весь прогон).
+2. На каждом шаге, если результат thenable (`typeof then === 'function'`), **await** в Worker; таймаут через vt-7 на весь прогон.
 3. Финальные значения: если `rejects: true` — обе стороны должны reject; сравнить reasons; иначе обе fulfill → `jsonCompatibleEqual`.
 4. User reject + ref fulfill (и наоборот) → fail.
-5. Sync throw в call chain → fail (если не `rejects` и ref не throw symetrically — уточнить в SPEC: sync throw user vs sync throw ref с одинаким message при `rejects` — по желанию только Promise reject в v1; зафиксировать в REPORT).
+5. Sync throw в call chain → fail (v1: `rejects` только Promise reject).
 
 ### Протокол
 
@@ -50,22 +50,8 @@ Oracle по-прежнему **referenceSolution**, не static `expected`.
 - Зависимости: **vt-42**, **vt-7**, **vt-8**.
 - Thenable detection: минимально `then` callable; не требовать нативный `Promise`.
 
-## План работ
-
-- [ ] SPEC + schema + `generate:zod`
-- [ ] Async execution path в Worker
-- [ ] Runner + messages
-- [ ] Checklist specs
-- [ ] `ng test --watch=false` зелёный; REPORT при merge
-
-## Критерии готовности (Definition of Done)
-
-- [ ] Все пункты checklist покрыты
-- [ ] SPEC обновлён; sync-курсы и vt-42 сценарии зелёные
-
 ## Вне рамок задачи
 
 - Fake timers, spy (`vt-44`)
-- Проверка порядка microtasks vs macrotasks (vt-44)
 - `fetch` / реальный I/O
 - `checkScript`

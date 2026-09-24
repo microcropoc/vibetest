@@ -53,10 +53,9 @@
 
 | # | Задача | Зависимости |
 |---|--------|-------------|
-| vt-43 | [javascript-async-promises](tasks/backlog/vt-43-javascript-async-promises.md) | vt-42 ✓ |
-| vt-44 | [javascript-spy-fake-timers](tasks/backlog/vt-44-javascript-spy-fake-timers.md) | vt-43 |
+| vt-44 | [javascript-spy-fake-timers](tasks/backlog/vt-44-javascript-spy-fake-timers.md) | vt-43 ✓ |
 
-Цепочка: **vt-43 → vt-44** (vt-42 в [`tasks/done/vt-42-javascript-calls-equal/`](tasks/done/vt-42-javascript-calls-equal/TASK.md)).
+Цепочка: **vt-44** (vt-42 в [`tasks/done/vt-42-javascript-calls-equal/`](tasks/done/vt-42-javascript-calls-equal/TASK.md); vt-43 в [`tasks/done/vt-43-javascript-async-promises/`](tasks/done/vt-43-javascript-async-promises/TASK.md)).
 
 ## Решения и допущения
 

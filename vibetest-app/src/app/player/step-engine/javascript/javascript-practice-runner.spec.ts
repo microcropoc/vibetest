@@ -26,16 +26,30 @@ class ScriptableMockWorker {
     }
   }
 
-  lastCaseRequest: { args?: unknown[]; calls?: unknown[] } | undefined;
+  lastCaseRequest:
+    | { args?: unknown[]; calls?: unknown[]; rejects?: boolean; deadlineMs?: number }
+    | undefined;
 
   postMessage(data: unknown): void {
-    const req = data as { type: string; id: string; args?: unknown[]; calls?: unknown[] };
+    const req = data as {
+      type: string;
+      id: string;
+      args?: unknown[];
+      calls?: unknown[];
+      rejects?: boolean;
+      deadlineMs?: number;
+    };
     if (req.type === 'javascriptInit') {
       this.onmessage?.({ data: { type: 'javascriptInited', id: req.id } } as MessageEvent);
       return;
     }
     if (req.type === 'javascriptRunCase') {
-      this.lastCaseRequest = { args: req.args, calls: req.calls };
+      this.lastCaseRequest = {
+        args: req.args,
+        calls: req.calls,
+        rejects: req.rejects,
+        deadlineMs: req.deadlineMs,
+      };
       const index = Number.parseInt(req.id.split('-')[1] ?? '0', 10);
       if (index === this.failOnCase) {
         this.onmessage?.({
@@ -101,6 +115,25 @@ describe('runJavascriptPractice', () => {
       createWorker: () => mock as unknown as Worker,
     });
     expect(mock.lastCaseRequest?.calls).toEqual([{ args: [3] }, { args: [4] }]);
+  });
+
+  it('forwards rejects and deadlineMs to worker', async () => {
+    const mock = new ScriptableMockWorker();
+    const wrapper = new ExecutionWorkerWrapperService();
+    const stepWithRejects: JavascriptStep = {
+      ...javascriptStep,
+      content: {
+        ...javascriptStep.content,
+        timeoutMs: 5000,
+        tests: [{ args: [1], rejects: true }],
+      },
+    };
+    await runJavascriptPractice(stepWithRejects, stepWithRejects.content.starterCode, {
+      wrapper,
+      createWorker: () => mock as unknown as Worker,
+    });
+    expect(mock.lastCaseRequest?.rejects).toBe(true);
+    expect(mock.lastCaseRequest?.deadlineMs).toEqual(expect.any(Number));
   });
 
   it('fail-fast on first failing case', async () => {

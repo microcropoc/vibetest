@@ -12,6 +12,7 @@
 6. **Shell и списки** — `vt-16` … `vt-18`: routes, курсы, модули.
 7. **Плеер** — `vt-19` … `vt-23`: orchestration, навигация, step UI.
 8. **Страницы и PWA** — `vt-24` … `vt-27`: импорт, статистика, инфо, offline.
+9. **JS practice runner v2** — `vt-42` … `vt-44`: `calls` + equal, async/promises, spy + fake timers (полноценный JS-курс: замыкания, промисы, memoize/debounce).
 
 ## Очередь задач
 
@@ -46,6 +47,17 @@
 
 **Параллельно после vt-3:** vt-4–vt-6, vt-7, vt-13; после vt-7: vt-8–vt-10; после vt-11: **vt-12** (строго до vt-14); vt-13 параллельно с vt-11+; **vt-14** после vt-11, vt-12 **и** vt-13; vt-16 — отдельная ветка после vt-1.
 
+Таблица выше — **историческая** (vt-2 … vt-27 выполнены; файлы в `tasks/done/`). Актуальная работа — **активная очередь** ниже.
+
+## Активная очередь
+
+| # | Задача | Зависимости |
+|---|--------|-------------|
+| vt-43 | [javascript-async-promises](tasks/backlog/vt-43-javascript-async-promises.md) | vt-42 ✓ |
+| vt-44 | [javascript-spy-fake-timers](tasks/backlog/vt-44-javascript-spy-fake-timers.md) | vt-43 |
+
+Цепочка: **vt-43 → vt-44** (vt-42 в [`tasks/done/vt-42-javascript-calls-equal/`](tasks/done/vt-42-javascript-calls-equal/TASK.md)).
+
 ## Решения и допущения
 
 - Step engine — контракт + pure functions; registry всех типов — в orchestration (vt-19), не в vt-3.
@@ -53,7 +65,8 @@
 - Dexie только в `storage/`; domain не импортирует Dexie.
 - Worker — только через `execution/` wrapper.
 - Практика: обязательный **`timeoutMs`** (100–30000); кейсы **fail-fast**; regex **без** `setup`/`reset`.
-- JavaScript: статический **`args`** (JSON-массив, ≤ 20 элементов) на кейс; `setup` без проверочных данных; две среды user/reference.
+- JavaScript (vt-8, базовая линия): статический **`args`** (JSON-массив, ≤ 20 элементов) на кейс; `setup` без проверочных данных; две среды user/reference.
+- JavaScript (vt-42 … vt-44): dual-env oracle (**без** static `expected`, **без** `checkScript`); опциональные **`calls`** (≤ 20 шагов); recursive JSON **equal** (не `JSON.stringify`); **await** thenables + **`rejects`**; **`expectInvocations`** + fake **timers** / microtask flush в Worker.
 - Одна схема: **course.schema.json** (обязательные ID); в IndexedDB — тот же формат.
 - Импорт: JSON parse → Zod → semantic → опционально `regenerateCourseIds`; флажок «Заменить все ID» **включён по умолчанию** (vt-24) → всегда новый курс; при выключенном флажке replace только если `courseId` уже в хранилище.
 - Импорт: все ошибки **достигнутого этапа** под формой.

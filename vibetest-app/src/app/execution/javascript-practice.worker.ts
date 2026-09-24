@@ -1,5 +1,7 @@
 import { compileJavascriptPracticeCallable } from './javascript-practice-compile';
+import type { FakeTimerController } from './javascript-fake-timers';
 import { parseExecutionRequest } from './execution-messages';
+import type { PracticeGlobalBag } from './javascript-practice-global';
 import { runJavascriptCaseComparison } from '../player/step-engine/javascript/run-javascript-case';
 
 /// <reference lib="webworker" />
@@ -11,6 +13,10 @@ interface PracticeRuntime {
   readonly invokeReference: (args: readonly unknown[]) => unknown;
   readonly applyUserReset: (reset: string) => void;
   readonly applyReferenceReset: (reset: string) => void;
+  readonly userTimers: FakeTimerController;
+  readonly referenceTimers: FakeTimerController;
+  readonly userGlobal: PracticeGlobalBag;
+  readonly referenceGlobal: PracticeGlobalBag;
 }
 
 let runtime: PracticeRuntime | undefined;
@@ -36,6 +42,10 @@ self.addEventListener('message', (event: MessageEvent<unknown>) => {
           invokeReference: (args) => reference.invoke(args),
           applyUserReset: (reset) => user.applyReset(reset),
           applyReferenceReset: (reset) => reference.applyReset(reset),
+          userTimers: user.timers,
+          referenceTimers: reference.timers,
+          userGlobal: user.globalBag,
+          referenceGlobal: reference.globalBag,
         };
         self.postMessage({ type: 'javascriptInited', id: request.id });
         break;
@@ -71,6 +81,13 @@ self.addEventListener('message', (event: MessageEvent<unknown>) => {
               {
                 rejects: request.rejects,
                 deadlineMs: request.deadlineMs,
+                expectInvocations: request.expectInvocations,
+                advanceMs: request.advanceMs,
+                flushMicrotasks: request.flushMicrotasks,
+                userTimers: active.userTimers,
+                referenceTimers: active.referenceTimers,
+                userGlobal: active.userGlobal,
+                referenceGlobal: active.referenceGlobal,
               },
             );
             self.postMessage({

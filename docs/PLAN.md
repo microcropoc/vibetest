@@ -53,9 +53,9 @@
 
 | # | Задача | Зависимости |
 |---|--------|-------------|
-| vt-44 | [javascript-spy-fake-timers](tasks/backlog/vt-44-javascript-spy-fake-timers.md) | vt-43 ✓ |
+| — | _(пусто — JS practice runner v2 закрыт: vt-42 … vt-44)_ | |
 
-Цепочка: **vt-44** (vt-42 в [`tasks/done/vt-42-javascript-calls-equal/`](tasks/done/vt-42-javascript-calls-equal/TASK.md); vt-43 в [`tasks/done/vt-43-javascript-async-promises/`](tasks/done/vt-43-javascript-async-promises/TASK.md)).
+Цепочка: vt-42 … vt-44 в [`tasks/done/`](tasks/done/) (`vt-42-javascript-calls-equal`, `vt-43-javascript-async-promises`, `vt-44-javascript-spy-fake-timers`).
 
 ## Решения и допущения
 

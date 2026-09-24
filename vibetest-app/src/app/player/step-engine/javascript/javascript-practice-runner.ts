@@ -72,6 +72,13 @@ export async function runJavascriptPractice(
               }
             : {}),
           ...(testCase.rejects !== undefined ? { rejects: testCase.rejects } : {}),
+          ...(testCase.expectInvocations !== undefined
+            ? { expectInvocations: { ...testCase.expectInvocations } }
+            : {}),
+          ...(testCase.advanceMs !== undefined ? { advanceMs: testCase.advanceMs } : {}),
+          ...(testCase.flushMicrotasks !== undefined
+            ? { flushMicrotasks: testCase.flushMicrotasks }
+            : {}),
           deadlineMs,
           userReset: content.reset ?? '',
           referenceReset: content.reset ?? '',

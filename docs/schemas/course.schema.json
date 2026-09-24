@@ -125,7 +125,13 @@
                   }
                 }
               },
-              "rejects": { "type": "boolean" }
+              "rejects": { "type": "boolean" },
+              "expectInvocations": {
+                "type": "object",
+                "additionalProperties": { "type": "integer", "minimum": 0 }
+              },
+              "advanceMs": { "type": "integer", "minimum": 0, "maximum": 60000 },
+              "flushMicrotasks": { "type": "boolean" }
             }
           }
         }

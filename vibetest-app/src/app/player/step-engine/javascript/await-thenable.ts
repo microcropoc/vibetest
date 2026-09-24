@@ -17,6 +17,7 @@ export async function awaitThenable(value: unknown, deadlineMs?: number): Promis
   if (!isThenable(value)) {
     return value;
   }
+
   const adopted = Promise.resolve(value);
   if (deadlineMs === undefined) {
     return adopted;

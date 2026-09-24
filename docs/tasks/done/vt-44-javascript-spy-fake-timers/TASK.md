@@ -23,7 +23,7 @@ function registerSpy(name, fn) {
 }
 ```
 
-Раннер после init читает счётчики через согласованный hook (например `__vibetestGetCount` на wrapped fn в `__vibetestSpies`) **без** произвольного eval из курса.
+Раннер после init читает счётчики через согласованный hook (например `__vibetestGetCount` on wrapped fn in `__vibetestSpies`) **без** произвольного eval из курса.
 
 ## Требования
 
@@ -42,7 +42,7 @@ function registerSpy(name, fn) {
 
 - **`advanceMs`**: продвижение fake clock; выполнение due callbacks (macrotasks).
 - **`flushMicrotasks`**: если true — drain microtask queue один раз (или до fixed point — зафиксировать в SPEC одним правилом).
-- User и ref используют **раздельные** fake clock instances, синхронно продвигаемые на одинаковый `advanceMs`.
+- User и ref используют **раздельные** fake clock instances, синхronно продвигаемые на одинаковый `advanceMs`.
 
 ### Граничные тесты — spy (checklist)
 

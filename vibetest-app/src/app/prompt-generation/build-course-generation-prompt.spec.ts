@@ -8,6 +8,10 @@ describe('buildCourseGenerationPrompt', () => {
   it('includes author description, Russian rules, per-module step types, and schema', () => {
     const prompt = buildCourseGenerationPrompt('Курс про HTML', schemaSnippet);
 
+    expect(prompt).toContain('description');
+    expect(prompt).toContain('основной источник');
+    expect(prompt).toContain('Не выдумывай');
+    expect(prompt).toContain('при конфликте');
     expect(prompt).toContain('Курс про HTML');
     expect(prompt).toContain('русском языке');
     expect(prompt).toContain('theory');

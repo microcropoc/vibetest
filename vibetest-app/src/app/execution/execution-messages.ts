@@ -13,11 +13,19 @@ const javascriptInitSchema = z
   })
   .strict();
 
+const javascriptCallStepSchema = z
+  .object({
+    args: z.array(z.unknown()).max(20),
+    method: z.string().min(1).max(100).optional(),
+  })
+  .strict();
+
 const javascriptRunCaseSchema = z
   .object({
     type: z.literal('javascriptRunCase'),
     id: messageIdSchema,
     args: z.array(z.unknown()).max(20),
+    calls: z.array(javascriptCallStepSchema).max(20).optional(),
     userReset: z.string().optional(),
     referenceReset: z.string().optional(),
   })

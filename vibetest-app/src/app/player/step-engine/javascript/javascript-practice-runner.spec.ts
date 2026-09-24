@@ -26,13 +26,16 @@ class ScriptableMockWorker {
     }
   }
 
+  lastCaseRequest: { args?: unknown[]; calls?: unknown[] } | undefined;
+
   postMessage(data: unknown): void {
-    const req = data as { type: string; id: string; args?: unknown[] };
+    const req = data as { type: string; id: string; args?: unknown[]; calls?: unknown[] };
     if (req.type === 'javascriptInit') {
       this.onmessage?.({ data: { type: 'javascriptInited', id: req.id } } as MessageEvent);
       return;
     }
     if (req.type === 'javascriptRunCase') {
+      this.lastCaseRequest = { args: req.args, calls: req.calls };
       const index = Number.parseInt(req.id.split('-')[1] ?? '0', 10);
       if (index === this.failOnCase) {
         this.onmessage?.({
@@ -81,6 +84,23 @@ describe('runJavascriptPractice', () => {
     });
     expect(result).toEqual({ ok: true });
     expect(mock.terminated).toBe(true);
+  });
+
+  it('forwards calls to worker when present on test case', async () => {
+    const mock = new ScriptableMockWorker();
+    const wrapper = new ExecutionWorkerWrapperService();
+    const stepWithCalls: JavascriptStep = {
+      ...javascriptStep,
+      content: {
+        ...javascriptStep.content,
+        tests: [{ args: [2], calls: [{ args: [3] }, { args: [4] }] }],
+      },
+    };
+    await runJavascriptPractice(stepWithCalls, stepWithCalls.content.starterCode, {
+      wrapper,
+      createWorker: () => mock as unknown as Worker,
+    });
+    expect(mock.lastCaseRequest?.calls).toEqual([{ args: [3] }, { args: [4] }]);
   });
 
   it('fail-fast on first failing case', async () => {

@@ -110,7 +110,21 @@
             "required": ["args"],
             "additionalProperties": false,
             "properties": {
-              "args": { "type": "array", "maxItems": 20 }
+              "args": { "type": "array", "maxItems": 20 },
+              "calls": {
+                "type": "array",
+                "minItems": 0,
+                "maxItems": 20,
+                "items": {
+                  "type": "object",
+                  "required": ["args"],
+                  "additionalProperties": false,
+                  "properties": {
+                    "args": { "type": "array", "maxItems": 20 },
+                    "method": { "type": "string", "minLength": 1, "maxLength": 100 }
+                  }
+                }
+              }
             }
           }
         }

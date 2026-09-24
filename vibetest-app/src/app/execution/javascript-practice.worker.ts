@@ -1,4 +1,6 @@
+import { compileJavascriptPracticeCallable } from './javascript-practice-compile';
 import { parseExecutionRequest } from './execution-messages';
+import { runJavascriptCaseComparison } from '../player/step-engine/javascript/run-javascript-case';
 
 /// <reference lib="webworker" />
 
@@ -13,56 +15,17 @@ interface PracticeRuntime {
 
 let runtime: PracticeRuntime | undefined;
 
-function compileCallable(
-  setup: string,
-  code: string,
-  functionName: string,
-): {
-  invoke: (args: readonly unknown[]) => unknown;
-  applyReset: (reset: string, recompile: () => (...args: unknown[]) => unknown) => void;
-  recompile: () => (...args: unknown[]) => unknown;
-} {
-  const recompile = (): ((...args: unknown[]) => unknown) => {
-    const factory = new Function(
-      `"use strict";
-${setup}
-${code}
-if (typeof ${functionName} !== "function") {
-  throw new Error("Function ${functionName} is not defined");
-}
-return ${functionName};`,
-    );
-    return factory() as (...args: unknown[]) => unknown;
-  };
-
-  let fn = recompile();
-
-  return {
-    invoke(args: readonly unknown[]) {
-      return fn(...args);
-    },
-    recompile,
-    applyReset(reset: string, recompileFn: () => (...args: unknown[]) => unknown) {
-      if (reset.trim() !== '') {
-        const resetRunner = new Function(`"use strict"; ${reset}`);
-        resetRunner();
-      }
-      fn = recompileFn();
-    },
-  };
-}
-
-function jsonCompatibleEqual(a: unknown, b: unknown): boolean {
-  return JSON.stringify(a) === JSON.stringify(b);
-}
-
 self.addEventListener('message', (event: MessageEvent<unknown>) => {
   try {
     const request = parseExecutionRequest(event.data);
     switch (request.type) {
       case 'javascriptInit': {
-        const user = compileCallable(request.setup, request.userCode, request.functionName);
-        const reference = compileCallable(
+        const user = compileJavascriptPracticeCallable(
+          request.setup,
+          request.userCode,
+          request.functionName,
+        );
+        const reference = compileJavascriptPracticeCallable(
           request.setup,
           request.referenceCode,
           request.functionName,
@@ -70,8 +33,8 @@ self.addEventListener('message', (event: MessageEvent<unknown>) => {
         runtime = {
           invokeUser: (args) => user.invoke(args),
           invokeReference: (args) => reference.invoke(args),
-          applyUserReset: (reset) => user.applyReset(reset, user.recompile),
-          applyReferenceReset: (reset) => reference.applyReset(reset, reference.recompile),
+          applyUserReset: (reset) => user.applyReset(reset),
+          applyReferenceReset: (reset) => reference.applyReset(reset),
         };
         self.postMessage({ type: 'javascriptInited', id: request.id });
         break;
@@ -88,16 +51,19 @@ self.addEventListener('message', (event: MessageEvent<unknown>) => {
         try {
           runtime.applyUserReset(request.userReset ?? '');
           runtime.applyReferenceReset(request.referenceReset ?? '');
-          const userValue = runtime.invokeUser(request.args);
-          const referenceValue = runtime.invokeReference(request.args);
-          const pass = jsonCompatibleEqual(userValue, referenceValue);
+          const result = runJavascriptCaseComparison(
+            runtime.invokeUser,
+            runtime.invokeReference,
+            request.args,
+            request.calls,
+          );
           self.postMessage({
             type: 'javascriptCaseResult',
             id: request.id,
-            pass,
-            userValue,
-            referenceValue,
-            message: pass ? undefined : 'Return values do not match',
+            pass: result.pass,
+            userValue: result.userValue,
+            referenceValue: result.referenceValue,
+            message: result.message,
           });
         } catch (error: unknown) {
           const message = error instanceof Error ? error.message : 'Runtime error';

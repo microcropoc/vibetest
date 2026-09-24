@@ -138,14 +138,14 @@ Inline SVG (SMIL/CSS и т.п.); рендер **без санитизации** 
 
 **На каждый элемент `tests`:**
 
-1. **JavaScript:** `reset` в средах пользователя и эталона (если задан и не пустой), вызов `functionName(...args)` с массивом из `tests[i].args` (≤ 20 элементов, только JSON-совместимые значения) в обеих средах; сравнение возвращаемых значений.
+1. **JavaScript:** `reset` в средах пользователя и эталона (если задан и не пустой), вызов `functionName(...args)` с массивом из `tests[i].args` (≤ 20 элементов, только JSON-совместимые значения) в обеих средах. Опционально **`calls`** (≤ 20 шагов): на результате первого вызова в user и reference **одинаково** для каждого элемента — если задан **`method`**, то `current = current[method](...call.args)`, иначе `current = current(...call.args)` (результат предыдущего шага должен быть callable). Пустой `calls: []` — только первичный вызов. Сравнение **финальных** значений user vs reference.
 2. **SQLite:** `reset` в обеих средах (no-op, если не задан или пустой), `tests[i].seed`, выполнение и сравнение.
 3. **Regex:** `RegExp.test(input)` у паттерна пользователя и эталона на одном `input`; успех, если оба boolean **совпадают**.
 4. При fail / runtime error / timeout — стоп (fail-fast).
 
 | Тип | Сравнение | Прочее |
 |-----|-----------|--------|
-| `javascript` | возврат `functionName(...args)` — JSON-совместимые значения; структурное сравнение | `setup`/`reset`; `{ "args": … }`; `functionName`; `timeoutMs` |
+| `javascript` | финальное значение после `args` и опциональных `calls` — **JSON-совместимо**; иначе fail кейса (`non-JSON result`). **Не-JSON:** `undefined`, `function`, `symbol`, `bigint`, не-plain объекты (`Date`, `Map`, …). **Числа:** сравнение через `Object.is` (`NaN`, `+0`/`-0`); `Infinity` / `-Infinity` допустимы. Далее recursive equal: plain objects/arrays рекурсивно, порядок ключей объектов не важен; циклические ссылки → unequal (без throw). | `setup`/`reset`; `{ "args": … }`, опционально `calls[]` с `{ "args", "method"? }`; `functionName`; `timeoutMs` |
 | `sqlite` | строки результата; порядок при `orderMatters: true`, иначе multiset | DDL `setup`; `reset`; `{ "seed": … }`; `orderMatters`; `timeoutMs` |
 | `regex` | `RegExp.test(input)` user vs reference — одинаковый boolean | `{ "input": string }`; `timeoutMs` |
 

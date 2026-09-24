@@ -63,8 +63,16 @@ export async function runJavascriptPractice(
           type: 'javascriptRunCase',
           id: caseId,
           args: [...testCase.args],
-          userReset: content.reset,
-          referenceReset: content.reset,
+          ...(testCase.calls !== undefined
+            ? {
+                calls: testCase.calls.map((call) => ({
+                  args: [...call.args],
+                  ...(call.method !== undefined ? { method: call.method } : {}),
+                })),
+              }
+            : {}),
+          userReset: content.reset ?? '',
+          referenceReset: content.reset ?? '',
         },
         remainingMs(deadlineMs),
       );

@@ -164,7 +164,7 @@
     },
     "javascriptContent": {
       "type": "object",
-      "description": "JS-практика: код ученика и эталон выполняются в двух изолированных средах (dual-run); результаты сравниваются JSON-equal. Порядок на тест-кейс: reset → вызов functionName(...args) → цепочка calls → await thenable при необходимости → rejects → flushMicrotasks → advanceMs → expectInvocations.",
+      "description": "JS-практика: код ученика и эталон выполняются в двух изолированных средах (dual-run); результаты сравниваются recursive JSON-compatible equal — plain objects/arrays, порядок ключей объектов не важен, примитивы через Object.is (NaN равен NaN, +0 ≠ -0), а undefined / function / symbol / bigint / не-plain объекты (Map, Set, Date, RegExp) считаются non-JSON result и приводят к fail. Порядок на тест-кейс: reset → вызов functionName(...args) → цепочка calls → await thenable при необходимости → rejects → flushMicrotasks → advanceMs → expectInvocations.",
       "required": ["description", "starterCode", "referenceSolution", "setup", "functionName", "timeoutMs", "tests"],
       "additionalProperties": false,
       "properties": {
@@ -188,12 +188,12 @@
         "setup": {
           "type": "string",
           "maxLength": 20000,
-          "description": "JS подготовки среды перед загрузкой starterCode/referenceSolution в обеих средах (моки, registerSpy); не класть проверочные данные в setup — functionName появляется после load кода."
+          "description": "JS подготовки среды перед загрузкой starterCode/referenceSolution в обеих средах (моки, registerSpy). Глобалы и spy, объявленные в setup, видны коду ученика и эталону после загрузки; не класть сюда проверочные данные — functionName появляется после load."
         },
         "reset": {
           "type": "string",
           "maxLength": 20000,
-          "description": "Необязательный JS перед каждым тест-кейсом для сброса состояния между кейсами."
+          "description": "Необязательный JS перед каждым тест-кейсом (включая первый); пустая строка — no-op для авторского кода. Между кейсами раннер всегда отменяет pending timers, обнуляет clock, сбрасывает spy и перекомпилирует среду (setup + код), независимо от содержимого этого поля."
         },
         "functionName": {
           "type": "string",
@@ -221,7 +221,7 @@
               "args": {
                 "type": "array",
                 "maxItems": 20,
-                "description": "Аргументы первого вызова functionName(...args); значения должны быть JSON-serializable для сравнения."
+                "description": "Аргументы первого вызова functionName(...args). Пустой массив — вызов без аргументов; иначе — JSON-совместимые значения."
               },
               "calls": {
                 "type": "array",
@@ -249,7 +249,7 @@
               },
               "rejects": {
                 "type": "boolean",
-                "description": "true: и user, и reference должны завершиться reject; reason: для Error — message; иначе JSON-equal как у fulfill."
+                "description": "true: и user, и reference должны завершиться reject. Reason для Error сравнивается по message; иначе — тем же recursive JSON-compatible equal. Относится к финалу кейса; промежуточный throw/reject внутри calls — отдельный тест-кейс."
               },
               "expectInvocations": {
                 "type": "object",
@@ -263,11 +263,11 @@
                 "type": "integer",
                 "minimum": 0,
                 "maximum": 60000,
-                "description": "Продвинуть fake timers на столько мс в обеих средах перед финальным сравнением."
+                "description": "Продвинуть fake timers на N мс в обеих средах перед финальным сравнением. Действует на текущий кейс; состояние таймеров сбрасывается через фазу reset раннера перед следующим кейсом."
               },
               "flushMicrotasks": {
                 "type": "boolean",
-                "description": "true: drain microtasks queue в обеих средах перед сравнением."
+                "description": "true: один host microtask checkpoint (await Promise.resolve()) в обеих средах перед сравнением. Не цикл до пустой очереди — только один tick."
               }
             }
           }

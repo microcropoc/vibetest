@@ -28,13 +28,13 @@ vt-47…vt-49 закрывают массовые кейсы декларати�
 
 ### Граничные тесты (checklist)
 
-- [ ] без checker — регрессия
-- [ ] in-place через checker: сравнение `userArgs[0]` (дубль vt-47 path)
-- [ ] «any permutation»: checker валидирует vs ref или независимо
-- [ ] non-boolean return → fail
-- [ ] throw → fail
-- [ ] infinite loop → timeout fail (не зависание шага)
-- [ ] checker не виден в player UI / не уходит в feedback ученику
+- [x] без checker — регрессия
+- [x] in-place через checker: сравнение `userArgs[0]` (дубль vt-47 path)
+- [x] «any permutation»: checker валидирует vs ref или независимо
+- [x] non-boolean return → fail
+- [x] throw → fail
+- [x] infinite loop → timeout fail (не зависание шага)
+- [x] checker не виден в player UI / не уходит в feedback ученику
 
 ## Технические заметки
 
@@ -44,14 +44,14 @@ vt-47…vt-49 закрывают массовые кейсы декларати�
 
 ## План работ
 
-- [ ] SPEC + schema + zod
-- [ ] Sandbox runner + helpers injection
-- [ ] Checklist specs
-- [ ] `ng test --watch=false`; REPORT
+- [x] SPEC + schema + zod
+- [x] Sandbox runner + helpers injection
+- [x] Checklist specs
+- [x] `ng test --watch=false`; REPORT
 
 ## Критерии готовности (Definition of Done)
 
-- [ ] Checklist зелёный; флаги vt-47…49 остаются предпочтительным путём в docs
+- [x] Checklist зелёный; флаги vt-47…49 остаются предпочтительным путём в docs
 
 ## Вне рамок задачи
 

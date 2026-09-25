@@ -61,6 +61,7 @@ const javascriptRunCaseSchema = z
     unordered: z.boolean().optional(),
     resultMode: z.enum(['return', 'args', 'both']).optional(),
     structure: javascriptStructureSchema.optional(),
+    checker: z.string().min(1).max(10000).optional(),
     deadlineMs: z.number().optional(),
     userReset: z.string().optional(),
     referenceReset: z.string().optional(),

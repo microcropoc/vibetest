@@ -112,6 +112,7 @@ self.addEventListener('message', (event: MessageEvent<unknown>) => {
                 unordered: request.unordered,
                 resultMode: request.resultMode,
                 structure: request.structure,
+                checker: request.checker,
                 userTimers: active.userTimers,
                 referenceTimers: active.referenceTimers,
                 userGlobal: active.userGlobal,

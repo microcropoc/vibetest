@@ -99,6 +99,9 @@ export async function runJavascriptPractice(
                 },
               }
             : {}),
+          ...(content.checker !== undefined && content.checker.length > 0
+            ? { checker: content.checker }
+            : {}),
           deadlineMs,
           userReset: content.reset ?? '',
           referenceReset: content.reset ?? '',

@@ -36,6 +36,7 @@ class ScriptableMockWorker {
         deadlineMs?: number;
         resultMode?: string;
         structure?: unknown;
+        checker?: string;
       }
     | undefined;
 
@@ -49,6 +50,7 @@ class ScriptableMockWorker {
       deadlineMs?: number;
       resultMode?: string;
       structure?: unknown;
+      checker?: string;
     };
     if (req.type === 'javascriptInit') {
       if (this.initErrorMessage !== null) {
@@ -72,6 +74,7 @@ class ScriptableMockWorker {
         deadlineMs: req.deadlineMs,
         resultMode: req.resultMode,
         structure: req.structure,
+        checker: req.checker,
       };
       const index = Number.parseInt(req.id.split('-')[1] ?? '0', 10);
       if (index === this.failOnCase) {
@@ -177,6 +180,25 @@ describe('runJavascriptPractice', () => {
     });
     expect(mock.lastCaseRequest?.resultMode).toBe('args');
     expect(mock.lastCaseRequest?.structure).toEqual({ args: ['list'], result: 'list' });
+  });
+
+  it('forwards checker to worker', async () => {
+    const mock = new ScriptableMockWorker();
+    const wrapper = new ExecutionWorkerWrapperService();
+    const checker = '(ctx) => ctx.deepEqual(ctx.userResult, ctx.refResult)';
+    const step: JavascriptStep = {
+      ...javascriptStep,
+      content: {
+        ...javascriptStep.content,
+        checker,
+        tests: [{ args: [1] }],
+      },
+    };
+    await runJavascriptPractice(step, step.content.starterCode, {
+      wrapper,
+      createWorker: () => mock as unknown as Worker,
+    });
+    expect(mock.lastCaseRequest?.checker).toBe(checker);
   });
 
   it('forwards construct on init instead of functionName', async () => {

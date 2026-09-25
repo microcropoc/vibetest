@@ -40,4 +40,23 @@ describe('JavascriptContentWithTargetSchema', () => {
     const result = JavascriptContentWithTargetSchema.safeParse(base);
     expect(result.success).toBe(false);
   });
+
+  it('accepts non-empty checker', () => {
+    expect(
+      JavascriptContentWithTargetSchema.safeParse({
+        ...base,
+        functionName: 'fn',
+        checker: '(ctx) => true',
+      }).success,
+    ).toBe(true);
+  });
+
+  it('rejects empty checker string', () => {
+    const result = JavascriptContentWithTargetSchema.safeParse({
+      ...base,
+      functionName: 'fn',
+      checker: '',
+    });
+    expect(result.success).toBe(false);
+  });
 });

@@ -1279,4 +1279,167 @@ function f(head) {
       expect(withUnordered.userValue).toEqual([1, 2, 3]);
     });
   });
+
+  describe('checker', () => {
+    it('without checker still uses equal (regression)', async () => {
+      const env = dualEnv(
+        'function f(x) { return x + 1; }',
+        'function f(x) { return x + 1; }',
+        'f',
+      );
+      const result = await runJavascriptCaseComparison(
+        env.invokeUser,
+        env.invokeReference,
+        [1],
+        undefined,
+        env.opts(),
+      );
+      expect(result.pass).toBe(true);
+    });
+
+    it('in-place via checker comparing userArgs[0]', async () => {
+      const env = dualEnv(
+        'function mutate(arr) { arr[0] = 42; return "user"; }',
+        'function mutate(arr) { arr[0] = 42; return "ref"; }',
+        'mutate',
+      );
+      const equalPath = await runJavascriptCaseComparison(
+        env.invokeUser,
+        env.invokeReference,
+        [[0, 1, 2]],
+        undefined,
+        env.opts(),
+      );
+      expect(equalPath.pass).toBe(false);
+
+      const checker = `(ctx) => ctx.deepEqual(ctx.userArgs[0], ctx.refArgs[0])`;
+      const result = await runJavascriptCaseComparison(
+        env.invokeUser,
+        env.invokeReference,
+        [[0, 1, 2]],
+        undefined,
+        env.opts({ checker }),
+      );
+      expect(result.pass).toBe(true);
+    });
+
+    it('any permutation: checker validates independently of order', async () => {
+      const env = dualEnv(
+        'function f() { return [3, 1, 2]; }',
+        'function f() { return [1, 2, 3]; }',
+        'f',
+      );
+      const without = await runJavascriptCaseComparison(
+        env.invokeUser,
+        env.invokeReference,
+        [],
+        undefined,
+        env.opts(),
+      );
+      expect(without.pass).toBe(false);
+
+      const checker = `(ctx) => ctx.deepEqual(
+        ctx.sortUnordered(ctx.userResult),
+        ctx.sortUnordered(ctx.refResult)
+      )`;
+      const withChecker = await runJavascriptCaseComparison(
+        env.invokeUser,
+        env.invokeReference,
+        [],
+        undefined,
+        env.opts({ checker, unordered: true, resultMode: 'return' }),
+      );
+      expect(withChecker.pass).toBe(true);
+    });
+
+    it('non-boolean return fails without leaking checker source', async () => {
+      const marker = 'CHECKER_SOURCE_MARKER_vt50_xyz';
+      const env = dualEnv(
+        'function f() { return 1; }',
+        'function f() { return 1; }',
+        'f',
+      );
+      const result = await runJavascriptCaseComparison(
+        env.invokeUser,
+        env.invokeReference,
+        [],
+        undefined,
+        env.opts({ checker: `(ctx) => { void "${marker}"; return 1; }` }),
+      );
+      expect(result.pass).toBe(false);
+      expect(result.message).toMatch(/boolean/);
+      expect(result.message).not.toContain(marker);
+    });
+
+    it('throw fails with message', async () => {
+      const env = dualEnv(
+        'function f() { return 1; }',
+        'function f() { return 1; }',
+        'f',
+      );
+      const result = await runJavascriptCaseComparison(
+        env.invokeUser,
+        env.invokeReference,
+        [],
+        undefined,
+        env.opts({ checker: '(ctx) => { throw new Error("checker boom"); }' }),
+      );
+      expect(result.pass).toBe(false);
+      expect(result.message).toMatch(/checker boom/);
+    });
+
+    it('hanging thenable times out', async () => {
+      const env = dualEnv(
+        'function f() { return 1; }',
+        'function f() { return 1; }',
+        'f',
+      );
+      const result = await runJavascriptCaseComparison(
+        env.invokeUser,
+        env.invokeReference,
+        [],
+        undefined,
+        env.opts({ checker: '(ctx) => new Promise(() => {})' }),
+      );
+      expect(result.pass).toBe(false);
+      expect(result.message).toMatch(/Checker timeout/);
+    });
+
+    it('rejects path ignores checker', async () => {
+      const env = dualEnv(
+        'async function f() { throw new Error("a"); }',
+        'async function f() { throw new Error("a"); }',
+        'f',
+      );
+      const result = await runJavascriptCaseComparison(
+        env.invokeUser,
+        env.invokeReference,
+        [],
+        undefined,
+        env.opts({
+          rejects: true,
+          deadlineMs: Date.now() + 2000,
+          checker: '(ctx) => false',
+        }),
+      );
+      expect(result.pass).toBe(true);
+    });
+
+    it('false checker fails even when equal would pass', async () => {
+      const env = dualEnv(
+        'function f() { return 1; }',
+        'function f() { return 1; }',
+        'f',
+      );
+      const result = await runJavascriptCaseComparison(
+        env.invokeUser,
+        env.invokeReference,
+        [],
+        undefined,
+        env.opts({ checker: '(ctx) => false' }),
+      );
+      expect(result.pass).toBe(false);
+      expect(result.message).toBe('Checker rejected');
+    });
+  });
 });

@@ -54,10 +54,10 @@
 
 | # | Задача | Зависимости |
 |---|--------|-------------|
-| vt-50 | [javascript-checker](tasks/backlog/vt-50-javascript-checker.md) | vt-47, vt-49 |
+| vt-50 | [javascript-checker](tasks/done/vt-50-javascript-checker/) | vt-47, vt-49 |
 | vt-51 | [algorithms-sample-course](tasks/backlog/vt-51-algorithms-sample-course.md) | vt-47, vt-48, vt-49 |
 
-Цепочка JS practice v2: vt-42 … vt-44 в [`tasks/done/`](tasks/done/). **vt-47**…**vt-49** (`resultMode`/`structure`, `construct`, `unordered`) — в [`tasks/done/`](tasks/done/). Дальше: опциональный `checker` → демо-курс.
+Цепочка JS practice v2: vt-42 … vt-44 в [`tasks/done/`](tasks/done/). **vt-47**…**vt-49** — в [`tasks/done/`](tasks/done/). **vt-50** (`checker`) — в [`tasks/done/`](tasks/done/); дальше демо-курс vt-51.
 
 ## Решения и допущения
 
@@ -68,8 +68,8 @@
 - Практика: обязательный **`timeoutMs`** (100–30000); кейсы **fail-fast**; regex **без** `setup`/`reset`.
 - JavaScript (vt-8, базовая линия): статический **`args`** (JSON-массив, ≤ 20 элементов) на кейс; `setup` без проверочных данных; две среды user/reference.
 - JavaScript (vt-42 … vt-44): dual-env oracle (**без** static `expected`, **без** `checkScript` по умолчанию); опциональные **`calls`** (≤ 20 шагов); recursive JSON **equal** (не `JSON.stringify`); **await** thenables + **`rejects`**; **`expectInvocations`** + fake **timers** / microtask flush в Worker.
-- JavaScript (vt-47 … vt-50): опциональные **`resultMode`** / **`structure`** (in-place, list/tree) — **vt-47 done**; **`construct`** — **vt-48 done**; **`unordered`** — **vt-49 done**; узкий escape hatch **`checker`** (не основной путь). `schemaVersion` остаётся 1. Без проверки O(n).
-- JavaScript (**vt-49**): опциональный **`tests[].unordered`** — после structure-serialize, перед equal, рекурсивная нормализация порядка массивов.
+- JavaScript (vt-47 … vt-50): опциональные **`resultMode`** / **`structure`** (in-place, list/tree) — **vt-47 done**; **`construct`** — **vt-48 done**; **`unordered`** — **vt-49 done**; узкий escape hatch **`checker`** — **vt-50**. `schemaVersion` остаётся 1. Без проверки O(n).
+- JavaScript (**vt-50**): опциональный step-level **`checker`** — `(ctx)=>boolean` в отдельном sandbox (timeout 250 ms) **вместо** equal/`resultMode`/`unordered` на fulfilled-пути; dual-run по-прежнему даёт results/args. Не основной путь авторов (флаги предпочтительнее).
 - Одна схема: **course.schema.json** (обязательные ID); в IndexedDB — тот же формат.
 - Импорт: JSON parse → Zod → semantic → опционально `regenerateCourseIds`; флажок «Заменить все ID» **включён по умолчанию** (vt-24) → всегда новый курс; при выключенном флажке replace только если `courseId` уже в хранилище.
 - Импорт: все ошибки **достигнутого этапа** под формой.
@@ -82,3 +82,4 @@
 ## Заметки
 
 _(свободная форма)_
+

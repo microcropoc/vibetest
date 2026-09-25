@@ -151,7 +151,7 @@
     },
     "javascriptContent": {
       "type": "object",
-      "description": "JS-практика: код ученика и эталон выполняются в двух изолированных средах (dual-run); по умолчанию результаты сравниваются recursive JSON-compatible equal — plain objects/arrays, порядок ключей объектов не важен, примитивы через Object.is (NaN равен NaN, +0 ≠ -0), а undefined / function / symbol / bigint / не-plain объекты (Map, Set, Date, RegExp) считаются non-JSON result и приводят к fail. Опционально resultMode / structure меняют подготовку args и объект сравнения (in-place, list/tree). Ровно одно из functionName или construct. Порядок на тест-кейс: reset → materialize args (structure) → вызов functionName(...args) или new construct.className(...args) → цепочка calls (materialize call.args) → await thenable при необходимости → rejects → flushMicrotasks → advanceMs → expectInvocations → serialize + compare по resultMode.",
+      "description": "JS-практика: код ученика и эталон выполняются в двух изолированных средах (dual-run); по умолчанию результаты сравниваются recursive JSON-compatible equal — plain objects/arrays, порядок ключей объектов не важен, примитивы через Object.is (NaN равен NaN, +0 ≠ -0), а undefined / function / symbol / bigint / не-plain объекты (Map, Set, Date, RegExp) считаются non-JSON result и приводят к fail. Опционально resultMode / structure / unordered меняют подготовку args и объект сравнения. Опциональный checker — escape hatch вместо equal. Ровно одно из functionName или construct. Порядок на тест-кейс: reset → materialize args (structure) → вызов functionName(...args) или new construct.className(...args) → цепочка calls → await thenable → rejects → flushMicrotasks → advanceMs → expectInvocations → compare (checker или serialize+equal по resultMode).",
       "required": ["description", "starterCode", "referenceSolution", "setup", "timeoutMs", "tests"],
       "additionalProperties": false,
       "properties": {
@@ -228,6 +228,12 @@
             }
           }
         },
+        "checker": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 10000,
+          "description": "Escape hatch: исходник JS-функции (ctx) => boolean; при наличии полностью заменяет default equal / resultMode / unordered на fulfilled-пути (rejects и expectInvocations по-прежнему раньше). ctx: userResult, refResult, userArgs, refArgs (сырые значения после invoke; structure только materialize args) и хелперы deepEqual, serializeList, serializeTree, sortUnordered. Детерминизм; запрет Math.random / Date.now / I/O (конвенция автора). Не показывается ученику (как referenceSolution). Timeout ~250 ms; non-boolean / throw / timeout → fail. Отсутствие поля = без checker; пустая строка недопустима."
+        },
         "timeoutMs": {
           "type": "integer",
           "minimum": 100,
@@ -298,7 +304,7 @@
               },
               "unordered": {
                 "type": "boolean",
-                "description": "true: перед equal рекурсивно нормализовать значения (массивы сортируются по стабильному JSON-ключу; values plain objects нормализуются). Применяется после structure-serialize к return и/или args по resultMode. Не использовать, если порядок внутри части ответа семантически важен (тогда checker, vt-50). Отсутствие / false — порядок важен."
+                "description": "true: перед equal рекурсивно нормализовать значения (массивы сортируются по стабильному JSON-ключу; values plain objects нормализуются). Применяется после structure-serialize к return и/или args по resultMode. Игнорируется, если задан content.checker. Не использовать, если порядок внутри части ответа семантически важен (тогда checker). Отсутствие / false — порядок важен."
               }
             }
           }

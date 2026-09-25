@@ -8,6 +8,7 @@ import { compareSpyInvocations } from './compare-spy-invocations';
 import type { FakeTimerController } from '../../../execution/javascript-fake-timers';
 import type { PracticeGlobalBag } from '../../../execution/javascript-practice-global';
 import { isJsonCompatibleValue, jsonCompatibleEqual } from './json-value-equal';
+import { JavascriptCheckerError, runJavascriptChecker } from './run-javascript-checker';
 import { sortUnordered } from './sort-unordered';
 import {
   prepareArgs,
@@ -37,6 +38,8 @@ export type JavascriptCaseRunOptions = {
   readonly resultMode?: JavascriptResultMode;
   readonly structure?: JavascriptStructure;
   readonly unordered?: boolean;
+  /** Escape hatch: replaces equal / resultMode / unordered on fulfilled path. */
+  readonly checker?: string;
   readonly userTimers: FakeTimerController;
   readonly referenceTimers: FakeTimerController;
   readonly userGlobal: PracticeGlobalBag;
@@ -199,7 +202,36 @@ function compareFulfilledWithMode(
   }
 }
 
-function mergeSideOutcomes(
+async function compareWithChecker(
+  user: Extract<JavascriptSideOutcome, { kind: 'fulfilled' }>,
+  reference: Extract<JavascriptSideOutcome, { kind: 'fulfilled' }>,
+  userArgs: readonly unknown[],
+  referenceArgs: readonly unknown[],
+  checker: string,
+): Promise<JavascriptCaseRunResult> {
+  try {
+    const pass = await runJavascriptChecker(checker, {
+      userResult: user.value,
+      refResult: reference.value,
+      userArgs,
+      refArgs: referenceArgs,
+    });
+    return {
+      pass,
+      userValue: user.value,
+      referenceValue: reference.value,
+      message: pass ? undefined : 'Checker rejected',
+    };
+  } catch (error: unknown) {
+    if (error instanceof JavascriptCheckerError) {
+      return fail(error.message);
+    }
+    const message = error instanceof Error ? error.message : 'Checker error';
+    return fail(message);
+  }
+}
+
+async function mergeSideOutcomes(
   user: JavascriptSideOutcome,
   reference: JavascriptSideOutcome,
   rejects: boolean,
@@ -208,7 +240,8 @@ function mergeSideOutcomes(
   resultMode: JavascriptResultMode,
   structure: JavascriptStructure | undefined,
   unordered: boolean,
-): JavascriptCaseRunResult {
+  checker: string | undefined,
+): Promise<JavascriptCaseRunResult> {
   if (user.kind === 'thrown') {
     return fail(user.message);
   }
@@ -219,6 +252,9 @@ function mergeSideOutcomes(
   if (!rejects) {
     if (user.kind === 'rejected' || reference.kind === 'rejected') {
       return fail('Promise rejected');
+    }
+    if (checker !== undefined && checker.length > 0) {
+      return compareWithChecker(user, reference, userArgs, referenceArgs, checker);
     }
     return compareFulfilledWithMode(
       user,
@@ -248,6 +284,8 @@ export async function runJavascriptCaseComparison(
   const resultMode: JavascriptResultMode = options.resultMode ?? 'return';
   const { structure } = options;
   const unordered = options.unordered === true;
+  const checker =
+    options.checker !== undefined && options.checker.length > 0 ? options.checker : undefined;
 
   let userArgs: unknown[];
   let referenceArgs: unknown[];
@@ -308,5 +346,6 @@ export async function runJavascriptCaseComparison(
     resultMode,
     structure,
     unordered,
+    checker,
   );
 }

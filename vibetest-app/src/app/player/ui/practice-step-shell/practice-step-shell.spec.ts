@@ -53,4 +53,22 @@ describe('PracticeStepShellComponent', () => {
     await fixture.whenStable();
     expect(fixture.nativeElement.textContent).toContain('Failed test');
   });
+
+  it('does not render referenceSolution or checker', async () => {
+    const fixture = TestBed.createComponent(PracticeStepShellComponent);
+    const step = {
+      ...javascriptStep,
+      content: {
+        ...javascriptStep.content,
+        referenceSolution: 'SECRET_REFERENCE_vt50',
+        checker: '(ctx) => SECRET_CHECKER_vt50',
+      },
+    };
+    fixture.componentRef.setInput('step', step);
+    await fixture.whenStable();
+    const text = fixture.nativeElement.textContent as string;
+    expect(text).not.toContain('SECRET_REFERENCE_vt50');
+    expect(text).not.toContain('SECRET_CHECKER_vt50');
+    expect(text).toContain('Write a function');
+  });
 });

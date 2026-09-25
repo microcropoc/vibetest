@@ -150,7 +150,7 @@
       }
     },
     "javascriptContent": {
-      "$comment": "Ровно одно из functionName | construct: в $defs нет oneOf (json-schema-to-zod ломает JavascriptContentSchema). Импорт VibeTest — JavascriptContentWithTargetSchema.superRefine. AJV по import-файлу без шага content не дублирует это правило на nested content. Зарезервированные слова — superRefine и compile.",
+      "$comment": "Ровно одно из functionName | construct: в $defs нет oneOf (json-schema-to-zod ломает JavascriptContentSchema). Импорт VibeTest — JavascriptContentWithTargetSchema.superRefine. AJV по import-файлу без шага content не дублирует это правило на nested content. Зарезервированные слова — superRefine и compile. ВАЖНО: javascriptContent сам по себе не гарантирует XOR functionName|construct и не отклоняет reserved words для functionName/className (только pattern). Обязательный путь VibeTest — JavascriptContentWithTargetSchema (import и canonical course). Сырой AJV/редактор без superRefine — неполная валидация.",
       "type": "object",
       "description": "JS-практика: код ученика и эталон выполняются в двух изолированных средах (dual-run); по умолчанию результаты сравниваются recursive JSON-compatible equal — plain objects/arrays, порядок ключей объектов не важен, примитивы через Object.is (NaN равен NaN, +0 ≠ -0), а undefined / function / symbol / bigint / не-plain объекты (Map, Set, Date, RegExp) считаются non-JSON result и приводят к fail. Опционально resultMode / structure / unordered меняют подготовку args и объект сравнения. Опциональный checker — escape hatch вместо equal. Ровно одно из functionName или construct (строго при импорте в приложении). Порядок на тест-кейс: reset → materialize args (structure) → вызов functionName(...args) или new construct.className(...args) → цепочка calls → await thenable → flushMicrotasks → advanceMs → expectInvocations → compare (checker или serialize+equal по resultMode). Sync throw до финала — fail кейса, resultMode/rejects на equal не применяются.",
       "required": ["description", "starterCode", "referenceSolution", "setup", "timeoutMs", "tests"],
@@ -235,13 +235,13 @@
           "type": "string",
           "minLength": 1,
           "maxLength": 10000,
-          "description": "Escape hatch: исходник (ctx) => boolean. Раннер: отдельная sandbox (не user/reference globals), таймаут 250 ms, non-boolean/throw/timeout → fail; на fulfilled-пути заменяет equal/resultMode/unordered (structure.result не сериализуется автоматически). ctx: userResult, refResult, userArgs, refArgs — сырые после invoke (args только materialize); хелперы deepEqual, serializeList, serializeTree, sortUnordered. Автор по конвенции: детерминизм, без I/O; раннер не проверяет чистоту/детерминизм. Не показывается ученику. Пустая строка недопустима."
+          "description": "Escape hatch: исходник (ctx) => boolean. Раннер: отдельная sandbox (не user/reference globals); таймаут 250 ms на thenable-return checker (sync-бесконечный цикл — общий timeoutMs/terminate); non-boolean/throw/timeout → fail; на fulfilled-пути заменяет equal/resultMode/unordered (structure.result не сериализуется автоматически — при list/tree: ctx.deepEqual(ctx.serializeList(ctx.userResult), ctx.serializeList(ctx.refResult)) и т.п.). ctx.userResult/refResult — сырой return после invoke; ctx.userArgs/refArgs — materialized (structure.args), не serialized (сравнение args — serializeList/serializeTree/deepEqual вручную). ctx read-only по конвенции (мутация не поддерживается). Хелперы: deepEqual, serializeList, serializeTree, sortUnordered. Недетерминизм → ложные pass/fail; раннер не проверяет. Не показывается ученику. Пустая строка недопустима."
         },
         "timeoutMs": {
           "type": "integer",
           "minimum": 100,
           "maximum": 30000,
-          "description": "Лимит на весь шаг (мс): javascriptInit + все tests[] одним deadline (не per-case). Включает reset, invoke, calls, advanceMs, сравнение. Кооперативная проверка; бесконечный цикл в коде ученика — Worker.terminate() по истечении."
+          "description": "Лимит на весь шаг (мс): javascriptInit + все tests[] одним deadline (не per-case). Включает reset, invoke, calls, advanceMs, сравнение. Кооперативная проверка; бесконечный цикл в коде ученика или sync hang в checker — Worker.terminate() по истечении. Cap 250 ms у checker — только на thenable-return (отдельный от deadlineMs кейса; см. checker)."
         },
         "tests": {
           "type": "array",
@@ -308,7 +308,7 @@
               },
               "unordered": {
                 "type": "boolean",
-                "description": "true: после structure-serialize рекурсивная нормализация перед equal — массивы сортируются по stable JSON-key (ключи объектов в ключе сортируются); plain objects — значения рекурсивно, ключи при сборке по Object.keys().sort(). К return и/или tests[].args по resultMode. Игнорируется при content.checker. false/отсутствие — порядок массивов важен."
+                "description": "true: после structure-serialize рекурсивная нормализация перед equal — массивы сортируются по stable JSON-key (сортировка ключей объектов в ключе — для stable key, не для equal plain objects); plain objects — значения рекурсивно. К return и/или tests[].args по resultMode. При structure.result list/tree serialize даёт массив — unordered переставит элементы; не использовать, если порядок важен. Игнорируется при content.checker. false/отсутствие — порядок массивов важен."
               }
             }
           }

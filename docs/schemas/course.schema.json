@@ -163,8 +163,9 @@
       }
     },
     "javascriptContent": {
+      "$comment": "Ровно одно из functionName | construct: в $defs нет oneOf (json-schema-to-zod ломает JavascriptContentSchema). Импорт VibeTest — JavascriptContentWithTargetSchema.superRefine. AJV по import-файлу без шага content не дублирует это правило на nested content. Зарезервированные слова — superRefine и compile.",
       "type": "object",
-      "description": "JS-практика: код ученика и эталон выполняются в двух изолированных средах (dual-run); по умолчанию результаты сравниваются recursive JSON-compatible equal — plain objects/arrays, порядок ключей объектов не важен, примитивы через Object.is (NaN равен NaN, +0 ≠ -0), а undefined / function / symbol / bigint / не-plain объекты (Map, Set, Date, RegExp) считаются non-JSON result и приводят к fail. Опционально resultMode / structure / unordered меняют подготовку args и объект сравнения. Опциональный checker — escape hatch вместо equal. Ровно одно из functionName или construct. Порядок на тест-кейс: reset → materialize args (structure) → вызов functionName(...args) или new construct.className(...args) → цепочка calls → await thenable → rejects → flushMicrotasks → advanceMs → expectInvocations → compare (checker или serialize+equal по resultMode).",
+      "description": "JS-практика: код ученика и эталон выполняются в двух изолированных средах (dual-run); по умолчанию результаты сравниваются recursive JSON-compatible equal — plain objects/arrays, порядок ключей объектов не важен, примитивы через Object.is (NaN равен NaN, +0 ≠ -0), а undefined / function / symbol / bigint / не-plain объекты (Map, Set, Date, RegExp) считаются non-JSON result и приводят к fail. Опционально resultMode / structure / unordered меняют подготовку args и объект сравнения. Опциональный checker — escape hatch вместо equal. Ровно одно из functionName или construct (строго при импорте в приложении). Порядок на тест-кейс: reset → materialize args (structure) → вызов functionName(...args) или new construct.className(...args) → цепочка calls → await thenable → flushMicrotasks → advanceMs → expectInvocations → compare (checker или serialize+equal по resultMode). Sync throw до финала — fail кейса, resultMode/rejects на equal не применяются.",
       "required": ["description", "starterCode", "referenceSolution", "setup", "timeoutMs", "tests"],
       "additionalProperties": false,
       "properties": {
@@ -199,7 +200,8 @@
           "type": "string",
           "minLength": 1,
           "maxLength": 100,
-          "description": "Имя вызываемой функции; должна существовать после загрузки starterCode/referenceSolution. Взаимоисключимо с construct: нужно ровно одно из двух."
+          "pattern": "^[A-Za-z_$][A-Za-z0-9_$]*$",
+          "description": "Имя вызываемой функции (JS identifier); должна существовать после load starterCode/referenceSolution. Взаимоисключимо с construct. Зарезервированные слова отклоняются при импорте VibeTest."
         },
         "construct": {
           "type": "object",
@@ -211,18 +213,19 @@
               "type": "string",
               "minLength": 1,
               "maxLength": 100,
-              "description": "Имя класса/конструктора после load starterCode/referenceSolution."
+              "pattern": "^[A-Za-z_$][A-Za-z0-9_$]*$",
+              "description": "Имя класса/конструктора (JS identifier) после load starterCode/referenceSolution. Зарезервированные слова отклоняются при импорте VibeTest."
             }
           }
         },
         "resultMode": {
           "type": "string",
           "enum": ["return", "args", "both"],
-          "description": "Что сравнивать после кейса (при rejects: true игнорируется — сравниваются только reject reasons). return (по умолчанию / отсутствие поля) — финальный return после serialize structure.result; args — весь массив мутированных args после serialize по structure.args (return может быть undefined); both — и return, и args."
+          "description": "Что сравнивать после кейса. При rejects: true или sync throw до финала — игнорируется (rejects: только reasons; throw: fail кейса). return (default) — финальный return после serialize structure.result; args — только массив tests[].args после прогона (materialize + serialize по structure.args), не calls[].args; return может быть undefined/non-JSON; both — return и tests[].args, оба должны совпасть."
         },
         "structure": {
           "type": "object",
-          "description": "Декларация структурных типов для materialize JSON→узлы до вызова и serialize перед equal. Отсутствие = все raw. list: number[] ↔ { val, next }; tree: level-order (number|null)[] ↔ { val, left, right }; raw: structuredClone. Пустой list [] → null. Serialize: cycle → fail; cap 10000 узлов.",
+          "description": "Materialize JSON→узлы до вызова и serialize перед equal (не при content.checker на fulfilled-пути). Отсутствие = raw. list/tree/raw как в SPEC. structure.args — по позиции для tests[].args и calls[].args; индекс вне массива = raw. structure.result — только финальный return, не промежуточные значения calls. Cycle/overflow serialize → fail.",
           "additionalProperties": false,
           "properties": {
             "args": {
@@ -245,13 +248,13 @@
           "type": "string",
           "minLength": 1,
           "maxLength": 10000,
-          "description": "Escape hatch: исходник JS-функции (ctx) => boolean; при наличии полностью заменяет default equal / resultMode / unordered на fulfilled-пути (rejects и expectInvocations по-прежнему раньше). ctx: userResult, refResult, userArgs, refArgs (сырые значения после invoke; structure только materialize args) и хелперы deepEqual, serializeList, serializeTree, sortUnordered. Детерминизм; запрет Math.random / Date.now / I/O (конвенция автора). Не показывается ученику (как referenceSolution). Timeout ~250 ms; non-boolean / throw / timeout → fail. Отсутствие поля = без checker; пустая строка недопустима."
+          "description": "Escape hatch: исходник (ctx) => boolean. Раннер: отдельная sandbox (не user/reference globals), таймаут 250 ms, non-boolean/throw/timeout → fail; на fulfilled-пути заменяет equal/resultMode/unordered (structure.result не сериализуется автоматически). ctx: userResult, refResult, userArgs, refArgs — сырые после invoke (args только materialize); хелперы deepEqual, serializeList, serializeTree, sortUnordered. Автор по конвенции: детерминизм, без I/O; раннер не проверяет чистоту/детерминизм. Не показывается ученику. Пустая строка недопустима."
         },
         "timeoutMs": {
           "type": "integer",
           "minimum": 100,
           "maximum": 30000,
-          "description": "Лимит времени на весь шаг практики (мс)."
+          "description": "Лимит на весь шаг (мс): javascriptInit + все tests[] одним deadline (не per-case). Включает reset, invoke, calls, advanceMs, сравнение. Кооперативная проверка; бесконечный цикл в коде ученика — Worker.terminate() по истечении."
         },
         "tests": {
           "type": "array",
@@ -288,18 +291,19 @@
                       "type": "string",
                       "minLength": 1,
                       "maxLength": 100,
-                      "description": "Если задан — current[method](...args) на результате предыдущего шага; иначе current(...args) (результат должен быть callable)."
+                      "pattern": "^[A-Za-z_$][A-Za-z0-9_$]*$",
+                      "description": "JS identifier метода (syntax only): current[method](...args); иначе current(...args). Reserved words допустимы (Reflect.get)."
                     }
                   }
                 }
               },
               "rejects": {
                 "type": "boolean",
-                "description": "true: и user, и reference должны завершиться reject. Reason для Error сравнивается по message; иначе — тем же recursive JSON-compatible equal. Относится к финалу кейса; промежуточный throw/reject внутри calls — отдельный тест-кейс."
+                "description": "true: обе среды должны reject на финале; иначе fail. Если одна reject, другая fulfill — fail. Reasons сравниваются (Error.message или JSON-equal). Промежуточный throw/reject в calls — fail кейса (не rejects-путь)."
               },
               "expectInvocations": {
                 "type": "object",
-                "description": "Ожидаемое число вызовов spy по имени (ключ — имя spy, значение — count).",
+                "description": "Ожидаемое число вызовов spy (имя из setup/registerSpy). user === reference === count; иначе fail. Spy не зарегистрирован — fail («not registered»).",
                 "additionalProperties": {
                   "type": "integer",
                   "minimum": 0
@@ -317,7 +321,7 @@
               },
               "unordered": {
                 "type": "boolean",
-                "description": "true: перед equal рекурсивно нормализовать значения (массивы сортируются по стабильному JSON-ключу; values plain objects нормализуются). Применяется после structure-serialize к return и/или args по resultMode. Игнорируется, если задан content.checker. Не использовать, если порядок внутри части ответа семантически важен (тогда checker). Отсутствие / false — порядок важен."
+                "description": "true: после structure-serialize рекурсивная нормализация перед equal — массивы сортируются по stable JSON-key (ключи объектов в ключе сортируются); plain objects — значения рекурсивно, ключи при сборке по Object.keys().sort(). К return и/или tests[].args по resultMode. Игнорируется при content.checker. false/отсутствие — порядок массивов важен."
               }
             }
           }

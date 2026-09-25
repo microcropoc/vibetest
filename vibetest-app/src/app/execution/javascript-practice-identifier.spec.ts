@@ -1,12 +1,19 @@
 import { describe, expect, it } from 'vitest';
 
-import { assertPracticeIdentifier } from './javascript-practice-identifier';
+import {
+  assertPracticeIdentifier,
+  assertPracticeIdentifierSyntax,
+} from './javascript-practice-identifier';
 import { compileJavascriptPracticeCallable } from './javascript-practice-compile';
 
 describe('assertPracticeIdentifier', () => {
   it('accepts valid identifiers', () => {
     expect(() => assertPracticeIdentifier('add', 'functionName')).not.toThrow();
     expect(() => assertPracticeIdentifier('_$x1', 'className')).not.toThrow();
+  });
+
+  it('allows reserved words for syntax-only check', () => {
+    expect(() => assertPracticeIdentifierSyntax('delete', 'method')).not.toThrow();
   });
 
   it('rejects invalid syntax and reserved words', () => {

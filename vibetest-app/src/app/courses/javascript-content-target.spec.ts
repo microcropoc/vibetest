@@ -59,4 +59,48 @@ describe('JavascriptContentWithTargetSchema', () => {
     });
     expect(result.success).toBe(false);
   });
+
+  it('rejects reserved functionName', () => {
+    const result = JavascriptContentWithTargetSchema.safeParse({
+      ...base,
+      functionName: 'class',
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it('rejects invalid className on construct', () => {
+    const result = JavascriptContentWithTargetSchema.safeParse({
+      ...base,
+      construct: { className: 'static' },
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it('rejects invalid method in calls', () => {
+    const result = JavascriptContentWithTargetSchema.safeParse({
+      ...base,
+      functionName: 'fn',
+      tests: [{ args: [], calls: [{ args: [], method: 'bad-name' }] }],
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it('accepts reserved-word method names used via Reflect.get', () => {
+    expect(
+      JavascriptContentWithTargetSchema.safeParse({
+        ...base,
+        functionName: 'fn',
+        tests: [{ args: [], calls: [{ args: [], method: 'delete' }] }],
+      }).success,
+    ).toBe(true);
+  });
+
+  it('accepts LRUCache construct', () => {
+    expect(
+      JavascriptContentWithTargetSchema.safeParse({
+        ...base,
+        construct: { className: 'LRUCache' },
+      }).success,
+    ).toBe(true);
+  });
 });

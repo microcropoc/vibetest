@@ -52,10 +52,15 @@ const RESERVED_IDENTIFIERS = new Set([
   'yield',
 ]);
 
-export function assertPracticeIdentifier(name: string, label: string): void {
+export function assertPracticeIdentifierSyntax(name: string, label: string): void {
   if (!IDENTIFIER_PATTERN.test(name)) {
     throw new Error(`Invalid ${label}: must be a JavaScript identifier`);
   }
+}
+
+/** For names interpolated into `"use strict"` compile factories (functionName, className). */
+export function assertPracticeIdentifier(name: string, label: string): void {
+  assertPracticeIdentifierSyntax(name, label);
   if (RESERVED_IDENTIFIERS.has(name)) {
     throw new Error(`Invalid ${label}: "${name}" is a reserved word`);
   }

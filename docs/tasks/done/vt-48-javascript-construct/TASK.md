@@ -33,13 +33,13 @@ function createLRU(...args) { return new LRUCache(...args); }
 
 ### Граничные тесты (checklist)
 
-- [ ] LRU-подобный: `construct.className`, `args: [2]`, `calls` put/get → pass
-- [ ] user ломает get → fail
-- [ ] только `functionName` — регрессия vt-47/44
-- [ ] оба `functionName` + `construct` — reject на импорте (schema или semantic)
-- [ ] ни одного — reject
-- [ ] отсутствующий className в среде → fail message
-- [ ] `construct` + `resultMode: "args"` (если vt-47 merge) — один кейс или явный skip до merge
+- [x] LRU-подобный: `construct.className`, `args: [2]`, `calls` put/get → pass
+- [x] user ломает get → fail
+- [x] только `functionName` — регрессия vt-47/44
+- [x] оба `functionName` + `construct` — reject на импорте (schema или semantic)
+- [x] ни одного — reject
+- [x] отсутствующий className в среде → fail message
+- [x] `construct` + `resultMode: "args"` (если vt-47 merge) — один кейс или явный skip до merge
 
 ## Технические заметки
 
@@ -48,10 +48,10 @@ function createLRU(...args) { return new LRUCache(...args); }
 
 ## План работ
 
-- [ ] SPEC + schema anyOf + zod + semantic
-- [ ] Worker/compile path: `new` vs function invoke
-- [ ] Checklist specs
-- [ ] `ng test --watch=false`; REPORT при merge
+- [x] SPEC + schema anyOf + zod + semantic
+- [x] Worker/compile path: `new` vs function invoke
+- [x] Checklist specs
+- [x] `ng test --watch=false`; REPORT при merge
 
 ## Критерии готовности (Definition of Done)
 

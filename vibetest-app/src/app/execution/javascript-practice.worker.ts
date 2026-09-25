@@ -1,4 +1,7 @@
-import { compileJavascriptPracticeCallable } from './javascript-practice-compile';
+import {
+  compileJavascriptPracticeCallable,
+  type JavascriptPracticeTarget,
+} from './javascript-practice-compile';
 import type { FakeTimerController } from './javascript-fake-timers';
 import { parseExecutionRequest } from './execution-messages';
 import type { PracticeGlobalBag } from './javascript-practice-global';
@@ -27,27 +30,49 @@ self.addEventListener('message', (event: MessageEvent<unknown>) => {
     const request = parseExecutionRequest(event.data);
     switch (request.type) {
       case 'javascriptInit': {
-        const user = compileJavascriptPracticeCallable(
-          request.setup,
-          request.userCode,
-          request.functionName,
-        );
-        const reference = compileJavascriptPracticeCallable(
-          request.setup,
-          request.referenceCode,
-          request.functionName,
-        );
-        runtime = {
-          invokeUser: (args) => user.invoke(args),
-          invokeReference: (args) => reference.invoke(args),
-          applyUserReset: (reset) => user.applyReset(reset),
-          applyReferenceReset: (reset) => reference.applyReset(reset),
-          userTimers: user.timers,
-          referenceTimers: reference.timers,
-          userGlobal: user.globalBag,
-          referenceGlobal: reference.globalBag,
-        };
-        self.postMessage({ type: 'javascriptInited', id: request.id });
+        let target: JavascriptPracticeTarget;
+        if (request.functionName !== undefined) {
+          target = { kind: 'function', name: request.functionName };
+        } else if (request.construct !== undefined) {
+          target = { kind: 'construct', className: request.construct.className };
+        } else {
+          self.postMessage({
+            type: 'error',
+            id: request.id,
+            message: 'Exactly one of functionName or construct is required',
+          });
+          break;
+        }
+        try {
+          const user = compileJavascriptPracticeCallable(
+            request.setup,
+            request.userCode,
+            target,
+          );
+          const reference = compileJavascriptPracticeCallable(
+            request.setup,
+            request.referenceCode,
+            target,
+          );
+          runtime = {
+            invokeUser: (args) => user.invoke(args),
+            invokeReference: (args) => reference.invoke(args),
+            applyUserReset: (reset) => user.applyReset(reset),
+            applyReferenceReset: (reset) => reference.applyReset(reset),
+            userTimers: user.timers,
+            referenceTimers: reference.timers,
+            userGlobal: user.globalBag,
+            referenceGlobal: reference.globalBag,
+          };
+          self.postMessage({ type: 'javascriptInited', id: request.id });
+        } catch (error: unknown) {
+          const message = error instanceof Error ? error.message : 'Init error';
+          self.postMessage({
+            type: 'error',
+            id: request.id,
+            message,
+          });
+        }
         break;
       }
       case 'javascriptRunCase': {

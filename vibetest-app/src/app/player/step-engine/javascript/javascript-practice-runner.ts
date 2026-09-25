@@ -46,10 +46,16 @@ export async function runJavascriptPractice(
         setup: content.setup,
         userCode,
         referenceCode: content.referenceSolution,
-        functionName: content.functionName,
+        ...(content.functionName !== undefined ? { functionName: content.functionName } : {}),
+        ...(content.construct !== undefined
+          ? { construct: { className: content.construct.className } }
+          : {}),
       },
       remainingMs(deadlineMs),
     );
+    if (initResponse.type === 'error') {
+      return { ok: false, failedTestIndex: 0, message: initResponse.message };
+    }
     if (initResponse.type !== 'javascriptInited') {
       return { ok: false, failedTestIndex: 0, message: 'Unexpected init response' };
     }

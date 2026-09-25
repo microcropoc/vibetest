@@ -164,8 +164,8 @@
     },
     "javascriptContent": {
       "type": "object",
-      "description": "JS-практика: код ученика и эталон выполняются в двух изолированных средах (dual-run); по умолчанию результаты сравниваются recursive JSON-compatible equal — plain objects/arrays, порядок ключей объектов не важен, примитивы через Object.is (NaN равен NaN, +0 ≠ -0), а undefined / function / symbol / bigint / не-plain объекты (Map, Set, Date, RegExp) считаются non-JSON result и приводят к fail. Опционально resultMode / structure меняют подготовку args и объект сравнения (in-place, list/tree). Порядок на тест-кейс: reset → materialize args (structure) → вызов functionName(...args) → цепочка calls (materialize call.args) → await thenable при необходимости → rejects → flushMicrotasks → advanceMs → expectInvocations → serialize + compare по resultMode.",
-      "required": ["description", "starterCode", "referenceSolution", "setup", "functionName", "timeoutMs", "tests"],
+      "description": "JS-практика: код ученика и эталон выполняются в двух изолированных средах (dual-run); по умолчанию результаты сравниваются recursive JSON-compatible equal — plain objects/arrays, порядок ключей объектов не важен, примитивы через Object.is (NaN равен NaN, +0 ≠ -0), а undefined / function / symbol / bigint / не-plain объекты (Map, Set, Date, RegExp) считаются non-JSON result и приводят к fail. Опционально resultMode / structure меняют подготовку args и объект сравнения (in-place, list/tree). Ровно одно из functionName или construct. Порядок на тест-кейс: reset → materialize args (structure) → вызов functionName(...args) или new construct.className(...args) → цепочка calls (materialize call.args) → await thenable при необходимости → rejects → flushMicrotasks → advanceMs → expectInvocations → serialize + compare по resultMode.",
+      "required": ["description", "starterCode", "referenceSolution", "setup", "timeoutMs", "tests"],
       "additionalProperties": false,
       "properties": {
         "description": {
@@ -188,7 +188,7 @@
         "setup": {
           "type": "string",
           "maxLength": 20000,
-          "description": "JS подготовки среды перед загрузкой starterCode/referenceSolution в обеих средах (моки, registerSpy). Глобалы и spy, объявленные в setup, видны коду ученика и эталону после загрузки; не класть сюда проверочные данные — functionName появляется после load."
+          "description": "JS подготовки среды перед загрузкой starterCode/referenceSolution в обеих средах (моки, registerSpy). Глобалы и spy, объявленные в setup, видны коду ученика и эталону после загрузки; не класть сюда проверочные данные — functionName / className появляются после load."
         },
         "reset": {
           "type": "string",
@@ -199,7 +199,21 @@
           "type": "string",
           "minLength": 1,
           "maxLength": 100,
-          "description": "Имя вызываемой функции; должна существовать после загрузки starterCode/referenceSolution в среде."
+          "description": "Имя вызываемой функции; должна существовать после загрузки starterCode/referenceSolution. Взаимоисключимо с construct: нужно ровно одно из двух."
+        },
+        "construct": {
+          "type": "object",
+          "description": "Вместо вызова функции — new className(...tests[].args) в обеих средах; далее calls как обычно. Взаимоисключимо с functionName.",
+          "required": ["className"],
+          "additionalProperties": false,
+          "properties": {
+            "className": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 100,
+              "description": "Имя класса/конструктора после load starterCode/referenceSolution."
+            }
+          }
         },
         "resultMode": {
           "type": "string",

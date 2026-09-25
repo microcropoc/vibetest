@@ -6,6 +6,10 @@ import {
   type PracticeGlobalBag,
 } from './javascript-practice-global';
 
+export type JavascriptPracticeTarget =
+  | { readonly kind: 'function'; readonly name: string }
+  | { readonly kind: 'construct'; readonly className: string };
+
 export interface JavascriptPracticeCallable {
   readonly invoke: (args: readonly unknown[]) => unknown;
   readonly applyReset: (reset: string) => void;
@@ -19,10 +23,27 @@ ${JAVASCRIPT_PRACTICE_SPY_PREAMBLE}
 ${JAVASCRIPT_PRACTICE_TIMER_PREAMBLE}
 `;
 
+function buildReturnExpression(target: JavascriptPracticeTarget): string {
+  if (target.kind === 'function') {
+    return `
+if (typeof ${target.name} !== "function") {
+  throw new Error("Function ${target.name} is not defined");
+}
+return ${target.name};`;
+  }
+  return `
+if (typeof ${target.className} !== "function") {
+  throw new Error("Class ${target.className} is not defined");
+}
+return function (...args) {
+  return new ${target.className}(...args);
+};`;
+}
+
 export function compileJavascriptPracticeCallable(
   setup: string,
   code: string,
-  functionName: string,
+  target: JavascriptPracticeTarget,
 ): JavascriptPracticeCallable {
   const globalBag = createPracticeGlobalBag();
   const timers = installFakeTimers(globalBag);
@@ -35,10 +56,7 @@ export function compileJavascriptPracticeCallable(
 ${COMPILE_PREAMBLE}
 ${setup}
 ${code}
-if (typeof ${functionName} !== "function") {
-  throw new Error("Function ${functionName} is not defined");
-}
-return ${functionName};`,
+${buildReturnExpression(target)}`,
     );
     return factory(globalBag) as (...args: unknown[]) => unknown;
   };

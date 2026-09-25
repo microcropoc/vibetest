@@ -9,9 +9,26 @@ const javascriptInitSchema = z
     setup: z.string(),
     userCode: z.string(),
     referenceCode: z.string(),
-    functionName: z.string().min(1),
+    functionName: z.string().min(1).optional(),
+    construct: z
+      .object({
+        className: z.string().min(1).max(100),
+      })
+      .strict()
+      .optional(),
   })
-  .strict();
+  .strict()
+  .superRefine((value, ctx) => {
+    const hasFunction = value.functionName !== undefined;
+    const hasConstruct = value.construct !== undefined;
+    if (hasFunction === hasConstruct) {
+      ctx.addIssue({
+        code: 'custom',
+        message: 'Exactly one of functionName or construct is required',
+        path: hasFunction ? ['construct'] : ['functionName'],
+      });
+    }
+  });
 
 const javascriptCallStepSchema = z
   .object({

@@ -1,13 +1,23 @@
 import { describe, expect, it } from 'vitest';
 
 import { compileJavascriptPracticeCallable } from '../../../execution/javascript-practice-compile';
+import type { JavascriptPracticeTarget } from '../../../execution/javascript-practice-compile';
 
 import { runJavascriptCaseComparison, type JavascriptCaseRunOptions } from './run-javascript-case';
+
+function resolveTarget(
+  target: string | JavascriptPracticeTarget,
+): JavascriptPracticeTarget {
+  if (typeof target === 'string') {
+    return { kind: 'function', name: target };
+  }
+  return target;
+}
 
 function dualEnv(
   userCode: string,
   referenceCode: string,
-  functionName: string,
+  target: string | JavascriptPracticeTarget,
   setup = '',
 ): {
   invokeUser: (args: readonly unknown[]) => unknown;
@@ -16,8 +26,9 @@ function dualEnv(
   applyUserReset: (reset: string) => void;
   applyReferenceReset: (reset: string) => void;
 } {
-  const user = compileJavascriptPracticeCallable(setup, userCode, functionName);
-  const reference = compileJavascriptPracticeCallable(setup, referenceCode, functionName);
+  const resolved = resolveTarget(target);
+  const user = compileJavascriptPracticeCallable(setup, userCode, resolved);
+  const reference = compileJavascriptPracticeCallable(setup, referenceCode, resolved);
   const opts = (extra: Partial<JavascriptCaseRunOptions> = {}): JavascriptCaseRunOptions => ({
     userTimers: user.timers,
     referenceTimers: reference.timers,
@@ -1081,6 +1092,97 @@ function reverseList(head) {
         env.opts(),
       );
       expect(result).toMatchObject({ pass: true, userValue: [1, 2, 3] });
+    });
+  });
+
+  describe('construct', () => {
+    const lruCode = `
+class LRUCache {
+  constructor(capacity) {
+    this.capacity = capacity;
+    this.map = new Map();
+  }
+  put(key, value) {
+    if (this.map.has(key)) this.map.delete(key);
+    this.map.set(key, value);
+    if (this.map.size > this.capacity) {
+      const first = this.map.keys().next().value;
+      this.map.delete(first);
+    }
+    return this;
+  }
+  get(key) {
+    if (!this.map.has(key)) return -1;
+    const value = this.map.get(key);
+    this.map.delete(key);
+    this.map.set(key, value);
+    return value;
+  }
+}
+`;
+
+    it('LRU-like construct + calls put/get passes', async () => {
+      const env = dualEnv(lruCode, lruCode, { kind: 'construct', className: 'LRUCache' });
+      const result = await runJavascriptCaseComparison(
+        env.invokeUser,
+        env.invokeReference,
+        [2],
+        [
+          { method: 'put', args: [1, 1] },
+          { method: 'put', args: [2, 2] },
+          { method: 'get', args: [1] },
+        ],
+        env.opts(),
+      );
+      expect(result).toMatchObject({ pass: true, userValue: 1 });
+    });
+
+    it('fails when user get is wrong', async () => {
+      const broken = `
+class LRUCache {
+  constructor(capacity) { this.capacity = capacity; this.map = new Map(); }
+  put(key, value) { this.map.set(key, value); return this; }
+  get(key) { return 0; }
+}
+`;
+      const env = dualEnv(broken, lruCode, { kind: 'construct', className: 'LRUCache' });
+      const result = await runJavascriptCaseComparison(
+        env.invokeUser,
+        env.invokeReference,
+        [2],
+        [
+          { method: 'put', args: [1, 1] },
+          { method: 'get', args: [1] },
+        ],
+        env.opts(),
+      );
+      expect(result.pass).toBe(false);
+    });
+
+    it('throws when className is missing in environment', () => {
+      expect(() =>
+        dualEnv('const x = 1;', 'const x = 1;', { kind: 'construct', className: 'Missing' }),
+      ).toThrow(/Class Missing is not defined/);
+    });
+
+    it('construct + resultMode args compares mutated constructor args', async () => {
+      const code = `
+class Mut {
+  constructor(nums) {
+    nums.push(99);
+  }
+}
+`;
+      const env = dualEnv(code, code, { kind: 'construct', className: 'Mut' });
+      const result = await runJavascriptCaseComparison(
+        env.invokeUser,
+        env.invokeReference,
+        [[1, 2]],
+        undefined,
+        env.opts({ resultMode: 'args' }),
+      );
+      expect(result.pass).toBe(true);
+      expect(result.userValue).toEqual([[1, 2, 99]]);
     });
   });
 });

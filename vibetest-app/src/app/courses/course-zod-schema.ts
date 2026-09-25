@@ -1,7 +1,6 @@
 import { z } from 'zod';
 
 import {
-  JavascriptContentSchema,
   QuizContentSchema,
   RegexContentSchema,
   SqliteContentSchema,
@@ -9,6 +8,7 @@ import {
   TheoryContentSchema,
   UuidSchema,
 } from './generated/content-schemas.zod';
+import { JavascriptContentWithTargetSchema } from './javascript-content-target';
 
 const stepTitleSchema = z.string().min(1).max(200);
 
@@ -42,7 +42,7 @@ export const StepSchema = z.discriminatedUnion('type', [
       stepId: UuidSchema,
       type: z.literal('javascript'),
       title: stepTitleSchema,
-      content: JavascriptContentSchema,
+      content: JavascriptContentWithTargetSchema,
     })
     .strict(),
   z

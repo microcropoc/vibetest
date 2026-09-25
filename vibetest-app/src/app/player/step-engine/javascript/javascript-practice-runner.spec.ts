@@ -8,6 +8,8 @@ class ScriptableMockWorker {
   onerror: ((event: ErrorEvent) => void) | null = null;
   terminated = false;
   failOnCase = -1;
+  /** When set, javascriptInit responds with this error message (same request id). */
+  initErrorMessage: string | null = null;
 
   addEventListener(type: 'message' | 'error', listener: (event: MessageEvent | ErrorEvent) => void): void {
     if (type === 'message') {
@@ -49,6 +51,16 @@ class ScriptableMockWorker {
       structure?: unknown;
     };
     if (req.type === 'javascriptInit') {
+      if (this.initErrorMessage !== null) {
+        this.onmessage?.({
+          data: {
+            type: 'error',
+            id: req.id,
+            message: this.initErrorMessage,
+          },
+        } as MessageEvent);
+        return;
+      }
       this.onmessage?.({ data: { type: 'javascriptInited', id: req.id } } as MessageEvent);
       return;
     }
@@ -165,6 +177,59 @@ describe('runJavascriptPractice', () => {
     });
     expect(mock.lastCaseRequest?.resultMode).toBe('args');
     expect(mock.lastCaseRequest?.structure).toEqual({ args: ['list'], result: 'list' });
+  });
+
+  it('forwards construct on init instead of functionName', async () => {
+    const mock = new ScriptableMockWorker();
+    let initPayload: { functionName?: string; construct?: { className: string } } | undefined;
+    const originalPost = mock.postMessage.bind(mock);
+    mock.postMessage = (data: unknown) => {
+      const req = data as { type: string; functionName?: string; construct?: { className: string } };
+      if (req.type === 'javascriptInit') {
+        initPayload = { functionName: req.functionName, construct: req.construct };
+      }
+      originalPost(data);
+    };
+    const wrapper = new ExecutionWorkerWrapperService();
+    const { functionName: _fn, ...rest } = javascriptStep.content;
+    const step: JavascriptStep = {
+      ...javascriptStep,
+      content: {
+        ...rest,
+        construct: { className: 'LRUCache' },
+        tests: [{ args: [2], calls: [{ method: 'get', args: [1] }] }],
+      },
+    };
+    await runJavascriptPractice(step, step.content.starterCode, {
+      wrapper,
+      createWorker: () => mock as unknown as Worker,
+    });
+    expect(initPayload?.construct).toEqual({ className: 'LRUCache' });
+    expect(initPayload?.functionName).toBeUndefined();
+  });
+
+  it('surfaces init error message when class is missing', async () => {
+    const mock = new ScriptableMockWorker();
+    mock.initErrorMessage = 'Class Missing is not defined';
+    const wrapper = new ExecutionWorkerWrapperService();
+    const { functionName: _fn, ...rest } = javascriptStep.content;
+    const step: JavascriptStep = {
+      ...javascriptStep,
+      content: {
+        ...rest,
+        construct: { className: 'Missing' },
+        tests: [{ args: [] }],
+      },
+    };
+    const result = await runJavascriptPractice(step, 'const x = 1;', {
+      wrapper,
+      createWorker: () => mock as unknown as Worker,
+    });
+    expect(result).toEqual({
+      ok: false,
+      failedTestIndex: 0,
+      message: 'Class Missing is not defined',
+    });
   });
 
   it('fail-fast on first failing case', async () => {

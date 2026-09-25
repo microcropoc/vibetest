@@ -1,5 +1,7 @@
 import { Component, computed, input, output } from '@angular/core';
 
+import { CodeEditor } from '../code-editor/code-editor';
+import type { PracticeCodeEditorLanguage } from '../code-editor/practice-code-editor-language';
 import {
   practiceStepShellLabels,
   type PracticeFeedback,
@@ -8,6 +10,7 @@ import {
 
 @Component({
   selector: 'app-practice-step-shell',
+  imports: [CodeEditor],
   templateUrl: './practice-step-shell.html',
   styleUrl: './practice-step-shell.scss',
 })
@@ -25,8 +28,20 @@ export class PracticeStepShellComponent {
 
   protected readonly timeoutMs = computed(() => this.step().content.timeoutMs);
 
-  protected onDraftInput(event: Event): void {
-    const value = (event.target as HTMLTextAreaElement).value;
+  protected readonly editorLabelId = computed(() => `practice-editor-label-${this.step().stepId}`);
+
+  protected readonly editorLanguage = computed((): PracticeCodeEditorLanguage => {
+    switch (this.step().type) {
+      case 'javascript':
+        return 'javascript';
+      case 'sqlite':
+        return 'sql';
+      case 'regex':
+        return 'plain';
+    }
+  });
+
+  protected onDraftChange(value: string): void {
     this.draftChange.emit(value);
   }
 

@@ -3,17 +3,17 @@
   <p class="practice-step-shell__hint">{{ labels().hint }}</p>
   <p class="practice-step-shell__timeout">Лимит выполнения: {{ timeoutMs() }} мс</p>
 
-  <label class="practice-step-shell__label">
-    {{ labels().editorLabel }}
-    <textarea
+  <div class="practice-step-shell__label">
+    <span class="practice-step-shell__label-text" [id]="editorLabelId()">{{ labels().editorLabel }}</span>
+    <app-code-editor
       class="practice-step-shell__editor"
       [value]="draft()"
-      [disabled]="running()"
-      rows="10"
-      spellcheck="false"
-      (input)="onDraftInput($event)"
-    ></textarea>
-  </label>
+      [language]="editorLanguage()"
+      [readOnly]="running()"
+      [labelledBy]="editorLabelId()"
+      (valueChange)="onDraftChange($event)"
+    />
+  </div>
 
   @if (running()) {
     <p class="practice-step-shell__status" role="status">Выполнение…</p>

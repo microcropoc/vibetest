@@ -57,7 +57,7 @@
 
 _(очередь пуста — следующая задача из backlog по приоритету)_
 
-Цепочка JS practice v2: vt-42 … vt-44 в [`tasks/done/`](tasks/done/). **vt-47**…**vt-52** — в [`tasks/done/`](tasks/done/), включая демо-курс алгоритмов (**vt-51**) и проверку practice при импорте (**vt-52**).
+Цепочка JS practice v2: vt-42 … vt-44 в [`tasks/done/`](tasks/done/). **vt-47**…**vt-53** — в [`tasks/done/`](tasks/done/), включая CodeMirror в practice UI (**vt-53**).
 
 ## Решения и допущения
 

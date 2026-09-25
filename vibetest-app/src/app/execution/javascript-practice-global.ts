@@ -3,12 +3,23 @@ export type PracticeGlobalBag = Record<string, unknown>;
 export const JAVASCRIPT_PRACTICE_SPY_PREAMBLE = `
 globalThis.__vibetestSpies = globalThis.__vibetestSpies ?? Object.create(null);
 function registerSpy(name, fn) {
+  if (typeof name !== "string" || name === "") {
+    throw new Error("registerSpy: name must be a non-empty string");
+  }
+  if (typeof fn !== "function") {
+    throw new Error("registerSpy: fn must be a function");
+  }
   let n = 0;
   const wrapped = function(...a) {
     n += 1;
     return fn.apply(this, a);
   };
-  wrapped.__vibetestGetCount = function() { return n; };
+  Object.defineProperty(wrapped, "__vibetestGetCount", {
+    value: function() { return n; },
+    enumerable: false,
+    writable: false,
+    configurable: false,
+  });
   globalThis.__vibetestSpies[name] = wrapped;
   return wrapped;
 }

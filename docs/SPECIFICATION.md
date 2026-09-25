@@ -126,13 +126,13 @@ Inline SVG (SMIL/CSS и т.п.); рендер **без санитизации** 
 
 ### Практика (`javascript`, `sqlite`, `regex`)
 
-Проверка в Web Worker. Обязательное **`timeoutMs`** (100–30000): один deadline на **весь** шаг практики (javascriptInit/sqliteInit/regexInit + все `tests[]`, не per-case); кооперативная проверка, при зависании — `Worker.terminate()`. У JavaScript thenable **checker** — отдельный cap 250 ms (`Date.now()+250`, не `deadlineMs` кейса); bag `ctx` заморожен (`Object.freeze`); sync hang в checker/коде ученика — общий `timeoutMs` / `Worker.terminate()` без деталей кейса. **`structure.args`** materialize всегда; **`structure.result`** serialize — только equal-path без checker. Курсы **доверенные**; Worker защищает от зависания, не от произвольного кода в origin.
+Проверка в Web Worker. Обязательное **`timeoutMs`** (100–30000): один deadline на **весь** шаг практики (javascriptInit/sqliteInit/regexInit + все `tests[]`, не per-case); кооперативно в раннере через `Date.now()` / `deadlineMs`, плюс watchdog на **main thread** (`ExecutionWorkerWrapperService` / practice runner → `Worker.terminate()` при превышении). Воркер сам sync hang не прерывает. У JavaScript thenable **checker** — отдельный cap 250 ms по **wall-clock** `Date.now()+250` (не fake timers practice bag, не `deadlineMs` кейса); bag `ctx` заморожен (`Object.freeze`); sync hang в checker/коде ученика — общий `timeoutMs` / terminate без деталей кейса. **`structure.args`** materialize всегда; **`structure.result`** serialize — только equal-path без checker. Курсы **доверенные**; Worker защищает от зависания, не от произвольного кода в origin.
 
 В плеере черновик practice редактируется в **CodeMirror 6** (подсветка: JavaScript / SQL / plain text для regex); редактор грузится lazy-chunk, оформление — через CSS variables темы приложения.
 
 Кейсы `tests` выполняются **по порядку**; при первом провале, runtime-ошибке или timeout дальнейшие кейсы **не** запускаются.
 
-`reset` (только `javascript` / `sqlite`) — авторский код очистки перед **каждым** элементом `tests` (включая первый), если поле задано и не пустое; **отсутствие или пустая строка** — no-op для авторского кода. У `regex` полей `setup` / `reset` нет. У **JavaScript** фаза перед каждым кейсом (включая пустой `reset`) всегда: отмена pending timers, обнуление clock, сброс spy и recompile (`setup` + код).
+`reset` (только `javascript` / `sqlite`) — авторский код очистки перед **каждым** элементом `tests` (включая первый), если поле задано и не пустое; **отсутствие или пустая строка** — no-op для авторского кода. У `regex` полей `setup` / `reset` нет. У **JavaScript** фаза перед каждым кейсом (включая пустой `reset`) всегда: авторский `reset` (если не пустой) → `timers.reset()` → recompile (`clearSpyRegistry` + `setup` + код). **`reset`** видит только fake timers, **не** `registerSpy`. Practice **bag** переиспользуется между кейсами: `globalThis.foo` в коде ученика может пережить applyReset. Spy регистрировать в **`setup`**; не сохранять ссылки на wrapped spy вне реестра (иначе счётчик не сбрасывается при `clearSpyRegistry` — UB).
 
 **Подготовка (один раз на прогон):**
 

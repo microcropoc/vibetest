@@ -54,4 +54,41 @@ describe('readSpyInvocationCount', () => {
     clearSpyRegistry(callable.globalBag);
     expect(readSpyInvocationCount(callable.globalBag, 'fn')).toBeUndefined();
   });
+
+  it('rejects non-writable tampering of __vibetestGetCount', () => {
+    const callable = compileJavascriptPracticeCallable(
+      'const log = registerSpy("log", () => {}); log(); log();',
+      'function add() { return 1; }',
+      { kind: 'function', name: 'add' },
+    );
+    const registry = callable.globalBag['__vibetestSpies'] as Record<string, unknown>;
+    const wrapped = registry['log'];
+    expect(wrapped).toBeDefined();
+    const desc = Object.getOwnPropertyDescriptor(wrapped as object, '__vibetestGetCount');
+    expect(desc?.writable).toBe(false);
+    expect(Reflect.set(wrapped as object, '__vibetestGetCount', () => 999)).toBe(false);
+    expect(readSpyInvocationCount(callable.globalBag, 'log')).toBe(2);
+  });
+});
+
+describe('registerSpy validation', () => {
+  it('rejects empty spy name', () => {
+    expect(() =>
+      compileJavascriptPracticeCallable(
+        'registerSpy("", () => {});',
+        'function add() { return 1; }',
+        { kind: 'function', name: 'add' },
+      ),
+    ).toThrow(/non-empty string/);
+  });
+
+  it('rejects non-function fn', () => {
+    expect(() =>
+      compileJavascriptPracticeCallable(
+        'registerSpy("x", 1);',
+        'function add() { return 1; }',
+        { kind: 'function', name: 'add' },
+      ),
+    ).toThrow(/must be a function/);
+  });
 });

@@ -1,4 +1,5 @@
 import { installFakeTimers, JAVASCRIPT_PRACTICE_TIMER_PREAMBLE, type FakeTimerController } from './javascript-fake-timers';
+import { assertPracticeIdentifier } from './javascript-practice-identifier';
 import {
   clearSpyRegistry,
   createPracticeGlobalBag,
@@ -45,6 +46,11 @@ export function compileJavascriptPracticeCallable(
   code: string,
   target: JavascriptPracticeTarget,
 ): JavascriptPracticeCallable {
+  if (target.kind === 'function') {
+    assertPracticeIdentifier(target.name, 'functionName');
+  } else {
+    assertPracticeIdentifier(target.className, 'className');
+  }
   const globalBag = createPracticeGlobalBag();
   const timers = installFakeTimers(globalBag);
 

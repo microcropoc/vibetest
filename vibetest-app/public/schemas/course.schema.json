@@ -221,11 +221,11 @@
         "resultMode": {
           "type": "string",
           "enum": ["return", "args", "both"],
-          "description": "Что сравнивать после кейса. При rejects: true или sync throw до финала — игнорируется (rejects: только reasons; throw: fail кейса). return (default) — финальный return после serialize structure.result; args — только массив tests[].args после прогона (materialize + serialize по structure.args), не calls[].args; return может быть undefined/non-JSON; both — return и tests[].args, оба должны совпасть."
+          "description": "Что сравнивать после кейса. При rejects: true или sync throw до финала — игнорируется (rejects: только reasons; throw: fail кейса). return (default) — финальный return после serialize structure.result; args — только tests[].args после прогона (serialize по structure.args; без structure.args — raw после materialize/cloned); не calls[].args; both — return и tests[].args. return может быть undefined/non-JSON."
         },
         "structure": {
           "type": "object",
-          "description": "Materialize JSON→узлы до вызова и serialize перед equal (не при content.checker на fulfilled-пути). Отсутствие = raw. list/tree/raw как в SPEC. structure.args — по позиции для tests[].args и calls[].args; индекс вне массива = raw. structure.result — только финальный return, не промежуточные значения calls. Cycle/overflow serialize → fail.",
+          "description": "structure.args: materialize JSON→узлы всегда до invoke (tests[].args и calls[].args; индекс вне массива = raw). structure.result: serialize финального return — только equal-path без content.checker на fulfill; при checker или rejects result не сериализуется автоматически. list/tree/raw как SPEC. Cycle/overflow serialize → fail.",
           "additionalProperties": false,
           "properties": {
             "args": {
@@ -248,13 +248,13 @@
           "type": "string",
           "minLength": 1,
           "maxLength": 10000,
-          "description": "Escape hatch: исходник (ctx) => boolean. Раннер: отдельная sandbox (не user/reference globals); таймаут 250 ms на thenable-return checker (sync-бесконечный цикл — общий timeoutMs/terminate); non-boolean/throw/timeout → fail; на fulfilled-пути заменяет equal/resultMode/unordered (structure.result не сериализуется автоматически — при list/tree: ctx.deepEqual(ctx.serializeList(ctx.userResult), ctx.serializeList(ctx.refResult)) и т.п.). ctx.userResult/refResult — сырой return после invoke; ctx.userArgs/refArgs — materialized (structure.args), не serialized (сравнение args — serializeList/serializeTree/deepEqual вручную). ctx read-only по конвенции (мутация не поддерживается). Хелперы: deepEqual, serializeList, serializeTree, sortUnordered. Недетерминизм → ложные pass/fail; раннер не проверяет. Не показывается ученику. Пустая строка недопустима."
+          "description": "Escape hatch: исходник (ctx) => boolean. Sandbox (не user/reference globals). Bag ctx заморожен (Object.freeze): присвоение/удаление свойств ctx → throw; deep-mutation userResult/args и утечки ссылок на ctx.* вне вызова — undefined behaviour. Thenable-return: отдельный cap 250 ms (Date.now()+250), не deadlineMs кейса; sync boolean — без cap. Sync hang → общий timeoutMs/Worker.terminate (без деталей кейса). На fulfill заменяет equal/resultMode/unordered; tests[].unordered не применяется — ctx.sortUnordered. structure.result не сериализуется (пример list: ctx.deepEqual(ctx.serializeList(ctx.userResult), ctx.serializeList(ctx.refResult))). userResult/refResult — сырой return; userArgs/refArgs — materialized, не serialized. Хелперы: deepEqual, serializeList, serializeTree, sortUnordered. Недетерминизм → ложные pass/fail. Не показывается ученику."
         },
         "timeoutMs": {
           "type": "integer",
           "minimum": 100,
           "maximum": 30000,
-          "description": "Лимит на весь шаг (мс): javascriptInit + все tests[] одним deadline (не per-case). Включает reset, invoke, calls, advanceMs, сравнение. Кооперативная проверка; бесконечный цикл в коде ученика или sync hang в checker — Worker.terminate() по истечении. Cap 250 ms у checker — только на thenable-return (отдельный от deadlineMs кейса; см. checker)."
+          "description": "Лимит на весь шаг (мс): javascriptInit + все tests[] одним deadline (не per-case). Включает reset, invoke, calls, advanceMs, сравнение. Кооперативная проверка; sync hang в коде ученика или checker — Worker.terminate() по истечении (без деталей кейса). Отдельный thenable-таймаут 250 ms у checker — см. checker."
         },
         "tests": {
           "type": "array",
@@ -321,7 +321,7 @@
               },
               "unordered": {
                 "type": "boolean",
-                "description": "true: после structure-serialize рекурсивная нормализация перед equal — массивы сортируются по stable JSON-key (сортировка ключей объектов в ключе — для stable key, не для equal plain objects); plain objects — значения рекурсивно. К return и/или tests[].args по resultMode. При structure.result list/tree serialize даёт массив — unordered переставит элементы; не использовать, если порядок важен. Игнорируется при content.checker. false/отсутствие — порядок массивов важен."
+                "description": "true: после structure-serialize рекурсивная нормализация перед equal — массивы сортируются по stable JSON-key (сортировка ключей объектов в ключе — для stable key, не для equal plain objects); plain objects — значения рекурсивно. К return и/или tests[].args по resultMode. При structure.result list/tree serialize даёт массив — unordered переставит элементы; не использовать, если порядок важен. Игнорируется при content.checker (нужен порядок-agnostic — ctx.sortUnordered в checker). false/отсутствие — порядок массивов важен."
               }
             }
           }

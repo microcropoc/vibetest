@@ -86,4 +86,24 @@ describe('runJavascriptChecker', () => {
     );
     expect(pass).toBe(true);
   });
+
+  it('rejects mutating frozen ctx properties', async () => {
+    await expect(
+      runJavascriptChecker('(ctx) => { ctx.userResult = 2; return true; }', {
+        userResult: 1,
+        refResult: 1,
+        userArgs: [],
+        refArgs: [],
+      }),
+    ).rejects.toThrow(JavascriptCheckerError);
+
+    await expect(
+      runJavascriptChecker('(ctx) => { delete ctx.deepEqual; return true; }', {
+        userResult: 1,
+        refResult: 1,
+        userArgs: [],
+        refArgs: [],
+      }),
+    ).rejects.toThrow(JavascriptCheckerError);
+  });
 });

@@ -21,7 +21,7 @@ export class JavascriptCheckerError extends Error {
 }
 
 function buildCtx(payload: JavascriptCheckerPayload): Record<string, unknown> {
-  return {
+  return Object.freeze({
     userResult: payload.userResult,
     refResult: payload.refResult,
     userArgs: payload.userArgs,
@@ -30,7 +30,7 @@ function buildCtx(payload: JavascriptCheckerPayload): Record<string, unknown> {
     serializeList,
     serializeTree,
     sortUnordered,
-  };
+  });
 }
 
 function invokeCheckerSource(source: string, ctx: Record<string, unknown>): unknown {

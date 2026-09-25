@@ -22,12 +22,12 @@
 
 ### Граничные тесты (checklist)
 
-- [ ] без флага: `[[1,2],[3]]` vs `[[3],[1,2]]` → fail
-- [ ] `unordered: true`: те же → pass
-- [ ] внутри тройки `[-1,0,1]` vs `[0,-1,1]` → pass при unordered
-- [ ] разный multiset → fail
-- [ ] `unordered` + `structure.result: "list"` — list serialize **до** unordered (не сортировать узлы как raw object)
-- [ ] регрессия кейсов без флага
+- [x] без флага: `[[1,2],[3]]` vs `[[3],[1,2]]` → fail
+- [x] `unordered: true`: те же → pass
+- [x] внутри тройки `[-1,0,1]` vs `[0,-1,1]` → pass при unordered
+- [x] разный multiset → fail
+- [x] `unordered` + `structure.result: "list"` — list serialize **до** unordered (не сортировать узлы как raw object)
+- [x] регрессия кейсов без флага
 
 ## Технические заметки
 
@@ -36,10 +36,10 @@
 
 ## План работ
 
-- [ ] SPEC + schema + zod
-- [ ] `sortUnordered` + unit
-- [ ] Integrate compare path
-- [ ] Checklist; `ng test --watch=false`; REPORT
+- [x] SPEC + schema + zod
+- [x] `sortUnordered` + unit
+- [x] Integrate compare path
+- [x] Checklist; `ng test --watch=false`; REPORT
 
 ## Критерии готовности (Definition of Done)
 

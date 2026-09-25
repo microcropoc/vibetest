@@ -8,6 +8,7 @@ import { compareSpyInvocations } from './compare-spy-invocations';
 import type { FakeTimerController } from '../../../execution/javascript-fake-timers';
 import type { PracticeGlobalBag } from '../../../execution/javascript-practice-global';
 import { isJsonCompatibleValue, jsonCompatibleEqual } from './json-value-equal';
+import { sortUnordered } from './sort-unordered';
 import {
   prepareArgs,
   prepareCalls,
@@ -35,6 +36,7 @@ export type JavascriptCaseRunOptions = {
   readonly flushMicrotasks?: boolean;
   readonly resultMode?: JavascriptResultMode;
   readonly structure?: JavascriptStructure;
+  readonly unordered?: boolean;
   readonly userTimers: FakeTimerController;
   readonly referenceTimers: FakeTimerController;
   readonly userGlobal: PracticeGlobalBag;
@@ -123,6 +125,10 @@ function resolveBothSideChains(
   return [userRun, referenceRun];
 }
 
+function maybeUnordered(value: unknown, unordered: boolean): unknown {
+  return unordered ? sortUnordered(value) : value;
+}
+
 function compareFulfilledWithMode(
   user: Extract<JavascriptSideOutcome, { kind: 'fulfilled' }>,
   reference: Extract<JavascriptSideOutcome, { kind: 'fulfilled' }>,
@@ -130,14 +136,18 @@ function compareFulfilledWithMode(
   referenceArgs: readonly unknown[],
   resultMode: JavascriptResultMode,
   structure: JavascriptStructure | undefined,
+  unordered: boolean,
 ): JavascriptCaseRunResult {
   try {
     const resultKind: StructureKind | undefined = structure?.result;
     const structureArgs = structure?.args;
 
     if (resultMode === 'return' || resultMode === 'both') {
-      const userSerialized = serializeResult(user.value, resultKind);
-      const referenceSerialized = serializeResult(reference.value, resultKind);
+      const userSerialized = maybeUnordered(serializeResult(user.value, resultKind), unordered);
+      const referenceSerialized = maybeUnordered(
+        serializeResult(reference.value, resultKind),
+        unordered,
+      );
       const returnCompare = compareJsonValues(
         userSerialized,
         referenceSerialized,
@@ -152,8 +162,11 @@ function compareFulfilledWithMode(
     }
 
     if (resultMode === 'args' || resultMode === 'both') {
-      const userSerializedArgs = serializeArgs(userArgs, structureArgs);
-      const referenceSerializedArgs = serializeArgs(referenceArgs, structureArgs);
+      const userSerializedArgs = maybeUnordered(serializeArgs(userArgs, structureArgs), unordered);
+      const referenceSerializedArgs = maybeUnordered(
+        serializeArgs(referenceArgs, structureArgs),
+        unordered,
+      );
       const argsCompare = compareJsonValues(
         userSerializedArgs,
         referenceSerializedArgs,
@@ -171,8 +184,8 @@ function compareFulfilledWithMode(
       }
       return {
         pass: true,
-        userValue: serializeResult(user.value, resultKind),
-        referenceValue: serializeResult(reference.value, resultKind),
+        userValue: maybeUnordered(serializeResult(user.value, resultKind), unordered),
+        referenceValue: maybeUnordered(serializeResult(reference.value, resultKind), unordered),
       };
     }
 
@@ -194,6 +207,7 @@ function mergeSideOutcomes(
   referenceArgs: readonly unknown[],
   resultMode: JavascriptResultMode,
   structure: JavascriptStructure | undefined,
+  unordered: boolean,
 ): JavascriptCaseRunResult {
   if (user.kind === 'thrown') {
     return fail(user.message);
@@ -206,7 +220,15 @@ function mergeSideOutcomes(
     if (user.kind === 'rejected' || reference.kind === 'rejected') {
       return fail('Promise rejected');
     }
-    return compareFulfilledWithMode(user, reference, userArgs, referenceArgs, resultMode, structure);
+    return compareFulfilledWithMode(
+      user,
+      reference,
+      userArgs,
+      referenceArgs,
+      resultMode,
+      structure,
+      unordered,
+    );
   }
 
   if (user.kind !== 'rejected' || reference.kind !== 'rejected') {
@@ -225,6 +247,7 @@ export async function runJavascriptCaseComparison(
   const { rejects = false, deadlineMs, expectInvocations } = options;
   const resultMode: JavascriptResultMode = options.resultMode ?? 'return';
   const { structure } = options;
+  const unordered = options.unordered === true;
 
   let userArgs: unknown[];
   let referenceArgs: unknown[];
@@ -276,5 +299,14 @@ export async function runJavascriptCaseComparison(
     }
   }
 
-  return mergeSideOutcomes(user, reference, rejects, userArgs, referenceArgs, resultMode, structure);
+  return mergeSideOutcomes(
+    user,
+    reference,
+    rejects,
+    userArgs,
+    referenceArgs,
+    resultMode,
+    structure,
+    unordered,
+  );
 }

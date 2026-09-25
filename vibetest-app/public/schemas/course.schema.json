@@ -308,6 +308,10 @@
               "flushMicrotasks": {
                 "type": "boolean",
                 "description": "true: один host microtask checkpoint (await Promise.resolve()) в обеих средах перед сравнением. Не цикл до пустой очереди — только один tick."
+              },
+              "unordered": {
+                "type": "boolean",
+                "description": "true: перед equal рекурсивно нормализовать значения (массивы сортируются по стабильному JSON-ключу; values plain objects нормализуются). Применяется после structure-serialize к return и/или args по resultMode. Не использовать, если порядок внутри части ответа семантически важен (тогда checker, vt-50). Отсутствие / false — порядок важен."
               }
             }
           }

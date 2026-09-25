@@ -1185,4 +1185,98 @@ class Mut {
       expect(result.userValue).toEqual([[1, 2, 99]]);
     });
   });
+
+  describe('unordered', () => {
+    it('fails without unordered when group order differs', async () => {
+      const user = 'const f = () => [[3], [1, 2]];';
+      const ref = 'const f = () => [[1, 2], [3]];';
+      const env = dualEnv(user, ref, 'f');
+      const result = await runJavascriptCaseComparison(
+        env.invokeUser,
+        env.invokeReference,
+        [],
+        undefined,
+        env.opts(),
+      );
+      expect(result).toMatchObject({ pass: false, message: 'Return values do not match' });
+    });
+
+    it('passes with unordered when group order differs', async () => {
+      const user = 'const f = () => [[3], [1, 2]];';
+      const ref = 'const f = () => [[1, 2], [3]];';
+      const env = dualEnv(user, ref, 'f');
+      const result = await runJavascriptCaseComparison(
+        env.invokeUser,
+        env.invokeReference,
+        [],
+        undefined,
+        env.opts({ unordered: true }),
+      );
+      expect(result.pass).toBe(true);
+    });
+
+    it('passes when element order inside groups differs', async () => {
+      const user = 'const f = () => [[0, -1, 1]];';
+      const ref = 'const f = () => [[-1, 0, 1]];';
+      const env = dualEnv(user, ref, 'f');
+      const result = await runJavascriptCaseComparison(
+        env.invokeUser,
+        env.invokeReference,
+        [],
+        undefined,
+        env.opts({ unordered: true }),
+      );
+      expect(result.pass).toBe(true);
+      expect(result.userValue).toEqual([[-1, 0, 1]]);
+    });
+
+    it('fails when multisets differ even with unordered', async () => {
+      const user = 'const f = () => [[1, 2], [3]];';
+      const ref = 'const f = () => [[1, 2], [4]];';
+      const env = dualEnv(user, ref, 'f');
+      const result = await runJavascriptCaseComparison(
+        env.invokeUser,
+        env.invokeReference,
+        [],
+        undefined,
+        env.opts({ unordered: true }),
+      );
+      expect(result.pass).toBe(false);
+    });
+
+    it('serializes list before unordered normalize', async () => {
+      const identity = 'function f(head) { return head; }';
+      const reverse = `
+function f(head) {
+  let prev = null;
+  let cur = head;
+  while (cur) {
+    const next = cur.next;
+    cur.next = prev;
+    prev = cur;
+    cur = next;
+  }
+  return prev;
+}
+`;
+      const env = dualEnv(identity, reverse, 'f');
+      const without = await runJavascriptCaseComparison(
+        env.invokeUser,
+        env.invokeReference,
+        [[1, 2, 3]],
+        undefined,
+        env.opts({ structure: { args: ['list'], result: 'list' } }),
+      );
+      expect(without.pass).toBe(false);
+      const withUnordered = await runJavascriptCaseComparison(
+        env.invokeUser,
+        env.invokeReference,
+        [[1, 2, 3]],
+        undefined,
+        env.opts({ structure: { args: ['list'], result: 'list' }, unordered: true }),
+      );
+      expect(withUnordered.pass).toBe(true);
+      expect(withUnordered.userValue).toEqual([1, 2, 3]);
+    });
+  });
 });

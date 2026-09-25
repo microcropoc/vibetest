@@ -58,6 +58,7 @@ const javascriptRunCaseSchema = z
     expectInvocations: expectInvocationsSchema.optional(),
     advanceMs: z.number().int().min(0).max(60000).optional(),
     flushMicrotasks: z.boolean().optional(),
+    unordered: z.boolean().optional(),
     resultMode: z.enum(['return', 'args', 'both']).optional(),
     structure: javascriptStructureSchema.optional(),
     deadlineMs: z.number().optional(),

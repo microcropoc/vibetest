@@ -85,6 +85,7 @@ export async function runJavascriptPractice(
           ...(testCase.flushMicrotasks !== undefined
             ? { flushMicrotasks: testCase.flushMicrotasks }
             : {}),
+          ...(testCase.unordered !== undefined ? { unordered: testCase.unordered } : {}),
           ...(content.resultMode !== undefined ? { resultMode: content.resultMode } : {}),
           ...(content.structure !== undefined
             ? {

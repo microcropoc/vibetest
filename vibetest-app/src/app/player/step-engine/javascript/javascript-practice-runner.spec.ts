@@ -27,7 +27,14 @@ class ScriptableMockWorker {
   }
 
   lastCaseRequest:
-    | { args?: unknown[]; calls?: unknown[]; rejects?: boolean; deadlineMs?: number }
+    | {
+        args?: unknown[];
+        calls?: unknown[];
+        rejects?: boolean;
+        deadlineMs?: number;
+        resultMode?: string;
+        structure?: unknown;
+      }
     | undefined;
 
   postMessage(data: unknown): void {
@@ -38,6 +45,8 @@ class ScriptableMockWorker {
       calls?: unknown[];
       rejects?: boolean;
       deadlineMs?: number;
+      resultMode?: string;
+      structure?: unknown;
     };
     if (req.type === 'javascriptInit') {
       this.onmessage?.({ data: { type: 'javascriptInited', id: req.id } } as MessageEvent);
@@ -49,6 +58,8 @@ class ScriptableMockWorker {
         calls: req.calls,
         rejects: req.rejects,
         deadlineMs: req.deadlineMs,
+        resultMode: req.resultMode,
+        structure: req.structure,
       };
       const index = Number.parseInt(req.id.split('-')[1] ?? '0', 10);
       if (index === this.failOnCase) {
@@ -134,6 +145,26 @@ describe('runJavascriptPractice', () => {
     });
     expect(mock.lastCaseRequest?.rejects).toBe(true);
     expect(mock.lastCaseRequest?.deadlineMs).toEqual(expect.any(Number));
+  });
+
+  it('forwards resultMode and structure to worker', async () => {
+    const mock = new ScriptableMockWorker();
+    const wrapper = new ExecutionWorkerWrapperService();
+    const step: JavascriptStep = {
+      ...javascriptStep,
+      content: {
+        ...javascriptStep.content,
+        resultMode: 'args',
+        structure: { args: ['list'], result: 'list' },
+        tests: [{ args: [[1, 2, 3]] }],
+      },
+    };
+    await runJavascriptPractice(step, step.content.starterCode, {
+      wrapper,
+      createWorker: () => mock as unknown as Worker,
+    });
+    expect(mock.lastCaseRequest?.resultMode).toBe('args');
+    expect(mock.lastCaseRequest?.structure).toEqual({ args: ['list'], result: 'list' });
   });
 
   it('fail-fast on first failing case', async () => {

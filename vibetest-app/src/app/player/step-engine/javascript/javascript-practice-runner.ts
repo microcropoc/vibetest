@@ -79,6 +79,19 @@ export async function runJavascriptPractice(
           ...(testCase.flushMicrotasks !== undefined
             ? { flushMicrotasks: testCase.flushMicrotasks }
             : {}),
+          ...(content.resultMode !== undefined ? { resultMode: content.resultMode } : {}),
+          ...(content.structure !== undefined
+            ? {
+                structure: {
+                  ...(content.structure.args !== undefined
+                    ? { args: [...content.structure.args] }
+                    : {}),
+                  ...(content.structure.result !== undefined
+                    ? { result: content.structure.result }
+                    : {}),
+                },
+              }
+            : {}),
           deadlineMs,
           userReset: content.reset ?? '',
           referenceReset: content.reset ?? '',

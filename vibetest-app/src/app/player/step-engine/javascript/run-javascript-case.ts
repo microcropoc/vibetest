@@ -8,6 +8,17 @@ import { compareSpyInvocations } from './compare-spy-invocations';
 import type { FakeTimerController } from '../../../execution/javascript-fake-timers';
 import type { PracticeGlobalBag } from '../../../execution/javascript-practice-global';
 import { isJsonCompatibleValue, jsonCompatibleEqual } from './json-value-equal';
+import {
+  prepareArgs,
+  prepareCalls,
+  serializeArgs,
+  serializeResult,
+  StructureCodecError,
+  type JavascriptStructure,
+  type StructureKind,
+} from './structure-codec';
+
+export type JavascriptResultMode = 'return' | 'args' | 'both';
 
 export type JavascriptCaseRunResult = {
   readonly pass: boolean;
@@ -22,6 +33,8 @@ export type JavascriptCaseRunOptions = {
   readonly expectInvocations?: Readonly<Record<string, number>>;
   readonly advanceMs?: number;
   readonly flushMicrotasks?: boolean;
+  readonly resultMode?: JavascriptResultMode;
+  readonly structure?: JavascriptStructure;
   readonly userTimers: FakeTimerController;
   readonly referenceTimers: FakeTimerController;
   readonly userGlobal: PracticeGlobalBag;
@@ -32,7 +45,11 @@ function fail(message: string): JavascriptCaseRunResult {
   return { pass: false, message };
 }
 
-function compareFulfilled(userValue: unknown, referenceValue: unknown): JavascriptCaseRunResult {
+function compareJsonValues(
+  userValue: unknown,
+  referenceValue: unknown,
+  mismatchMessage: string,
+): JavascriptCaseRunResult {
   if (!isJsonCompatibleValue(userValue) || !isJsonCompatibleValue(referenceValue)) {
     return fail('non-JSON result');
   }
@@ -41,7 +58,7 @@ function compareFulfilled(userValue: unknown, referenceValue: unknown): Javascri
     pass,
     userValue,
     referenceValue,
-    message: pass ? undefined : 'Return values do not match',
+    message: pass ? undefined : mismatchMessage,
   };
 }
 
@@ -51,41 +68,7 @@ function compareRejected(
 ): JavascriptCaseRunResult {
   const userValue = normalizeRejectReason(userReason);
   const referenceValue = normalizeRejectReason(referenceReason);
-  if (!isJsonCompatibleValue(userValue) || !isJsonCompatibleValue(referenceValue)) {
-    return fail('non-JSON result');
-  }
-  const pass = jsonCompatibleEqual(userValue, referenceValue);
-  return {
-    pass,
-    userValue,
-    referenceValue,
-    message: pass ? undefined : 'Reject reasons do not match',
-  };
-}
-
-function mergeSideOutcomes(
-  user: JavascriptSideOutcome,
-  reference: JavascriptSideOutcome,
-  rejects: boolean,
-): JavascriptCaseRunResult {
-  if (user.kind === 'thrown') {
-    return fail(user.message);
-  }
-  if (reference.kind === 'thrown') {
-    return fail(reference.message);
-  }
-
-  if (!rejects) {
-    if (user.kind === 'rejected' || reference.kind === 'rejected') {
-      return fail('Promise rejected');
-    }
-    return compareFulfilled(user.value, reference.value);
-  }
-
-  if (user.kind !== 'rejected' || reference.kind !== 'rejected') {
-    return fail('Expected both sides to reject');
-  }
-  return compareRejected(user.reason, reference.reason);
+  return compareJsonValues(userValue, referenceValue, 'Reject reasons do not match');
 }
 
 function failOnThrownSideOutcomes(
@@ -118,14 +101,16 @@ function applyTimerPhaseSync(options: JavascriptCaseRunOptions): JavascriptCaseR
 function resolveBothSideChains(
   invokeUser: (args: readonly unknown[]) => unknown,
   invokeReference: (args: readonly unknown[]) => unknown,
-  args: readonly unknown[],
-  calls: readonly JavascriptCallStep[] | undefined,
+  userArgs: readonly unknown[],
+  referenceArgs: readonly unknown[],
+  userCalls: readonly JavascriptCallStep[] | undefined,
+  referenceCalls: readonly JavascriptCallStep[] | undefined,
   deadlineMs: number | undefined,
 ):
   | [JavascriptSideOutcome, JavascriptSideOutcome]
   | Promise<[JavascriptSideOutcome, JavascriptSideOutcome]> {
-  const userRun = runJavascriptSideChain(invokeUser, args, calls, deadlineMs);
-  const referenceRun = runJavascriptSideChain(invokeReference, args, calls, deadlineMs);
+  const userRun = runJavascriptSideChain(invokeUser, userArgs, userCalls, deadlineMs);
+  const referenceRun = runJavascriptSideChain(invokeReference, referenceArgs, referenceCalls, deadlineMs);
   if (userRun instanceof Promise) {
     if (referenceRun instanceof Promise) {
       return Promise.all([userRun, referenceRun]);
@@ -138,6 +123,98 @@ function resolveBothSideChains(
   return [userRun, referenceRun];
 }
 
+function compareFulfilledWithMode(
+  user: Extract<JavascriptSideOutcome, { kind: 'fulfilled' }>,
+  reference: Extract<JavascriptSideOutcome, { kind: 'fulfilled' }>,
+  userArgs: readonly unknown[],
+  referenceArgs: readonly unknown[],
+  resultMode: JavascriptResultMode,
+  structure: JavascriptStructure | undefined,
+): JavascriptCaseRunResult {
+  try {
+    const resultKind: StructureKind | undefined = structure?.result;
+    const structureArgs = structure?.args;
+
+    if (resultMode === 'return' || resultMode === 'both') {
+      const userSerialized = serializeResult(user.value, resultKind);
+      const referenceSerialized = serializeResult(reference.value, resultKind);
+      const returnCompare = compareJsonValues(
+        userSerialized,
+        referenceSerialized,
+        'Return values do not match',
+      );
+      if (!returnCompare.pass) {
+        return returnCompare;
+      }
+      if (resultMode === 'return') {
+        return returnCompare;
+      }
+    }
+
+    if (resultMode === 'args' || resultMode === 'both') {
+      const userSerializedArgs = serializeArgs(userArgs, structureArgs);
+      const referenceSerializedArgs = serializeArgs(referenceArgs, structureArgs);
+      const argsCompare = compareJsonValues(
+        userSerializedArgs,
+        referenceSerializedArgs,
+        'Args values do not match',
+      );
+      if (!argsCompare.pass) {
+        return argsCompare;
+      }
+      if (resultMode === 'args') {
+        return {
+          pass: true,
+          userValue: userSerializedArgs,
+          referenceValue: referenceSerializedArgs,
+        };
+      }
+      return {
+        pass: true,
+        userValue: serializeResult(user.value, resultKind),
+        referenceValue: serializeResult(reference.value, resultKind),
+      };
+    }
+
+    return fail('Invalid resultMode');
+  } catch (error: unknown) {
+    if (error instanceof StructureCodecError) {
+      return fail(error.message);
+    }
+    const message = error instanceof Error ? error.message : 'Serialize error';
+    return fail(message);
+  }
+}
+
+function mergeSideOutcomes(
+  user: JavascriptSideOutcome,
+  reference: JavascriptSideOutcome,
+  rejects: boolean,
+  userArgs: readonly unknown[],
+  referenceArgs: readonly unknown[],
+  resultMode: JavascriptResultMode,
+  structure: JavascriptStructure | undefined,
+): JavascriptCaseRunResult {
+  if (user.kind === 'thrown') {
+    return fail(user.message);
+  }
+  if (reference.kind === 'thrown') {
+    return fail(reference.message);
+  }
+
+  if (!rejects) {
+    if (user.kind === 'rejected' || reference.kind === 'rejected') {
+      return fail('Promise rejected');
+    }
+    return compareFulfilledWithMode(user, reference, userArgs, referenceArgs, resultMode, structure);
+  }
+
+  if (user.kind !== 'rejected' || reference.kind !== 'rejected') {
+    return fail('Expected both sides to reject');
+  }
+  return compareRejected(user.reason, reference.reason);
+}
+
 export async function runJavascriptCaseComparison(
   invokeUser: (args: readonly unknown[]) => unknown,
   invokeReference: (args: readonly unknown[]) => unknown,
@@ -146,11 +223,33 @@ export async function runJavascriptCaseComparison(
   options: JavascriptCaseRunOptions,
 ): Promise<JavascriptCaseRunResult> {
   const { rejects = false, deadlineMs, expectInvocations } = options;
+  const resultMode: JavascriptResultMode = options.resultMode ?? 'return';
+  const { structure } = options;
+
+  let userArgs: unknown[];
+  let referenceArgs: unknown[];
+  let userCalls: readonly JavascriptCallStep[] | undefined;
+  let referenceCalls: readonly JavascriptCallStep[] | undefined;
+  try {
+    userArgs = prepareArgs(args, structure?.args);
+    referenceArgs = prepareArgs(args, structure?.args);
+    userCalls = prepareCalls(calls, structure?.args);
+    referenceCalls = prepareCalls(calls, structure?.args);
+  } catch (error: unknown) {
+    if (error instanceof StructureCodecError) {
+      return fail(error.message);
+    }
+    const message = error instanceof Error ? error.message : 'Materialize error';
+    return fail(message);
+  }
+
   const sideOutcomes = resolveBothSideChains(
     invokeUser,
     invokeReference,
-    args,
-    calls,
+    userArgs,
+    referenceArgs,
+    userCalls,
+    referenceCalls,
     deadlineMs,
   );
   const [user, reference] =
@@ -177,5 +276,5 @@ export async function runJavascriptCaseComparison(
     }
   }
 
-  return mergeSideOutcomes(user, reference, rejects);
+  return mergeSideOutcomes(user, reference, rejects, userArgs, referenceArgs, resultMode, structure);
 }

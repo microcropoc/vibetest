@@ -22,6 +22,15 @@ const javascriptCallStepSchema = z
 
 const expectInvocationsSchema = z.record(z.string(), z.number().int().min(0));
 
+const structureKindSchema = z.enum(['list', 'tree', 'raw']);
+
+const javascriptStructureSchema = z
+  .object({
+    args: z.array(structureKindSchema).max(20).optional(),
+    result: structureKindSchema.optional(),
+  })
+  .strict();
+
 const javascriptRunCaseSchema = z
   .object({
     type: z.literal('javascriptRunCase'),
@@ -32,6 +41,8 @@ const javascriptRunCaseSchema = z
     expectInvocations: expectInvocationsSchema.optional(),
     advanceMs: z.number().int().min(0).max(60000).optional(),
     flushMicrotasks: z.boolean().optional(),
+    resultMode: z.enum(['return', 'args', 'both']).optional(),
+    structure: javascriptStructureSchema.optional(),
     deadlineMs: z.number().optional(),
     userReset: z.string().optional(),
     referenceReset: z.string().optional(),

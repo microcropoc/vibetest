@@ -84,6 +84,8 @@ self.addEventListener('message', (event: MessageEvent<unknown>) => {
                 expectInvocations: request.expectInvocations,
                 advanceMs: request.advanceMs,
                 flushMicrotasks: request.flushMicrotasks,
+                resultMode: request.resultMode,
+                structure: request.structure,
                 userTimers: active.userTimers,
                 referenceTimers: active.referenceTimers,
                 userGlobal: active.userGlobal,

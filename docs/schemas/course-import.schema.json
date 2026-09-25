@@ -151,7 +151,7 @@
     },
     "javascriptContent": {
       "type": "object",
-      "description": "JS-практика: код ученика и эталон выполняются в двух изолированных средах (dual-run); результаты сравниваются recursive JSON-compatible equal — plain objects/arrays, порядок ключей объектов не важен, примитивы через Object.is (NaN равен NaN, +0 ≠ -0), а undefined / function / symbol / bigint / не-plain объекты (Map, Set, Date, RegExp) считаются non-JSON result и приводят к fail. Порядок на тест-кейс: reset → вызов functionName(...args) → цепочка calls → await thenable при необходимости → rejects → flushMicrotasks → advanceMs → expectInvocations.",
+      "description": "JS-практика: код ученика и эталон выполняются в двух изолированных средах (dual-run); по умолчанию результаты сравниваются recursive JSON-compatible equal — plain objects/arrays, порядок ключей объектов не важен, примитивы через Object.is (NaN равен NaN, +0 ≠ -0), а undefined / function / symbol / bigint / не-plain объекты (Map, Set, Date, RegExp) считаются non-JSON result и приводят к fail. Опционально resultMode / structure меняют подготовку args и объект сравнения (in-place, list/tree). Порядок на тест-кейс: reset → materialize args (structure) → вызов functionName(...args) → цепочка calls (materialize call.args) → await thenable при необходимости → rejects → flushMicrotasks → advanceMs → expectInvocations → serialize + compare по resultMode.",
       "required": ["description", "starterCode", "referenceSolution", "setup", "functionName", "timeoutMs", "tests"],
       "additionalProperties": false,
       "properties": {
@@ -187,6 +187,32 @@
           "minLength": 1,
           "maxLength": 100,
           "description": "Имя вызываемой функции; должна существовать после загрузки starterCode/referenceSolution в среде."
+        },
+        "resultMode": {
+          "type": "string",
+          "enum": ["return", "args", "both"],
+          "description": "Что сравнивать после кейса (при rejects: true игнорируется — сравниваются только reject reasons). return (по умолчанию / отсутствие поля) — финальный return после serialize structure.result; args — весь массив мутированных args после serialize по structure.args (return может быть undefined); both — и return, и args."
+        },
+        "structure": {
+          "type": "object",
+          "description": "Декларация структурных типов для materialize JSON→узлы до вызова и serialize перед equal. Отсутствие = все raw. list: number[] ↔ { val, next }; tree: level-order (number|null)[] ↔ { val, left, right }; raw: structuredClone. Пустой list [] → null. Serialize: cycle → fail; cap 10000 узлов.",
+          "additionalProperties": false,
+          "properties": {
+            "args": {
+              "type": "array",
+              "maxItems": 20,
+              "description": "По элементу на позиционный аргумент tests[].args и calls[].args; отсутствующий индекс = raw.",
+              "items": {
+                "type": "string",
+                "enum": ["list", "tree", "raw"]
+              }
+            },
+            "result": {
+              "type": "string",
+              "enum": ["list", "tree", "raw"],
+              "description": "Как сериализовать финальный return перед сравнением; отсутствие = raw."
+            }
+          }
         },
         "timeoutMs": {
           "type": "integer",

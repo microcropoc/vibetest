@@ -823,4 +823,264 @@ const spin = () => {
     );
     expect(result).toMatchObject({ pass: false, message: 'Too many timer callbacks' });
   });
+
+  describe('resultMode', () => {
+    const rotateRef = `
+function rotate(nums, k) {
+  const n = nums.length;
+  k = ((k % n) + n) % n;
+  const reverse = (l, r) => {
+    while (l < r) {
+      const t = nums[l];
+      nums[l] = nums[r];
+      nums[r] = t;
+      l += 1;
+      r -= 1;
+    }
+  };
+  reverse(0, n - 1);
+  reverse(0, k - 1);
+  reverse(k, n - 1);
+}
+`;
+
+    it('return mode fails on void undefined (regression)', async () => {
+      const env = dualEnv(rotateRef, rotateRef, 'rotate');
+      const result = await runJavascriptCaseComparison(
+        env.invokeUser,
+        env.invokeReference,
+        [[1, 2, 3, 4, 5, 6, 7], 3],
+        undefined,
+        env.opts({ resultMode: 'return' }),
+      );
+      expect(result).toMatchObject({ pass: false, message: 'non-JSON result' });
+    });
+
+    it('args mode passes in-place rotate with undefined return', async () => {
+      const env = dualEnv(rotateRef, rotateRef, 'rotate');
+      const result = await runJavascriptCaseComparison(
+        env.invokeUser,
+        env.invokeReference,
+        [[1, 2, 3, 4, 5, 6, 7], 3],
+        undefined,
+        env.opts({ resultMode: 'args' }),
+      );
+      expect(result.pass).toBe(true);
+      expect(result.userValue).toEqual([[5, 6, 7, 1, 2, 3, 4], 3]);
+    });
+
+    it('args mode fails when user does not mutate', async () => {
+      const env = dualEnv('function rotate(nums, k) {}', rotateRef, 'rotate');
+      const result = await runJavascriptCaseComparison(
+        env.invokeUser,
+        env.invokeReference,
+        [[1, 2, 3, 4, 5, 6, 7], 3],
+        undefined,
+        env.opts({ resultMode: 'args' }),
+      );
+      expect(result).toMatchObject({ pass: false, message: 'Args values do not match' });
+    });
+
+    it('both mode requires matching return and args', async () => {
+      const bothCode = `
+function rotate(nums, k) {
+  const n = nums.length;
+  k = ((k % n) + n) % n;
+  nums.push(...nums.splice(0, n - k));
+  return nums;
+}
+`;
+      const env = dualEnv(bothCode, bothCode, 'rotate');
+      const result = await runJavascriptCaseComparison(
+        env.invokeUser,
+        env.invokeReference,
+        [[1, 2, 3, 4, 5, 6, 7], 3],
+        undefined,
+        env.opts({ resultMode: 'both' }),
+      );
+      expect(result.pass).toBe(true);
+      expect(result.userValue).toEqual([5, 6, 7, 1, 2, 3, 4]);
+    });
+
+    it('both mode fails when return matches but args do not', async () => {
+      const userCode = `
+function rotate(nums, k) {
+  const n = nums.length;
+  k = ((k % n) + n) % n;
+  const rotated = nums.slice(n - k).concat(nums.slice(0, n - k));
+  return rotated;
+}
+`;
+      const refCode = `
+function rotate(nums, k) {
+  const n = nums.length;
+  k = ((k % n) + n) % n;
+  nums.push(...nums.splice(0, n - k));
+  return nums.slice();
+}
+`;
+      const env = dualEnv(userCode, refCode, 'rotate');
+      const result = await runJavascriptCaseComparison(
+        env.invokeUser,
+        env.invokeReference,
+        [[1, 2, 3, 4, 5, 6, 7], 3],
+        undefined,
+        env.opts({ resultMode: 'both' }),
+      );
+      expect(result).toMatchObject({ pass: false, message: 'Args values do not match' });
+    });
+
+    it('rejects ignores resultMode and compares reasons', async () => {
+      const code = `const boom = () => Promise.reject(new Error("x"));`;
+      const env = dualEnv(code, code, 'boom');
+      const result = await runJavascriptCaseComparison(
+        env.invokeUser,
+        env.invokeReference,
+        [],
+        undefined,
+        env.opts({ rejects: true, resultMode: 'args' }),
+      );
+      expect(result).toMatchObject({ pass: true, userValue: 'x', referenceValue: 'x' });
+    });
+  });
+
+  describe('structure', () => {
+    const reverseList = `
+function reverseList(head) {
+  let prev = null;
+  let cur = head;
+  while (cur) {
+    const next = cur.next;
+    cur.next = prev;
+    prev = cur;
+    cur = next;
+  }
+  return prev;
+}
+`;
+
+    it('list args and result reverseList', async () => {
+      const env = dualEnv(reverseList, reverseList, 'reverseList');
+      const result = await runJavascriptCaseComparison(
+        env.invokeUser,
+        env.invokeReference,
+        [[1, 2, 3]],
+        undefined,
+        env.opts({ structure: { args: ['list'], result: 'list' } }),
+      );
+      expect(result).toMatchObject({ pass: true, userValue: [3, 2, 1] });
+    });
+
+    it('materializes list structure on calls[].args', async () => {
+      const code = `
+function make() {
+  return {
+    reverse(head) {
+      let prev = null;
+      let cur = head;
+      while (cur) {
+        const next = cur.next;
+        cur.next = prev;
+        prev = cur;
+        cur = next;
+      }
+      return prev;
+    },
+  };
+}
+`;
+      const env = dualEnv(code, code, 'make');
+      const result = await runJavascriptCaseComparison(
+        env.invokeUser,
+        env.invokeReference,
+        [],
+        [{ method: 'reverse', args: [[1, 2, 3]] }],
+        env.opts({ structure: { args: ['list'], result: 'list' } }),
+      );
+      expect(result).toMatchObject({ pass: true, userValue: [3, 2, 1] });
+    });
+
+    it('empty list []', async () => {
+      const env = dualEnv(reverseList, reverseList, 'reverseList');
+      const result = await runJavascriptCaseComparison(
+        env.invokeUser,
+        env.invokeReference,
+        [[]],
+        undefined,
+        env.opts({ structure: { args: ['list'], result: 'list' } }),
+      );
+      expect(result).toMatchObject({ pass: true, userValue: [] });
+    });
+
+    it('cycle in return list fails without hanging', async () => {
+      const cyclic = `
+function reverseList(head) {
+  if (head) head.next = head;
+  return head;
+}
+`;
+      const env = dualEnv(cyclic, reverseList, 'reverseList');
+      const result = await runJavascriptCaseComparison(
+        env.invokeUser,
+        env.invokeReference,
+        [[1, 2]],
+        undefined,
+        env.opts({ structure: { args: ['list'], result: 'list' } }),
+      );
+      expect(result.pass).toBe(false);
+      expect(result.message).toMatch(/cycle/);
+    });
+
+    it('tree invertTree level-order', async () => {
+      const invert = `
+function invertTree(root) {
+  if (!root) return null;
+  const left = invertTree(root.left);
+  const right = invertTree(root.right);
+  root.left = right;
+  root.right = left;
+  return root;
+}
+`;
+      const env = dualEnv(invert, invert, 'invertTree');
+      const result = await runJavascriptCaseComparison(
+        env.invokeUser,
+        env.invokeReference,
+        [[4, 2, 7, 1, 3, 6, 9]],
+        undefined,
+        env.opts({ structure: { args: ['tree'], result: 'tree' } }),
+      );
+      expect(result).toMatchObject({ pass: true, userValue: [4, 7, 2, 9, 6, 3, 1] });
+    });
+
+    it('user and ref get separate list objects', async () => {
+      const mutateShared = `
+function reverseList(head) {
+  return head;
+}
+`;
+      const env = dualEnv(mutateShared, reverseList, 'reverseList');
+      const result = await runJavascriptCaseComparison(
+        env.invokeUser,
+        env.invokeReference,
+        [[1, 2, 3]],
+        undefined,
+        env.opts({ structure: { args: ['list'], result: 'list' } }),
+      );
+      expect(result).toMatchObject({ pass: false, message: 'Return values do not match' });
+    });
+
+    it('raw default still compares arrays', async () => {
+      const code = 'const id = (a) => a;';
+      const env = dualEnv(code, code, 'id');
+      const result = await runJavascriptCaseComparison(
+        env.invokeUser,
+        env.invokeReference,
+        [[1, 2, 3]],
+        undefined,
+        env.opts(),
+      );
+      expect(result).toMatchObject({ pass: true, userValue: [1, 2, 3] });
+    });
+  });
 });

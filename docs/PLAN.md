@@ -13,6 +13,7 @@
 7. **Плеер** — `vt-19` … `vt-23`: orchestration, навигация, step UI.
 8. **Страницы и PWA** — `vt-24` … `vt-27`: импорт, статистика, инфо, offline.
 9. **JS practice runner v2** — `vt-42` … `vt-44`: `calls` + equal, async/promises, spy + fake timers (полноценный JS-курс: замыкания, промисы, memoize/debounce).
+10. **JS practice v3 (алгоритмы)** — `vt-47` … `vt-51`: `resultMode`/`structure`, `construct`, `unordered`, опциональный `checker`, демо-курс.
 
 ## Очередь задач
 
@@ -53,9 +54,12 @@
 
 | # | Задача | Зависимости |
 |---|--------|-------------|
-| — | _(пусто — JS practice runner v2 закрыт: vt-42 … vt-44)_ | |
+| vt-48 | [javascript-construct](tasks/backlog/vt-48-javascript-construct.md) | vt-47 |
+| vt-49 | [javascript-unordered](tasks/backlog/vt-49-javascript-unordered.md) | vt-47 |
+| vt-50 | [javascript-checker](tasks/backlog/vt-50-javascript-checker.md) | vt-47, vt-49 |
+| vt-51 | [algorithms-sample-course](tasks/backlog/vt-51-algorithms-sample-course.md) | vt-47, vt-48, vt-49 |
 
-Цепочка: vt-42 … vt-44 в [`tasks/done/`](tasks/done/) (`vt-42-javascript-calls-equal`, `vt-43-javascript-async-promises`, `vt-44-javascript-spy-fake-timers`).
+Цепочка JS practice v2: vt-42 … vt-44 в [`tasks/done/`](tasks/done/). **vt-47** (`resultMode`/`structure`) — [`tasks/done/vt-47-javascript-result-mode-structure/`](tasks/done/vt-47-javascript-result-mode-structure/). Дальше: `construct` / `unordered` → опциональный `checker` → демо-курс.
 
 ## Решения и допущения
 
@@ -65,7 +69,9 @@
 - Worker — только через `execution/` wrapper.
 - Практика: обязательный **`timeoutMs`** (100–30000); кейсы **fail-fast**; regex **без** `setup`/`reset`.
 - JavaScript (vt-8, базовая линия): статический **`args`** (JSON-массив, ≤ 20 элементов) на кейс; `setup` без проверочных данных; две среды user/reference.
-- JavaScript (vt-42 … vt-44): dual-env oracle (**без** static `expected`, **без** `checkScript`); опциональные **`calls`** (≤ 20 шагов); recursive JSON **equal** (не `JSON.stringify`); **await** thenables + **`rejects`**; **`expectInvocations`** + fake **timers** / microtask flush в Worker.
+- JavaScript (vt-42 … vt-44): dual-env oracle (**без** static `expected`, **без** `checkScript` по умолчанию); опциональные **`calls`** (≤ 20 шагов); recursive JSON **equal** (не `JSON.stringify`); **await** thenables + **`rejects`**; **`expectInvocations`** + fake **timers** / microtask flush в Worker.
+- JavaScript (vt-47 … vt-50): опциональные **`resultMode`** / **`structure`** (in-place, list/tree) — **vt-47 done**; **`construct`**; **`unordered`**; узкий escape hatch **`checker`** (не основной путь). `schemaVersion` остаётся 1. Без проверки O(n).
+- JavaScript (**vt-47**): **`resultMode`** (`return`|`args`|`both`) и **`structure`** (`list`|`tree`|`raw`) — materialize args отдельно для user/ref, serialize перед equal; при `rejects` — только reasons.
 - Одна схема: **course.schema.json** (обязательные ID); в IndexedDB — тот же формат.
 - Импорт: JSON parse → Zod → semantic → опционально `regenerateCourseIds`; флажок «Заменить все ID» **включён по умолчанию** (vt-24) → всегда новый курс; при выключенном флажке replace только если `courseId` уже в хранилище.
 - Импорт: все ошибки **достигнутого этапа** под формой.

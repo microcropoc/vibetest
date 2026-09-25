@@ -12,6 +12,7 @@ import {
   minimalValidImportJson,
 } from './__fixtures__/course-fixtures';
 import { CourseImportService } from './course-import.service';
+import type { PracticeReferenceValidationDeps } from './validate-practice-references';
 
 const IMPORT_UUIDS = [
   FIXTURE_COURSE_ID,
@@ -36,6 +37,17 @@ function stubImportUuids(...queues: readonly (readonly string[])[]): void {
     }
     return id as `${string}-${string}-${string}-${string}-${string}`;
   });
+}
+
+function mockPracticeDeps(
+  overrides?: Partial<PracticeReferenceValidationDeps>,
+): PracticeReferenceValidationDeps {
+  return {
+    runJavascriptStep: vi.fn().mockResolvedValue({ ok: true }),
+    runSqliteStep: vi.fn().mockResolvedValue({ ok: true }),
+    runRegexStep: vi.fn().mockResolvedValue({ ok: true }),
+    ...overrides,
+  };
 }
 
 describe('CourseImportService', () => {
@@ -144,6 +156,69 @@ describe('CourseImportService', () => {
     const result = await service.importCourse('{', { regenerateIds: false });
 
     expect(result.ok).toBe(false);
+    expect(await CourseRepository.forDb(db).list()).toHaveLength(0);
+  });
+
+  it('does not run practice validation when flag is off', async () => {
+    db = createTestVibetestDb();
+    const practiceDeps = mockPracticeDeps();
+    const service = CourseImportService.forDb(db, { practiceValidationDeps: practiceDeps });
+    stubImportUuids(IMPORT_UUIDS);
+
+    await service.importCourse(JSON.stringify(minimalValidImportJson()), { regenerateIds: false });
+
+    expect(practiceDeps.runJavascriptStep).not.toHaveBeenCalled();
+    expect(practiceDeps.runSqliteStep).not.toHaveBeenCalled();
+    expect(practiceDeps.runRegexStep).not.toHaveBeenCalled();
+  });
+
+  it('returns practice stage and does not save when self-check fails', async () => {
+    db = createTestVibetestDb();
+    const practiceDeps = mockPracticeDeps({
+      runJavascriptStep: vi.fn().mockResolvedValue({
+        ok: false,
+        failedTestIndex: 0,
+        message: 'broken',
+      }),
+    });
+    const service = CourseImportService.forDb(db, { practiceValidationDeps: practiceDeps });
+    stubImportUuids(IMPORT_UUIDS);
+
+    const importJson = {
+      ...minimalValidImportJson(),
+      modules: [
+        {
+          title: 'Practice',
+          steps: [
+            {
+              type: 'javascript',
+              title: 'Add',
+              content: {
+                description: 'd',
+                starterCode: 'const add = () => 0;',
+                referenceSolution: 'const add = () => 1;',
+                setup: '',
+                functionName: 'add',
+                timeoutMs: 2000,
+                tests: [{ args: [] }],
+              },
+            },
+          ],
+        },
+      ],
+    };
+
+    const result = await service.importCourse(JSON.stringify(importJson), {
+      regenerateIds: false,
+      validatePracticeSteps: true,
+    });
+
+    expect(result).toEqual({
+      ok: false,
+      stage: 'practice',
+      issues: [{ path: 'modules[0].steps[0]', message: 'test 0: broken' }],
+    });
+    expect(practiceDeps.runJavascriptStep).toHaveBeenCalledOnce();
     expect(await CourseRepository.forDb(db).list()).toHaveLength(0);
   });
 });

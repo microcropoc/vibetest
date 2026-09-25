@@ -1,0 +1,26 @@
+{
+  "schemaVersion": 1,
+  "title": "Practice check: fail",
+  "description": "Fixture: reference throws — self-check must fail.",
+  "modules": [
+    {
+      "title": "Broken",
+      "steps": [
+        {
+          "type": "javascript",
+          "title": "Throws",
+          "content": {
+            "description": "Broken reference.",
+            "starterCode": "const broken = () => 0;",
+            "referenceSolution": "const broken = () => { throw new Error('reference throws'); };",
+            "setup": "",
+            "reset": "",
+            "functionName": "broken",
+            "timeoutMs": 2000,
+            "tests": [{ "args": [] }]
+          }
+        }
+      ]
+    }
+  ]
+}

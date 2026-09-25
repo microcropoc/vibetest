@@ -1,0 +1,27 @@
+{
+  "schemaVersion": 1,
+  "title": "Practice check: regex",
+  "description": "Fixture for import reference self-check (regex).",
+  "modules": [
+    {
+      "title": "Regex",
+      "steps": [
+        {
+          "type": "regex",
+          "title": "Digits",
+          "content": {
+            "description": "Whole string is digits.",
+            "starterCode": "^\\d$",
+            "referenceSolution": "^\\d+$",
+            "timeoutMs": 2000,
+            "tests": [
+              { "input": "0" },
+              { "input": "42" },
+              { "input": "x" }
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

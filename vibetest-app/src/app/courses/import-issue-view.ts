@@ -10,6 +10,8 @@ export function importStageLabel(
       return 'Схема курса';
     case 'semantic':
       return 'Семантика';
+    case 'practice':
+      return 'Проверка практики';
     case 'replace-required':
       return 'Конфликт ID';
   }

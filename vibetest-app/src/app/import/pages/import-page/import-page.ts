@@ -21,6 +21,7 @@ export class ImportPage {
 
   protected readonly jsonText = signal('');
   protected readonly regenerateIds = signal(true);
+  protected readonly validatePracticeSteps = signal(false);
   protected readonly issues = signal<readonly ImportIssue[]>([]);
   protected readonly issueStage = signal<ImportValidationStage | 'replace-required' | null>(
     null,
@@ -65,6 +66,14 @@ export class ImportPage {
       return;
     }
     this.regenerateIds.set(target.checked);
+  }
+
+  protected onValidatePracticeStepsChange(event: Event): void {
+    const target = event.target;
+    if (!(target instanceof HTMLInputElement)) {
+      return;
+    }
+    this.validatePracticeSteps.set(target.checked);
   }
 
   protected async onPasteFromClipboard(): Promise<void> {
@@ -113,6 +122,7 @@ export class ImportPage {
     try {
       const result = await this.importService.importCourse(text, {
         regenerateIds: confirmReplace ? false : this.regenerateIds(),
+        validatePracticeSteps: this.validatePracticeSteps(),
         confirmReplace: confirmReplace ? true : undefined,
       });
 

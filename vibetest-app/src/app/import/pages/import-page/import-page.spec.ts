@@ -36,6 +36,46 @@ describe('ImportPage', () => {
     expect(checkbox.checked).toBe(true);
   });
 
+  it('leaves practice validation unchecked by default', async () => {
+    const fixture = createFixture();
+    await fixture.whenStable();
+    const checkbox = fixture.nativeElement.querySelector(
+      'input[name="validatePracticeSteps"]',
+    ) as HTMLInputElement;
+    expect(checkbox.checked).toBe(false);
+  });
+
+  it('forwards validatePracticeSteps when checkbox is checked', async () => {
+    importCourse.mockResolvedValue({
+      ok: true,
+      courseId: 'new-id',
+      action: 'created',
+    } satisfies ImportCourseResult);
+
+    const fixture = createFixture();
+    await fixture.whenStable();
+    const router = TestBed.inject(Router);
+    vi.spyOn(router, 'navigate').mockResolvedValue(true);
+    const checkbox = fixture.nativeElement.querySelector(
+      'input[name="validatePracticeSteps"]',
+    ) as HTMLInputElement;
+    checkbox.checked = true;
+    checkbox.dispatchEvent(new Event('change', { bubbles: true }));
+    await fixture.whenStable();
+
+    const textarea = fixture.nativeElement.querySelector('textarea') as HTMLTextAreaElement;
+    textarea.value = '{}';
+    textarea.dispatchEvent(new Event('input'));
+    fixture.nativeElement.querySelector('form')!.dispatchEvent(new Event('submit'));
+    await fixture.whenStable();
+
+    expect(importCourse).toHaveBeenCalledWith('{}', {
+      regenerateIds: true,
+      validatePracticeSteps: true,
+      confirmReplace: undefined,
+    });
+  });
+
   it('shows validation issues from the service', async () => {
     importCourse.mockResolvedValue({
       ok: false,
@@ -55,7 +95,11 @@ describe('ImportPage', () => {
     const root = fixture.nativeElement as HTMLElement;
     expect(root.textContent).toContain('Разбор JSON');
     expect(root.textContent).toContain('json: Unexpected token');
-    expect(importCourse).toHaveBeenCalledWith('{', { regenerateIds: true, confirmReplace: undefined });
+    expect(importCourse).toHaveBeenCalledWith('{', {
+      regenerateIds: true,
+      validatePracticeSteps: false,
+      confirmReplace: undefined,
+    });
   });
 
   it('opens replace dialog when course id already exists', async () => {
@@ -122,6 +166,7 @@ describe('ImportPage', () => {
 
     expect(importCourse).toHaveBeenLastCalledWith('{"courseId":"course-1"}', {
       regenerateIds: false,
+      validatePracticeSteps: false,
       confirmReplace: true,
     });
   });

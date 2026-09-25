@@ -1,0 +1,43 @@
+{
+  "schemaVersion": 1,
+  "title": "Practice check: JS",
+  "description": "Fixture for import reference self-check (javascript).",
+  "modules": [
+    {
+      "title": "JS",
+      "steps": [
+        {
+          "type": "javascript",
+          "title": "Add",
+          "content": {
+            "description": "Return sum.",
+            "starterCode": "const add = (a, b) => 0;",
+            "referenceSolution": "const add = (a, b) => a + b;",
+            "setup": "",
+            "reset": "",
+            "functionName": "add",
+            "timeoutMs": 2000,
+            "tests": [
+              { "args": [1, 2] },
+              { "args": [0, 0] }
+            ]
+          }
+        },
+        {
+          "type": "javascript",
+          "title": "Double",
+          "content": {
+            "description": "Double a number.",
+            "starterCode": "const double = (n) => 0;",
+            "referenceSolution": "const double = (n) => n * 2;",
+            "setup": "",
+            "reset": "",
+            "functionName": "double",
+            "timeoutMs": 2000,
+            "tests": [{ "args": [3] }]
+          }
+        }
+      ]
+    }
+  ]
+}

@@ -28,6 +28,16 @@
       Заменить все ID новыми UUID
     </label>
 
+    <label class="import-page__checkbox">
+      <input
+        type="checkbox"
+        name="validatePracticeSteps"
+        [checked]="validatePracticeSteps()"
+        (change)="onValidatePracticeStepsChange($event)"
+      />
+      Проверка js/sql/regex шагов
+    </label>
+
     <div class="import-page__actions">
       <button type="button" class="import-page__button" (click)="onPasteFromClipboard()">
         Взять из буфера

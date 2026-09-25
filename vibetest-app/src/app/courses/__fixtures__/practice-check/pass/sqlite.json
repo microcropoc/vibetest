@@ -1,0 +1,29 @@
+{
+  "schemaVersion": 1,
+  "title": "Practice check: SQLite",
+  "description": "Fixture for import reference self-check (sqlite).",
+  "modules": [
+    {
+      "title": "SQL",
+      "steps": [
+        {
+          "type": "sqlite",
+          "title": "Count users",
+          "content": {
+            "description": "Count rows.",
+            "setup": "CREATE TABLE users(id INT, name TEXT);",
+            "reset": "DELETE FROM users;",
+            "starterCode": "SELECT COUNT(*) FROM users;",
+            "referenceSolution": "SELECT COUNT(*) FROM users;",
+            "orderMatters": false,
+            "timeoutMs": 10000,
+            "tests": [
+              { "seed": "INSERT INTO users VALUES(1, 'A');" },
+              { "seed": "INSERT INTO users VALUES(1, 'A'); INSERT INTO users VALUES(2, 'B');" }
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

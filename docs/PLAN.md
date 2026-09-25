@@ -54,10 +54,9 @@
 
 | # | Задача | Зависимости |
 |---|--------|-------------|
-| vt-50 | [javascript-checker](tasks/done/vt-50-javascript-checker/) | vt-47, vt-49 |
 | vt-51 | [algorithms-sample-course](tasks/backlog/vt-51-algorithms-sample-course.md) | vt-47, vt-48, vt-49 |
 
-Цепочка JS practice v2: vt-42 … vt-44 в [`tasks/done/`](tasks/done/). **vt-47**…**vt-49** — в [`tasks/done/`](tasks/done/). **vt-50** (`checker`) — в [`tasks/done/`](tasks/done/); дальше демо-курс vt-51.
+Цепочка JS practice v2: vt-42 … vt-44 в [`tasks/done/`](tasks/done/). **vt-47**…**vt-50** — в [`tasks/done/`](tasks/done/). **vt-52** — опциональная проверка practice при импорте (**done**); **vt-51** — демо-курс алгоритмов.
 
 ## Решения и допущения
 
@@ -71,8 +70,8 @@
 - JavaScript (vt-47 … vt-50): опциональные **`resultMode`** / **`structure`** (in-place, list/tree) — **vt-47 done**; **`construct`** — **vt-48 done**; **`unordered`** — **vt-49 done**; узкий escape hatch **`checker`** — **vt-50**. `schemaVersion` остаётся 1. Без проверки O(n).
 - JavaScript (**vt-50**): опциональный step-level **`checker`** — `(ctx)=>boolean` в отдельном sandbox (timeout 250 ms) **вместо** equal/`resultMode`/`unordered` на fulfilled-пути; dual-run по-прежнему даёт results/args. Не основной путь авторов (флаги предпочтительнее).
 - Одна схема: **course.schema.json** (обязательные ID); в IndexedDB — тот же формат.
-- Импорт: JSON parse → Zod → semantic → опционально `regenerateCourseIds`; флажок «Заменить все ID» **включён по умолчанию** (vt-24) → всегда новый курс; при выключенном флажке replace только если `courseId` уже в хранилище.
-- Импорт: все ошибки **достигнутого этапа** под формой.
+- Импорт: JSON parse → Zod → semantic → опционально проверка practice (dual-run `referenceSolution`, default **выкл**, vt-52) → опционально `regenerateCourseIds`; флажок «Заменить все ID» **включён по умолчанию** (vt-24) → всегда новый курс; при выключенном флажке replace только если `courseId` уже в хранилище.
+- Импорт: все ошибки **достигнутого этапа** под формой (включая этап **practice**).
 - Bundled schemas: `public/schemas/`.
 - Каскадное удаление progress: storage helper в **vt-12**; **vt-14** `deleteAllByCourseId` — обёртка, не обратная зависимость.
 - **Инфо:** показывать `course.schema.json`.

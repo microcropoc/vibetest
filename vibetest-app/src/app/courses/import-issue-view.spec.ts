@@ -5,6 +5,7 @@ describe('import-issue-view', () => {
     expect(importStageLabel('json')).toBe('Разбор JSON');
     expect(importStageLabel('zod')).toBe('Схема курса');
     expect(importStageLabel('semantic')).toBe('Семантика');
+    expect(importStageLabel('practice')).toBe('Проверка практики');
     expect(importStageLabel('replace-required')).toBe('Конфликт ID');
   });
 

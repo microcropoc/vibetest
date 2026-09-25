@@ -2,10 +2,12 @@ import type { SemanticIssue } from './semantic-validation';
 
 export type ImportIssue = SemanticIssue;
 
-export type ImportValidationStage = 'json' | 'zod' | 'semantic';
+export type ImportValidationStage = 'json' | 'zod' | 'semantic' | 'practice';
 
 export type ImportCourseOptions = {
   readonly regenerateIds: boolean;
+  /** When true, run referenceSolution self-check on javascript/sqlite/regex steps before save. */
+  readonly validatePracticeSteps?: boolean;
   /** Required when `regenerateIds` is false and `courseId` already exists. */
   readonly confirmReplace?: boolean;
 };

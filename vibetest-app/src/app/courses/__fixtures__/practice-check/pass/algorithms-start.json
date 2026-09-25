@@ -1,0 +1,172 @@
+{
+  "schemaVersion": 1,
+  "title": "Алгоритмы: старт",
+  "description": "Мини-курс на JS-практике: Two Sum, in-place Rotate, linked list / tree, LRU Cache (construct) и Three Sum с unordered. Демонстрирует поля resultMode, structure, construct и unordered без checker.",
+  "modules": [
+    {
+      "title": "Алгоритмы на JS",
+      "steps": [
+        {
+          "type": "theory",
+          "title": "Как устроена практика",
+          "content": "## Dual-run\n\nВаш код и эталон выполняются в **двух изолированных средах**. Сравнивается результат (или мутированные аргументы) — без статического `expected`.\n\nВ этом модуле — шесть задач: базовая функция, **in-place** (`resultMode: args`), **list/tree** (`structure`), **класс** (`construct` + `calls`) и ответы **без порядка** (`unordered`).\n\nДля шагов с `calls`: каждый следующий метод вызывается на **return** предыдущего. Мутирующие методы вроде `put` должны возвращать **экземпляр** (`return this`), иначе цепочка оборвётся."
+        },
+        {
+          "type": "quiz",
+          "title": "Quiz: dual-run",
+          "content": {
+            "question": "Что сравнивает раннер JS-практики по умолчанию?",
+            "options": [
+              "Только статическое поле expected в JSON",
+              "Результаты user и reference после dual-run",
+              "Только время выполнения",
+              "Только синтаксис starterCode"
+            ],
+            "correctIndices": [1]
+          }
+        },
+        {
+          "type": "javascript",
+          "title": "Two Sum",
+          "content": {
+            "description": "Реализуйте **`twoSum(nums, target)`**: верните индексы двух разных элементов, сумма которых равна `target`. Гарантируется ровно одно решение. Верните пару в порядке возрастания индекса (меньший первым): `[i, j]` с `i < j`.",
+            "starterCode": "const twoSum = (nums, target) => [];",
+            "referenceSolution": "const twoSum = (nums, target) => {\n  const seen = new Map();\n  for (let i = 0; i < nums.length; i += 1) {\n    const need = target - nums[i];\n    if (seen.has(need)) return [seen.get(need), i];\n    seen.set(nums[i], i);\n  }\n  return [];\n};",
+            "setup": "",
+            "reset": "",
+            "functionName": "twoSum",
+            "timeoutMs": 3000,
+            "tests": [
+              { "args": [[2, 7, 11, 15], 9] },
+              { "args": [[3, 2, 4], 6] },
+              { "args": [[3, 3], 6] }
+            ]
+          }
+        },
+        {
+          "type": "javascript",
+          "title": "Rotate Array",
+          "content": {
+            "description": "Реализуйте **`rotate(nums, k)`**: поверните массив **in-place** вправо на `k` шагов. Функция может ничего не возвращать — сравниваются мутированные аргументы (`resultMode: args`).",
+            "starterCode": "function rotate(nums, k) {\n  // mutate nums in place\n}",
+            "referenceSolution": "function rotate(nums, k) {\n  const n = nums.length;\n  k = ((k % n) + n) % n;\n  const reverse = (l, r) => {\n    while (l < r) {\n      const t = nums[l];\n      nums[l] = nums[r];\n      nums[r] = t;\n      l += 1;\n      r -= 1;\n    }\n  };\n  reverse(0, n - 1);\n  reverse(0, k - 1);\n  reverse(k, n - 1);\n}",
+            "setup": "",
+            "reset": "",
+            "functionName": "rotate",
+            "resultMode": "args",
+            "timeoutMs": 3000,
+            "tests": [
+              { "args": [[1, 2, 3, 4, 5, 6, 7], 3] },
+              { "args": [[-1, -100, 3, 99], 2] }
+            ]
+          }
+        },
+        {
+          "type": "javascript",
+          "title": "Reverse Linked List",
+          "content": {
+            "description": "Реализуйте **`reverseList(head)`**: разверните односвязный список. В JSON аргумент — массив чисел; раннер materialize/serialize через `structure` list (`{ val, next }`).",
+            "starterCode": "function reverseList(head) {\n  return head;\n}",
+            "referenceSolution": "function reverseList(head) {\n  let prev = null;\n  let cur = head;\n  while (cur) {\n    const next = cur.next;\n    cur.next = prev;\n    prev = cur;\n    cur = next;\n  }\n  return prev;\n}",
+            "setup": "",
+            "reset": "",
+            "functionName": "reverseList",
+            "structure": {
+              "args": ["list"],
+              "result": "list"
+            },
+            "timeoutMs": 3000,
+            "tests": [
+              { "args": [[1, 2, 3]] },
+              { "args": [[1, 2]] },
+              { "args": [[]] }
+            ]
+          }
+        },
+        {
+          "type": "javascript",
+          "title": "Invert Binary Tree",
+          "content": {
+            "description": "Реализуйте **`invertTree(root)`**: зеркально отразите бинарное дерево. В JSON — level-order массив (`number | null`); `structure` tree.",
+            "starterCode": "function invertTree(root) {\n  return root;\n}",
+            "referenceSolution": "function invertTree(root) {\n  if (!root) return null;\n  const left = invertTree(root.left);\n  const right = invertTree(root.right);\n  root.left = right;\n  root.right = left;\n  return root;\n}",
+            "setup": "",
+            "reset": "",
+            "functionName": "invertTree",
+            "structure": {
+              "args": ["tree"],
+              "result": "tree"
+            },
+            "timeoutMs": 3000,
+            "tests": [
+              { "args": [[4, 2, 7, 1, 3, 6, 9]] },
+              { "args": [[2, 1, 3]] },
+              { "args": [[]] }
+            ]
+          }
+        },
+        {
+          "type": "javascript",
+          "title": "LRU Cache",
+          "content": {
+            "description": "Реализуйте класс **`LRUCache`**: `constructor(capacity)`, `get(key)`, `put(key, value)`. При переполнении вытесняется least recently used. Первый вызов — `new LRUCache(...args)`, далее `calls` с методами. Важно: каждый следующий `method` вызывается на **return** предыдущего шага — мутирующие методы (`put`) должны возвращать экземпляр (`return this`).",
+            "starterCode": "class LRUCache {\n  constructor(capacity) {\n    this.capacity = capacity;\n  }\n  put(key, value) {\n    return this;\n  }\n  get(key) {\n    return -1;\n  }\n}",
+            "referenceSolution": "class LRUCache {\n  constructor(capacity) {\n    this.capacity = capacity;\n    this.map = new Map();\n  }\n  put(key, value) {\n    if (this.map.has(key)) this.map.delete(key);\n    this.map.set(key, value);\n    if (this.map.size > this.capacity) {\n      const first = this.map.keys().next().value;\n      this.map.delete(first);\n    }\n    return this;\n  }\n  get(key) {\n    if (!this.map.has(key)) return -1;\n    const value = this.map.get(key);\n    this.map.delete(key);\n    this.map.set(key, value);\n    return value;\n  }\n}",
+            "setup": "",
+            "reset": "",
+            "construct": {
+              "className": "LRUCache"
+            },
+            "timeoutMs": 5000,
+            "tests": [
+              {
+                "args": [2],
+                "calls": [
+                  { "method": "put", "args": [1, 1] },
+                  { "method": "put", "args": [2, 2] },
+                  { "method": "get", "args": [1] }
+                ]
+              },
+              {
+                "args": [2],
+                "calls": [
+                  { "method": "put", "args": [1, 1] },
+                  { "method": "put", "args": [2, 2] },
+                  { "method": "put", "args": [3, 3] },
+                  { "method": "get", "args": [1] }
+                ]
+              },
+              {
+                "args": [2],
+                "calls": [
+                  { "method": "put", "args": [1, 1] },
+                  { "method": "put", "args": [2, 2] },
+                  { "method": "put", "args": [3, 3] },
+                  { "method": "get", "args": [2] }
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "type": "javascript",
+          "title": "Three Sum",
+          "content": {
+            "description": "Реализуйте **`threeSum(nums)`**: все уникальные тройки с суммой 0. Порядок троек и порядок чисел внутри тройки **не важен** (`unordered: true`).",
+            "starterCode": "const threeSum = (nums) => [];",
+            "referenceSolution": "const threeSum = (nums) => {\n  const n = nums.length;\n  const sorted = nums.slice().sort((a, b) => a - b);\n  const out = [];\n  for (let i = 0; i < n - 2; i += 1) {\n    if (i > 0 && sorted[i] === sorted[i - 1]) continue;\n    let l = i + 1;\n    let r = n - 1;\n    while (l < r) {\n      const sum = sorted[i] + sorted[l] + sorted[r];\n      if (sum === 0) {\n        out.push([sorted[i], sorted[l], sorted[r]]);\n        l += 1;\n        r -= 1;\n        while (l < r && sorted[l] === sorted[l - 1]) l += 1;\n        while (l < r && sorted[r] === sorted[r + 1]) r -= 1;\n      } else if (sum < 0) {\n        l += 1;\n      } else {\n        r -= 1;\n      }\n    }\n  }\n  return out;\n};",
+            "setup": "",
+            "reset": "",
+            "functionName": "threeSum",
+            "timeoutMs": 5000,
+            "tests": [
+              { "args": [[-1, 0, 1, 2, -1, -4]], "unordered": true },
+              { "args": [[0, 1, 1]], "unordered": true },
+              { "args": [[0, 0, 0]], "unordered": true }
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

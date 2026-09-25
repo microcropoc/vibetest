@@ -10,6 +10,14 @@ import { validatePracticeReferences } from './validate-practice-references';
 
 const practiceCheckRoot = join(process.cwd(), 'src', 'app', 'courses', '__fixtures__', 'practice-check');
 
+/** Sample courses mirrored into practice-check/pass — keep byte-identical with docs/courses/. */
+const MIRRORED_SAMPLE_COURSES: ReadonlyArray<readonly [string, string]> = [
+  [
+    join(process.cwd(), '..', 'docs', 'courses', 'algorithms-start.json'),
+    join(practiceCheckRoot, 'pass', 'algorithms-start.json'),
+  ],
+];
+
 function listJsonFixtures(kind: 'pass' | 'fail'): ReadonlyArray<readonly [string, string]> {
   const dir = join(practiceCheckRoot, kind);
   return readdirSync(dir)
@@ -28,6 +36,13 @@ function courseFromFixturePath(path: string): Course {
 
 describe('validatePracticeReferences', () => {
   const deps = createInProcessPracticeReferenceValidationDeps();
+
+  it.each(MIRRORED_SAMPLE_COURSES)(
+    'keeps mirrored sample course in sync: %s',
+    (docsPath, fixturePath) => {
+      expect(readFileSync(fixturePath, 'utf8')).toBe(readFileSync(docsPath, 'utf8'));
+    },
+  );
 
   it('skips theory and quiz steps', async () => {
     const parsed = parseImportCourseText(JSON.stringify({

@@ -9,6 +9,7 @@
 | [javascript-basics.json](./javascript-basics.json) | JavaScript: 2 модуля, теория, `svg`, quiz и практика `javascript` |
 | [sqlite-basics.json](./sqlite-basics.json) | SQLite: 2 модуля, теория, `svg`, quiz и практика `sqlite` |
 | [regex-basics.json](./regex-basics.json) | Regex: 2 модуля, теория, `svg`, quiz и практика `regex` |
+| [algorithms-start.json](./algorithms-start.json) | Алгоритмы: Two Sum, Rotate (`resultMode`), list/tree, LRU (`construct`), Three Sum (`unordered`) |
 
 ## Импорт
 

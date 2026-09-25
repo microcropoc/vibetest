@@ -54,9 +54,10 @@
 
 | # | Задача | Зависимости |
 |---|--------|-------------|
-| vt-51 | [algorithms-sample-course](tasks/backlog/vt-51-algorithms-sample-course.md) | vt-47, vt-48, vt-49 |
 
-Цепочка JS practice v2: vt-42 … vt-44 в [`tasks/done/`](tasks/done/). **vt-47**…**vt-50** — в [`tasks/done/`](tasks/done/). **vt-52** — опциональная проверка practice при импорте (**done**); **vt-51** — демо-курс алгоритмов.
+_(очередь пуста — следующая задача из backlog по приоритету)_
+
+Цепочка JS practice v2: vt-42 … vt-44 в [`tasks/done/`](tasks/done/). **vt-47**…**vt-52** — в [`tasks/done/`](tasks/done/), включая демо-курс алгоритмов (**vt-51**) и проверку practice при импорте (**vt-52**).
 
 ## Решения и допущения
 

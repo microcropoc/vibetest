@@ -38,6 +38,8 @@ describe('SvgStepUiComponent', () => {
     await fixture.whenStable();
 
     expect(fixture.nativeElement.querySelector('[role="dialog"]')).toBeTruthy();
+    expect(fixture.nativeElement.querySelector('.svg-step-ui__figure-inner')).toBeNull();
+    expect(fixture.nativeElement.querySelector('.svg-fullscreen-viewer__svg svg')).toBeTruthy();
   });
 
   it('restores focus to expand after close', async () => {

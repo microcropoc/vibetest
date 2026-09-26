@@ -4,7 +4,15 @@
   }
 
   <div class="svg-step-ui__figure-row">
-    <div class="svg-step-ui__figure" [innerHTML]="svgHtml()"></div>
+    <div
+      class="svg-step-ui__figure"
+      [class.svg-step-ui__figure--empty]="viewerOpen()"
+      [attr.aria-hidden]="viewerOpen() ? true : null"
+    >
+      @if (!viewerOpen()) {
+        <div class="svg-step-ui__figure-inner" [innerHTML]="svgHtml()"></div>
+      }
+    </div>
     <button
       #expandButton
       type="button"

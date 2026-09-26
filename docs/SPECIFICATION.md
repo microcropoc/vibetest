@@ -95,7 +95,7 @@ flowchart TD
 
 Inline SVG (SMIL/CSS и т.п.); рендер **без санитизации** (курс доверенный). Без автопроверки — как theory.
 
-В карточке шага SVG **вписывается** в область figure (без внутреннего scroll). Кнопка **«Развернуть»** открывает in-app overlay (`role="dialog"`) на весь viewport: SVG целиком, **+** / **−** / **Сброс** (масштаб 1–4 от fit-baseline), **pan** pointer-ом при scale > 1; закрытие — «Закрыть», backdrop, Escape; сброс zoom/pan и возврат фокуса на «Развернуть». Browser Fullscreen API и zoom колёсиком/pinch — не используются.
+В карточке шага SVG **вписывается** в область figure (без внутреннего scroll). Кнопка **«Развернуть»** открывает in-app overlay (`role="dialog"`) на весь viewport: SVG целиком (в DOM только одна копия разметки), **+** / **−** / **Сброс** (масштаб 1–4 от fit-baseline), **pan** одним pointer при scale > 1, **pinch** двумя пальцами и **zoom** колёсиком мыши (масштаб вокруг точки жеста); закрытие — «Закрыть», backdrop, Escape; сброс zoom/pan и возврат фокуса на «Развернуть». Browser Fullscreen API — не используется.
 
 ```json
 {

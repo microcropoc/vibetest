@@ -43,6 +43,7 @@
       <div
         class="svg-fullscreen-viewer__viewport"
         [class.svg-fullscreen-viewer__viewport--panning]="panning()"
+        (wheel)="onWheel($event)"
         (pointerdown)="onPointerDown($event)"
         (pointermove)="onPointerMove($event)"
         (pointerup)="onPointerUp($event)"

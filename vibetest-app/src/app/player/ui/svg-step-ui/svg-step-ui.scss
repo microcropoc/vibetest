@@ -25,12 +25,24 @@
   box-sizing: border-box;
 }
 
-.svg-step-ui__figure :where(svg) {
+.svg-step-ui__figure-inner {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  max-height: min(50vh, 24rem);
+}
+
+.svg-step-ui__figure-inner :where(svg) {
   display: block;
   max-width: 100%;
   max-height: min(50vh, 24rem);
   width: auto;
   height: auto;
+}
+
+.svg-step-ui__figure--empty {
+  min-height: min(50vh, 24rem);
 }
 
 .svg-step-ui__expand {

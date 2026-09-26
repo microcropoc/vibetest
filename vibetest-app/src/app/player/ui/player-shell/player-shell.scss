@@ -1,5 +1,12 @@
 .player-shell {
   width: 100%;
+  max-width: 100%;
+  min-width: 0;
+}
+
+.player-shell__outlet,
+.player-shell__step {
+  max-width: 100%;
   min-width: 0;
 }
 

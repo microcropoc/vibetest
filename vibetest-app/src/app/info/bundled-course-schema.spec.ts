@@ -1,6 +1,8 @@
 import {
   bundledCourseImportSchemaUrl,
+  bundledModuleImportSchemaUrl,
   loadBundledCourseImportSchema,
+  loadBundledModuleImportSchema,
   prettyPrintJson,
 } from './bundled-course-schema';
 
@@ -45,5 +47,35 @@ describe('bundled-course-schema', () => {
     await expect(loadBundledCourseImportSchema(fetchFn)).rejects.toThrow(
       'Failed to load course import schema (404)',
     );
+  });
+
+  it('resolves module import schema URL from document baseURI', () => {
+    const previousBase = document.baseURI;
+    Object.defineProperty(document, 'baseURI', {
+      configurable: true,
+      value: 'https://example.test/vibetest/',
+    });
+    try {
+      expect(bundledModuleImportSchemaUrl()).toBe(
+        'https://example.test/vibetest/schemas/module-import.schema.json',
+      );
+    } finally {
+      Object.defineProperty(document, 'baseURI', {
+        configurable: true,
+        value: previousBase,
+      });
+    }
+  });
+
+  it('loads module import schema from bundled URL', async () => {
+    const fetchFn = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ schemaVersion: 1 }),
+    });
+
+    const schema = await loadBundledModuleImportSchema(fetchFn);
+
+    expect(fetchFn).toHaveBeenCalledWith(bundledModuleImportSchemaUrl());
+    expect(schema).toEqual({ schemaVersion: 1 });
   });
 });

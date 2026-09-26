@@ -1,0 +1,560 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://vibetest.app/schemas/module-import.schema.json",
+  "title": "VibeTest Module Import",
+  "description": "Import-DTO одного модуля для добавления в конец существующего курса: без moduleId и stepId (их назначает приложение). schemaVersion всегда 1. Смысл полей шагов — в description у свойств и $defs; не выдумывай семантику вне схемы.",
+  "type": "object",
+  "required": [
+    "schemaVersion",
+    "title",
+    "steps"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "schemaVersion": {
+      "const": 1,
+      "description": "Версия формата документа. Для текущих модулей всегда 1."
+    },
+    "title": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 120,
+      "description": "Название модуля (отображается в списке модулей курса)."
+    },
+    "steps": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 200,
+      "description": "Упорядоченные шаги модуля; тип content зависит от type каждого шага.",
+      "items": {
+        "$ref": "#/$defs/step"
+      }
+    }
+  },
+  "$defs": {
+    "step": {
+      "type": "object",
+      "description": "Один шаг модуля: type определяет форму content (см. allOf/if/then).",
+      "required": [
+        "type",
+        "title",
+        "content"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": [
+            "theory",
+            "svg",
+            "quiz",
+            "javascript",
+            "sqlite",
+            "regex"
+          ],
+          "description": "Тип шага: theory — Markdown-теория (строка content); svg — inline SVG (объект); quiz — тест с вариантами; javascript — JS-практика с dual-run проверкой; sqlite — SQL-практика в sql.js; regex — практика с RegExp.test. content обязан соответствовать выбранному type."
+        },
+        "title": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 200,
+          "description": "Заголовок шага в плеере."
+        },
+        "content": true
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "const": "theory"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "content": {
+                "$ref": "#/$defs/theoryContent"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "const": "svg"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "content": {
+                "$ref": "#/$defs/svgContent"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "const": "quiz"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "content": {
+                "$ref": "#/$defs/quizContent"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "const": "javascript"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "content": {
+                "$ref": "#/$defs/javascriptContent"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "const": "sqlite"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "content": {
+                "$ref": "#/$defs/sqliteContent"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "const": "regex"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "content": {
+                "$ref": "#/$defs/regexContent"
+              }
+            }
+          }
+        }
+      ]
+    },
+    "theoryContent": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 20000,
+      "description": "Markdown-текст теории. Многострочный код — только в fenced-блоках с указанием языка (например ```javascript). Короткие фрагменты — inline code. Без автопроверки; достаточно прочитать."
+    },
+    "svgContent": {
+      "type": "object",
+      "description": "Inline SVG (SMIL/CSS допустимы); рендер без санитизации. Без автопроверки.",
+      "required": [
+        "svg"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "svg": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 50000,
+          "description": "Полный фрагмент SVG (корневой элемент <svg …>)."
+        },
+        "caption": {
+          "type": "string",
+          "maxLength": 300,
+          "description": "Необязательная подпись над рисунком."
+        },
+        "description": {
+          "type": "string",
+          "maxLength": 2000,
+          "description": "Необязательное пояснение под рисунком."
+        }
+      }
+    },
+    "quizContent": {
+      "type": "object",
+      "description": "Локальная проверка ответа; успех переводит шаг в completed.",
+      "required": [
+        "question",
+        "options",
+        "correctIndices"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "question": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 1000,
+          "description": "Текст вопроса."
+        },
+        "options": {
+          "type": "array",
+          "minItems": 2,
+          "maxItems": 10,
+          "description": "Варианты ответа; индексация с 0.",
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 300,
+            "description": "Текст одного варианта."
+          }
+        },
+        "correctIndices": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 10,
+          "uniqueItems": true,
+          "description": "Индексы правильных вариантов в options (0-based). Каждый индекс строго меньше options.length. Один индекс — один ответ (radio); несколько — множественный выбор (checkbox).",
+          "items": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Индекс элемента в массиве options."
+          }
+        }
+      }
+    },
+    "javascriptContent": {
+      "$comment": "Ровно одно из functionName | construct: в $defs нет oneOf (json-schema-to-zod ломает JavascriptContentSchema). Импорт VibeTest — JavascriptContentWithTargetSchema.superRefine. AJV по import-файлу без шага content не дублирует это правило на nested content. Зарезервированные слова — superRefine и compile. ВАЖНО: javascriptContent сам по себе не гарантирует XOR functionName|construct и не отклоняет reserved words для functionName/className (только pattern). Обязательный путь VibeTest — JavascriptContentWithTargetSchema (import и canonical course). Сырой AJV/редактор без superRefine — неполная валидация.",
+      "type": "object",
+      "description": "JS-практика: код ученика и эталон выполняются в двух изолированных средах (dual-run); по умолчанию результаты сравниваются recursive JSON-compatible equal — plain objects/arrays, порядок ключей объектов не важен, примитивы через Object.is (NaN равен NaN, +0 ≠ -0), а undefined / function / symbol / bigint / не-plain объекты (Map, Set, Date, RegExp) считаются non-JSON result и приводят к fail. Опционально resultMode / structure / unordered меняют подготовку args и объект сравнения. Опциональный checker — escape hatch вместо equal. Ровно одно из functionName или construct (строго при импорте в приложении). Порядок на тест-кейс: reset → materialize args (structure) → вызов functionName(...args) или new construct.className(...args) → цепочка calls → await thenable → flushMicrotasks → advanceMs → expectInvocations → compare (checker или serialize+equal по resultMode). Sync throw до финала — fail кейса, resultMode/rejects на equal не применяются.",
+      "required": [
+        "description",
+        "starterCode",
+        "referenceSolution",
+        "setup",
+        "timeoutMs",
+        "tests"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "description": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 5000,
+          "description": "Условие задачи для ученика (Markdown/plain text)."
+        },
+        "starterCode": {
+          "type": "string",
+          "maxLength": 20000,
+          "description": "Начальный код в редакторе (может быть пустой строкой)."
+        },
+        "referenceSolution": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 20000,
+          "description": "Эталонное решение; должно проходить все tests в reference-среде."
+        },
+        "setup": {
+          "type": "string",
+          "maxLength": 20000,
+          "description": "JS подготовки среды перед загрузкой starterCode/referenceSolution в обеих средах (моки, registerSpy). Глобалы и spy, объявленные в setup, видны коду ученика и эталону после загрузки; не класть сюда проверочные данные — functionName / className появляются после load."
+        },
+        "reset": {
+          "type": "string",
+          "maxLength": 20000,
+          "description": "Необязательный JS перед каждым тест-кейсом (включая первый); пустая строка — no-op для авторского кода. Между кейсами раннер всегда отменяет pending timers, обнуляет clock, сбрасывает spy и перекомпилирует среду (setup + код), независимо от содержимого этого поля."
+        },
+        "functionName": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 100,
+          "pattern": "^[A-Za-z_$][A-Za-z0-9_$]*$",
+          "description": "Имя вызываемой функции (JS identifier); должна существовать после load starterCode/referenceSolution. Взаимоисключимо с construct. Зарезервированные слова отклоняются при импорте VibeTest."
+        },
+        "construct": {
+          "type": "object",
+          "description": "Вместо вызова функции — new className(...tests[].args) в обеих средах; далее calls как обычно. Взаимоисключимо с functionName.",
+          "required": [
+            "className"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "className": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 100,
+              "pattern": "^[A-Za-z_$][A-Za-z0-9_$]*$",
+              "description": "Имя класса/конструктора (JS identifier) после load starterCode/referenceSolution. Зарезервированные слова отклоняются при импорте VibeTest."
+            }
+          }
+        },
+        "resultMode": {
+          "type": "string",
+          "enum": [
+            "return",
+            "args",
+            "both"
+          ],
+          "description": "Что сравнивать после кейса. При rejects: true или sync throw до финала — игнорируется (rejects: только reasons; throw: fail кейса). return (default) — финальный return после serialize structure.result; args — только tests[].args после прогона (serialize по structure.args; без structure.args — raw после materialize/cloned); не calls[].args; both — return и tests[].args. return может быть undefined/non-JSON."
+        },
+        "structure": {
+          "type": "object",
+          "description": "structure.args: materialize JSON→узлы всегда до invoke (tests[].args и calls[].args; индекс вне массива = raw). structure.result: serialize финального return — только equal-path без content.checker на fulfill; при checker или rejects result не сериализуется автоматически. list/tree/raw как SPEC. Cycle/overflow serialize → fail.",
+          "additionalProperties": false,
+          "properties": {
+            "args": {
+              "type": "array",
+              "maxItems": 20,
+              "description": "По элементу на позиционный аргумент tests[].args и calls[].args; отсутствующий индекс = raw.",
+              "items": {
+                "type": "string",
+                "enum": [
+                  "list",
+                  "tree",
+                  "raw"
+                ]
+              }
+            },
+            "result": {
+              "type": "string",
+              "enum": [
+                "list",
+                "tree",
+                "raw"
+              ],
+              "description": "Как сериализовать финальный return перед сравнением; отсутствие = raw."
+            }
+          }
+        },
+        "checker": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 10000,
+          "description": "Escape hatch: исходник (ctx) => boolean. Sandbox (не user/reference globals). Bag ctx заморожен (Object.freeze): присвоение/удаление свойств ctx → throw; deep-mutation userResult/args и утечки ссылок на ctx.* вне вызова — undefined behaviour. Thenable-return: отдельный cap 250 ms (Date.now()+250), не deadlineMs кейса; sync boolean — без cap. Sync hang → общий timeoutMs/Worker.terminate (без деталей кейса). На fulfill заменяет equal/resultMode/unordered; tests[].unordered не применяется — ctx.sortUnordered. structure.result не сериализуется (пример list: ctx.deepEqual(ctx.serializeList(ctx.userResult), ctx.serializeList(ctx.refResult))). userResult/refResult — сырой return; userArgs/refArgs — materialized, не serialized. Хелперы: deepEqual, serializeList, serializeTree, sortUnordered. Недетерминизм → ложные pass/fail. Не показывается ученику."
+        },
+        "timeoutMs": {
+          "type": "integer",
+          "minimum": 100,
+          "maximum": 30000,
+          "description": "Лимит на весь шаг (мс): javascriptInit + все tests[] одним deadline (не per-case). Включает reset, invoke, calls, advanceMs, сравнение. Кооперативная проверка; sync hang в коде ученика или checker — Worker.terminate() по истечении (без деталей кейса). Отдельный thenable-таймаут 250 ms у checker — см. checker."
+        },
+        "tests": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 50,
+          "description": "Набор тест-кейсов; каждый прогоняется для user и reference кода.",
+          "items": {
+            "type": "object",
+            "description": "Один тест-кейс JS-практики.",
+            "required": [
+              "args"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "args": {
+                "type": "array",
+                "maxItems": 20,
+                "description": "Аргументы первого вызова functionName(...args). Пустой массив — вызов без аргументов; иначе — JSON-совместимые значения."
+              },
+              "calls": {
+                "type": "array",
+                "minItems": 0,
+                "maxItems": 20,
+                "description": "Дополнительные вызовы functionName или method(...args) после первого invoke.",
+                "items": {
+                  "type": "object",
+                  "required": [
+                    "args"
+                  ],
+                  "additionalProperties": false,
+                  "properties": {
+                    "args": {
+                      "type": "array",
+                      "maxItems": 20,
+                      "description": "Аргументы вызова."
+                    },
+                    "method": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 100,
+                      "pattern": "^[A-Za-z_$][A-Za-z0-9_$]*$",
+                      "description": "JS identifier метода (syntax only): current[method](...args); иначе current(...args). Reserved words допустимы (Reflect.get)."
+                    }
+                  }
+                }
+              },
+              "rejects": {
+                "type": "boolean",
+                "description": "true: обе среды должны reject на финале; иначе fail. Если одна reject, другая fulfill — fail. Reasons сравниваются (Error.message или JSON-equal). Промежуточный throw/reject в calls — fail кейса (не rejects-путь)."
+              },
+              "expectInvocations": {
+                "type": "object",
+                "description": "Ожидаемое число вызовов spy (имя из setup/registerSpy). user === reference === count; иначе fail. Spy не зарегистрирован — fail («not registered»).",
+                "additionalProperties": {
+                  "type": "integer",
+                  "minimum": 0
+                }
+              },
+              "advanceMs": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 60000,
+                "description": "Продвинуть fake timers на N мс в обеих средах перед финальным сравнением. Действует на текущий кейс; состояние таймеров сбрасывается через фазу reset раннера перед следующим кейсом."
+              },
+              "flushMicrotasks": {
+                "type": "boolean",
+                "description": "true: один host microtask checkpoint (await Promise.resolve()) в обеих средах перед сравнением. Не цикл до пустой очереди — только один tick."
+              },
+              "unordered": {
+                "type": "boolean",
+                "description": "true: после structure-serialize рекурсивная нормализация перед equal — массивы сортируются по stable JSON-key (сортировка ключей объектов в ключе — для stable key, не для equal plain objects); plain objects — значения рекурсивно. К return и/или tests[].args по resultMode. При structure.result list/tree serialize даёт массив — unordered переставит элементы; не использовать, если порядок важен. Игнорируется при content.checker (нужен порядок-agnostic — ctx.sortUnordered в checker). false/отсутствие — порядок массивов важен."
+              }
+            }
+          }
+        }
+      }
+    },
+    "sqliteContent": {
+      "type": "object",
+      "description": "SQL-практика в sql.js: ученик пишет запрос; результат сравнивается с эталоном. setup — DDL (CREATE TABLE); начальные данные только в tests[].seed; reset не должен содержать INSERT/seed-DML.",
+      "required": [
+        "description",
+        "starterCode",
+        "referenceSolution",
+        "setup",
+        "orderMatters",
+        "timeoutMs",
+        "tests"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "description": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 5000,
+          "description": "Условие задачи для ученика."
+        },
+        "starterCode": {
+          "type": "string",
+          "maxLength": 20000,
+          "description": "Начальный SQL в редакторе."
+        },
+        "referenceSolution": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 20000,
+          "description": "Эталонный SQL-запрос."
+        },
+        "setup": {
+          "type": "string",
+          "maxLength": 20000,
+          "description": "DDL и прочий SQL без seed-DML (CREATE TABLE и т.п.)."
+        },
+        "reset": {
+          "type": "string",
+          "maxLength": 20000,
+          "description": "SQL между тест-кейсами; без INSERT INTO seed-данных (seed только в tests[].seed)."
+        },
+        "orderMatters": {
+          "type": "boolean",
+          "description": "true: порядок строк в результате SELECT важен при сравнении."
+        },
+        "timeoutMs": {
+          "type": "integer",
+          "minimum": 100,
+          "maximum": 30000,
+          "description": "Лимит времени на шаг (мс)."
+        },
+        "tests": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 50,
+          "description": "Тест-кейсы с отдельным seed-DML на каждый.",
+          "items": {
+            "type": "object",
+            "required": [
+              "seed"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "seed": {
+                "type": "string",
+                "maxLength": 5000,
+                "description": "DML (INSERT и т.п.) для наполнения БД перед прогоном этого кейса."
+              }
+            }
+          }
+        }
+      }
+    },
+    "regexContent": {
+      "type": "object",
+      "description": "Практика regex: starterCode и referenceSolution — строки паттернов; для каждого tests[].input сравнивается boolean RegExp.test(input) у ученика и эталона.",
+      "required": [
+        "description",
+        "starterCode",
+        "referenceSolution",
+        "timeoutMs",
+        "tests"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "description": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 5000,
+          "description": "Условие задачи для ученика."
+        },
+        "starterCode": {
+          "type": "string",
+          "maxLength": 2000,
+          "description": "Начальный паттерн (строка для RegExp)."
+        },
+        "referenceSolution": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 2000,
+          "description": "Эталонный паттерн."
+        },
+        "timeoutMs": {
+          "type": "integer",
+          "minimum": 100,
+          "maximum": 30000,
+          "description": "Лимит времени на шаг (мс)."
+        },
+        "tests": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 50,
+          "description": "Входные строки для проверки .test().",
+          "items": {
+            "type": "object",
+            "required": [
+              "input"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "input": {
+                "type": "string",
+                "maxLength": 2000,
+                "description": "Строка, передаваемая в RegExp.test."
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

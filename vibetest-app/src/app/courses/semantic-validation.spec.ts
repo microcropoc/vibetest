@@ -5,7 +5,10 @@ import {
   minimalValidCourseJson,
 } from './__fixtures__/course-fixtures';
 import { parseCourse } from './parse-course';
-import { validateCourseSemantics } from './semantic-validation';
+import {
+  validateAppendModuleToCourse,
+  validateCourseSemantics,
+} from './semantic-validation';
 
 describe('validateCourseSemantics', () => {
   it('returns no issues for a valid course', () => {
@@ -82,5 +85,66 @@ describe('validateCourseSemantics', () => {
     });
     const course = parseCourse(raw);
     expect(validateCourseSemantics(course)).toEqual([]);
+  });
+});
+
+describe('validateAppendModuleToCourse', () => {
+  it('rejects when course already has 100 modules', () => {
+    const course = parseCourse(minimalValidCourseJson());
+    const modules = Array.from({ length: 100 }, (_, index) => ({
+      moduleId: `00000000-0000-4000-8000-${String(index).padStart(12, '0')}`,
+      title: `M${index}`,
+      steps: [
+        {
+          stepId: `10000000-0000-4000-8000-${String(index).padStart(12, '0')}`,
+          type: 'theory' as const,
+          title: 'T',
+          content: 'x',
+        },
+      ],
+    }));
+    const fullCourse = { ...course, modules };
+    const newModule = {
+      moduleId: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+      title: 'New',
+      steps: [
+        {
+          stepId: 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb',
+          type: 'theory' as const,
+          title: 'T',
+          content: 'y',
+        },
+      ],
+    };
+
+    const issues = validateAppendModuleToCourse(fullCourse, newModule);
+
+    expect(issues).toContainEqual({
+      path: 'course',
+      message: 'Course already has the maximum of 100 modules',
+    });
+  });
+
+  it('rejects when new moduleId collides with courseId', () => {
+    const course = parseCourse(minimalValidCourseJson());
+    const newModule = {
+      moduleId: course.courseId,
+      title: 'New',
+      steps: [
+        {
+          stepId: 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb',
+          type: 'theory' as const,
+          title: 'T',
+          content: 'y',
+        },
+      ],
+    };
+
+    const issues = validateAppendModuleToCourse(course, newModule);
+
+    expect(issues).toContainEqual({
+      path: 'moduleId',
+      message: `Duplicate moduleId ${course.courseId}`,
+    });
   });
 });

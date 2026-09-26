@@ -10,6 +10,7 @@ import {
   FIXTURE_STEP_QUIZ_ID,
   FIXTURE_STEP_THEORY_ID,
   minimalValidImportJson,
+  minimalValidImportModuleJson,
 } from './__fixtures__/course-fixtures';
 import { CourseImportService } from './course-import.service';
 import type { PracticeReferenceValidationDeps } from './validate-practice-references';
@@ -220,5 +221,179 @@ describe('CourseImportService', () => {
     });
     expect(practiceDeps.runJavascriptStep).toHaveBeenCalledOnce();
     expect(await CourseRepository.forDb(db).list()).toHaveLength(0);
+  });
+
+  it('appends module to existing course without wiping progress', async () => {
+    db = createTestVibetestDb();
+    const service = CourseImportService.forDb(db);
+    const progressRepo = ProgressRepository.forDb(db);
+    const appendModuleId = 'e5eebc99-9c0b-4ef8-bb6d-6bb9bd380a77';
+    const appendStepId = 'f6eebc99-9c0b-4ef8-bb6d-6bb9bd380a88';
+    stubImportUuids(IMPORT_UUIDS, [appendModuleId, appendStepId]);
+
+    await service.importCourse(JSON.stringify(minimalValidImportJson()), { regenerateIds: false });
+    await progressRepo.put(
+      {
+        courseId: FIXTURE_COURSE_ID,
+        moduleId: FIXTURE_MODULE_ID,
+        stepId: FIXTURE_STEP_THEORY_ID,
+      },
+      {
+        stepId: FIXTURE_STEP_THEORY_ID,
+        type: 'theory',
+        status: 'completed',
+        lastCheckFailed: false,
+        draft: {},
+      },
+    );
+
+    const result = await service.importModule(JSON.stringify(minimalValidImportModuleJson()), {
+      courseId: FIXTURE_COURSE_ID,
+    });
+
+    expect(result).toEqual({
+      ok: true,
+      courseId: FIXTURE_COURSE_ID,
+      moduleId: appendModuleId,
+      action: 'appended',
+    });
+
+    const course = await CourseRepository.forDb(db).get(FIXTURE_COURSE_ID);
+    expect(course?.modules).toHaveLength(2);
+    expect(course?.modules[1]?.moduleId).toBe(appendModuleId);
+    expect(await progressRepo.listByCourseId(FIXTURE_COURSE_ID)).toHaveLength(1);
+  });
+
+  it('returns target stage when course is missing for module import', async () => {
+    db = createTestVibetestDb();
+    const service = CourseImportService.forDb(db);
+    stubImportUuids(['aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb']);
+
+    const result = await service.importModule(JSON.stringify(minimalValidImportModuleJson()), {
+      courseId: FIXTURE_COURSE_ID,
+    });
+
+    expect(result).toEqual({ ok: false, stage: 'target', courseId: FIXTURE_COURSE_ID });
+  });
+
+  it('returns target before semantic when course is missing', async () => {
+    db = createTestVibetestDb();
+    const service = CourseImportService.forDb(db);
+    stubImportUuids(['aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb']);
+
+    const badQuizModule = {
+      schemaVersion: 1,
+      title: 'Bad quiz',
+      steps: [
+        {
+          type: 'quiz',
+          title: 'Q',
+          content: {
+            question: 'Q',
+            options: ['A', 'B'],
+            correctIndices: [2],
+          },
+        },
+      ],
+    };
+
+    const result = await service.importModule(JSON.stringify(badQuizModule), {
+      courseId: FIXTURE_COURSE_ID,
+    });
+
+    expect(result).toEqual({ ok: false, stage: 'target', courseId: FIXTURE_COURSE_ID });
+  });
+
+  it('returns semantic for invalid quiz indices when course exists', async () => {
+    db = createTestVibetestDb();
+    const service = CourseImportService.forDb(db);
+    stubImportUuids(IMPORT_UUIDS, [
+      'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+      'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb',
+    ]);
+
+    await service.importCourse(JSON.stringify(minimalValidImportJson()), { regenerateIds: false });
+
+    const badQuizModule = {
+      schemaVersion: 1,
+      title: 'Bad quiz',
+      steps: [
+        {
+          type: 'quiz',
+          title: 'Q',
+          content: {
+            question: 'Q',
+            options: ['A', 'B'],
+            correctIndices: [2],
+          },
+        },
+      ],
+    };
+
+    const result = await service.importModule(JSON.stringify(badQuizModule), {
+      courseId: FIXTURE_COURSE_ID,
+    });
+
+    expect(result).toEqual({
+      ok: false,
+      stage: 'semantic',
+      issues: [
+        {
+          path: 'steps[0].content.correctIndices[0]',
+          message: 'Index 2 is out of range for 2 option(s)',
+        },
+      ],
+    });
+    expect((await CourseRepository.forDb(db).get(FIXTURE_COURSE_ID))?.modules).toHaveLength(1);
+  });
+
+  it('remaps practice issues to steps[i] paths for module import', async () => {
+    db = createTestVibetestDb();
+    const practiceDeps = mockPracticeDeps({
+      runJavascriptStep: vi.fn().mockResolvedValue({
+        ok: false,
+        failedTestIndex: 0,
+        message: 'broken',
+      }),
+    });
+    const service = CourseImportService.forDb(db, { practiceValidationDeps: practiceDeps });
+    stubImportUuids(IMPORT_UUIDS, [
+      'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+      'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb',
+    ]);
+
+    await service.importCourse(JSON.stringify(minimalValidImportJson()), { regenerateIds: false });
+
+    const moduleJson = {
+      schemaVersion: 1,
+      title: 'Practice module',
+      steps: [
+        {
+          type: 'javascript',
+          title: 'Add',
+          content: {
+            description: 'd',
+            starterCode: 'const add = () => 0;',
+            referenceSolution: 'const add = () => 1;',
+            setup: '',
+            functionName: 'add',
+            timeoutMs: 2000,
+            tests: [{ args: [] }],
+          },
+        },
+      ],
+    };
+
+    const result = await service.importModule(JSON.stringify(moduleJson), {
+      courseId: FIXTURE_COURSE_ID,
+      validatePracticeSteps: true,
+    });
+
+    expect(result).toEqual({
+      ok: false,
+      stage: 'practice',
+      issues: [{ path: 'steps[0]', message: 'test 0: broken' }],
+    });
+    expect((await CourseRepository.forDb(db).get(FIXTURE_COURSE_ID))?.modules).toHaveLength(1);
   });
 });

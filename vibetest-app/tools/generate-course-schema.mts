@@ -1,4 +1,5 @@
-import { copyFileSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { buildModuleImportSchemaFromCourseImport } from './build-module-import-schema.mts';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { compile } from 'json-schema-to-typescript';
@@ -8,8 +9,21 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const appRoot = join(__dirname, '..');
 const repoSchemaPath = join(appRoot, '..', 'docs', 'schemas', 'course.schema.json');
 const repoImportSchemaPath = join(appRoot, '..', 'docs', 'schemas', 'course-import.schema.json');
+const repoModuleImportSchemaPath = join(
+  appRoot,
+  '..',
+  'docs',
+  'schemas',
+  'module-import.schema.json',
+);
 const publicSchemaPath = join(appRoot, 'public', 'schemas', 'course.schema.json');
 const publicImportSchemaPath = join(appRoot, 'public', 'schemas', 'course-import.schema.json');
+const publicModuleImportSchemaPath = join(
+  appRoot,
+  'public',
+  'schemas',
+  'module-import.schema.json',
+);
 const generatedDir = join(appRoot, 'src', 'app', 'courses', 'generated');
 
 const GENERATED_HEADER = `/* eslint-disable */
@@ -103,11 +117,15 @@ Step/Course Zod composition lives in \`../course-zod-schema.ts\` (manual discrim
 async function main(): Promise<void> {
   const raw = readFileSync(repoSchemaPath, 'utf8');
   const importRaw = readFileSync(repoImportSchemaPath, 'utf8');
+  const importSchema = JSON.parse(importRaw) as JsonSchema;
+  const moduleImportRaw = `${JSON.stringify(buildModuleImportSchemaFromCourseImport(importSchema), null, 2)}\n`;
+  writeFileSync(repoModuleImportSchemaPath, moduleImportRaw, 'utf8');
   const schema = loadSchema();
 
   bundleSchema(raw);
   mkdirSync(dirname(publicImportSchemaPath), { recursive: true });
   writeFileSync(publicImportSchemaPath, importRaw, 'utf8');
+  writeFileSync(publicModuleImportSchemaPath, moduleImportRaw, 'utf8');
   mkdirSync(generatedDir, { recursive: true });
 
   writeFileSync(

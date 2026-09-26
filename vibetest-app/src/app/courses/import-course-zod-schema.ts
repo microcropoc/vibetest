@@ -73,3 +73,14 @@ export const ImportCourseSchema = z
   .strict();
 
 export type ImportCourse = z.infer<typeof ImportCourseSchema>;
+
+/** Author JSON for appending a single module (no moduleId / stepId). */
+export const ImportModuleDocumentSchema = z
+  .object({
+    schemaVersion: z.literal(1),
+    title: z.string().min(1).max(120),
+    steps: z.array(ImportStepSchema).min(1).max(200),
+  })
+  .strict();
+
+export type ImportModuleDocument = z.infer<typeof ImportModuleDocumentSchema>;

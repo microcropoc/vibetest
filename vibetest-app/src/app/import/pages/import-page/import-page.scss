@@ -9,6 +9,36 @@
   font-weight: 600;
 }
 
+.import-page__section {
+  margin-bottom: 2rem;
+}
+
+.import-page__section-title {
+  margin: 0 0 0.5rem;
+  font-size: 1.125rem;
+  font-weight: 600;
+}
+
+.import-page__hint {
+  margin: 0 0 0.75rem;
+  color: var(--color-text-muted);
+  line-height: 1.5;
+}
+
+.import-page__label-text {
+  display: block;
+  margin-bottom: 0.35rem;
+  font-size: 0.9375rem;
+}
+
+.import-page__select {
+  width: 100%;
+  min-height: var(--touch-target-min);
+  padding: 0.5rem;
+  font: inherit;
+  box-sizing: border-box;
+}
+
 .import-page__form {
   display: flex;
   flex-direction: column;

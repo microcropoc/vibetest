@@ -2,6 +2,7 @@ import { Component, signal } from '@angular/core';
 
 import {
   loadBundledCourseImportSchema,
+  loadBundledModuleImportSchema,
   prettyPrintJson,
 } from '../../bundled-course-schema';
 import {
@@ -16,34 +17,56 @@ import {
 })
 export class InfoPage {
   protected readonly loading = signal(true);
-  protected readonly schemaText = signal('');
+  protected readonly courseSchemaText = signal('');
+  protected readonly moduleSchemaText = signal('');
   protected readonly errorMessage = signal<string | null>(null);
-  protected readonly copyFeedback = signal<CopyTextToClipboardResult | null>(null);
+  protected readonly courseCopyFeedback = signal<CopyTextToClipboardResult | null>(null);
+  protected readonly moduleCopyFeedback = signal<CopyTextToClipboardResult | null>(null);
 
   constructor() {
-    void this.loadSchema();
+    void this.loadSchemas();
   }
 
-  protected async onCopySchema(): Promise<void> {
-    const text = this.schemaText();
+  protected async onCopyCourseSchema(): Promise<void> {
+    await this.copySchema(this.courseSchemaText(), (result) =>
+      this.courseCopyFeedback.set(result),
+    );
+  }
+
+  protected async onCopyModuleSchema(): Promise<void> {
+    await this.copySchema(this.moduleSchemaText(), (result) =>
+      this.moduleCopyFeedback.set(result),
+    );
+  }
+
+  private async copySchema(
+    text: string,
+    setFeedback: (result: CopyTextToClipboardResult) => void,
+  ): Promise<void> {
     if (!text) {
       return;
     }
     const result = await copyTextToClipboard(text);
-    this.copyFeedback.set(result);
+    setFeedback(result);
   }
 
-  private async loadSchema(): Promise<void> {
+  private async loadSchemas(): Promise<void> {
     this.loading.set(true);
     this.errorMessage.set(null);
-    this.schemaText.set('');
-    this.copyFeedback.set(null);
+    this.courseSchemaText.set('');
+    this.moduleSchemaText.set('');
+    this.courseCopyFeedback.set(null);
+    this.moduleCopyFeedback.set(null);
 
     try {
-      const schema = await loadBundledCourseImportSchema();
-      this.schemaText.set(prettyPrintJson(schema));
+      const [courseSchema, moduleSchema] = await Promise.all([
+        loadBundledCourseImportSchema(),
+        loadBundledModuleImportSchema(),
+      ]);
+      this.courseSchemaText.set(prettyPrintJson(courseSchema));
+      this.moduleSchemaText.set(prettyPrintJson(moduleSchema));
     } catch {
-      this.errorMessage.set('Не удалось загрузить course-import.schema.json.');
+      this.errorMessage.set('Не удалось загрузить схемы импорта.');
     } finally {
       this.loading.set(false);
     }

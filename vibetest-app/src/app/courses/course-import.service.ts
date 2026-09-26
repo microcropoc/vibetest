@@ -7,9 +7,20 @@ import { ProgressRepository } from '../storage/progress-repository';
 import type { VibetestDb } from '../storage/vibetest-db';
 import { VibetestDbProvider, vibetestDbProviderFor } from '../storage/vibetest-db-provider';
 
-import type { ImportCourseOptions, ImportCourseResult } from './import-types';
+import type {
+  ImportCourseOptions,
+  ImportCourseResult,
+  ImportModuleOptions,
+  ImportModuleResult,
+} from './import-types';
 import { parseImportCourseText } from './import-parse';
+import { parseImportModuleText } from './import-module-parse';
 import { regenerateCourseIds } from './regenerate-course-ids';
+import {
+  courseWithAppendedModule,
+  remapSingleModuleIssuePath,
+  validateAppendModuleToCourse,
+} from './semantic-validation';
 import type { PracticeReferenceValidationDeps } from './validate-practice-references';
 import {
   createWorkerPracticeReferenceValidationDeps,
@@ -103,5 +114,52 @@ export class CourseImportService {
     });
 
     return { ok: true, courseId: course.courseId, action: 'replaced' };
+  }
+
+  async importModule(text: string, options: ImportModuleOptions): Promise<ImportModuleResult> {
+    const parsed = parseImportModuleText(text);
+    if (!parsed.ok) {
+      return parsed;
+    }
+
+    const existing = await this.courses.get(options.courseId);
+    if (existing === undefined) {
+      return { ok: false, stage: 'target', courseId: options.courseId };
+    }
+
+    const module = parsed.module;
+    const appendIssues = validateAppendModuleToCourse(existing, module);
+    if (appendIssues.length > 0) {
+      return { ok: false, stage: 'semantic', issues: appendIssues };
+    }
+
+    if (options.validatePracticeSteps === true) {
+      const practiceCourse = courseWithAppendedModule(existing, module);
+      const moduleIndex = practiceCourse.modules.length - 1;
+      const practiceIssues = await validatePracticeReferences(
+        {
+          ...practiceCourse,
+          modules: [practiceCourse.modules[moduleIndex]!],
+        },
+        this.practiceValidationDeps(),
+      );
+      if (practiceIssues.length > 0) {
+        const remapped = practiceIssues.map((issue) => ({
+          ...issue,
+          path: remapSingleModuleIssuePath(issue.path),
+        }));
+        return { ok: false, stage: 'practice', issues: remapped };
+      }
+    }
+
+    const updated = courseWithAppendedModule(existing, module);
+    await this.courses.put(updated);
+
+    return {
+      ok: true,
+      courseId: options.courseId,
+      moduleId: module.moduleId,
+      action: 'appended',
+    };
   }
 }

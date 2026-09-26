@@ -6,6 +6,21 @@ export const FIXTURE_STEP_JS_ID = 'e4eebc99-9c0b-4ef8-bb6d-6bb9bd380a55';
 export const FIXTURE_STEP_SQLITE_ID = 'f5eebc99-9c0b-4ef8-bb6d-6bb9bd380a66';
 export const FIXTURE_CREATED_AT = '2020-01-15T12:00:00.000Z';
 
+/** Author import JSON for a single module append (no UUIDs). */
+export function minimalValidImportModuleJson(): Record<string, unknown> {
+  return {
+    schemaVersion: 1,
+    title: 'Appended module',
+    steps: [
+      {
+        type: 'theory',
+        title: 'Extra theory',
+        content: 'More content',
+      },
+    ],
+  };
+}
+
 /** Author import JSON (no UUIDs, no createdAt). */
 export function minimalValidImportJson(): Record<string, unknown> {
   return {

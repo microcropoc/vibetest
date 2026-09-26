@@ -17,4 +17,12 @@ describe('bundled course schemas', () => {
     const bundled = JSON.parse(readFileSync(publicPath, 'utf8'));
     expect(bundled).toEqual(docs);
   });
+
+  it('module-import.schema.json matches docs/schemas/module-import.schema.json', () => {
+    const docsPath = join(process.cwd(), '..', 'docs', 'schemas', 'module-import.schema.json');
+    const publicPath = join(process.cwd(), 'public', 'schemas', 'module-import.schema.json');
+    const docs = JSON.parse(readFileSync(docsPath, 'utf8'));
+    const bundled = JSON.parse(readFileSync(publicPath, 'utf8'));
+    expect(bundled).toEqual(docs);
+  });
 });

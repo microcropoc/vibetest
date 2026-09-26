@@ -60,16 +60,17 @@ flowchart TD
 
 ## Формат курса
 
-Две JSON Schema (draft **2020-12**), без перекрёстных `$ref`:
+Три JSON Schema (draft **2020-12**), без перекрёстных `$ref`:
 
 | Схема | Назначение |
 |-------|------------|
-| [course-import.schema.json](./schemas/course-import.schema.json) | JSON автора для **импорта**: `schemaVersion`, `title`, `description`, `modules` / `steps` **без** UUID и без `createdAt` |
+| [course-import.schema.json](./schemas/course-import.schema.json) | JSON автора для **импорта курса**: `schemaVersion`, `title`, `description`, `modules` / `steps` **без** UUID и без `createdAt` |
+| [module-import.schema.json](./schemas/module-import.schema.json) | JSON автора для **добавления одного модуля** в конец существующего курса: `schemaVersion`, `title`, `steps` **без** `moduleId` / `stepId` |
 | [course.schema.json](./schemas/course.schema.json) | **Канонический DTO** в IndexedDB и domain `Course`: обязательны `schemaVersion: 1`, `courseId`, `createdAt` (ISO 8601 date-time), у каждого модуля `moduleId`, у каждого шага `stepId` |
 
-В bundle приложения (`public/schemas/`) — обе схемы + **сгенерированные** Zod и TypeScript; generated-файлы не редактируют вручную.
+В bundle приложения (`public/schemas/`) — все три схемы (`course`, `course-import`, `module-import`) + **сгенерированные** Zod и TypeScript; generated-файлы не редактируют вручную.
 
-У свойств и `$defs` в обеих схемах заданы русские **`description`** (семантика для авторов и LLM при генерации курса); ограничения валидации (`type`, `required`, лимиты длины) не дублируют SPEC, а дополняют его. Для **`javascriptContent`** голая JSON Schema **не** выражает XOR `functionName`|`construct` и reserved words для имён — полная семантика импорта/parse в приложении через **`JavascriptContentWithTargetSchema`** (см. `$comment` в схеме).
+У свойств и `$defs` во всех трёх схемах заданы русские **`description`** (семантика для авторов и LLM при генерации курса/модуля); ограничения валидации (`type`, `required`, лимиты длины) не дублируют SPEC, а дополняют его. Для **`javascriptContent`** голая JSON Schema **не** выражает XOR `functionName`|`construct` и reserved words для имён — полная семантика импорта/parse в приложении через **`JavascriptContentWithTargetSchema`** (см. `$comment` в схеме).
 
 **UUID v4**: RFC 4122, назначаются приложением при импорте (`crypto.randomUUID()`). Дубликаты `courseId` / `moduleId` / `stepId` в одном сохранённом документе → отклонение на этапе semantic validation.
 
@@ -210,9 +211,13 @@ Inline SVG (SMIL/CSS и т.п.); рендер **без санитизации** 
 
 ## Импорт
 
-Вкладка **Импорт**: многострочное поле JSON, флажок **Заменить все ID новыми UUID** (включён по умолчанию при каждом открытии формы), флажок **Проверка js/sql/regex шагов** (выключен по умолчанию), кнопки **Взять из буфера** (вставить текст из clipboard в поле) и **Импортировать**.
+Вкладка **Импорт** — две секции: **импорт курса** и **импорт модуля**.
 
-Поток **Импортировать**:
+**Импорт курса:** многострочное поле JSON, флажок **Заменить все ID новыми UUID** (включён по умолчанию при каждом открытии формы), флажок **Проверка js/sql/regex шагов** (выключен по умолчанию), кнопки **Взять из буфера** (вставить текст из clipboard в поле) и **Импортировать**.
+
+**Импорт модуля:** выпадающий список существующих курсов (по `title`, порядок как в списке курсов), поле JSON по [module-import.schema.json](./schemas/module-import.schema.json), флажок **Проверка js/sql/regex шагов** (выключен по умолчанию), **Взять из буфера**, **Добавить модуль**. Успех — модуль дописывается **в конец** `modules[]` выбранного курса; **прогресс** существующих шагов **не** сбрасывается. Лимит **100** модулей на курс. Курс в IndexedDB по-прежнему один JSON-документ на `courseId`.
+
+Поток **Импортировать** (курс):
 
 1. Разбор JSON: чистый текст import-DTO или **один** fenced-блок ` ```json … ``` ` (без текста до/после блока).
 2. Валидация Zod по [course-import.schema.json](./schemas/course-import.schema.json) (JSON **без** UUID и `createdAt`).
@@ -225,6 +230,18 @@ Inline SVG (SMIL/CSS и т.п.); рендер **без санитизации** 
 При ошибках — **все проблемы достигнутого этапа** (JSON parse → Zod → semantic → practice) **под полем импорта**; после сбоя этапа следующие шаги не выполняются; курс не сохраняется.
 
 **Create / replace:** при включённом флажке замены ID импорт **всегда создаёт новый** курс (диалог «заменить» не показывается). При выключенном флажке: если сгенерированный при шаге 3 `courseId` уже есть в хранилище (повторный импорт с тем же результатом UUID) — диалог «заменить»; подтверждение заменяет документ курса и **удаляет прогресс**; отмена — без записи. Обычно каждый импорт даёт новые UUID → создаётся новый курс.
+
+Поток **Добавить модуль**:
+
+1. Разбор JSON: чистый текст module-import-DTO или **один** fenced-блок ` ```json … ``` `.
+2. Валидация Zod по [module-import.schema.json](./schemas/module-import.schema.json) (JSON **без** `moduleId` / `stepId`).
+3. Преобразование → canonical `Module`: новые `moduleId` и `stepId`.
+4. Если выбранный `courseId` отсутствует в хранилище — этап **target**, модуль не сохраняется.
+5. Semantic на append: лимит **100** модулей; уникальность новых ID относительно `courseId` / существующих `moduleId` / `stepId` курса; quiz indices и sqlite `reset` для нового модуля.
+6. Если включена **Проверка js/sql/regex шагов** — dual-run только по шагам нового модуля; при ошибке этап **practice**, курс не меняется.
+7. Успех — `put` обновлённого документа курса (`modules` с новым модулем в конце); **прогресс** существующих шагов **не** сбрасывается.
+
+При ошибках — **все проблемы достигнутого этапа** (JSON parse → Zod → target / semantic → practice) **под формой импорта модуля**.
 
 ## Хранилище (IndexedDB)
 
@@ -274,7 +291,7 @@ Inline SVG (SMIL/CSS и т.п.); рендер **без санитизации** 
 
 ### Инфо
 
-Просмотр формата для авторов: **bundled** [course-import.schema.json](./schemas/course-import.schema.json) — форматированный JSON (read-only), схема **import-DTO** (без UUID и `createdAt`). Кнопка **Копировать** — текст схемы в буфер обмена. На MVP без отдельного UI-рендера полей. Канонический [course.schema.json](./schemas/course.schema.json) в UI не показывается.
+Просмотр формата для авторов: **bundled** [course-import.schema.json](./schemas/course-import.schema.json) и [module-import.schema.json](./schemas/module-import.schema.json) — форматированный JSON (read-only), import-DTO (без UUID и `createdAt` у курса; без `moduleId` / `stepId` у модуля). У каждой схемы кнопка **Копировать**. На MVP без отдельного UI-рендера полей. Канонический [course.schema.json](./schemas/course.schema.json) в UI не показывается.
 
 ### Генерация промта
 

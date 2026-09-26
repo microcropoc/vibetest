@@ -3,21 +3,39 @@ import { provideRouter, Router } from '@angular/router';
 
 import { CourseImportService } from '../../../courses/course-import.service';
 import type { ImportCourseResult } from '../../../courses/import-types';
+import { CourseRepository } from '../../../storage/course-repository';
 
 import { ImportPage } from './import-page';
 
 describe('ImportPage', () => {
   let importCourse: ReturnType<typeof vi.fn>;
+  let importModule: ReturnType<typeof vi.fn>;
+  let listCourses: ReturnType<typeof vi.fn>;
 
   beforeEach(async () => {
     importCourse = vi.fn();
+    importModule = vi.fn();
+    listCourses = vi.fn().mockResolvedValue([
+      {
+        courseId: 'course-1',
+        createdAt: '2020-01-01T00:00:00.000Z',
+        title: 'Course one',
+        description: 'd',
+        schemaVersion: 1,
+        modules: [],
+      },
+    ]);
     await TestBed.configureTestingModule({
       imports: [ImportPage],
       providers: [
         provideRouter([{ path: 'import', component: ImportPage }]),
         {
           provide: CourseImportService,
-          useValue: { importCourse },
+          useValue: { importCourse, importModule },
+        },
+        {
+          provide: CourseRepository,
+          useValue: { list: listCourses },
         },
       ],
     }).compileComponents();
@@ -63,7 +81,9 @@ describe('ImportPage', () => {
     checkbox.dispatchEvent(new Event('change', { bubbles: true }));
     await fixture.whenStable();
 
-    const textarea = fixture.nativeElement.querySelector('textarea') as HTMLTextAreaElement;
+    const textarea = fixture.nativeElement.querySelector(
+      'textarea[name="courseJson"]',
+    ) as HTMLTextAreaElement;
     textarea.value = '{}';
     textarea.dispatchEvent(new Event('input'));
     fixture.nativeElement.querySelector('form')!.dispatchEvent(new Event('submit'));
@@ -85,7 +105,9 @@ describe('ImportPage', () => {
 
     const fixture = createFixture();
     await fixture.whenStable();
-    const textarea = fixture.nativeElement.querySelector('textarea') as HTMLTextAreaElement;
+    const textarea = fixture.nativeElement.querySelector(
+      'textarea[name="courseJson"]',
+    ) as HTMLTextAreaElement;
     textarea.value = '{';
     textarea.dispatchEvent(new Event('input'));
     const form = fixture.nativeElement.querySelector('form') as HTMLFormElement;
@@ -118,7 +140,9 @@ describe('ImportPage', () => {
     checkbox.dispatchEvent(new Event('change', { bubbles: true }));
     await fixture.whenStable();
 
-    const textarea = fixture.nativeElement.querySelector('textarea') as HTMLTextAreaElement;
+    const textarea = fixture.nativeElement.querySelector(
+      'textarea[name="courseJson"]',
+    ) as HTMLTextAreaElement;
     textarea.value = '{}';
     textarea.dispatchEvent(new Event('input'));
     const form = fixture.nativeElement.querySelector('form') as HTMLFormElement;
@@ -152,7 +176,9 @@ describe('ImportPage', () => {
     checkbox.checked = false;
     checkbox.dispatchEvent(new Event('change', { bubbles: true }));
 
-    const textarea = fixture.nativeElement.querySelector('textarea') as HTMLTextAreaElement;
+    const textarea = fixture.nativeElement.querySelector(
+      'textarea[name="courseJson"]',
+    ) as HTMLTextAreaElement;
     textarea.value = '{"courseId":"course-1"}';
     textarea.dispatchEvent(new Event('input'));
     fixture.nativeElement.querySelector('form')!.dispatchEvent(new Event('submit'));
@@ -183,7 +209,9 @@ describe('ImportPage', () => {
     const router = TestBed.inject(Router);
     const navigateSpy = vi.spyOn(router, 'navigate').mockResolvedValue(true);
 
-    const textarea = fixture.nativeElement.querySelector('textarea') as HTMLTextAreaElement;
+    const textarea = fixture.nativeElement.querySelector(
+      'textarea[name="courseJson"]',
+    ) as HTMLTextAreaElement;
     textarea.value = '{}';
     textarea.dispatchEvent(new Event('input'));
     fixture.nativeElement.querySelector('form')!.dispatchEvent(new Event('submit'));
@@ -202,11 +230,42 @@ describe('ImportPage', () => {
     const fixture = createFixture();
     await fixture.whenStable();
     const button = fixture.nativeElement.querySelector(
-      'button.import-page__button',
+      'section[aria-labelledby="import-course-heading"] button.import-page__button',
     ) as HTMLButtonElement;
     button.click();
     await fixture.whenStable();
 
     expect(fixture.nativeElement.textContent).toContain('Нет доступа к буферу обмена');
+  });
+
+  it('calls importModule with selected course', async () => {
+    importModule.mockResolvedValue({
+      ok: true,
+      courseId: 'course-1',
+      moduleId: 'module-1',
+      action: 'appended',
+    });
+
+    const fixture = createFixture();
+    await fixture.whenStable();
+    const router = TestBed.inject(Router);
+    vi.spyOn(router, 'navigate').mockResolvedValue(true);
+
+    const moduleTextarea = fixture.nativeElement.querySelector(
+      'textarea[name="moduleJson"]',
+    ) as HTMLTextAreaElement;
+    moduleTextarea.value = '{"schemaVersion":1}';
+    moduleTextarea.dispatchEvent(new Event('input'));
+
+    const moduleForm = fixture.nativeElement.querySelector(
+      'section[aria-labelledby="import-module-heading"] form',
+    ) as HTMLFormElement;
+    moduleForm.dispatchEvent(new Event('submit'));
+    await fixture.whenStable();
+
+    expect(importModule).toHaveBeenCalledWith('{"schemaVersion":1}', {
+      courseId: 'course-1',
+      validatePracticeSteps: false,
+    });
   });
 });

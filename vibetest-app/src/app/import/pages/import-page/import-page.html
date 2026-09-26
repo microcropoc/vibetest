@@ -1,75 +1,171 @@
 <section class="import-page">
   <h1 class="import-page__title">Импорт</h1>
-  <p class="import-page__hint">
-    JSON по формату import-DTO (без UUID и без <code>createdAt</code>) или один блок
-    <code>```json … ```</code> из LLM. Схема: <code>course-import.schema.json</code>.
-  </p>
 
-  <form class="import-page__form" (submit)="onSubmit($event)">
-    <label class="import-page__label">
-      <textarea
-        class="import-page__json"
-        name="courseJson"
-        aria-label="JSON курса"
-        [value]="jsonText()"
-        (input)="onJsonInput($event)"
-        autocomplete="off"
-        spellcheck="false"
-      ></textarea>
-    </label>
-
-    <label class="import-page__checkbox">
-      <input
-        type="checkbox"
-        name="regenerateIds"
-        [checked]="regenerateIds()"
-        (change)="onRegenerateIdsChange($event)"
-      />
-      Заменить все ID новыми UUID
-    </label>
-
-    <label class="import-page__checkbox">
-      <input
-        type="checkbox"
-        name="validatePracticeSteps"
-        [checked]="validatePracticeSteps()"
-        (change)="onValidatePracticeStepsChange($event)"
-      />
-      Проверка js/sql/regex шагов
-    </label>
-
-    <div class="import-page__actions">
-      <button type="button" class="import-page__button" (click)="onPasteFromClipboard()">
-        Взять из буфера
-      </button>
-      <button type="submit" class="import-page__button" [disabled]="importing()">
-        Импортировать
-      </button>
-    </div>
-  </form>
-
-  @if (clipboardMessage()) {
-    <p class="import-page__status import-page__status--info" role="status">
-      {{ clipboardMessage() }}
+  <section class="import-page__section" aria-labelledby="import-course-heading">
+    <h2 id="import-course-heading" class="import-page__section-title">Импорт курса</h2>
+    <p class="import-page__hint">
+      JSON по формату import-DTO (без UUID и без <code>createdAt</code>) или один блок
+      <code>```json … ```</code> из LLM. Схема: <code>course-import.schema.json</code>.
     </p>
-  }
 
-  @if (successMessage()) {
-    <p class="import-page__status import-page__status--success" role="status">
-      {{ successMessage() }}
+    <form class="import-page__form" (submit)="onSubmit($event)">
+      <label class="import-page__label">
+        <textarea
+          class="import-page__json"
+          name="courseJson"
+          aria-label="JSON курса"
+          [value]="jsonText()"
+          (input)="onJsonInput($event)"
+          autocomplete="off"
+          spellcheck="false"
+        ></textarea>
+      </label>
+
+      <label class="import-page__checkbox">
+        <input
+          type="checkbox"
+          name="regenerateIds"
+          [checked]="regenerateIds()"
+          (change)="onRegenerateIdsChange($event)"
+        />
+        Заменить все ID новыми UUID
+      </label>
+
+      <label class="import-page__checkbox">
+        <input
+          type="checkbox"
+          name="validatePracticeSteps"
+          [checked]="validatePracticeSteps()"
+          (change)="onValidatePracticeStepsChange($event)"
+        />
+        Проверка js/sql/regex шагов
+      </label>
+
+      <div class="import-page__actions">
+        <button type="button" class="import-page__button" (click)="onPasteCourseFromClipboard()">
+          Взять из буфера
+        </button>
+        <button type="submit" class="import-page__button" [disabled]="importing()">
+          Импортировать
+        </button>
+      </div>
+    </form>
+
+    @if (clipboardMessage()) {
+      <p class="import-page__status import-page__status--info" role="status">
+        {{ clipboardMessage() }}
+      </p>
+    }
+
+    @if (successMessage()) {
+      <p class="import-page__status import-page__status--success" role="status">
+        {{ successMessage() }}
+      </p>
+    }
+
+    @if (issues().length > 0 && issueStage()) {
+      <div class="import-page__errors" role="alert">
+        <p class="import-page__errors-title">{{ stageHeading() }}</p>
+        <ul class="import-page__errors-list">
+          @for (issue of issues(); track issue.path + issue.message) {
+            <li class="import-page__errors-item">{{ formatIssue(issue) }}</li>
+          }
+        </ul>
+      </div>
+    }
+  </section>
+
+  <section class="import-page__section" aria-labelledby="import-module-heading">
+    <h2 id="import-module-heading" class="import-page__section-title">Импорт модуля</h2>
+    <p class="import-page__hint">
+      JSON одного модуля по <code>module-import.schema.json</code>; модуль добавляется в
+      <strong>конец</strong> выбранного курса. Прогресс существующих шагов не меняется.
     </p>
-  }
 
-  @if (issues().length > 0 && issueStage()) {
-    <div class="import-page__errors" role="alert">
-      <p class="import-page__errors-title">{{ stageHeading() }}</p>
-      <ul class="import-page__errors-list">
-        @for (issue of issues(); track issue.path + issue.message) {
-          <li class="import-page__errors-item">{{ formatIssue(issue) }}</li>
-        }
-      </ul>
-    </div>
-  }
+    <form class="import-page__form" (submit)="onModuleSubmit($event)">
+      <label class="import-page__label">
+        <span class="import-page__label-text">Курс</span>
+        <select
+          class="import-page__select"
+          name="targetCourseId"
+          [value]="selectedCourseId()"
+          (change)="onCourseSelectChange($event)"
+          [disabled]="courseOptions().length === 0"
+          aria-label="Курс для добавления модуля"
+        >
+          @if (courseOptions().length === 0) {
+            <option value="">Нет импортированных курсов</option>
+          } @else {
+            @for (option of courseOptions(); track option.courseId) {
+              <option [value]="option.courseId">{{ option.title }}</option>
+            }
+          }
+        </select>
+      </label>
+
+      <label class="import-page__label">
+        <textarea
+          class="import-page__json"
+          name="moduleJson"
+          aria-label="JSON модуля"
+          [value]="moduleJsonText()"
+          (input)="onModuleJsonInput($event)"
+          autocomplete="off"
+          spellcheck="false"
+        ></textarea>
+      </label>
+
+      <label class="import-page__checkbox">
+        <input
+          type="checkbox"
+          name="moduleValidatePracticeSteps"
+          [checked]="moduleValidatePracticeSteps()"
+          (change)="onModuleValidatePracticeStepsChange($event)"
+        />
+        Проверка js/sql/regex шагов
+      </label>
+
+      <div class="import-page__actions">
+        <button
+          type="button"
+          class="import-page__button"
+          (click)="onPasteModuleFromClipboard()"
+        >
+          Взять из буфера
+        </button>
+        <button
+          type="submit"
+          class="import-page__button"
+          [disabled]="moduleImporting() || courseOptions().length === 0"
+        >
+          Добавить модуль
+        </button>
+      </div>
+    </form>
+
+    @if (moduleClipboardMessage()) {
+      <p class="import-page__status import-page__status--info" role="status">
+        {{ moduleClipboardMessage() }}
+      </p>
+    }
+
+    @if (moduleSuccessMessage()) {
+      <p class="import-page__status import-page__status--success" role="status">
+        {{ moduleSuccessMessage() }}
+      </p>
+    }
+
+    @if (moduleIssues().length > 0 && moduleIssueStage()) {
+      <div class="import-page__errors" role="alert">
+        <p class="import-page__errors-title">{{ moduleStageHeading() }}</p>
+        <ul class="import-page__errors-list">
+          @for (issue of moduleIssues(); track issue.path + issue.message) {
+            <li class="import-page__errors-item">{{ formatIssue(issue) }}</li>
+          }
+        </ul>
+      </div>
+    }
+  </section>
 </section>
 
 <app-confirm-dialog

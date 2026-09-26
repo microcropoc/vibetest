@@ -34,3 +34,26 @@ export type ImportCourseResult =
   | ImportCourseSuccess
   | ImportCourseValidationFailure
   | ImportCourseReplaceRequired;
+
+export type ImportModuleOptions = {
+  readonly courseId: string;
+  readonly validatePracticeSteps?: boolean;
+};
+
+export type ImportModuleSuccess = {
+  readonly ok: true;
+  readonly courseId: string;
+  readonly moduleId: string;
+  readonly action: 'appended';
+};
+
+export type ImportModuleNotFound = {
+  readonly ok: false;
+  readonly stage: 'target';
+  readonly courseId: string;
+};
+
+export type ImportModuleResult =
+  | ImportModuleSuccess
+  | ImportCourseValidationFailure
+  | ImportModuleNotFound;

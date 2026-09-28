@@ -1,0 +1,104 @@
+{
+  "schemaVersion": 1,
+  "title": "День 11. InventoryReservation",
+  "steps": [
+    {
+      "type": "theory",
+      "title": "Условие",
+      "content": "## Условие\n\nРезервирование товара на складе при оформлении заказа.\n\n```csharp\nbool TryReserve(string sku, int quantity);\nvoid Release(string sku, int quantity);\nint Available(string sku);\n```\n\n**Требования**\n\n- `Available = остаток − резерв`, не уходит в минус.\n- Конкурентные `TryReserve` не приводят к overselling.\n- `quantity <= 0` → false; `Release` не делает резерв отрицательным.\n\n**Пример:** остаток 5, два параллельных `TryReserve(\"sku\", 3)` → ровно один true, `Available(\"sku\")` = 2."
+    },
+    {
+      "type": "theory",
+      "title": "Уточняющие вопросы и план",
+      "content": "## Уточняющие вопросы\n\n- Резерв истекает, если заказ не оплатили?\n- Остаток меняется извне (поставки)?\n- Один склад или несколько?\n\n## План\n\n1. Словари остатков и резервов под `lock`.\n2. `TryReserve`: проверка `onHand − held >= quantity` и увеличение резерва в одной секции.\n3. `Release`: уменьшить резерв с нижней границей 0.\n4. Тест: много параллельных резервов → сумма успешных не больше остатка."
+    },
+    {
+      "type": "svg",
+      "title": "Схема: InventoryReservation",
+      "content": {
+        "caption": "Компонент InventoryReservation",
+        "description": "Поток данных и ограничение ресурсов.",
+        "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 320 120\" width=\"100%\" role=\"img\" aria-label=\"Компонент InventoryReservation\"><rect id=\"ozon-d11-n0\" x=\"16\" y=\"36\" width=\"88\" height=\"48\" rx=\"6\" fill=\"#e3f2fd\" stroke=\"#1565c0\"/><text id=\"ozon-d11-t0\" x=\"60\" y=\"64\" text-anchor=\"middle\" font-size=\"9\" fill=\"#0d47a1\">Reserve</text><rect id=\"ozon-d11-n1\" x=\"116\" y=\"36\" width=\"88\" height=\"48\" rx=\"6\" fill=\"#e3f2fd\" stroke=\"#1565c0\"/><text id=\"ozon-d11-t1\" x=\"160\" y=\"64\" text-anchor=\"middle\" font-size=\"9\" fill=\"#0d47a1\">Stock lock</text><line id=\"ozon-d11-a1\" x1=\"104\" y1=\"60\" x2=\"116\" y2=\"60\" stroke=\"#37474f\"/><rect id=\"ozon-d11-n2\" x=\"216\" y=\"36\" width=\"88\" height=\"48\" rx=\"6\" fill=\"#e3f2fd\" stroke=\"#1565c0\"/><text id=\"ozon-d11-t2\" x=\"260\" y=\"64\" text-anchor=\"middle\" font-size=\"9\" fill=\"#0d47a1\">Release</text><line id=\"ozon-d11-a2\" x1=\"204\" y1=\"60\" x2=\"216\" y2=\"60\" stroke=\"#37474f\"/></svg>"
+      }
+    },
+    {
+      "type": "theory",
+      "title": "Решение",
+      "content": "## Полный код\n\n```csharp\npublic interface IInventoryReservation\n{\n    bool TryReserve(string sku, int quantity);\n    void Release(string sku, int quantity);\n    int Available(string sku);\n}\n\npublic sealed class InventoryReservation : IInventoryReservation\n{\n    private readonly object _sync = new();\n    private readonly Dictionary<string, int> _stock = new();\n    private readonly Dictionary<string, int> _reserved = new();\n\n    public InventoryReservation(IReadOnlyDictionary<string, int> initialStock)\n    {\n        foreach (var kv in initialStock)\n            _stock[kv.Key] = kv.Value;\n    }\n\n    public bool TryReserve(string sku, int quantity)\n    {\n        if (quantity <= 0) return false;\n        lock (_sync)\n        {\n            _stock.TryGetValue(sku, out var onHand);\n            _reserved.TryGetValue(sku, out var held);\n            if (onHand - held < quantity) return false;\n            _reserved[sku] = held + quantity;\n            return true;\n        }\n    }\n\n    public void Release(string sku, int quantity)\n    {\n        lock (_sync)\n        {\n            _reserved.TryGetValue(sku, out var held);\n            var next = Math.Max(0, held - quantity);\n            if (next == 0) _reserved.Remove(sku);\n            else _reserved[sku] = next;\n        }\n    }\n\n    public int Available(string sku)\n    {\n        lock (_sync)\n        {\n            _stock.TryGetValue(sku, out var onHand);\n            _reserved.TryGetValue(sku, out var held);\n            return onHand - held;\n        }\n    }\n}\n```"
+    },
+    {
+      "type": "theory",
+      "title": "Ошибки и крайние случаи",
+      "content": "## Ошибки\n\n- Проверка остатка и списание в разных критических секциях → overselling.\n- Отрицательный резерв после двойного `Release`.\n- Хранить только `Available` без разделения на остаток и резерв — нельзя отменить резерв корректно.\n\n## Крайние случаи\n\n- Неизвестный sku → остаток 0, резерв невозможен.\n- Резерв ровно на весь остаток → `Available = 0`."
+    },
+    {
+      "type": "theory",
+      "title": "Что спросят дальше",
+      "content": "## Что спросят дальше\n\n- Как то же в БД: `UPDATE … SET reserved = reserved + @q WHERE on_hand - reserved >= @q`.\n- Резервы с TTL и фоновое снятие.\n- Сага: компенсация резерва при отказе оплаты."
+    },
+    {
+      "type": "quiz",
+      "title": "Quiz 1/4",
+      "content": {
+        "question": "Остаток 5, параллельно два `TryReserve(3)`. Сколько успешных?",
+        "options": [
+          "Оба: каждый видел остаток 5",
+          "Ровно один",
+          "Ни одного: запросы конфликтуют",
+          "Зависит от порядка — может быть и два"
+        ],
+        "correctIndices": [
+          1
+        ]
+      }
+    },
+    {
+      "type": "quiz",
+      "title": "Quiz 2/4",
+      "content": {
+        "question": "Что приводит к overselling?",
+        "options": [
+          "Проверка и резерв в разных критических секциях",
+          "Использование `Dictionary` для остатков",
+          "Вызов `Release` с количеством больше резерва",
+          "Возврат `false` при `quantity <= 0`"
+        ],
+        "correctIndices": [
+          0
+        ]
+      }
+    },
+    {
+      "type": "quiz",
+      "title": "Quiz 3/4",
+      "content": {
+        "question": "Зачем в `Release` `Math.Max(0, held - quantity)`?",
+        "options": [
+          "Чтобы остаток не превысил начальный",
+          "Чтобы вернуть освободившийся товар следующему покупателю",
+          "Чтобы не держать `lock` слишком долго",
+          "Лишний `Release` не сделает резерв отрицательным"
+        ],
+        "correctIndices": [
+          3
+        ]
+      }
+    },
+    {
+      "type": "quiz",
+      "title": "Quiz 4/4",
+      "content": {
+        "question": "Как то же требование реализуют в SQL одним запросом?",
+        "options": [
+          "`SELECT` остатка, затем `UPDATE` без условия",
+          "`INSERT` в таблицу резервов без проверки",
+          "Условный `UPDATE … WHERE on_hand - reserved >= @q`",
+          "Уровень изоляции `READ UNCOMMITTED`"
+        ],
+        "correctIndices": [
+          2
+        ]
+      }
+    }
+  ]
+}

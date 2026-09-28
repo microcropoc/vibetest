@@ -1,0 +1,104 @@
+{
+  "schemaVersion": 1,
+  "title": "День 18. PriorityJobQueue",
+  "steps": [
+    {
+      "type": "theory",
+      "title": "Условие",
+      "content": "## Условие\n\nОчередь фоновых задач: срочные (пересчёт цены) раньше обычных (обновление описания).\n\n```csharp\nvoid Enqueue(Job job);          // Job(string Id, int Priority)\nbool TryDequeue(out Job job);\n```\n\n**Требования**\n\n- Сначала задачи с большим `Priority`.\n- При равном приоритете — FIFO.\n- Потокобезопасность.\n\n**Пример:** Enqueue a(1), b(1), c(2) → Dequeue: c, a, b."
+    },
+    {
+      "type": "theory",
+      "title": "Уточняющие вопросы и план",
+      "content": "## Уточняющие вопросы\n\n- Больший приоритет — большее число?\n- Возможен ли голод низкоприоритетных задач?\n- Нужно ли асинхронное ожидание задачи (`DequeueAsync`)?\n\n## План\n\n1. `PriorityQueue<Job, (int Priority, long Seq)>`.\n2. Приоритет `-job.Priority` — у `PriorityQueue` min-куча.\n3. `Seq` — счётчик вставок для FIFO.\n4. Все операции под `lock`: `PriorityQueue` не потокобезопасна."
+    },
+    {
+      "type": "svg",
+      "title": "Схема: PriorityJobQueue",
+      "content": {
+        "caption": "Компонент PriorityJobQueue",
+        "description": "Поток данных и ограничение ресурсов.",
+        "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 320 120\" width=\"100%\" role=\"img\" aria-label=\"Компонент PriorityJobQueue\"><rect id=\"ozon-d18-n0\" x=\"16\" y=\"36\" width=\"88\" height=\"48\" rx=\"6\" fill=\"#e3f2fd\" stroke=\"#1565c0\"/><text id=\"ozon-d18-t0\" x=\"60\" y=\"64\" text-anchor=\"middle\" font-size=\"9\" fill=\"#0d47a1\">Enqueue job</text><rect id=\"ozon-d18-n1\" x=\"116\" y=\"36\" width=\"88\" height=\"48\" rx=\"6\" fill=\"#e3f2fd\" stroke=\"#1565c0\"/><text id=\"ozon-d18-t1\" x=\"160\" y=\"64\" text-anchor=\"middle\" font-size=\"9\" fill=\"#0d47a1\">Priority queue</text><line id=\"ozon-d18-a1\" x1=\"104\" y1=\"60\" x2=\"116\" y2=\"60\" stroke=\"#37474f\"/><rect id=\"ozon-d18-n2\" x=\"216\" y=\"36\" width=\"88\" height=\"48\" rx=\"6\" fill=\"#e3f2fd\" stroke=\"#1565c0\"/><text id=\"ozon-d18-t2\" x=\"260\" y=\"64\" text-anchor=\"middle\" font-size=\"9\" fill=\"#0d47a1\">Dequeue FIFO tie</text><line id=\"ozon-d18-a2\" x1=\"204\" y1=\"60\" x2=\"216\" y2=\"60\" stroke=\"#37474f\"/></svg>"
+      }
+    },
+    {
+      "type": "theory",
+      "title": "Решение",
+      "content": "## Полный код\n\n```csharp\nusing System.Diagnostics.CodeAnalysis;\n\npublic sealed record Job(string Id, int Priority);\n\npublic interface IPriorityJobQueue\n{\n    void Enqueue(Job job);\n    bool TryDequeue([MaybeNullWhen(false)] out Job job);\n}\n\npublic sealed class PriorityJobQueue : IPriorityJobQueue\n{\n    private readonly object _sync = new();\n    private readonly PriorityQueue<Job, (int Priority, long Seq)> _queue = new();\n    private long _sequence;\n\n    public void Enqueue(Job job)\n    {\n        lock (_sync)\n        {\n            _queue.Enqueue(job, (-job.Priority, _sequence++));\n        }\n    }\n\n    public bool TryDequeue([MaybeNullWhen(false)] out Job job)\n    {\n        lock (_sync)\n        {\n            return _queue.TryDequeue(out job, out _);\n        }\n    }\n}\n```"
+    },
+    {
+      "type": "theory",
+      "title": "Ошибки и крайние случаи",
+      "content": "## Ошибки\n\n- `PriorityQueue` без блокировки при параллельном доступе — порча кучи.\n- Нет sequence: `PriorityQueue` не стабильна, FIFO при равном приоритете не гарантирован.\n- Забыть, что `PriorityQueue` — min-куча, и получить обратный порядок.\n\n## Крайние случаи\n\n- `TryDequeue` на пустой очереди → false.\n- Поток срочных задач — обычные никогда не выполнятся (обсудить aging)."
+    },
+    {
+      "type": "theory",
+      "title": "Что спросят дальше",
+      "content": "## Что спросят дальше\n\n- `DequeueAsync` с ожиданием через `SemaphoreSlim` или `Channel`.\n- Aging: повышать приоритет давно ждущих задач.\n- Персистентная очередь с приоритетами (PostgreSQL + `SKIP LOCKED`)."
+    },
+    {
+      "type": "quiz",
+      "title": "Quiz 1/4",
+      "content": {
+        "question": "Enqueue a(1), b(1), c(2). Порядок `TryDequeue`?",
+        "options": [
+          "a, b, c",
+          "c, b, a",
+          "c, a, b",
+          "a, c, b"
+        ],
+        "correctIndices": [
+          2
+        ]
+      }
+    },
+    {
+      "type": "quiz",
+      "title": "Quiz 2/4",
+      "content": {
+        "question": "Зачем `Seq` в ключе приоритета?",
+        "options": [
+          "Чтобы ключи были уникальны, иначе `Enqueue` бросит исключение",
+          "Для ускорения `TryDequeue`",
+          "Чтобы ограничить размер очереди",
+          "`PriorityQueue` не стабильна — без счётчика нет FIFO"
+        ],
+        "correctIndices": [
+          3
+        ]
+      }
+    },
+    {
+      "type": "quiz",
+      "title": "Quiz 3/4",
+      "content": {
+        "question": "Почему приоритет кладётся как `-job.Priority`?",
+        "options": [
+          "`PriorityQueue` отдаёт минимальный приоритет первым",
+          "Чтобы отрицательные приоритеты стали положительными",
+          "Так `Seq` сравнивается раньше приоритета",
+          "Это требование `IComparer<int>`"
+        ],
+        "correctIndices": [
+          0
+        ]
+      }
+    },
+    {
+      "type": "quiz",
+      "title": "Quiz 4/4",
+      "content": {
+        "question": "Что будет без `lock` при параллельных `Enqueue`?",
+        "options": [
+          "Ничего: `PriorityQueue` потокобезопасна",
+          "Возможна порча внутренней кучи и потеря задач",
+          "Только нарушение FIFO при равных приоритетах",
+          "`Enqueue` будет ждать, пока завершится предыдущий"
+        ],
+        "correctIndices": [
+          1
+        ]
+      }
+    }
+  ]
+}

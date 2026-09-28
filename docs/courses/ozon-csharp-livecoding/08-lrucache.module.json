@@ -1,0 +1,104 @@
+{
+  "schemaVersion": 1,
+  "title": "День 8. LruCache",
+  "steps": [
+    {
+      "type": "theory",
+      "title": "Условие",
+      "content": "## Условие\n\nКэш карточек товаров с ограниченной ёмкостью: при переполнении вытесняется давно неиспользуемый элемент.\n\n```csharp\nbool TryGet(TKey key, out TValue value);\nvoid Set(TKey key, TValue value);\n```\n\n**Требования**\n\n- Обе операции за O(1).\n- `TryGet` при попадании делает ключ самым свежим.\n- При превышении `capacity` вытесняется самый давно использованный ключ.\n- Потокобезопасность.\n\n**Пример:** `capacity = 2`: Set A, Set B, TryGet A, Set C → B вытеснен, A и C остались."
+    },
+    {
+      "type": "theory",
+      "title": "Уточняющие вопросы и план",
+      "content": "## Уточняющие вопросы\n\n- Считается ли `Set` существующего ключа использованием?\n- Ёмкость в элементах или в байтах?\n- Нагрузка на чтение и запись — можно ли обойтись одним `lock`?\n\n## План\n\n1. `Dictionary<TKey, LinkedListNode>` + `LinkedList` в порядке использования.\n2. Попадание: перенести узел в начало.\n3. Вставка: добавить в начало, при переполнении удалить хвост и его ключ из словаря.\n4. Все операции под одним `lock`."
+    },
+    {
+      "type": "svg",
+      "title": "Схема: LruCache",
+      "content": {
+        "caption": "Компонент LruCache",
+        "description": "Поток данных и ограничение ресурсов.",
+        "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 320 120\" width=\"100%\" role=\"img\" aria-label=\"Компонент LruCache\"><rect id=\"ozon-d08-n0\" x=\"16\" y=\"36\" width=\"88\" height=\"48\" rx=\"6\" fill=\"#e3f2fd\" stroke=\"#1565c0\"/><text id=\"ozon-d08-t0\" x=\"60\" y=\"64\" text-anchor=\"middle\" font-size=\"9\" fill=\"#0d47a1\">Get touch</text><rect id=\"ozon-d08-n1\" x=\"116\" y=\"36\" width=\"88\" height=\"48\" rx=\"6\" fill=\"#e3f2fd\" stroke=\"#1565c0\"/><text id=\"ozon-d08-t1\" x=\"160\" y=\"64\" text-anchor=\"middle\" font-size=\"9\" fill=\"#0d47a1\">Dict+list</text><line id=\"ozon-d08-a1\" x1=\"104\" y1=\"60\" x2=\"116\" y2=\"60\" stroke=\"#37474f\"/><rect id=\"ozon-d08-n2\" x=\"216\" y=\"36\" width=\"88\" height=\"48\" rx=\"6\" fill=\"#e3f2fd\" stroke=\"#1565c0\"/><text id=\"ozon-d08-t2\" x=\"260\" y=\"64\" text-anchor=\"middle\" font-size=\"9\" fill=\"#0d47a1\">Evict LRU</text><line id=\"ozon-d08-a2\" x1=\"204\" y1=\"60\" x2=\"216\" y2=\"60\" stroke=\"#37474f\"/></svg>"
+      }
+    },
+    {
+      "type": "theory",
+      "title": "Решение",
+      "content": "## Полный код\n\n```csharp\npublic interface ILruCache<TKey, TValue> where TKey : notnull\n{\n    bool TryGet(TKey key, out TValue value);\n    void Set(TKey key, TValue value);\n}\n\npublic sealed class LruCache<TKey, TValue> : ILruCache<TKey, TValue> where TKey : notnull\n{\n    private readonly object _sync = new();\n    private readonly int _capacity;\n    private readonly Dictionary<TKey, LinkedListNode<(TKey Key, TValue Value)>> _map = new();\n    private readonly LinkedList<(TKey Key, TValue Value)> _list = new();\n\n    public LruCache(int capacity)\n    {\n        if (capacity <= 0) throw new ArgumentOutOfRangeException(nameof(capacity));\n        _capacity = capacity;\n    }\n\n    public bool TryGet(TKey key, out TValue value)\n    {\n        lock (_sync)\n        {\n        if (!_map.TryGetValue(key, out var node))\n        {\n            value = default!;\n            return false;\n        }\n        _list.Remove(node);\n        _list.AddFirst(node);\n        value = node.Value.Value;\n        return true;\n        }\n    }\n\n    public void Set(TKey key, TValue value)\n    {\n        lock (_sync)\n        {\n        if (_map.TryGetValue(key, out var existing))\n        {\n            existing.Value = (key, value);\n            _list.Remove(existing);\n            _list.AddFirst(existing);\n            return;\n        }\n        var node = _list.AddFirst((key, value));\n        _map[key] = node;\n        if (_map.Count > _capacity)\n        {\n            var tail = _list.Last!;\n            _map.Remove(tail.Value.Key);\n            _list.RemoveLast();\n        }\n        }\n    }\n}\n```"
+    },
+    {
+      "type": "theory",
+      "title": "Ошибки и крайние случаи",
+      "content": "## Ошибки\n\n- Хранить порядок в `List` и искать элемент линейно — O(n).\n- Не обновлять порядок при `TryGet` — получится FIFO, а не LRU.\n- Удалить узел из списка, но забыть удалить ключ из словаря.\n\n## Крайние случаи\n\n- `capacity <= 0` → исключение в конструкторе.\n- `Set` существующего ключа обновляет значение и порядок, размер не растёт."
+    },
+    {
+      "type": "theory",
+      "title": "Что спросят дальше",
+      "content": "## Что спросят дальше\n\n- Как снизить конкуренцию за `lock`: шардирование по хэшу ключа.\n- Почему в production часто выбирают W-TinyLFU (Caffeine), а не чистый LRU?\n- Вытеснение по размеру значения, а не по количеству."
+    },
+    {
+      "type": "quiz",
+      "title": "Quiz 1/4",
+      "content": {
+        "question": "Какая структура даёт LRU за O(1)?",
+        "options": [
+          "`Dictionary` + двусвязный список",
+          "`SortedDictionary` по времени доступа",
+          "`Queue` + `HashSet`",
+          "`List` с удалением и вставкой в начало"
+        ],
+        "correctIndices": [
+          0
+        ]
+      }
+    },
+    {
+      "type": "quiz",
+      "title": "Quiz 2/4",
+      "content": {
+        "question": "`capacity = 2`: Set A, Set B, TryGet A, Set C. Кто вытеснен?",
+        "options": [
+          "A",
+          "C",
+          "Никто: `TryGet` не меняет порядок",
+          "B"
+        ],
+        "correctIndices": [
+          3
+        ]
+      }
+    },
+    {
+      "type": "quiz",
+      "title": "Quiz 3/4",
+      "content": {
+        "question": "Почему `TryGet` в эталоне тоже под `lock`?",
+        "options": [
+          "Чтение из `Dictionary` без `lock` всегда бросает исключение",
+          "Чтобы значение не устарело по TTL",
+          "Он переставляет узел в списке — это запись",
+          "Иначе `LinkedList` не найдёт узел"
+        ],
+        "correctIndices": [
+          2
+        ]
+      }
+    },
+    {
+      "type": "quiz",
+      "title": "Quiz 4/4",
+      "content": {
+        "question": "Чем опасно заменить `lock` на `ConcurrentDictionary` без блокировки списка?",
+        "options": [
+          "`ConcurrentDictionary` не хранит ссылки на узлы",
+          "Список и словарь разойдутся при параллельных операциях",
+          "Это сделает `TryGet` O(n)",
+          "Ничем, так даже быстрее и корректно"
+        ],
+        "correctIndices": [
+          1
+        ]
+      }
+    }
+  ]
+}

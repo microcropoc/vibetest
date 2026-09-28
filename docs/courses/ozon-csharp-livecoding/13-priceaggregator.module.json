@@ -1,0 +1,104 @@
+{
+  "schemaVersion": 1,
+  "title": "День 13. PriceAggregator",
+  "steps": [
+    {
+      "type": "theory",
+      "title": "Условие",
+      "content": "## Условие\n\nСобрать цену товара у нескольких поставщиков; медленный поставщик не должен тормозить ответ.\n\n```csharp\nTask<IReadOnlyList<PriceQuote>> GetPricesAsync(string sku, CancellationToken ct);\n// PriceQuote(string Source, decimal? Price)\n```\n\n**Требования**\n\n- Опросить все источники параллельно, у каждого свой таймаут `perSourceTimeout`.\n- Упавший или не успевший источник → `Price = null`, остальные ответы возвращаются.\n- Отмена вызывающего пробрасывается как `OperationCanceledException`.\n\n**Пример:** A = 100, B не ответил за таймаут, C = 90 → `[A: 100, B: null, C: 90]`; минимальная доступная цена — 90."
+    },
+    {
+      "type": "theory",
+      "title": "Уточняющие вопросы и план",
+      "content": "## Уточняющие вопросы\n\n- Нужен ли минимум, среднее или все цены?\n- Сколько источников и какой общий SLA ответа?\n- Какой минимум ответивших источников нужен для валидного результата?\n\n## План\n\n1. Для каждого источника связанный CTS с `CancelAfter(perSourceTimeout)`.\n2. Ошибку источника превращать в `Price = null`, но не отмену вызывающего.\n3. `Task.WhenAll` по всем источникам — каждая задача сама обрабатывает ошибки.\n4. Тесты: медленный источник, упавший источник, внешняя отмена."
+    },
+    {
+      "type": "svg",
+      "title": "Схема: PriceAggregator",
+      "content": {
+        "caption": "Компонент PriceAggregator",
+        "description": "Поток данных и ограничение ресурсов.",
+        "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 320 120\" width=\"100%\" role=\"img\" aria-label=\"Компонент PriceAggregator\"><rect id=\"ozon-d13-n0\" x=\"16\" y=\"36\" width=\"88\" height=\"48\" rx=\"6\" fill=\"#e3f2fd\" stroke=\"#1565c0\"/><text id=\"ozon-d13-t0\" x=\"60\" y=\"64\" text-anchor=\"middle\" font-size=\"9\" fill=\"#0d47a1\">Sources</text><rect id=\"ozon-d13-n1\" x=\"116\" y=\"36\" width=\"88\" height=\"48\" rx=\"6\" fill=\"#e3f2fd\" stroke=\"#1565c0\"/><text id=\"ozon-d13-t1\" x=\"160\" y=\"64\" text-anchor=\"middle\" font-size=\"9\" fill=\"#0d47a1\">Timeout each</text><line id=\"ozon-d13-a1\" x1=\"104\" y1=\"60\" x2=\"116\" y2=\"60\" stroke=\"#37474f\"/><rect id=\"ozon-d13-n2\" x=\"216\" y=\"36\" width=\"88\" height=\"48\" rx=\"6\" fill=\"#e3f2fd\" stroke=\"#1565c0\"/><text id=\"ozon-d13-t2\" x=\"260\" y=\"64\" text-anchor=\"middle\" font-size=\"9\" fill=\"#0d47a1\">Partial min price</text><line id=\"ozon-d13-a2\" x1=\"204\" y1=\"60\" x2=\"216\" y2=\"60\" stroke=\"#37474f\"/></svg>"
+      }
+    },
+    {
+      "type": "theory",
+      "title": "Решение",
+      "content": "## Полный код\n\n```csharp\npublic sealed record PriceQuote(string Source, decimal? Price)\n{\n    public bool IsAvailable => Price is not null;\n}\n\npublic interface IPriceAggregator\n{\n    Task<IReadOnlyList<PriceQuote>> GetPricesAsync(string sku, CancellationToken ct);\n}\n\npublic sealed class PriceAggregator(IReadOnlyList<IPriceSource> sources, TimeSpan perSourceTimeout) : IPriceAggregator\n{\n    public async Task<IReadOnlyList<PriceQuote>> GetPricesAsync(string sku, CancellationToken ct)\n    {\n        var tasks = sources.Select(s => FetchOneAsync(s, sku, ct));\n        return await Task.WhenAll(tasks).ConfigureAwait(false);\n    }\n\n    private async Task<PriceQuote> FetchOneAsync(IPriceSource source, string sku, CancellationToken ct)\n    {\n        using var timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(ct);\n        timeoutCts.CancelAfter(perSourceTimeout);\n        try\n        {\n            var price = await source.GetPriceAsync(sku, timeoutCts.Token).ConfigureAwait(false);\n            return new PriceQuote(source.Name, price);\n        }\n        catch (Exception) when (!ct.IsCancellationRequested)\n        {\n            return new PriceQuote(source.Name, Price: null);\n        }\n    }\n}\n\npublic interface IPriceSource\n{\n    string Name { get; }\n    Task<decimal> GetPriceAsync(string sku, CancellationToken ct);\n}\n```"
+    },
+    {
+      "type": "theory",
+      "title": "Ошибки и крайние случаи",
+      "content": "## Ошибки\n\n- Один общий таймаут без изоляции: медленный источник съедает время остальных.\n- `catch (Exception)` без фильтра превращает отмену вызывающего в «частичный результат».\n- Цена `0` вместо отсутствия значения — клиент посчитает её минимальной.\n\n## Крайние случаи\n\n- Все источники недоступны → список с `null`; решать на уровне вызывающего (ошибка или fallback).\n- Источник ответил после таймаута — результат игнорируется."
+    },
+    {
+      "type": "theory",
+      "title": "Что спросят дальше",
+      "content": "## Что спросят дальше\n\n- Hedged requests: дублировать запрос к медленному источнику.\n- Fallback на последнюю известную цену из кэша.\n- Метрики латентности и доли таймаутов по каждому источнику."
+    },
+    {
+      "type": "quiz",
+      "title": "Quiz 1/4",
+      "content": {
+        "question": "Источник B не ответил за `perSourceTimeout`. Что в ответе?",
+        "options": [
+          "Весь запрос падает с `TimeoutException`",
+          "B с `Price = null`, остальные цены на месте",
+          "B пропускается, список короче числа источников",
+          "Цена B = 0"
+        ],
+        "correctIndices": [
+          1
+        ]
+      }
+    },
+    {
+      "type": "quiz",
+      "title": "Quiz 2/4",
+      "content": {
+        "question": "Зачем фильтр `when (!ct.IsCancellationRequested)` в `catch`?",
+        "options": [
+          "Чтобы не ловить исключения таймаута источника",
+          "Без него `Task.WhenAll` зависнет",
+          "Чтобы повторить запрос к источнику",
+          "Не выдавать отмену вызывающего за частичный результат"
+        ],
+        "correctIndices": [
+          3
+        ]
+      }
+    },
+    {
+      "type": "quiz",
+      "title": "Quiz 3/4",
+      "content": {
+        "question": "Почему `Price` сделан `decimal?`, а не `decimal` с 0?",
+        "options": [
+          "`decimal` не сериализуется в JSON",
+          "`decimal?` быстрее в вычислениях",
+          "Ноль выглядит как реальная минимальная цена",
+          "Так требует `Task.WhenAll`"
+        ],
+        "correctIndices": [
+          2
+        ]
+      }
+    },
+    {
+      "type": "quiz",
+      "title": "Quiz 4/4",
+      "content": {
+        "question": "Как устроен таймаут на источник в эталоне?",
+        "options": [
+          "Связанный CTS с `CancelAfter(perSourceTimeout)`",
+          "Общий `Task.WhenAny` с `Task.Delay` на весь запрос",
+          "`Thread.Sleep` перед каждым вызовом",
+          "Таймаут `HttpClient.Timeout` на все источники"
+        ],
+        "correctIndices": [
+          0
+        ]
+      }
+    }
+  ]
+}

@@ -1,0 +1,104 @@
+{
+  "schemaVersion": 1,
+  "title": "День 10. IdempotentConsumer",
+  "steps": [
+    {
+      "type": "theory",
+      "title": "Условие",
+      "content": "## Условие\n\nConsumer очереди получает сообщения с гарантией at-least-once. Нужно не обработать одно сообщение дважды.\n\n```csharp\nbool TryClaim(string messageId);\nvoid Release(string messageId);\n```\n\n**Требования**\n\n- Первый `TryClaim` по id → true, повторные (в том числе параллельные) → false.\n- `Release` снимает claim при неуспешной обработке, чтобы повторная доставка обработалась.\n- Claim истекает через `ttl` — память не растёт бесконечно.\n\n**Пример:** `TryClaim(\"msg-7\")` → true; `TryClaim(\"msg-7\")` → false; `Release(\"msg-7\")`; `TryClaim(\"msg-7\")` → true."
+    },
+    {
+      "type": "theory",
+      "title": "Уточняющие вопросы и план",
+      "content": "## Уточняющие вопросы\n\n- Сколько времени брокер может передоставлять сообщение (выбор `ttl`)?\n- Что делать, если обработка упала: снимать claim или нет?\n- Хранилище только в памяти или общее для инстансов?\n\n## План\n\n1. `HashSet` claimed + словарь сроков под одним `lock`.\n2. `TryClaim`: очистить просроченные, проверить и добавить атомарно.\n3. `Release` — удалить из обоих.\n4. Тест: 100 параллельных `TryClaim` одного id → ровно один true."
+    },
+    {
+      "type": "svg",
+      "title": "Схема: IdempotentConsumer",
+      "content": {
+        "caption": "Компонент IdempotentConsumer",
+        "description": "Поток данных и ограничение ресурсов.",
+        "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 320 120\" width=\"100%\" role=\"img\" aria-label=\"Компонент IdempotentConsumer\"><rect id=\"ozon-d10-n0\" x=\"16\" y=\"36\" width=\"88\" height=\"48\" rx=\"6\" fill=\"#e3f2fd\" stroke=\"#1565c0\"/><text id=\"ozon-d10-t0\" x=\"60\" y=\"64\" text-anchor=\"middle\" font-size=\"9\" fill=\"#0d47a1\">messageId</text><rect id=\"ozon-d10-n1\" x=\"116\" y=\"36\" width=\"88\" height=\"48\" rx=\"6\" fill=\"#e3f2fd\" stroke=\"#1565c0\"/><text id=\"ozon-d10-t1\" x=\"160\" y=\"64\" text-anchor=\"middle\" font-size=\"9\" fill=\"#0d47a1\">TryClaim</text><line id=\"ozon-d10-a1\" x1=\"104\" y1=\"60\" x2=\"116\" y2=\"60\" stroke=\"#37474f\"/><rect id=\"ozon-d10-n2\" x=\"216\" y=\"36\" width=\"88\" height=\"48\" rx=\"6\" fill=\"#e3f2fd\" stroke=\"#1565c0\"/><text id=\"ozon-d10-t2\" x=\"260\" y=\"64\" text-anchor=\"middle\" font-size=\"9\" fill=\"#0d47a1\">once / skip</text><line id=\"ozon-d10-a2\" x1=\"204\" y1=\"60\" x2=\"216\" y2=\"60\" stroke=\"#37474f\"/></svg>"
+      }
+    },
+    {
+      "type": "theory",
+      "title": "Решение",
+      "content": "## Полный код\n\n```csharp\npublic interface IIdempotentConsumer\n{\n    bool TryClaim(string messageId);\n    void Release(string messageId);\n}\n\npublic sealed class IdempotentConsumer : IIdempotentConsumer\n{\n    private readonly object _sync = new();\n    private readonly HashSet<string> _claimed = new();\n    private readonly TimeSpan _ttl;\n    private readonly TimeProvider _time;\n    private readonly Dictionary<string, DateTimeOffset> _expires = new();\n\n    public IdempotentConsumer(TimeSpan? ttl = null, TimeProvider? time = null)\n    {\n        _ttl = ttl ?? TimeSpan.FromHours(24);\n        _time = time ?? TimeProvider.System;\n    }\n\n    public bool TryClaim(string messageId)\n    {\n        lock (_sync)\n        {\n            PruneExpired();\n            if (_claimed.Contains(messageId)) return false;\n            _claimed.Add(messageId);\n            _expires[messageId] = _time.GetUtcNow().Add(_ttl);\n            return true;\n        }\n    }\n\n    public void Release(string messageId)\n    {\n        lock (_sync)\n        {\n            _claimed.Remove(messageId);\n            _expires.Remove(messageId);\n        }\n    }\n\n    private void PruneExpired()\n    {\n        var now = _time.GetUtcNow();\n        foreach (var kv in _expires.ToList())\n        {\n            if (kv.Value <= now)\n            {\n                _claimed.Remove(kv.Key);\n                _expires.Remove(kv.Key);\n            }\n        }\n    }\n}\n```"
+    },
+    {
+      "type": "theory",
+      "title": "Ошибки и крайние случаи",
+      "content": "## Ошибки\n\n- Проверка `Contains` и `Add` в разных критических секциях — два потока оба получат true.\n- Claim без срока жизни — утечка памяти.\n- Claim ставится после обработки, а не до неё — параллельная доставка обработается дважды.\n\n## Крайние случаи\n\n- Пустой или null `messageId` — валидировать.\n- Обработка дольше `ttl` → claim истечёт, возможен дубль; `ttl` должен быть больше максимального времени обработки."
+    },
+    {
+      "type": "theory",
+      "title": "Что спросят дальше",
+      "content": "## Что спросят дальше\n\n- Уникальный индекс в БД как claim (`INSERT … ON CONFLICT DO NOTHING`).\n- Inbox-паттерн: claim и бизнес-изменение в одной транзакции.\n- Что делать с «ядовитыми» сообщениями, которые всегда падают?"
+    },
+    {
+      "type": "quiz",
+      "title": "Quiz 1/4",
+      "content": {
+        "question": "Почему `Contains` и `Add` в эталоне под одним `lock`?",
+        "options": [
+          "`HashSet.Add` не работает без `lock`",
+          "Иначе два потока оба получат `true`",
+          "Чтобы `PruneExpired` не удалил новый claim",
+          "Так быстрее, чем два отдельных `lock`"
+        ],
+        "correctIndices": [
+          1
+        ]
+      }
+    },
+    {
+      "type": "quiz",
+      "title": "Quiz 2/4",
+      "content": {
+        "question": "Гарантия доставки at-least-once означает…",
+        "options": [
+          "Брокер доставляет каждое сообщение ровно один раз",
+          "Сообщение может потеряться, повторов не бывает",
+          "Consumer должен подтверждать сообщение до обработки",
+          "Сообщение может прийти повторно — нужна идемпотентность"
+        ],
+        "correctIndices": [
+          3
+        ]
+      }
+    },
+    {
+      "type": "quiz",
+      "title": "Quiz 3/4",
+      "content": {
+        "question": "Зачем `Release` при ошибке обработки?",
+        "options": [
+          "Чтобы повторная доставка обработалась",
+          "Чтобы освободить `lock` для других сообщений",
+          "Чтобы брокер удалил сообщение из очереди",
+          "Чтобы сбросить `ttl` у всех claim"
+        ],
+        "correctIndices": [
+          0
+        ]
+      }
+    },
+    {
+      "type": "quiz",
+      "title": "Quiz 4/4",
+      "content": {
+        "question": "`ttl` claim меньше времени обработки сообщения. Риск?",
+        "options": [
+          "Сообщение никогда не будет обработано",
+          "`TryClaim` начнёт всегда возвращать `false`",
+          "Claim истечёт посреди обработки — возможен дубль",
+          "Никакого: `ttl` влияет только на память"
+        ],
+        "correctIndices": [
+          2
+        ]
+      }
+    }
+  ]
+}

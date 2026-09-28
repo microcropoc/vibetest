@@ -1,0 +1,104 @@
+{
+  "schemaVersion": 1,
+  "title": "День 2. SingleFlight",
+  "steps": [
+    {
+      "type": "theory",
+      "title": "Условие",
+      "content": "## Условие\n\nЗащита от «шторма» одинаковых запросов: пока запрос по ключу выполняется, новые вызовы с тем же ключом ждут его результат.\n\n```csharp\nTask<T> RunAsync<T>(string key, Func<CancellationToken, Task<T>> factory, CancellationToken ct);\n```\n\n**Требования**\n\n- Параллельные вызовы с одним `key` запускают factory один раз и получают один результат или одно исключение.\n- После завершения ключ освобождается: следующий вызов снова запускает factory.\n- `ct` отменяет только ожидание вызывающего; общий запрос продолжается для остальных.\n- Корректно работает с синхронно завершающейся factory (`Task.FromResult`).\n\n**Пример:** три параллельных `RunAsync(\"sku-1\", LoadPrice)` → `LoadPrice` вызван один раз, все получают `42`. Затем `RunAsync(\"sku-1\", _ => Task.FromResult(43))` → `43`."
+    },
+    {
+      "type": "theory",
+      "title": "Уточняющие вопросы и план",
+      "content": "## Уточняющие вопросы\n\n- Если первый вызывающий отменил запрос, отменяем общую factory или только его ожидание?\n- Может ли один ключ использоваться с разными типами `T`?\n- Кэшировать ли результат после завершения или только схлопывать одновременные вызовы?\n\n## План\n\n1. Словарь `key → Task<T>` под `lock`.\n2. Под `lock` положить `TaskCompletionSource<T>.Task` **до** запуска factory.\n3. Factory запускать с собственным токеном, вызывающий ждёт через `WaitAsync(ct)`.\n4. В `finally` удалять ключ, только если в словаре лежит именно эта задача."
+    },
+    {
+      "type": "svg",
+      "title": "Схема: SingleFlight",
+      "content": {
+        "caption": "Компонент SingleFlight",
+        "description": "Поток данных и ограничение ресурсов.",
+        "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 320 120\" width=\"100%\" role=\"img\" aria-label=\"Компонент SingleFlight\"><rect id=\"ozon-d02-n0\" x=\"16\" y=\"36\" width=\"88\" height=\"48\" rx=\"6\" fill=\"#e3f2fd\" stroke=\"#1565c0\"/><text id=\"ozon-d02-t0\" x=\"60\" y=\"64\" text-anchor=\"middle\" font-size=\"9\" fill=\"#0d47a1\">Caller A</text><rect id=\"ozon-d02-n1\" x=\"116\" y=\"36\" width=\"88\" height=\"48\" rx=\"6\" fill=\"#e3f2fd\" stroke=\"#1565c0\"/><text id=\"ozon-d02-t1\" x=\"160\" y=\"64\" text-anchor=\"middle\" font-size=\"9\" fill=\"#0d47a1\">Shared Task</text><line id=\"ozon-d02-a1\" x1=\"104\" y1=\"60\" x2=\"116\" y2=\"60\" stroke=\"#37474f\"/><rect id=\"ozon-d02-n2\" x=\"216\" y=\"36\" width=\"88\" height=\"48\" rx=\"6\" fill=\"#e3f2fd\" stroke=\"#1565c0\"/><text id=\"ozon-d02-t2\" x=\"260\" y=\"64\" text-anchor=\"middle\" font-size=\"9\" fill=\"#0d47a1\">Caller B</text><line id=\"ozon-d02-a2\" x1=\"204\" y1=\"60\" x2=\"216\" y2=\"60\" stroke=\"#37474f\"/></svg>"
+      }
+    },
+    {
+      "type": "theory",
+      "title": "Решение",
+      "content": "## Полный код\n\n```csharp\npublic interface ISingleFlight\n{\n    Task<T> RunAsync<T>(string key, Func<CancellationToken, Task<T>> factory, CancellationToken ct);\n}\n\npublic sealed class SingleFlight : ISingleFlight\n{\n    private readonly object _sync = new();\n    private readonly Dictionary<string, object> _inFlight = new();\n\n    public async Task<T> RunAsync<T>(string key, Func<CancellationToken, Task<T>> factory, CancellationToken ct)\n    {\n        Task<T> shared;\n        lock (_sync)\n        {\n            if (_inFlight.TryGetValue(key, out var existing))\n            {\n                shared = (Task<T>)existing;\n            }\n            else\n            {\n                var tcs = new TaskCompletionSource<T>(TaskCreationOptions.RunContinuationsAsynchronously);\n                shared = tcs.Task;\n                _inFlight[key] = shared;\n                _ = CompleteFlightAsync(key, factory, tcs);\n            }\n        }\n        return await shared.WaitAsync(ct).ConfigureAwait(false);\n    }\n\n    private async Task CompleteFlightAsync<T>(\n        string key,\n        Func<CancellationToken, Task<T>> factory,\n        TaskCompletionSource<T> tcs)\n    {\n        try\n        {\n            var result = await factory(CancellationToken.None).ConfigureAwait(false);\n            tcs.TrySetResult(result);\n        }\n        catch (Exception ex)\n        {\n            tcs.TrySetException(ex);\n        }\n        finally\n        {\n            lock (_sync)\n            {\n                if (_inFlight.TryGetValue(key, out var current) && ReferenceEquals(current, tcs.Task))\n                {\n                    _inFlight.Remove(key);\n                }\n            }\n        }\n    }\n}\n```"
+    },
+    {
+      "type": "theory",
+      "title": "Ошибки и крайние случаи",
+      "content": "## Ошибки\n\n- Запуск factory внутри `lock` с записью в словарь **после**: синхронная factory успевает выполнить `finally` и удалить ключ раньше, чем задача попадёт в словарь, — ключ «застревает» с завершённой задачей навсегда.\n- Передать в factory `ct` первого вызывающего: его отмена отменит запрос у всех.\n- Удалять ключ без проверки `ReferenceEquals` — можно удалить уже новую задачу.\n\n## Крайние случаи\n\n- Factory бросила исключение → все ожидающие получают его, следующий вызов запускает factory заново.\n- Один ключ с `RunAsync<int>` и `RunAsync<string>` → `InvalidCastException`; ключи должны включать тип или быть разделены по сервисам."
+    },
+    {
+      "type": "theory",
+      "title": "Что спросят дальше",
+      "content": "## Что спросят дальше\n\n- Как сделать SingleFlight поверх распределённого кэша (lock в Redis)?\n- Как ограничить память, если ключей миллионы? (шардирование словаря, короткое время жизни записей)\n- Какие метрики: число схлопнутых вызовов, время выполнения factory."
+    },
+    {
+      "type": "quiz",
+      "title": "Quiz 1/4",
+      "content": {
+        "question": "Почему `TaskCompletionSource` кладут в словарь до запуска factory?",
+        "options": [
+          "Так factory выполнится быстрее за счёт пула потоков",
+          "Синхронная factory удалит ключ раньше, чем задача попадёт в словарь",
+          "Без TCS нельзя вернуть результат из `lock`",
+          "Чтобы `WaitAsync` не выбрасывал исключение"
+        ],
+        "correctIndices": [
+          1
+        ]
+      }
+    },
+    {
+      "type": "quiz",
+      "title": "Quiz 2/4",
+      "content": {
+        "question": "Первый вызывающий отменил свой `ct`. Что происходит в эталоне?",
+        "options": [
+          "Factory отменяется для всех ожидающих",
+          "Ключ удаляется, следующий вызов запускает factory заново",
+          "Остальные ожидающие получают `OperationCanceledException`",
+          "Отменяется только его ожидание"
+        ],
+        "correctIndices": [
+          3
+        ]
+      }
+    },
+    {
+      "type": "quiz",
+      "title": "Quiz 3/4",
+      "content": {
+        "question": "`RunAsync<int>(\"k\", …)` и параллельно `RunAsync<string>(\"k\", …)`. Результат?",
+        "options": [
+          "`InvalidCastException` при приведении общей задачи",
+          "Две независимые factory, каждая своего типа",
+          "Вторая factory ждёт первую и получает `default`",
+          "Компилятор не даст использовать один ключ с разными `T`"
+        ],
+        "correctIndices": [
+          0
+        ]
+      }
+    },
+    {
+      "type": "quiz",
+      "title": "Quiz 4/4",
+      "content": {
+        "question": "Зачем в `finally` проверять `ReferenceEquals(current, tcs.Task)`?",
+        "options": [
+          "Чтобы сравнить результаты двух factory",
+          "Чтобы не освобождать `lock` дважды",
+          "Чтобы не удалить задачу следующего вызова",
+          "Без проверки словарь бросит исключение на отсутствующий ключ"
+        ],
+        "correctIndices": [
+          2
+        ]
+      }
+    }
+  ]
+}

@@ -1,0 +1,104 @@
+{
+  "schemaVersion": 1,
+  "title": "День 15. PagedMerge",
+  "steps": [
+    {
+      "type": "theory",
+      "title": "Условие",
+      "content": "## Условие\n\nОбъединить несколько отсортированных постраничных источников (например, заказы из разных шардов) в один отсортированный поток.\n\n```csharp\nIAsyncEnumerable<T> MergeSortedAsync<T>(\n    IReadOnlyList<IAsyncEnumerable<T>> streams,\n    IComparer<T> comparer,\n    CancellationToken ct = default);\n```\n\n**Требования**\n\n- Каждый вход отсортирован по `comparer`, выход — общий отсортированный поток.\n- В памяти не больше одного текущего элемента на поток.\n- Отмена через `WithCancellation`; все enumerator'ы освобождаются.\n\n**Пример:** `[1, 4, 7]`, `[2, 3]`, `[]` → `1, 2, 3, 4, 7`."
+    },
+    {
+      "type": "theory",
+      "title": "Уточняющие вопросы и план",
+      "content": "## Уточняющие вопросы\n\n- Сколько потоков (k) и какой объём каждого?\n- Потоки действительно отсортированы? Проверять ли?\n- Нужна ли дедупликация одинаковых элементов?\n\n## План\n\n1. Открыть enumerator каждого потока, первые элементы — в `PriorityQueue<int, T>(comparer)`.\n2. Извлечь минимум, `yield return`, продвинуть его поток.\n3. `[EnumeratorCancellation]` на параметре `ct`.\n4. `DisposeAsync` всех enumerator'ов в `finally`."
+    },
+    {
+      "type": "svg",
+      "title": "Схема: PagedMerge",
+      "content": {
+        "caption": "Компонент PagedMerge",
+        "description": "Поток данных и ограничение ресурсов.",
+        "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 320 120\" width=\"100%\" role=\"img\" aria-label=\"Компонент PagedMerge\"><rect id=\"ozon-d15-n0\" x=\"16\" y=\"36\" width=\"88\" height=\"48\" rx=\"6\" fill=\"#e3f2fd\" stroke=\"#1565c0\"/><text id=\"ozon-d15-t0\" x=\"60\" y=\"64\" text-anchor=\"middle\" font-size=\"9\" fill=\"#0d47a1\">k streams</text><rect id=\"ozon-d15-n1\" x=\"116\" y=\"36\" width=\"88\" height=\"48\" rx=\"6\" fill=\"#e3f2fd\" stroke=\"#1565c0\"/><text id=\"ozon-d15-t1\" x=\"160\" y=\"64\" text-anchor=\"middle\" font-size=\"9\" fill=\"#0d47a1\">Heap heads</text><line id=\"ozon-d15-a1\" x1=\"104\" y1=\"60\" x2=\"116\" y2=\"60\" stroke=\"#37474f\"/><rect id=\"ozon-d15-n2\" x=\"216\" y=\"36\" width=\"88\" height=\"48\" rx=\"6\" fill=\"#e3f2fd\" stroke=\"#1565c0\"/><text id=\"ozon-d15-t2\" x=\"260\" y=\"64\" text-anchor=\"middle\" font-size=\"9\" fill=\"#0d47a1\">Merged order</text><line id=\"ozon-d15-a2\" x1=\"204\" y1=\"60\" x2=\"216\" y2=\"60\" stroke=\"#37474f\"/></svg>"
+      }
+    },
+    {
+      "type": "theory",
+      "title": "Решение",
+      "content": "## Полный код\n\n```csharp\nusing System.Runtime.CompilerServices;\n\npublic static class PagedMerge\n{\n    public static async IAsyncEnumerable<T> MergeSortedAsync<T>(\n        IReadOnlyList<IAsyncEnumerable<T>> streams,\n        IComparer<T> comparer,\n        [EnumeratorCancellation] CancellationToken ct = default)\n    {\n        var enumerators = new IAsyncEnumerator<T>?[streams.Count];\n        var heap = new PriorityQueue<int, T>(comparer);\n        try\n        {\n            for (var i = 0; i < streams.Count; i++)\n            {\n                enumerators[i] = streams[i].GetAsyncEnumerator(ct);\n                if (await enumerators[i]!.MoveNextAsync().ConfigureAwait(false))\n                    heap.Enqueue(i, enumerators[i]!.Current);\n            }\n            while (heap.TryDequeue(out var streamIndex, out var value))\n            {\n                yield return value;\n                var en = enumerators[streamIndex]!;\n                if (await en.MoveNextAsync().ConfigureAwait(false))\n                    heap.Enqueue(streamIndex, en.Current);\n            }\n        }\n        finally\n        {\n            foreach (var en in enumerators)\n                if (en is not null) await en.DisposeAsync().ConfigureAwait(false);\n        }\n    }\n}\n```"
+    },
+    {
+      "type": "theory",
+      "title": "Ошибки и крайние случаи",
+      "content": "## Ошибки\n\n- `ToListAsync` всех потоков и сортировка — теряется потоковость и растёт память.\n- Нет `[EnumeratorCancellation]` — токен из `WithCancellation` не доходит до итератора.\n- Enumerator'ы не освобождаются при раннем выходе из `await foreach`.\n\n## Крайние случаи\n\n- Пустой поток среди остальных — просто не попадает в кучу.\n- Один поток — выход совпадает со входом."
+    },
+    {
+      "type": "theory",
+      "title": "Что спросят дальше",
+      "content": "## Что спросят дальше\n\n- Сложность: O(N log k) по времени, O(k) по памяти.\n- Слияние на стороне БД (keyset pagination по шардам).\n- Back-pressure, если один поток сильно медленнее остальных."
+    },
+    {
+      "type": "quiz",
+      "title": "Quiz 1/4",
+      "content": {
+        "question": "Что лежит в куче в эталоне?",
+        "options": [
+          "Все элементы всех потоков",
+          "Только минимальный элемент каждого потока без индекса",
+          "Индекс потока с приоритетом — его текущим элементом",
+          "Enumerator'ы, отсортированные по длине потока"
+        ],
+        "correctIndices": [
+          2
+        ]
+      }
+    },
+    {
+      "type": "quiz",
+      "title": "Quiz 2/4",
+      "content": {
+        "question": "Сложность слияния k потоков с суммарно N элементами?",
+        "options": [
+          "O(N log N)",
+          "O(N × k)",
+          "O(k log N)",
+          "O(N log k)"
+        ],
+        "correctIndices": [
+          3
+        ]
+      }
+    },
+    {
+      "type": "quiz",
+      "title": "Quiz 3/4",
+      "content": {
+        "question": "Зачем `[EnumeratorCancellation]` на параметре `ct`?",
+        "options": [
+          "Передать в итератор токен из `WithCancellation`",
+          "Чтобы итератор ловил `OperationCanceledException`",
+          "Чтобы параметр стал обязательным",
+          "Без него итератор не компилируется"
+        ],
+        "correctIndices": [
+          0
+        ]
+      }
+    },
+    {
+      "type": "quiz",
+      "title": "Quiz 4/4",
+      "content": {
+        "question": "Почему `DisposeAsync` enumerator'ов в `finally`?",
+        "options": [
+          "Иначе куча не освободит память",
+          "Вызывающий может выйти из `await foreach` раньше конца потоков",
+          "`MoveNextAsync` требует явного `DisposeAsync` перед каждым вызовом",
+          "Чтобы сбросить позицию потоков в начало"
+        ],
+        "correctIndices": [
+          1
+        ]
+      }
+    }
+  ]
+}

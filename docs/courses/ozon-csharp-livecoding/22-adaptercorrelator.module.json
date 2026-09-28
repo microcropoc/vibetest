@@ -1,0 +1,104 @@
+{
+  "schemaVersion": 1,
+  "title": "День 22. AdapterCorrelator",
+  "steps": [
+    {
+      "type": "theory",
+      "title": "Условие",
+      "content": "## Условие\n\nАдаптер к внешней системе: запрос уходит в очередь, ответ приходит асинхронно и в любом порядке с тем же correlation id.\n\n```csharp\nTask<TResponse> SendAsync<TRequest, TResponse>(\n    TRequest request,\n    Func<TRequest, string> getCorrelationId,\n    Func<TRequest, CancellationToken, Task> send,\n    CancellationToken ct);\nbool TryComplete(string correlationId, object response);\n```\n\n**Требования**\n\n- Ожидание регистрируется **до** отправки запроса.\n- `TryComplete` находит ожидающего по correlation id.\n- Отмена или ошибка отправки удаляют запись; дубликат id — ошибка.\n\n**Пример:** отправлены id=1 и id=2, ответ id=2 пришёл первым → второй вызов получает свой ответ, первый продолжает ждать."
+    },
+    {
+      "type": "theory",
+      "title": "Уточняющие вопросы и план",
+      "content": "## Уточняющие вопросы\n\n- Нужен ли таймаут ожидания ответа?\n- Что делать с ответом без ожидающего (опоздал, неизвестен)?\n- Уникальность correlation id гарантирует вызывающий?\n\n## План\n\n1. Словарь `id → TaskCompletionSource<object>` под `lock`.\n2. Регистрация TCS, затем `send`.\n3. `ct.Register(() => tcs.TrySetCanceled(ct))`.\n4. `finally` удаляет запись, если она всё ещё наша."
+    },
+    {
+      "type": "svg",
+      "title": "Схема: AdapterCorrelator",
+      "content": {
+        "caption": "Компонент AdapterCorrelator",
+        "description": "Поток данных и ограничение ресурсов.",
+        "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 320 120\" width=\"100%\" role=\"img\" aria-label=\"Компонент AdapterCorrelator\"><rect id=\"ozon-d22-n0\" x=\"16\" y=\"36\" width=\"88\" height=\"48\" rx=\"6\" fill=\"#e3f2fd\" stroke=\"#1565c0\"/><text id=\"ozon-d22-t0\" x=\"60\" y=\"64\" text-anchor=\"middle\" font-size=\"9\" fill=\"#0d47a1\">Request+id</text><rect id=\"ozon-d22-n1\" x=\"116\" y=\"36\" width=\"88\" height=\"48\" rx=\"6\" fill=\"#e3f2fd\" stroke=\"#1565c0\"/><text id=\"ozon-d22-t1\" x=\"160\" y=\"64\" text-anchor=\"middle\" font-size=\"9\" fill=\"#0d47a1\">Pending map</text><line id=\"ozon-d22-a1\" x1=\"104\" y1=\"60\" x2=\"116\" y2=\"60\" stroke=\"#37474f\"/><rect id=\"ozon-d22-n2\" x=\"216\" y=\"36\" width=\"88\" height=\"48\" rx=\"6\" fill=\"#e3f2fd\" stroke=\"#1565c0\"/><text id=\"ozon-d22-t2\" x=\"260\" y=\"64\" text-anchor=\"middle\" font-size=\"9\" fill=\"#0d47a1\">Match response</text><line id=\"ozon-d22-a2\" x1=\"204\" y1=\"60\" x2=\"216\" y2=\"60\" stroke=\"#37474f\"/></svg>"
+      }
+    },
+    {
+      "type": "theory",
+      "title": "Решение",
+      "content": "## Полный код\n\n```csharp\npublic interface IAdapterCorrelator\n{\n    Task<TResponse> SendAsync<TRequest, TResponse>(\n        TRequest request,\n        Func<TRequest, string> getCorrelationId,\n        Func<TRequest, CancellationToken, Task> send,\n        CancellationToken ct);\n\n    bool TryComplete(string correlationId, object response);\n}\n\npublic sealed class AdapterCorrelator : IAdapterCorrelator\n{\n    private readonly object _sync = new();\n    private readonly Dictionary<string, TaskCompletionSource<object>> _pending = new();\n\n    public async Task<TResponse> SendAsync<TRequest, TResponse>(\n        TRequest request,\n        Func<TRequest, string> getCorrelationId,\n        Func<TRequest, CancellationToken, Task> send,\n        CancellationToken ct)\n    {\n        var id = getCorrelationId(request);\n        var tcs = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);\n        lock (_sync)\n        {\n            if (!_pending.TryAdd(id, tcs))\n                throw new InvalidOperationException($\"Duplicate correlation id '{id}'\");\n        }\n        try\n        {\n            using var reg = ct.Register(() => tcs.TrySetCanceled(ct));\n            await send(request, ct).ConfigureAwait(false);\n            var result = await tcs.Task.ConfigureAwait(false);\n            return (TResponse)result;\n        }\n        finally\n        {\n            lock (_sync)\n            {\n                if (_pending.TryGetValue(id, out var current) && ReferenceEquals(current, tcs))\n                    _pending.Remove(id);\n            }\n        }\n    }\n\n    public bool TryComplete(string correlationId, object response)\n    {\n        TaskCompletionSource<object>? tcs;\n        lock (_sync)\n        {\n            if (!_pending.Remove(correlationId, out tcs)) return false;\n        }\n        return tcs.TrySetResult(response);\n    }\n}\n```"
+    },
+    {
+      "type": "theory",
+      "title": "Ошибки и крайние случаи",
+      "content": "## Ошибки\n\n- Регистрация после отправки — быстрый ответ придёт раньше и потеряется.\n- Запись не удаляется при отмене или ошибке — утечка памяти.\n- `TrySetResult` под `lock` без `RunContinuationsAsynchronously` — продолжение вызывающего выполнится под блокировкой.\n\n## Крайние случаи\n\n- Ответ пришёл после отмены → `TryComplete` вернёт false.\n- Два запроса с одним id → второй получает `InvalidOperationException`."
+    },
+    {
+      "type": "theory",
+      "title": "Что спросят дальше",
+      "content": "## Что спросят дальше\n\n- Таймаут ожидания ответа и метрика «ответов без ожидающего».\n- Correlation id в заголовках сообщений (Kafka, RabbitMQ reply-to).\n- Что делать при рестарте инстанса, ожидавшего ответ?"
+    },
+    {
+      "type": "quiz",
+      "title": "Quiz 1/4",
+      "content": {
+        "question": "Почему TCS регистрируется до вызова `send`?",
+        "options": [
+          "Так `send` выполнится быстрее",
+          "Ответ может прийти раньше, чем `send` завершится",
+          "Без этого `ct.Register` не сработает",
+          "Чтобы проверить уникальность запроса в `send`"
+        ],
+        "correctIndices": [
+          1
+        ]
+      }
+    },
+    {
+      "type": "quiz",
+      "title": "Quiz 2/4",
+      "content": {
+        "question": "Вызывающий отменил `ct`. Что с записью в словаре?",
+        "options": [
+          "Остаётся до прихода ответа",
+          "Удаляется только при следующем `SendAsync`",
+          "Удаляется в `finally`, поздний ответ не найдёт ожидающего",
+          "Переходит в состояние faulted и остаётся"
+        ],
+        "correctIndices": [
+          2
+        ]
+      }
+    },
+    {
+      "type": "quiz",
+      "title": "Quiz 3/4",
+      "content": {
+        "question": "Зачем `TaskCreationOptions.RunContinuationsAsynchronously`?",
+        "options": [
+          "Чтобы `SendAsync` работал в пуле потоков",
+          "Чтобы TCS можно было завершить повторно",
+          "Без него `TrySetCanceled` бросает исключение",
+          "Продолжение не выполнится внутри `TryComplete`"
+        ],
+        "correctIndices": [
+          3
+        ]
+      }
+    },
+    {
+      "type": "quiz",
+      "title": "Quiz 4/4",
+      "content": {
+        "question": "Второй `SendAsync` с уже ожидающим correlation id. Что делает эталон?",
+        "options": [
+          "Бросает `InvalidOperationException`",
+          "Перезаписывает первое ожидание",
+          "Оба получат один и тот же ответ",
+          "Ждёт завершения первого запроса"
+        ],
+        "correctIndices": [
+          0
+        ]
+      }
+    }
+  ]
+}

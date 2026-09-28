@@ -1,0 +1,104 @@
+{
+  "schemaVersion": 1,
+  "title": "День 1. Enrichment",
+  "steps": [
+    {
+      "type": "theory",
+      "title": "Условие",
+      "content": "## Условие\n\nСервис каталога получает список `ids` и должен вернуть карточки товаров из внешнего `IProductClient`.\n\n```csharp\nTask<IReadOnlyList<ProductCard>> EnrichAsync(IReadOnlyList<int> ids, CancellationToken ct);\n```\n\n**Требования**\n\n- Результат в том же порядке, что `ids`; дубликаты сохраняются.\n- Уже загруженные карточки берутся из in-memory кэша без HTTP.\n- Не более `maxParallel` одновременных запросов к клиенту.\n- `ct` отменяет и ожидание слота, и HTTP.\n\n**Пример:** `ids = [3, 1, 3]`, `maxParallel = 2` → `[card3, card1, card3]`; одновременно в клиенте не больше двух запросов."
+    },
+    {
+      "type": "theory",
+      "title": "Уточняющие вопросы и план",
+      "content": "## Уточняющие вопросы\n\n- Сколько ids в запросе и сколько живёт кэш?\n- Ошибка по одному id валит весь ответ или возвращаем частичный результат?\n- Допустим ли повторный HTTP для дубликата, который ещё грузится?\n\n## План\n\n1. Массив результатов по индексу — порядок сохраняется автоматически.\n2. `ConcurrentDictionary` как кэш, `SemaphoreSlim(maxParallel)` как ограничитель.\n3. Повторная проверка кэша после получения слота.\n4. Тесты: порядок, дубликаты, счётчик одновременных запросов, отмена."
+    },
+    {
+      "type": "svg",
+      "title": "Схема: Enrichment",
+      "content": {
+        "caption": "Компонент Enrichment",
+        "description": "Поток данных и ограничение ресурсов.",
+        "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 320 120\" width=\"100%\" role=\"img\" aria-label=\"Компонент Enrichment\"><rect id=\"ozon-d01-n0\" x=\"16\" y=\"36\" width=\"88\" height=\"48\" rx=\"6\" fill=\"#e3f2fd\" stroke=\"#1565c0\"/><text id=\"ozon-d01-t0\" x=\"60\" y=\"64\" text-anchor=\"middle\" font-size=\"9\" fill=\"#0d47a1\">ids in order</text><rect id=\"ozon-d01-n1\" x=\"116\" y=\"36\" width=\"88\" height=\"48\" rx=\"6\" fill=\"#e3f2fd\" stroke=\"#1565c0\"/><text id=\"ozon-d01-t1\" x=\"160\" y=\"64\" text-anchor=\"middle\" font-size=\"9\" fill=\"#0d47a1\">Cache + HTTP</text><line id=\"ozon-d01-a1\" x1=\"104\" y1=\"60\" x2=\"116\" y2=\"60\" stroke=\"#37474f\"/><rect id=\"ozon-d01-n2\" x=\"216\" y=\"36\" width=\"88\" height=\"48\" rx=\"6\" fill=\"#e3f2fd\" stroke=\"#1565c0\"/><text id=\"ozon-d01-t2\" x=\"260\" y=\"64\" text-anchor=\"middle\" font-size=\"9\" fill=\"#0d47a1\">cards out</text><line id=\"ozon-d01-a2\" x1=\"204\" y1=\"60\" x2=\"216\" y2=\"60\" stroke=\"#37474f\"/></svg>"
+      }
+    },
+    {
+      "type": "theory",
+      "title": "Решение",
+      "content": "## Полный код\n\n```csharp\nusing System.Collections.Concurrent;\n\npublic interface IProductEnricher\n{\n    Task<IReadOnlyList<ProductCard>> EnrichAsync(IReadOnlyList<int> ids, CancellationToken ct);\n}\n\npublic sealed class ProductEnricher(IProductClient client, int maxParallel) : IProductEnricher\n{\n    private readonly SemaphoreSlim _gate = new(maxParallel, maxParallel);\n    private readonly ConcurrentDictionary<int, ProductCard> _cache = new();\n\n    public async Task<IReadOnlyList<ProductCard>> EnrichAsync(IReadOnlyList<int> ids, CancellationToken ct)\n    {\n        var results = new ProductCard[ids.Count];\n        var tasks = ids.Select((id, index) => LoadOneAsync(id, index, results, ct)).ToArray();\n        await Task.WhenAll(tasks).ConfigureAwait(false);\n        return results;\n    }\n\n    private async Task LoadOneAsync(int id, int index, ProductCard[] results, CancellationToken ct)\n    {\n        if (_cache.TryGetValue(id, out var hit))\n        {\n            results[index] = hit;\n            return;\n        }\n        await _gate.WaitAsync(ct).ConfigureAwait(false);\n        try\n        {\n            if (_cache.TryGetValue(id, out hit))\n            {\n                results[index] = hit;\n                return;\n            }\n            var card = await client.GetAsync(id, ct).ConfigureAwait(false);\n            results[index] = _cache.GetOrAdd(id, card);\n        }\n        finally { _gate.Release(); }\n    }\n}\n\npublic interface IProductClient { Task<ProductCard> GetAsync(int id, CancellationToken ct); }\npublic sealed record ProductCard(int Id, string Title, decimal Price);\n```"
+    },
+    {
+      "type": "theory",
+      "title": "Ошибки и крайние случаи",
+      "content": "## Ошибки\n\n- Обычный `Dictionary` как кэш: запись из нескольких задач одновременно ломает его внутреннее состояние.\n- `Release` не в `finally` — после первой ошибки HTTP лимит «съедается».\n- Сбор результатов в `List` по мере завершения — порядок не совпадёт с `ids`.\n\n## Крайние случаи\n\n- Пустой `ids` → пустой список без обращений к клиенту.\n- Все id в кэше → ни одного HTTP.\n- Один и тот же id грузится параллельно — два HTTP, если не использовать SingleFlight (день 2)."
+    },
+    {
+      "type": "theory",
+      "title": "Что спросят дальше",
+      "content": "## Что спросят дальше\n\n- Как защититься от cache stampede в распределённом кэше (Redis)?\n- Как ограничить параллелизм на все инстансы сервиса, а не на один?\n- Какие метрики: hit rate кэша, время ожидания слота, ошибки клиента."
+    },
+    {
+      "type": "quiz",
+      "title": "Quiz 1/4",
+      "content": {
+        "question": "Как гарантировать, что карточки вернутся в порядке `ids`?",
+        "options": [
+          "Добавлять в `List` по мере завершения запросов",
+          "Писать результат в массив по индексу исходного id",
+          "Отсортировать результат по `Id` карточки",
+          "Использовать `ConcurrentBag` и `OrderBy` по времени"
+        ],
+        "correctIndices": [
+          1
+        ]
+      }
+    },
+    {
+      "type": "quiz",
+      "title": "Quiz 2/4",
+      "content": {
+        "question": "Почему в эталоне кэш — `ConcurrentDictionary`, а не `Dictionary`?",
+        "options": [
+          "Запись в кэш идёт из нескольких задач одновременно",
+          "`Dictionary` не поддерживает ключи типа `int`",
+          "`ConcurrentDictionary` быстрее на чтение в однопоточном коде",
+          "Чтобы кэш автоматически очищался по TTL"
+        ],
+        "correctIndices": [
+          0
+        ]
+      }
+    },
+    {
+      "type": "quiz",
+      "title": "Quiz 3/4",
+      "content": {
+        "question": "Зачем проверять кэш повторно после `WaitAsync`?",
+        "options": [
+          "Первая проверка не потокобезопасна и может вернуть мусор",
+          "Без неё `SemaphoreSlim` не отпустит слот",
+          "Чтобы обновить TTL записи",
+          "Пока ждали слот, другая задача могла загрузить тот же id"
+        ],
+        "correctIndices": [
+          3
+        ]
+      }
+    },
+    {
+      "type": "quiz",
+      "title": "Quiz 4/4",
+      "content": {
+        "question": "`maxParallel = 2`, запросов 100. Как ведёт себя эталон?",
+        "options": [
+          "Создаёт только 2 задачи и обрабатывает id по очереди",
+          "Запускает 100 HTTP сразу, семафор ограничивает только кэш",
+          "100 задач, но в клиенте одновременно не больше двух",
+          "Бросает исключение: задач больше лимита"
+        ],
+        "correctIndices": [
+          2
+        ]
+      }
+    }
+  ]
+}

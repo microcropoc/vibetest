@@ -1,0 +1,104 @@
+{
+  "schemaVersion": 1,
+  "title": "День 16. TopKProducts",
+  "steps": [
+    {
+      "type": "theory",
+      "title": "Условие",
+      "content": "## Условие\n\nВитрина «Популярное»: считать просмотры товаров и отдавать Top-K.\n\n```csharp\nvoid RecordView(string productId);\nIReadOnlyList<(string ProductId, long Count)> GetTopK(int k);\n```\n\n**Требования**\n\n- Потокобезопасный подсчёт.\n- Top-K по убыванию количества; при равенстве — `productId` по возрастанию (ordinal).\n- `k` больше числа товаров → все товары.\n\n**Пример:** A×3, C×3, B×1 → `GetTopK(2)` = `[(A, 3), (C, 3)]`."
+    },
+    {
+      "type": "theory",
+      "title": "Уточняющие вопросы и план",
+      "content": "## Уточняющие вопросы\n\n- Как часто вызывают `GetTopK` по сравнению с `RecordView`?\n- Окно времени (за час) или за всё время?\n- Допустима ли приблизительная статистика?\n\n## План\n\n1. `Dictionary<string, long>` под `lock`.\n2. `GetTopK`: сортировка по count убыв., затем по id (ordinal), `Take(k)`.\n3. Обсудить кучу размера K для O(n log K).\n4. Тест на tie-break."
+    },
+    {
+      "type": "svg",
+      "title": "Схема: TopKProducts",
+      "content": {
+        "caption": "Компонент TopKProducts",
+        "description": "Поток данных и ограничение ресурсов.",
+        "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 320 120\" width=\"100%\" role=\"img\" aria-label=\"Компонент TopKProducts\"><rect id=\"ozon-d16-n0\" x=\"16\" y=\"36\" width=\"88\" height=\"48\" rx=\"6\" fill=\"#e3f2fd\" stroke=\"#1565c0\"/><text id=\"ozon-d16-t0\" x=\"60\" y=\"64\" text-anchor=\"middle\" font-size=\"9\" fill=\"#0d47a1\">Events</text><rect id=\"ozon-d16-n1\" x=\"116\" y=\"36\" width=\"88\" height=\"48\" rx=\"6\" fill=\"#e3f2fd\" stroke=\"#1565c0\"/><text id=\"ozon-d16-t1\" x=\"160\" y=\"64\" text-anchor=\"middle\" font-size=\"9\" fill=\"#0d47a1\">Count map</text><line id=\"ozon-d16-a1\" x1=\"104\" y1=\"60\" x2=\"116\" y2=\"60\" stroke=\"#37474f\"/><rect id=\"ozon-d16-n2\" x=\"216\" y=\"36\" width=\"88\" height=\"48\" rx=\"6\" fill=\"#e3f2fd\" stroke=\"#1565c0\"/><text id=\"ozon-d16-t2\" x=\"260\" y=\"64\" text-anchor=\"middle\" font-size=\"9\" fill=\"#0d47a1\">Top K heap</text><line id=\"ozon-d16-a2\" x1=\"204\" y1=\"60\" x2=\"216\" y2=\"60\" stroke=\"#37474f\"/></svg>"
+      }
+    },
+    {
+      "type": "theory",
+      "title": "Решение",
+      "content": "## Полный код\n\n```csharp\npublic interface ITopKProducts\n{\n    IReadOnlyList<(string ProductId, long Count)> GetTopK(int k);\n    void RecordView(string productId);\n}\n\npublic sealed class TopKProducts : ITopKProducts\n{\n    private readonly object _sync = new();\n    private readonly Dictionary<string, long> _counts = new();\n\n    public void RecordView(string productId)\n    {\n        lock (_sync)\n        {\n            _counts.TryGetValue(productId, out var c);\n            _counts[productId] = c + 1;\n        }\n    }\n\n    public IReadOnlyList<(string ProductId, long Count)> GetTopK(int k)\n    {\n        lock (_sync)\n        {\n            return _counts\n                .OrderByDescending(kv => kv.Value)\n                .ThenBy(kv => kv.Key, StringComparer.Ordinal)\n                .Take(k)\n                .Select(kv => (kv.Key, kv.Value))\n                .ToList();\n        }\n    }\n}\n```"
+    },
+    {
+      "type": "theory",
+      "title": "Ошибки и крайние случаи",
+      "content": "## Ошибки\n\n- Нет tie-break — порядок равных товаров случаен и «мигает» на витрине.\n- Сортировка с культурозависимым сравнением строк вместо ordinal.\n- `Dictionary` без синхронизации при параллельных `RecordView`.\n\n## Крайние случаи\n\n- `k = 0` → пустой список.\n- Нет просмотров → пустой список."
+    },
+    {
+      "type": "theory",
+      "title": "Что спросят дальше",
+      "content": "## Что спросят дальше\n\n- Count-Min Sketch + куча для приблизительного Top-K при миллионах товаров.\n- Скользящее окно популярности (день 17).\n- Предрасчёт Top-K фоново вместо сортировки на каждый запрос."
+    },
+    {
+      "type": "quiz",
+      "title": "Quiz 1/4",
+      "content": {
+        "question": "A×3, C×3, B×1. Что вернёт `GetTopK(2)`?",
+        "options": [
+          "`[(A, 3), (C, 3)]`",
+          "`[(C, 3), (A, 3)]`",
+          "`[(A, 3), (B, 1)]`",
+          "Порядок A и C не определён"
+        ],
+        "correctIndices": [
+          0
+        ]
+      }
+    },
+    {
+      "type": "quiz",
+      "title": "Quiz 2/4",
+      "content": {
+        "question": "Зачем `StringComparer.Ordinal` в tie-break?",
+        "options": [
+          "Ordinal сортирует по длине строки",
+          "Без него `ThenBy` не компилируется",
+          "Порядок не зависит от культуры",
+          "Он игнорирует регистр"
+        ],
+        "correctIndices": [
+          2
+        ]
+      }
+    },
+    {
+      "type": "quiz",
+      "title": "Quiz 3/4",
+      "content": {
+        "question": "Сложность `GetTopK` в эталоне для n товаров?",
+        "options": [
+          "O(k)",
+          "O(n log k)",
+          "O(1) за счёт словаря",
+          "O(n log n)"
+        ],
+        "correctIndices": [
+          3
+        ]
+      }
+    },
+    {
+      "type": "quiz",
+      "title": "Quiz 4/4",
+      "content": {
+        "question": "Как ускорить `GetTopK` при малом k и большом n?",
+        "options": [
+          "Заменить `Dictionary` на `SortedDictionary` по id",
+          "Min-heap размера k за один проход: O(n log k)",
+          "Кэшировать результат навсегда",
+          "Сортировать только первые k элементов словаря"
+        ],
+        "correctIndices": [
+          1
+        ]
+      }
+    }
+  ]
+}

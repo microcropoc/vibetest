@@ -1,0 +1,104 @@
+{
+  "schemaVersion": 1,
+  "title": "День 24. Outbox",
+  "steps": [
+    {
+      "type": "theory",
+      "title": "Условие",
+      "content": "## Условие\n\nПри создании заказа нужно надёжно опубликовать событие `OrderPlaced` в брокер.\n\n```csharp\nTask PlaceAsync(OrderDraft order, CancellationToken ct);\n```\n\n**Требования**\n\n- Заказ и сообщение в таблице outbox сохраняются одним `SaveChangesAsync` (одна транзакция).\n- Публикация в брокер — отдельный процесс, читающий outbox.\n- Повторная публикация допустима, consumer идемпотентен (день 10).\n\n**Пример:** `PlaceAsync` упал на `SaveChangesAsync` → нет ни заказа, ни outbox-строки; успех → обе записи, publisher позже отправит событие."
+    },
+    {
+      "type": "theory",
+      "title": "Уточняющие вопросы и план",
+      "content": "## Уточняющие вопросы\n\n- Какая БД и есть ли транзакции между заказом и outbox (одна БД)?\n- Допустимая задержка публикации?\n- Нужен ли порядок событий по заказу?\n\n## План\n\n1. Репозиторий заказов и outbox в одном unit of work.\n2. `PlaceAsync`: добавить заказ, добавить `OutboxMessage`, один `SaveChangesAsync`.\n3. Publisher: `SELECT … FOR UPDATE SKIP LOCKED`, публикация, отметка отправленных.\n4. Consumer — идемпотентный (`TryClaim` по `message.Id`)."
+    },
+    {
+      "type": "svg",
+      "title": "Схема: Outbox",
+      "content": {
+        "caption": "Компонент Outbox",
+        "description": "Поток данных и ограничение ресурсов.",
+        "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 320 120\" width=\"100%\" role=\"img\" aria-label=\"Компонент Outbox\"><rect id=\"ozon-d24-n0\" x=\"16\" y=\"36\" width=\"88\" height=\"48\" rx=\"6\" fill=\"#e3f2fd\" stroke=\"#1565c0\"/><text id=\"ozon-d24-t0\" x=\"60\" y=\"64\" text-anchor=\"middle\" font-size=\"9\" fill=\"#0d47a1\">DB tx</text><rect id=\"ozon-d24-n1\" x=\"116\" y=\"36\" width=\"88\" height=\"48\" rx=\"6\" fill=\"#e3f2fd\" stroke=\"#1565c0\"/><text id=\"ozon-d24-t1\" x=\"160\" y=\"64\" text-anchor=\"middle\" font-size=\"9\" fill=\"#0d47a1\">Outbox row</text><line id=\"ozon-d24-a1\" x1=\"104\" y1=\"60\" x2=\"116\" y2=\"60\" stroke=\"#37474f\"/><rect id=\"ozon-d24-n2\" x=\"216\" y=\"36\" width=\"88\" height=\"48\" rx=\"6\" fill=\"#e3f2fd\" stroke=\"#1565c0\"/><text id=\"ozon-d24-t2\" x=\"260\" y=\"64\" text-anchor=\"middle\" font-size=\"9\" fill=\"#0d47a1\">Publisher</text><line id=\"ozon-d24-a2\" x1=\"204\" y1=\"60\" x2=\"216\" y2=\"60\" stroke=\"#37474f\"/></svg>"
+      }
+    },
+    {
+      "type": "theory",
+      "title": "Решение",
+      "content": "## Полный код\n\n```csharp\npublic sealed record OutboxMessage(Guid Id, string Type, string PayloadJson, DateTimeOffset CreatedAt);\n\npublic interface IOutboxStore\n{\n    Task AddAsync(OutboxMessage message, CancellationToken ct);\n}\n\npublic interface IUnitOfWork\n{\n    Task SaveChangesAsync(CancellationToken ct);\n}\n\npublic interface IOrderRepository\n{\n    void AddOrder(OrderDraft order);\n}\n\npublic sealed record OrderDraft(Guid Id, decimal Total);\n\npublic sealed class OutboxDbContext : IUnitOfWork, IOutboxStore, IOrderRepository\n{\n    private readonly List<OrderDraft> _orders = new();\n    private readonly List<OutboxMessage> _outbox = new();\n\n    public void AddOrder(OrderDraft order) => _orders.Add(order);\n\n    public Task AddAsync(OutboxMessage message, CancellationToken ct)\n    {\n        _outbox.Add(message);\n        return Task.CompletedTask;\n    }\n\n    public async Task SaveChangesAsync(CancellationToken ct)\n    {\n        // Single transaction: orders + outbox rows commit together.\n        await PersistAsync(_orders, _outbox, ct).ConfigureAwait(false);\n    }\n\n    private static Task PersistAsync(\n        IReadOnlyList<OrderDraft> orders,\n        IReadOnlyList<OutboxMessage> outbox,\n        CancellationToken ct) => Task.CompletedTask;\n}\n\npublic sealed class PlaceOrderService(IOrderRepository orders, IOutboxStore outbox, IUnitOfWork uow)\n{\n    public async Task PlaceAsync(OrderDraft order, CancellationToken ct)\n    {\n        orders.AddOrder(order);\n        await outbox.AddAsync(new OutboxMessage(\n            Guid.NewGuid(),\n            \"OrderPlaced\",\n            order.Id.ToString(),\n            DateTimeOffset.UtcNow), ct).ConfigureAwait(false);\n        await uow.SaveChangesAsync(ct).ConfigureAwait(false);\n    }\n}\n```"
+    },
+    {
+      "type": "theory",
+      "title": "Ошибки и крайние случаи",
+      "content": "## Ошибки\n\n- Публикация в брокер прямо в `PlaceAsync` до или после commit — при сбое между ними событие теряется или публикуется без заказа.\n- Два `SaveChangesAsync` (заказ, потом outbox) — это две транзакции.\n- Ожидать exactly-once: publisher может упасть после публикации до отметки.\n\n## Крайние случаи\n\n- Publisher опубликовал, но не отметил строку → повторная публикация, consumer дедуплицирует.\n- Много воркеров-publisher'ов → `SKIP LOCKED`, чтобы не брать одни и те же строки."
+    },
+    {
+      "type": "theory",
+      "title": "Что спросят дальше",
+      "content": "## Что спросят дальше\n\n- CDC (Debezium) вместо polling outbox.\n- Inbox-паттерн на стороне consumer.\n- Порядок событий: партиционирование по `orderId`."
+    },
+    {
+      "type": "quiz",
+      "title": "Quiz 1/4",
+      "content": {
+        "question": "Какую проблему решает outbox?",
+        "options": [
+          "Заказ и событие фиксируются одной транзакцией",
+          "Гарантирует exactly-once доставку без идемпотентного consumer",
+          "Ускоряет публикацию за счёт батчей",
+          "Позволяет не использовать брокер сообщений"
+        ],
+        "correctIndices": [
+          0
+        ]
+      }
+    },
+    {
+      "type": "quiz",
+      "title": "Quiz 2/4",
+      "content": {
+        "question": "Publisher отправил событие и упал до отметки строки. Что будет?",
+        "options": [
+          "Событие потеряется",
+          "Повторная публикация — consumer дедуплицирует",
+          "Транзакция заказа откатится вместе с outbox-строкой",
+          "Брокер сам удалит дубликат"
+        ],
+        "correctIndices": [
+          1
+        ]
+      }
+    },
+    {
+      "type": "quiz",
+      "title": "Quiz 3/4",
+      "content": {
+        "question": "Почему нельзя вызвать брокер прямо в `PlaceAsync` после `SaveChangesAsync`?",
+        "options": [
+          "Брокер нельзя вызывать из async-метода",
+          "Это увеличит задержку ответа в разы",
+          "При сбое между commit и публикацией событие теряется",
+          "Брокер не принимает события без outbox-таблицы"
+        ],
+        "correctIndices": [
+          2
+        ]
+      }
+    },
+    {
+      "type": "quiz",
+      "title": "Quiz 4/4",
+      "content": {
+        "question": "Зачем publisher'у `FOR UPDATE SKIP LOCKED`?",
+        "options": [
+          "Чтобы читать строки без транзакции",
+          "Чтобы гарантировать порядок публикации по всей таблице",
+          "Чтобы удалить строки после чтения",
+          "Воркеры берут разные строки, не блокируя друг друга"
+        ],
+        "correctIndices": [
+          3
+        ]
+      }
+    }
+  ]
+}

@@ -1,0 +1,104 @@
+{
+  "schemaVersion": 1,
+  "title": "День 12. OrderStateMachine",
+  "steps": [
+    {
+      "type": "theory",
+      "title": "Условие",
+      "content": "## Условие\n\nЖизненный цикл заказа: разрешены только определённые переходы.\n\n```csharp\nOrderStatus Status { get; }\nbool TryTransition(OrderStatus target);\n```\n\nГраф: `Created → Paid | Cancelled`, `Paid → Shipped | Cancelled`, `Shipped → Completed`; `Cancelled` и `Completed` — терминальные.\n\n**Требования**\n\n- Недопустимый переход возвращает `false` и не меняет статус.\n- Конкурентные переходы атомарны.\n\n**Пример:** Created → Paid → `true`; Paid → Created → `false`; из Paid параллельно Shipped и Cancelled — успешен ровно один."
+    },
+    {
+      "type": "theory",
+      "title": "Уточняющие вопросы и план",
+      "content": "## Уточняющие вопросы\n\n- Недопустимый переход — `false` или исключение?\n- Нужна ли история переходов (аудит)?\n- Переход в тот же статус — ошибка или no-op?\n\n## План\n\n1. Статическая таблица допустимых переходов.\n2. `TryTransition`: проверка и изменение статуса под одним `lock`.\n3. Табличный тест: все пары (from, to).\n4. Тест гонки: Shipped против Cancelled."
+    },
+    {
+      "type": "svg",
+      "title": "Схема: OrderStateMachine",
+      "content": {
+        "caption": "Компонент OrderStateMachine",
+        "description": "Поток данных и ограничение ресурсов.",
+        "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 320 120\" width=\"100%\" role=\"img\" aria-label=\"Компонент OrderStateMachine\"><rect id=\"ozon-d12-n0\" x=\"16\" y=\"36\" width=\"88\" height=\"48\" rx=\"6\" fill=\"#e3f2fd\" stroke=\"#1565c0\"/><text id=\"ozon-d12-t0\" x=\"60\" y=\"64\" text-anchor=\"middle\" font-size=\"9\" fill=\"#0d47a1\">State</text><rect id=\"ozon-d12-n1\" x=\"116\" y=\"36\" width=\"88\" height=\"48\" rx=\"6\" fill=\"#e3f2fd\" stroke=\"#1565c0\"/><text id=\"ozon-d12-t1\" x=\"160\" y=\"64\" text-anchor=\"middle\" font-size=\"9\" fill=\"#0d47a1\">Valid edge</text><line id=\"ozon-d12-a1\" x1=\"104\" y1=\"60\" x2=\"116\" y2=\"60\" stroke=\"#37474f\"/><rect id=\"ozon-d12-n2\" x=\"216\" y=\"36\" width=\"88\" height=\"48\" rx=\"6\" fill=\"#e3f2fd\" stroke=\"#1565c0\"/><text id=\"ozon-d12-t2\" x=\"260\" y=\"64\" text-anchor=\"middle\" font-size=\"9\" fill=\"#0d47a1\">New state</text><line id=\"ozon-d12-a2\" x1=\"204\" y1=\"60\" x2=\"216\" y2=\"60\" stroke=\"#37474f\"/></svg>"
+      }
+    },
+    {
+      "type": "theory",
+      "title": "Решение",
+      "content": "## Полный код\n\n```csharp\npublic enum OrderStatus { Created, Paid, Shipped, Cancelled, Completed }\n\npublic interface IOrderStateMachine\n{\n    OrderStatus Status { get; }\n    bool TryTransition(OrderStatus target);\n}\n\npublic sealed class OrderStateMachine : IOrderStateMachine\n{\n    private static readonly Dictionary<OrderStatus, HashSet<OrderStatus>> Allowed = new()\n    {\n        [OrderStatus.Created] = [OrderStatus.Paid, OrderStatus.Cancelled],\n        [OrderStatus.Paid] = [OrderStatus.Shipped, OrderStatus.Cancelled],\n        [OrderStatus.Shipped] = [OrderStatus.Completed],\n        [OrderStatus.Cancelled] = [],\n        [OrderStatus.Completed] = [],\n    };\n\n    private readonly object _sync = new();\n    private OrderStatus _status = OrderStatus.Created;\n\n    public OrderStatus Status { get { lock (_sync) return _status; } }\n\n    public bool TryTransition(OrderStatus target)\n    {\n        lock (_sync)\n        {\n            if (!Allowed[_status].Contains(target)) return false;\n            _status = target;\n            return true;\n        }\n    }\n}\n```"
+    },
+    {
+      "type": "theory",
+      "title": "Ошибки и крайние случаи",
+      "content": "## Ошибки\n\n- Проверка допустимости и запись статуса без общей блокировки — два конфликтующих перехода оба «успешны».\n- Логика переходов размазана по `if` в сервисах вместо одной таблицы.\n- Разрешить выход из терминального статуса.\n\n## Крайние случаи\n\n- Переход в текущий статус (Paid → Paid) — по таблице запрещён.\n- Неизвестное значение enum → `Allowed[_status]` должен содержать все статусы."
+    },
+    {
+      "type": "theory",
+      "title": "Что спросят дальше",
+      "content": "## Что спросят дальше\n\n- Хранение в БД с оптимистичной блокировкой (`WHERE status = @expected`).\n- Event sourcing: статус как свёртка событий.\n- Побочные эффекты переходов (уведомления) через outbox (день 24)."
+    },
+    {
+      "type": "quiz",
+      "title": "Quiz 1/4",
+      "content": {
+        "question": "Paid → Created. Что вернёт эталон?",
+        "options": [
+          "`false`, статус остаётся Paid",
+          "`true`: откат статуса разрешён",
+          "`InvalidOperationException`",
+          "`false`, статус становится Cancelled"
+        ],
+        "correctIndices": [
+          0
+        ]
+      }
+    },
+    {
+      "type": "quiz",
+      "title": "Quiz 2/4",
+      "content": {
+        "question": "Из Paid параллельно вызвали `TryTransition(Shipped)` и `TryTransition(Cancelled)`. Итог?",
+        "options": [
+          "Оба вернут `true`, победит последний",
+          "Успешен ровно один переход",
+          "Оба вернут `false` из-за конфликта",
+          "Статус станет Completed"
+        ],
+        "correctIndices": [
+          1
+        ]
+      }
+    },
+    {
+      "type": "quiz",
+      "title": "Quiz 3/4",
+      "content": {
+        "question": "Какие статусы в эталоне терминальные?",
+        "options": [
+          "Shipped и Completed",
+          "Только Completed",
+          "Cancelled и Completed",
+          "Cancelled, Shipped и Completed"
+        ],
+        "correctIndices": [
+          2
+        ]
+      }
+    },
+    {
+      "type": "quiz",
+      "title": "Quiz 4/4",
+      "content": {
+        "question": "Как защитить переход при хранении заказа в БД?",
+        "options": [
+          "Прочитать статус, проверить в коде и сделать `UPDATE` без условия",
+          "Хранить статус только в памяти инстанса",
+          "Уровень изоляции `READ COMMITTED` сам предотвращает гонку",
+          "`UPDATE … WHERE id = @id AND status = @expected`"
+        ],
+        "correctIndices": [
+          3
+        ]
+      }
+    }
+  ]
+}

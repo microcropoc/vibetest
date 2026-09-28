@@ -1,0 +1,104 @@
+{
+  "schemaVersion": 1,
+  "title": "День 6. CircuitBreaker",
+  "steps": [
+    {
+      "type": "theory",
+      "title": "Условие",
+      "content": "## Условие\n\nЗащитить сервис от каскадного отказа зависимости: после серии ошибок временно перестать её вызывать.\n\n```csharp\nCircuitState State { get; }\nTask<T> ExecuteAsync<T>(Func<CancellationToken, Task<T>> action, CancellationToken ct);\n```\n\n**Требования**\n\n- Closed: после `failureThreshold` ошибок подряд → Open.\n- Open: вызовы сразу отклоняются `CircuitOpenException` в течение `openDuration`.\n- Half-Open: проходит ровно один пробный вызов, остальные отклоняются; успех → Closed, ошибка → Open.\n- Отмена (`OperationCanceledException`) не считается ошибкой зависимости.\n\n**Пример:** `failureThreshold = 2`, `openDuration = 10 с`: две ошибки → Open; через 11 с первый вызов — пробный, параллельный второй получает `CircuitOpenException`."
+    },
+    {
+      "type": "theory",
+      "title": "Уточняющие вопросы и план",
+      "content": "## Уточняющие вопросы\n\n- Считаем ошибки подряд или долю ошибок за окно?\n- Сколько пробных вызовов в Half-Open?\n- Какие исключения считать отказом зависимости?\n\n## План\n\n1. Состояние, счётчик ошибок, время открытия и флаг пробного вызова под `lock`.\n2. Вход: Open и cooldown не истёк → отказ; истёк → Half-Open; в Half-Open пропустить только один вызов.\n3. Успех → Closed и сброс счётчика; ошибка в Half-Open или порог → Open.\n4. Отмена пробного вызова освобождает флаг, не меняя состояние."
+    },
+    {
+      "type": "svg",
+      "title": "Схема: CircuitBreaker",
+      "content": {
+        "caption": "Компонент CircuitBreaker",
+        "description": "Поток данных и ограничение ресурсов.",
+        "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 320 120\" width=\"100%\" role=\"img\" aria-label=\"Компонент CircuitBreaker\"><rect id=\"ozon-d06-n0\" x=\"16\" y=\"36\" width=\"88\" height=\"48\" rx=\"6\" fill=\"#e3f2fd\" stroke=\"#1565c0\"/><text id=\"ozon-d06-t0\" x=\"60\" y=\"64\" text-anchor=\"middle\" font-size=\"9\" fill=\"#0d47a1\">Closed</text><rect id=\"ozon-d06-n1\" x=\"116\" y=\"36\" width=\"88\" height=\"48\" rx=\"6\" fill=\"#e3f2fd\" stroke=\"#1565c0\"/><text id=\"ozon-d06-t1\" x=\"160\" y=\"64\" text-anchor=\"middle\" font-size=\"9\" fill=\"#0d47a1\">Open / half-open</text><line id=\"ozon-d06-a1\" x1=\"104\" y1=\"60\" x2=\"116\" y2=\"60\" stroke=\"#37474f\"/><rect id=\"ozon-d06-n2\" x=\"216\" y=\"36\" width=\"88\" height=\"48\" rx=\"6\" fill=\"#e3f2fd\" stroke=\"#1565c0\"/><text id=\"ozon-d06-t2\" x=\"260\" y=\"64\" text-anchor=\"middle\" font-size=\"9\" fill=\"#0d47a1\">Probe call</text><line id=\"ozon-d06-a2\" x1=\"204\" y1=\"60\" x2=\"216\" y2=\"60\" stroke=\"#37474f\"/></svg>"
+      }
+    },
+    {
+      "type": "theory",
+      "title": "Решение",
+      "content": "## Полный код\n\n```csharp\npublic enum CircuitState { Closed, Open, HalfOpen }\n\npublic interface ICircuitBreaker\n{\n    CircuitState State { get; }\n    Task<T> ExecuteAsync<T>(Func<CancellationToken, Task<T>> action, CancellationToken ct);\n}\n\npublic sealed class CircuitOpenException() : InvalidOperationException(\"Circuit is open\");\n\npublic sealed class CircuitBreaker : ICircuitBreaker\n{\n    private readonly object _sync = new();\n    private readonly int _failureThreshold;\n    private readonly TimeSpan _openDuration;\n    private readonly TimeProvider _time;\n    private int _failures;\n    private DateTimeOffset _openedAt;\n    private bool _probeInFlight;\n    private CircuitState _state = CircuitState.Closed;\n\n    public CircuitBreaker(int failureThreshold, TimeSpan openDuration, TimeProvider? time = null)\n    {\n        if (failureThreshold <= 0) throw new ArgumentOutOfRangeException(nameof(failureThreshold));\n        _failureThreshold = failureThreshold;\n        _openDuration = openDuration;\n        _time = time ?? TimeProvider.System;\n    }\n\n    public CircuitState State { get { lock (_sync) return _state; } }\n\n    public async Task<T> ExecuteAsync<T>(Func<CancellationToken, Task<T>> action, CancellationToken ct)\n    {\n        var isProbe = EnterIsProbe();\n        try\n        {\n            var result = await action(ct).ConfigureAwait(false);\n            OnSuccess();\n            return result;\n        }\n        catch (OperationCanceledException)\n        {\n            if (isProbe) ReleaseProbe();\n            throw;\n        }\n        catch\n        {\n            OnFailure();\n            throw;\n        }\n    }\n\n    private bool EnterIsProbe()\n    {\n        lock (_sync)\n        {\n            if (_state == CircuitState.Open)\n            {\n                if (_time.GetUtcNow() - _openedAt < _openDuration) throw new CircuitOpenException();\n                _state = CircuitState.HalfOpen;\n            }\n            if (_state == CircuitState.HalfOpen)\n            {\n                if (_probeInFlight) throw new CircuitOpenException();\n                _probeInFlight = true;\n                return true;\n            }\n            return false;\n        }\n    }\n\n    private void OnSuccess()\n    {\n        lock (_sync)\n        {\n            _failures = 0;\n            _probeInFlight = false;\n            _state = CircuitState.Closed;\n        }\n    }\n\n    private void OnFailure()\n    {\n        lock (_sync)\n        {\n            _failures++;\n            if (_state == CircuitState.HalfOpen || _failures >= _failureThreshold)\n            {\n                _state = CircuitState.Open;\n                _openedAt = _time.GetUtcNow();\n                _probeInFlight = false;\n            }\n        }\n    }\n\n    private void ReleaseProbe()\n    {\n        lock (_sync) { _probeInFlight = false; }\n    }\n}\n```"
+    },
+    {
+      "type": "theory",
+      "title": "Ошибки и крайние случаи",
+      "content": "## Ошибки\n\n- В Half-Open пропускать всех: при живой нагрузке на едва поднявшуюся зависимость сразу обрушится весь трафик.\n- Считать отмену пользователя ошибкой зависимости — breaker открывается без причины.\n- Флаг пробного вызова не сбрасывается при отмене — breaker навсегда застревает в Half-Open.\n\n## Крайние случаи\n\n- Долгий вызов из Closed завершился успехом, когда breaker уже Open → переводит в Closed (упрощение; обсудить).\n- `failureThreshold <= 0` → исключение в конструкторе."
+    },
+    {
+      "type": "theory",
+      "title": "Что спросят дальше",
+      "content": "## Что спросят дальше\n\n- Порог по доле ошибок в скользящем окне вместо «подряд».\n- Bulkhead + circuit breaker: изоляция пулов по зависимостям.\n- Метрики и алерты на переходы состояний."
+    },
+    {
+      "type": "quiz",
+      "title": "Quiz 1/4",
+      "content": {
+        "question": "Сколько вызовов эталон пропускает в Half-Open?",
+        "options": [
+          "Все вызовы, пока не случится ошибка",
+          "Ни одного: ждёт ещё один `openDuration`",
+          "Один пробный вызов",
+          "Столько, сколько `failureThreshold`"
+        ],
+        "correctIndices": [
+          2
+        ]
+      }
+    },
+    {
+      "type": "quiz",
+      "title": "Quiz 2/4",
+      "content": {
+        "question": "Пробный вызов завершился ошибкой. Новое состояние?",
+        "options": [
+          "Closed со счётчиком ошибок 1",
+          "Open с новым отсчётом `openDuration`",
+          "Half-Open, следующий вызов снова пробный",
+          "Open до ручного сброса"
+        ],
+        "correctIndices": [
+          1
+        ]
+      }
+    },
+    {
+      "type": "quiz",
+      "title": "Quiz 3/4",
+      "content": {
+        "question": "Почему `OperationCanceledException` не вызывает `OnFailure`?",
+        "options": [
+          "Отмену запросил вызывающий, зависимость может быть здорова",
+          "Это исключение нельзя пробросить из `ExecuteAsync`",
+          "Отмена всегда означает таймаут зависимости",
+          "Иначе `lock` будет захвачен дважды"
+        ],
+        "correctIndices": [
+          0
+        ]
+      }
+    },
+    {
+      "type": "quiz",
+      "title": "Quiz 4/4",
+      "content": {
+        "question": "Что будет, если при отмене пробного вызова не сбросить флаг?",
+        "options": [
+          "Breaker сразу перейдёт в Closed",
+          "Следующий вызов станет пробным автоматически по таймауту",
+          "Ничего: флаг сбросится в `OnSuccess` другого вызова",
+          "Breaker застрянет в Half-Open и будет всех отклонять"
+        ],
+        "correctIndices": [
+          3
+        ]
+      }
+    }
+  ]
+}

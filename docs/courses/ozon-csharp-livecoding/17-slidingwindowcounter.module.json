@@ -1,0 +1,104 @@
+{
+  "schemaVersion": 1,
+  "title": "День 17. SlidingWindowCounter",
+  "steps": [
+    {
+      "type": "theory",
+      "title": "Условие",
+      "content": "## Условие\n\nСчитать события (например, ошибки оплаты) за последние `window` для алертинга.\n\n```csharp\nvoid RecordEvent();\nint CountInWindow();\n```\n\n**Требования**\n\n- Учитываются события за последние `window`.\n- Время — через `TimeProvider`.\n- Потокобезопасность; память ограничена числом событий в окне.\n\n**Пример:** `window = 60 с`: три события в t = 0, одно в t = 30; при t = 61 `CountInWindow()` → 1."
+    },
+    {
+      "type": "theory",
+      "title": "Уточняющие вопросы и план",
+      "content": "## Уточняющие вопросы\n\n- Точный счётчик или приблизительный (бакеты)?\n- Сколько событий в секунду?\n- Граница окна включительная?\n\n## План\n\n1. `Queue<DateTimeOffset>` под `lock`.\n2. `Prune`: удалять из головы метки старше `now − window`.\n3. `Prune` при записи и при чтении.\n4. Тест на `FakeTimeProvider`."
+    },
+    {
+      "type": "svg",
+      "title": "Схема: SlidingWindowCounter",
+      "content": {
+        "caption": "Компонент SlidingWindowCounter",
+        "description": "Поток данных и ограничение ресурсов.",
+        "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 320 120\" width=\"100%\" role=\"img\" aria-label=\"Компонент SlidingWindowCounter\"><rect id=\"ozon-d17-n0\" x=\"16\" y=\"36\" width=\"88\" height=\"48\" rx=\"6\" fill=\"#e3f2fd\" stroke=\"#1565c0\"/><text id=\"ozon-d17-t0\" x=\"60\" y=\"64\" text-anchor=\"middle\" font-size=\"9\" fill=\"#0d47a1\">Record event</text><rect id=\"ozon-d17-n1\" x=\"116\" y=\"36\" width=\"88\" height=\"48\" rx=\"6\" fill=\"#e3f2fd\" stroke=\"#1565c0\"/><text id=\"ozon-d17-t1\" x=\"160\" y=\"64\" text-anchor=\"middle\" font-size=\"9\" fill=\"#0d47a1\">Prune old</text><line id=\"ozon-d17-a1\" x1=\"104\" y1=\"60\" x2=\"116\" y2=\"60\" stroke=\"#37474f\"/><rect id=\"ozon-d17-n2\" x=\"216\" y=\"36\" width=\"88\" height=\"48\" rx=\"6\" fill=\"#e3f2fd\" stroke=\"#1565c0\"/><text id=\"ozon-d17-t2\" x=\"260\" y=\"64\" text-anchor=\"middle\" font-size=\"9\" fill=\"#0d47a1\">Count in window</text><line id=\"ozon-d17-a2\" x1=\"204\" y1=\"60\" x2=\"216\" y2=\"60\" stroke=\"#37474f\"/></svg>"
+      }
+    },
+    {
+      "type": "theory",
+      "title": "Решение",
+      "content": "## Полный код\n\n```csharp\npublic interface ISlidingWindowCounter\n{\n    void RecordEvent();\n    int CountInWindow();\n}\n\npublic sealed class SlidingWindowCounter : ISlidingWindowCounter\n{\n    private readonly object _sync = new();\n    private readonly TimeSpan _window;\n    private readonly TimeProvider _time;\n    private readonly Queue<DateTimeOffset> _events = new();\n\n    public SlidingWindowCounter(TimeSpan window, TimeProvider? time = null)\n    {\n        _window = window;\n        _time = time ?? TimeProvider.System;\n    }\n\n    public void RecordEvent()\n    {\n        lock (_sync)\n        {\n            Prune();\n            _events.Enqueue(_time.GetUtcNow());\n        }\n    }\n\n    public int CountInWindow()\n    {\n        lock (_sync)\n        {\n            Prune();\n            return _events.Count;\n        }\n    }\n\n    private void Prune()\n    {\n        var cutoff = _time.GetUtcNow() - _window;\n        while (_events.Count > 0 && _events.Peek() < cutoff)\n            _events.Dequeue();\n    }\n}\n```"
+    },
+    {
+      "type": "theory",
+      "title": "Ошибки и крайние случаи",
+      "content": "## Ошибки\n\n- Хранить все события без удаления — память растёт бесконечно.\n- Пересчитывать весь список на каждое чтение вместо удаления из головы.\n- `DateTime.Now` — прыжки времени при переводе часов.\n\n## Крайние случаи\n\n- Событие ровно на границе окна: эталон удаляет строго старше `cutoff` (`<`), граничное учитывается.\n- Всплеск в 10⁶ событий в окне — очередь большая; обсудить бакеты."
+    },
+    {
+      "type": "theory",
+      "title": "Что спросят дальше",
+      "content": "## Что спросят дальше\n\n- Бакеты по секундам: память O(window / bucket) ценой точности.\n- Распределённый счётчик (Redis sorted set / INCR с TTL).\n- Связь с rate limiter (день 4)."
+    },
+    {
+      "type": "quiz",
+      "title": "Quiz 1/4",
+      "content": {
+        "question": "`window = 60 с`: три события в t=0, одно в t=30. Что вернёт `CountInWindow()` при t=61?",
+        "options": [
+          "4",
+          "3",
+          "1",
+          "0"
+        ],
+        "correctIndices": [
+          2
+        ]
+      }
+    },
+    {
+      "type": "quiz",
+      "title": "Quiz 2/4",
+      "content": {
+        "question": "Почему `Prune` вызывается и в `RecordEvent`?",
+        "options": [
+          "Без этого новое событие не добавится",
+          "Чтобы `CountInWindow` работал за O(1) без блокировки",
+          "Чтобы сдвинуть окно вперёд на `window`",
+          "Иначе при редком чтении очередь растёт бесконечно"
+        ],
+        "correctIndices": [
+          3
+        ]
+      }
+    },
+    {
+      "type": "quiz",
+      "title": "Quiz 3/4",
+      "content": {
+        "question": "Как ограничить память при миллионах событий в окне?",
+        "options": [
+          "Хранить только последнюю метку",
+          "Бакеты-счётчики по интервалам вместо меток",
+          "Увеличить `window`",
+          "Заменить `Queue` на `List`"
+        ],
+        "correctIndices": [
+          1
+        ]
+      }
+    },
+    {
+      "type": "quiz",
+      "title": "Quiz 4/4",
+      "content": {
+        "question": "Событие ровно в `now − window`. Учитывается ли оно в эталоне?",
+        "options": [
+          "Да: удаляются только метки строго раньше `cutoff`",
+          "Нет: граница исключается",
+          "Зависит от порядка вызовов",
+          "Учитывается только при `RecordEvent`"
+        ],
+        "correctIndices": [
+          0
+        ]
+      }
+    }
+  ]
+}

@@ -1,0 +1,104 @@
+{
+  "schemaVersion": 1,
+  "title": "День 23. BoundedPipeline",
+  "steps": [
+    {
+      "type": "theory",
+      "title": "Условие",
+      "content": "## Условие\n\nОбработать пачку элементов параллельно (например, ресайз фото товаров), сохранив порядок результата.\n\n```csharp\nTask<IReadOnlyList<TOut>> ProcessAsync(IReadOnlyList<TIn> input, CancellationToken ct);\n```\n\n**Требования**\n\n- Не более `maxParallel` одновременных worker.\n- Результат в порядке входа.\n- Отмена останавливает ожидание слотов.\n\n**Пример:** `maxParallel = 2`, item0 обрабатывается 300 мс, item1 — 10 мс → результат `[out0, out1]`."
+    },
+    {
+      "type": "theory",
+      "title": "Уточняющие вопросы и план",
+      "content": "## Уточняющие вопросы\n\n- Размер входа: влезает в память целиком или нужен потоковый вариант?\n- Ошибка одного элемента — падает всё или частичный результат?\n- Нужно ли выдавать результаты по мере готовности?\n\n## План\n\n1. Массив результатов по индексу.\n2. `SemaphoreSlim(maxParallel)` вокруг worker.\n3. `Task.WhenAll` по всем элементам.\n4. Для потокового варианта — `Channel` между стадиями и буфер переупорядочивания."
+    },
+    {
+      "type": "svg",
+      "title": "Схема: BoundedPipeline",
+      "content": {
+        "caption": "Компонент BoundedPipeline",
+        "description": "Поток данных и ограничение ресурсов.",
+        "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 320 120\" width=\"100%\" role=\"img\" aria-label=\"Компонент BoundedPipeline\"><rect id=\"ozon-d23-n0\" x=\"16\" y=\"36\" width=\"88\" height=\"48\" rx=\"6\" fill=\"#e3f2fd\" stroke=\"#1565c0\"/><text id=\"ozon-d23-t0\" x=\"60\" y=\"64\" text-anchor=\"middle\" font-size=\"9\" fill=\"#0d47a1\">Input order</text><rect id=\"ozon-d23-n1\" x=\"116\" y=\"36\" width=\"88\" height=\"48\" rx=\"6\" fill=\"#e3f2fd\" stroke=\"#1565c0\"/><text id=\"ozon-d23-t1\" x=\"160\" y=\"64\" text-anchor=\"middle\" font-size=\"9\" fill=\"#0d47a1\">Workers</text><line id=\"ozon-d23-a1\" x1=\"104\" y1=\"60\" x2=\"116\" y2=\"60\" stroke=\"#37474f\"/><rect id=\"ozon-d23-n2\" x=\"216\" y=\"36\" width=\"88\" height=\"48\" rx=\"6\" fill=\"#e3f2fd\" stroke=\"#1565c0\"/><text id=\"ozon-d23-t2\" x=\"260\" y=\"64\" text-anchor=\"middle\" font-size=\"9\" fill=\"#0d47a1\">Ordered output</text><line id=\"ozon-d23-a2\" x1=\"204\" y1=\"60\" x2=\"216\" y2=\"60\" stroke=\"#37474f\"/></svg>"
+      }
+    },
+    {
+      "type": "theory",
+      "title": "Решение",
+      "content": "## Полный код\n\n```csharp\npublic interface IBoundedPipeline<TIn, TOut>\n{\n    Task<IReadOnlyList<TOut>> ProcessAsync(IReadOnlyList<TIn> input, CancellationToken ct);\n}\n\npublic sealed class BoundedPipeline<TIn, TOut> : IBoundedPipeline<TIn, TOut>\n{\n    private readonly Func<TIn, CancellationToken, Task<TOut>> _worker;\n    private readonly int _maxParallel;\n\n    public BoundedPipeline(Func<TIn, CancellationToken, Task<TOut>> worker, int maxParallel)\n    {\n        _worker = worker;\n        _maxParallel = maxParallel;\n    }\n\n    public async Task<IReadOnlyList<TOut>> ProcessAsync(IReadOnlyList<TIn> input, CancellationToken ct)\n    {\n        var results = new TOut[input.Count];\n        using var gate = new SemaphoreSlim(_maxParallel, _maxParallel);\n        var tasks = new Task[input.Count];\n        for (var i = 0; i < input.Count; i++)\n        {\n            var index = i;\n            tasks[i] = RunIndexAsync(index, input[index], results, gate, ct);\n        }\n        await Task.WhenAll(tasks).ConfigureAwait(false);\n        return results;\n    }\n\n    private async Task RunIndexAsync(int index, TIn item, TOut[] results, SemaphoreSlim gate, CancellationToken ct)\n    {\n        await gate.WaitAsync(ct).ConfigureAwait(false);\n        try\n        {\n            results[index] = await _worker(item, ct).ConfigureAwait(false);\n        }\n        finally { gate.Release(); }\n    }\n}\n```"
+    },
+    {
+      "type": "theory",
+      "title": "Ошибки и крайние случаи",
+      "content": "## Ошибки\n\n- Сбор результатов в `ConcurrentBag` — порядок теряется.\n- Нет лимита — тысячи одновременных worker.\n- Создание задачи на каждый элемент при миллионах элементов — память (обсудить `Parallel.ForEachAsync` или каналы).\n\n## Крайние случаи\n\n- Пустой вход → пустой список.\n- Worker бросил исключение → `Task.WhenAll` пробросит его; остальные worker'ы продолжат работу до завершения."
+    },
+    {
+      "type": "theory",
+      "title": "Что спросят дальше",
+      "content": "## Что спросят дальше\n\n- Потоковый пайплайн: результаты по готовности с буфером переупорядочивания.\n- TPL Dataflow (`TransformBlock` с `EnsureOrdered`).\n- Back-pressure между стадиями через bounded `Channel`."
+    },
+    {
+      "type": "quiz",
+      "title": "Quiz 1/4",
+      "content": {
+        "question": "item0 обрабатывается 300 мс, item1 — 10 мс. Порядок результата?",
+        "options": [
+          "`[out1, out0]`",
+          "`[out0, out1]`",
+          "Зависит от планировщика потоков",
+          "`[out1]`, затем исключение по таймауту"
+        ],
+        "correctIndices": [
+          1
+        ]
+      }
+    },
+    {
+      "type": "quiz",
+      "title": "Quiz 2/4",
+      "content": {
+        "question": "За счёт чего эталон сохраняет порядок?",
+        "options": [
+          "Worker'ы запускаются строго по очереди",
+          "`Task.WhenAll` возвращает результаты в порядке завершения",
+          "Семафор выдаёт слоты по порядку индексов",
+          "Каждый worker пишет результат в массив по своему индексу"
+        ],
+        "correctIndices": [
+          3
+        ]
+      }
+    },
+    {
+      "type": "quiz",
+      "title": "Quiz 3/4",
+      "content": {
+        "question": "Один worker бросил исключение. Что вернёт `ProcessAsync`?",
+        "options": [
+          "Вернёт результат с `default` на месте упавшего элемента",
+          "Сразу отменит остальные worker'ы и вернёт частичный результат",
+          "Пробросит исключение после завершения всех задач",
+          "Повторит упавший элемент"
+        ],
+        "correctIndices": [
+          2
+        ]
+      }
+    },
+    {
+      "type": "quiz",
+      "title": "Quiz 4/4",
+      "content": {
+        "question": "Чем плох `Parallel.ForEach` с async-лямбдой для этой задачи?",
+        "options": [
+          "Лямбда станет `async void`",
+          "Он не поддерживает лимит параллелизма",
+          "Он всегда выполняет элементы по порядку",
+          "Он не компилируется с `IReadOnlyList`"
+        ],
+        "correctIndices": [
+          0
+        ]
+      }
+    }
+  ]
+}

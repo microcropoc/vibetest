@@ -1,0 +1,104 @@
+{
+  "schemaVersion": 1,
+  "title": "День 5. RetryPolicy",
+  "steps": [
+    {
+      "type": "theory",
+      "title": "Условие",
+      "content": "## Условие\n\nОбёртка для вызовов нестабильного сервиса: повторять транзиентные ошибки с растущей паузой.\n\n```csharp\nTask<T> ExecuteAsync<T>(Func<CancellationToken, Task<T>> action, CancellationToken ct);\n```\n\n**Требования**\n\n- До `maxAttempts` попыток, пауза `baseDelay × 2^attempt` плюс случайный jitter.\n- `OperationCanceledException` не повторяется.\n- После исчерпания попыток пробрасывается последнее исключение.\n\n**Пример:** `maxAttempts = 3`, `baseDelay = 100 мс`: action дважды падает с `HttpRequestException`, на третий раз возвращает `ok` → результат `ok`, паузы ~100 и ~200 мс."
+    },
+    {
+      "type": "theory",
+      "title": "Уточняющие вопросы и план",
+      "content": "## Уточняющие вопросы\n\n- Какие ошибки транзиентные (5xx, таймаут), а какие нет (4xx, ошибка валидации)?\n- Операция идемпотентна? Можно ли её повторять?\n- Нужен ли общий бюджет времени на все попытки?\n\n## План\n\n1. Цикл по попыткам с `ct.ThrowIfCancellationRequested()`.\n2. `catch (OperationCanceledException) { throw; }` раньше общего `catch`.\n3. Пауза `baseDelay × 2^attempt + jitter` через `Task.Delay(delay, ct)`.\n4. Фильтр `when (attempt < max − 1)`: последняя ошибка уходит наружу."
+    },
+    {
+      "type": "svg",
+      "title": "Схема: RetryPolicy",
+      "content": {
+        "caption": "Компонент RetryPolicy",
+        "description": "Поток данных и ограничение ресурсов.",
+        "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 320 120\" width=\"100%\" role=\"img\" aria-label=\"Компонент RetryPolicy\"><rect id=\"ozon-d05-n0\" x=\"16\" y=\"36\" width=\"88\" height=\"48\" rx=\"6\" fill=\"#e3f2fd\" stroke=\"#1565c0\"/><text id=\"ozon-d05-t0\" x=\"60\" y=\"64\" text-anchor=\"middle\" font-size=\"9\" fill=\"#0d47a1\">Attempt</text><rect id=\"ozon-d05-n1\" x=\"116\" y=\"36\" width=\"88\" height=\"48\" rx=\"6\" fill=\"#e3f2fd\" stroke=\"#1565c0\"/><text id=\"ozon-d05-t1\" x=\"160\" y=\"64\" text-anchor=\"middle\" font-size=\"9\" fill=\"#0d47a1\">Backoff+jitter</text><line id=\"ozon-d05-a1\" x1=\"104\" y1=\"60\" x2=\"116\" y2=\"60\" stroke=\"#37474f\"/><rect id=\"ozon-d05-n2\" x=\"216\" y=\"36\" width=\"88\" height=\"48\" rx=\"6\" fill=\"#e3f2fd\" stroke=\"#1565c0\"/><text id=\"ozon-d05-t2\" x=\"260\" y=\"64\" text-anchor=\"middle\" font-size=\"9\" fill=\"#0d47a1\">Success / fail</text><line id=\"ozon-d05-a2\" x1=\"204\" y1=\"60\" x2=\"216\" y2=\"60\" stroke=\"#37474f\"/></svg>"
+      }
+    },
+    {
+      "type": "theory",
+      "title": "Решение",
+      "content": "## Полный код\n\n```csharp\npublic interface IRetryPolicy\n{\n    Task<T> ExecuteAsync<T>(\n        Func<CancellationToken, Task<T>> action,\n        CancellationToken ct);\n}\n\npublic sealed class RetryPolicy : IRetryPolicy\n{\n    private readonly int _maxAttempts;\n    private readonly TimeSpan _baseDelay;\n    private readonly Random _jitter = new();\n\n    public RetryPolicy(int maxAttempts = 5, TimeSpan? baseDelay = null)\n    {\n        _maxAttempts = maxAttempts;\n        _baseDelay = baseDelay ?? TimeSpan.FromMilliseconds(100);\n    }\n\n    public async Task<T> ExecuteAsync<T>(\n        Func<CancellationToken, Task<T>> action,\n        CancellationToken ct)\n    {\n        Exception? last = null;\n        for (var attempt = 0; attempt < _maxAttempts; attempt++)\n        {\n            ct.ThrowIfCancellationRequested();\n            try\n            {\n                return await action(ct).ConfigureAwait(false);\n            }\n            catch (OperationCanceledException) { throw; }\n            catch (Exception ex) when (attempt < _maxAttempts - 1)\n            {\n                last = ex;\n                var exp = Math.Pow(2, attempt);\n                var jitterMs = _jitter.Next(0, (int)(_baseDelay.TotalMilliseconds * 0.25) + 1);\n                var delay = TimeSpan.FromMilliseconds(_baseDelay.TotalMilliseconds * exp + jitterMs);\n                await Task.Delay(delay, ct).ConfigureAwait(false);\n            }\n        }\n        throw last ?? new InvalidOperationException(\"Retry exhausted\");\n    }\n}\n```"
+    },
+    {
+      "type": "theory",
+      "title": "Ошибки и крайние случаи",
+      "content": "## Ошибки\n\n- Повтор `OperationCanceledException`: отменённый пользователем запрос продолжает долбить сервис.\n- Нет верхней границы попыток или паузы.\n- Без jitter все клиенты повторяют синхронно и снова кладут сервис (thundering herd).\n\n## Крайние случаи\n\n- Неидемпотентная операция (списание денег) — повтор без ключа идемпотентности опасен.\n- Отмена во время паузы → `Task.Delay` бросает `OperationCanceledException`."
+    },
+    {
+      "type": "theory",
+      "title": "Что спросят дальше",
+      "content": "## Что спросят дальше\n\n- Retry budget: как ограничить долю повторов от общего трафика?\n- Как совместить retry с circuit breaker (день 6)?\n- Polly / `Microsoft.Extensions.Resilience`: что даёт готовая библиотека?"
+    },
+    {
+      "type": "quiz",
+      "title": "Quiz 1/4",
+      "content": {
+        "question": "Почему `OperationCanceledException` не повторяется?",
+        "options": [
+          "Отмену запросил вызывающий, повтор нарушит его решение",
+          "Это исключение нельзя поймать в `catch`",
+          "`Task.Delay` после отмены всегда падает",
+          "Оно означает таймаут сервера, который повторять бесполезно"
+        ],
+        "correctIndices": [
+          0
+        ]
+      }
+    },
+    {
+      "type": "quiz",
+      "title": "Quiz 2/4",
+      "content": {
+        "question": "Зачем добавлять jitter к паузе?",
+        "options": [
+          "Чтобы пауза становилась короче при последних попытках",
+          "Чтобы тесты были детерминированными",
+          "Чтобы клиенты не повторяли синхронно после сбоя",
+          "Чтобы компенсировать неточность `Task.Delay`"
+        ],
+        "correctIndices": [
+          2
+        ]
+      }
+    },
+    {
+      "type": "quiz",
+      "title": "Quiz 3/4",
+      "content": {
+        "question": "Какую ошибку обычно не стоит повторять?",
+        "options": [
+          "HTTP 503 Service Unavailable",
+          "Таймаут соединения",
+          "HTTP 429 с заголовком `Retry-After`",
+          "HTTP 400 из-за невалидного запроса"
+        ],
+        "correctIndices": [
+          3
+        ]
+      }
+    },
+    {
+      "type": "quiz",
+      "title": "Quiz 4/4",
+      "content": {
+        "question": "Что делает фильтр `when (attempt < _maxAttempts - 1)` в эталоне?",
+        "options": [
+          "Пропускает первую попытку без паузы",
+          "Последняя ошибка не ловится и уходит вызывающему",
+          "Ограничивает паузу сверху",
+          "Повторяет только исключения определённого типа"
+        ],
+        "correctIndices": [
+          1
+        ]
+      }
+    }
+  ]
+}

@@ -1,0 +1,104 @@
+{
+  "schemaVersion": 1,
+  "title": "День 21. GracefulBackgroundWorker",
+  "steps": [
+    {
+      "type": "theory",
+      "title": "Условие",
+      "content": "## Условие\n\nФоновый обработчик очереди, который корректно останавливается при деплое.\n\n```csharp\nChannelWriter<WorkUnit> Input { get; }\nTask StopAsync(CancellationToken ct);\n```\n\n**Требования**\n\n- Фоновый цикл читает bounded-канал.\n- `StopAsync` перестаёт принимать новые элементы, прерывает обработку по токену и дожидается завершения цикла (`ct` ограничивает ожидание).\n- Отмена не выходит наружу как исключение цикла.\n\n**Пример:** в очереди 100 элементов, вызван `StopAsync` → цикл завершается, `Input.TryWrite` возвращает false."
+    },
+    {
+      "type": "theory",
+      "title": "Уточняющие вопросы и план",
+      "content": "## Уточняющие вопросы\n\n- Дорабатывать очередь при остановке или прерывать сразу?\n- Сколько времени даёт оркестратор на остановку (`terminationGracePeriod`)?\n- Что делать с ошибкой обработки одного элемента?\n\n## План\n\n1. Bounded `Channel` + цикл `await foreach ReadAllAsync(ct)`.\n2. `StopAsync`: `TryComplete` writer, `Cancel`, `await _loop.WaitAsync(ct)`.\n3. Ловить `OperationCanceledException` в цикле только при нашей отмене.\n4. В production — `BackgroundService` (пакет `Microsoft.Extensions.Hosting`)."
+    },
+    {
+      "type": "svg",
+      "title": "Схема: GracefulBackgroundWorker",
+      "content": {
+        "caption": "Компонент GracefulBackgroundWorker",
+        "description": "Поток данных и ограничение ресурсов.",
+        "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 320 120\" width=\"100%\" role=\"img\" aria-label=\"Компонент GracefulBackgroundWorker\"><rect id=\"ozon-d21-n0\" x=\"16\" y=\"36\" width=\"88\" height=\"48\" rx=\"6\" fill=\"#e3f2fd\" stroke=\"#1565c0\"/><text id=\"ozon-d21-t0\" x=\"60\" y=\"64\" text-anchor=\"middle\" font-size=\"9\" fill=\"#0d47a1\">Start loop</text><rect id=\"ozon-d21-n1\" x=\"116\" y=\"36\" width=\"88\" height=\"48\" rx=\"6\" fill=\"#e3f2fd\" stroke=\"#1565c0\"/><text id=\"ozon-d21-t1\" x=\"160\" y=\"64\" text-anchor=\"middle\" font-size=\"9\" fill=\"#0d47a1\">Channel read</text><line id=\"ozon-d21-a1\" x1=\"104\" y1=\"60\" x2=\"116\" y2=\"60\" stroke=\"#37474f\"/><rect id=\"ozon-d21-n2\" x=\"216\" y=\"36\" width=\"88\" height=\"48\" rx=\"6\" fill=\"#e3f2fd\" stroke=\"#1565c0\"/><text id=\"ozon-d21-t2\" x=\"260\" y=\"64\" text-anchor=\"middle\" font-size=\"9\" fill=\"#0d47a1\">Stop complete</text><line id=\"ozon-d21-a2\" x1=\"204\" y1=\"60\" x2=\"216\" y2=\"60\" stroke=\"#37474f\"/></svg>"
+      }
+    },
+    {
+      "type": "theory",
+      "title": "Решение",
+      "content": "## Полный код\n\n```csharp\npublic sealed record WorkUnit(int Id);\n\n// В production — BackgroundService из Microsoft.Extensions.Hosting.\npublic sealed class GracefulBackgroundWorker : IAsyncDisposable\n{\n    private readonly Channel<WorkUnit> _channel = Channel.CreateBounded<WorkUnit>(\n        new BoundedChannelOptions(256) { FullMode = BoundedChannelFullMode.Wait });\n    private readonly CancellationTokenSource _cts = new();\n    private readonly Task _loop;\n\n    public GracefulBackgroundWorker() =>\n        _loop = Task.Run(() => RunAsync(_cts.Token));\n\n    public ChannelWriter<WorkUnit> Input => _channel.Writer;\n\n    private async Task RunAsync(CancellationToken ct)\n    {\n        try\n        {\n            await foreach (var unit in _channel.Reader.ReadAllAsync(ct).ConfigureAwait(false))\n                await ProcessAsync(unit, ct).ConfigureAwait(false);\n        }\n        catch (OperationCanceledException) when (ct.IsCancellationRequested) { }\n    }\n\n    public async Task StopAsync(CancellationToken ct)\n    {\n        _channel.Writer.TryComplete();\n        _cts.Cancel();\n        await _loop.WaitAsync(ct).ConfigureAwait(false);\n    }\n\n    public async ValueTask DisposeAsync() => await StopAsync(CancellationToken.None);\n\n    private static Task ProcessAsync(WorkUnit unit, CancellationToken ct) =>\n        Task.Delay(10, ct);\n}\n```"
+    },
+    {
+      "type": "theory",
+      "title": "Ошибки и крайние случаи",
+      "content": "## Ошибки\n\n- `Thread.Abort` / `Environment.Exit` вместо кооперативной отмены.\n- Не дождаться цикла в `StopAsync` — процесс завершится посреди обработки.\n- Исключение обработки элемента убивает цикл — остальные элементы не обработаются.\n\n## Крайние случаи\n\n- Остановка во время долгой обработки — `ProcessAsync` должен уважать токен.\n- Повторный `StopAsync` — `TryComplete` и `Cancel` идемпотентны."
+    },
+    {
+      "type": "theory",
+      "title": "Что спросят дальше",
+      "content": "## Что спросят дальше\n\n- Режим «дочитать очередь» перед остановкой (сначала `Complete`, отмена по таймауту).\n- `HostOptions.ShutdownTimeout` и preStop hook в Kubernetes.\n- Health checks: readiness = false во время остановки."
+    },
+    {
+      "type": "quiz",
+      "title": "Quiz 1/4",
+      "content": {
+        "question": "Что делает `Input.TryWrite` после `StopAsync`?",
+        "options": [
+          "Записывает элемент, он обработается после рестарта",
+          "Бросает `OperationCanceledException`",
+          "Возвращает `false`: writer завершён",
+          "Блокируется до освобождения места"
+        ],
+        "correctIndices": [
+          2
+        ]
+      }
+    },
+    {
+      "type": "quiz",
+      "title": "Quiz 2/4",
+      "content": {
+        "question": "Зачем `StopAsync` ждёт `_loop`?",
+        "options": [
+          "Чтобы цикл успел прочитать и обработать все 100 элементов",
+          "Без этого `Cancel` не сработает",
+          "Чтобы освободить канал для новых записей",
+          "Чтобы не оборвать обработку текущего элемента"
+        ],
+        "correctIndices": [
+          3
+        ]
+      }
+    },
+    {
+      "type": "quiz",
+      "title": "Quiz 3/4",
+      "content": {
+        "question": "Эталон при остановке дорабатывает очередь?",
+        "options": [
+          "Да: обрабатывает все элементы до конца",
+          "Нет: токен отменяется сразу, остаток не обрабатывается",
+          "Да, но не дольше `ShutdownTimeout`",
+          "Только элементы с высоким приоритетом"
+        ],
+        "correctIndices": [
+          1
+        ]
+      }
+    },
+    {
+      "type": "quiz",
+      "title": "Quiz 4/4",
+      "content": {
+        "question": "Зачем фильтр `when (ct.IsCancellationRequested)` в `catch`?",
+        "options": [
+          "Глотать только свою остановку, а не чужие отмены",
+          "Чтобы ловить все исключения обработки",
+          "Без него цикл не компилируется",
+          "Чтобы перезапустить цикл после отмены"
+        ],
+        "correctIndices": [
+          0
+        ]
+      }
+    }
+  ]
+}

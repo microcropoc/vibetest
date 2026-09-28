@@ -1,0 +1,104 @@
+{
+  "schemaVersion": 1,
+  "title": "День 4. RateLimiter",
+  "steps": [
+    {
+      "type": "theory",
+      "title": "Условие",
+      "content": "## Условие\n\nОграничить обращения к партнёрскому API: не больше `limit` разрешений за скользящее окно `window`.\n\n```csharp\nbool TryAcquire(int permits = 1);\nValueTask WaitAsync(int permits, CancellationToken ct);\n```\n\n**Требования**\n\n- За любой интервал длиной `window` выдано не более `limit` разрешений.\n- `permits` в диапазоне `(0, limit]`, иначе `ArgumentOutOfRangeException`.\n- `WaitAsync` ждёт освобождения окна и уважает `ct`; время — через `TimeProvider`.\n\n**Пример:** `limit = 3`, `window = 1 с`: `TryAcquire(2)` → true, `TryAcquire(2)` → false, через 1 с `TryAcquire(2)` → true."
+    },
+    {
+      "type": "theory",
+      "title": "Уточняющие вопросы и план",
+      "content": "## Уточняющие вопросы\n\n- Скользящее окно или фиксированное (сброс каждую секунду)?\n- Лимит на весь сервис или на клиента/ключ?\n- Что возвращать при отказе: `false`, ожидание или HTTP 429?\n\n## План\n\n1. Очередь меток времени выданных разрешений под `lock`.\n2. Перед проверкой удалять метки старше `now − window`.\n3. `WaitAsync`: спать до истечения самой старой метки (`Task.Delay(delay, TimeProvider, ct)`).\n4. Тесты на `FakeTimeProvider`."
+    },
+    {
+      "type": "svg",
+      "title": "Схема: RateLimiter",
+      "content": {
+        "caption": "Компонент RateLimiter",
+        "description": "Поток данных и ограничение ресурсов.",
+        "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 320 120\" width=\"100%\" role=\"img\" aria-label=\"Компонент RateLimiter\"><rect id=\"ozon-d04-n0\" x=\"16\" y=\"36\" width=\"88\" height=\"48\" rx=\"6\" fill=\"#e3f2fd\" stroke=\"#1565c0\"/><text id=\"ozon-d04-t0\" x=\"60\" y=\"64\" text-anchor=\"middle\" font-size=\"9\" fill=\"#0d47a1\">Acquire</text><rect id=\"ozon-d04-n1\" x=\"116\" y=\"36\" width=\"88\" height=\"48\" rx=\"6\" fill=\"#e3f2fd\" stroke=\"#1565c0\"/><text id=\"ozon-d04-t1\" x=\"160\" y=\"64\" text-anchor=\"middle\" font-size=\"9\" fill=\"#0d47a1\">Sliding window</text><line id=\"ozon-d04-a1\" x1=\"104\" y1=\"60\" x2=\"116\" y2=\"60\" stroke=\"#37474f\"/><rect id=\"ozon-d04-n2\" x=\"216\" y=\"36\" width=\"88\" height=\"48\" rx=\"6\" fill=\"#e3f2fd\" stroke=\"#1565c0\"/><text id=\"ozon-d04-t2\" x=\"260\" y=\"64\" text-anchor=\"middle\" font-size=\"9\" fill=\"#0d47a1\">Permit / wait</text><line id=\"ozon-d04-a2\" x1=\"204\" y1=\"60\" x2=\"216\" y2=\"60\" stroke=\"#37474f\"/></svg>"
+      }
+    },
+    {
+      "type": "theory",
+      "title": "Решение",
+      "content": "## Полный код\n\n```csharp\npublic interface IRateLimiter\n{\n    bool TryAcquire(int permits = 1);\n    ValueTask WaitAsync(int permits, CancellationToken ct);\n}\n\npublic sealed class SlidingWindowRateLimiter : IRateLimiter\n{\n    private readonly object _sync = new();\n    private readonly int _limit;\n    private readonly TimeSpan _window;\n    private readonly TimeProvider _time;\n    private readonly Queue<DateTimeOffset> _timestamps = new();\n\n    public SlidingWindowRateLimiter(int limit, TimeSpan window, TimeProvider? time = null)\n    {\n        if (limit <= 0) throw new ArgumentOutOfRangeException(nameof(limit));\n        _limit = limit;\n        _window = window;\n        _time = time ?? TimeProvider.System;\n    }\n\n    public bool TryAcquire(int permits = 1)\n    {\n        ValidatePermits(permits);\n        lock (_sync)\n        {\n            Prune();\n            if (_timestamps.Count + permits > _limit) return false;\n            var now = _time.GetUtcNow();\n            for (var i = 0; i < permits; i++) _timestamps.Enqueue(now);\n            return true;\n        }\n    }\n\n    public async ValueTask WaitAsync(int permits, CancellationToken ct)\n    {\n        ValidatePermits(permits);\n        while (!TryAcquire(permits))\n        {\n            DateTimeOffset wakeAt;\n            lock (_sync)\n            {\n                wakeAt = _timestamps.Count > 0\n                    ? _timestamps.Peek().Add(_window)\n                    : _time.GetUtcNow();\n            }\n            var delay = wakeAt - _time.GetUtcNow();\n            if (delay > TimeSpan.Zero)\n                await Task.Delay(delay, _time, ct).ConfigureAwait(false);\n            else\n                await Task.Yield();\n        }\n    }\n\n    private void ValidatePermits(int permits)\n    {\n        if (permits <= 0 || permits > _limit)\n            throw new ArgumentOutOfRangeException(nameof(permits));\n    }\n\n    private void Prune()\n    {\n        var cutoff = _time.GetUtcNow() - _window;\n        while (_timestamps.Count > 0 && _timestamps.Peek() < cutoff)\n            _timestamps.Dequeue();\n    }\n}\n```"
+    },
+    {
+      "type": "theory",
+      "title": "Ошибки и крайние случаи",
+      "content": "## Ошибки\n\n- `permits > limit` без проверки — `WaitAsync` крутится вечно.\n- Фиксированное окно вместо скользящего: на стыке окон проходит до `2 × limit`.\n- `DateTime.Now` и `Thread.Sleep` в тестах — медленно и нестабильно.\n\n## Крайние случаи\n\n- `permits = 0` или отрицательный → исключение.\n- Одновременно ждут несколько `WaitAsync` — кто первый проснётся, тот и получит разрешение (справедливость не гарантируется)."
+    },
+    {
+      "type": "theory",
+      "title": "Что спросят дальше",
+      "content": "## Что спросят дальше\n\n- Token bucket против скользящего окна: что проще масштабировать?\n- Как сделать распределённый лимит (Redis + Lua, sorted set)?\n- Как сообщать клиенту `Retry-After`?"
+    },
+    {
+      "type": "quiz",
+      "title": "Quiz 1/4",
+      "content": {
+        "question": "Что хранит скользящее окно в эталоне?",
+        "options": [
+          "Один счётчик, сбрасываемый каждые `window`",
+          "Очередь меток времени выданных разрешений",
+          "Время последнего вызова `TryAcquire`",
+          "Массив счётчиков по секундам без очистки"
+        ],
+        "correctIndices": [
+          1
+        ]
+      }
+    },
+    {
+      "type": "quiz",
+      "title": "Quiz 2/4",
+      "content": {
+        "question": "Почему `permits > limit` отклоняется исключением?",
+        "options": [
+          "Очередь меток физически не может хранить больше `limit` элементов",
+          "Иначе `TryAcquire` вернёт `true` без проверки",
+          "Так требует интерфейс `System.Threading.RateLimiting`",
+          "Такой запрос не влезет в окно, `WaitAsync` ждал бы вечно"
+        ],
+        "correctIndices": [
+          3
+        ]
+      }
+    },
+    {
+      "type": "quiz",
+      "title": "Quiz 3/4",
+      "content": {
+        "question": "Чем плохо фиксированное окно (сброс счётчика раз в секунду)?",
+        "options": [
+          "На стыке окон проходит почти `2 × limit` запросов",
+          "Оно не работает с `TimeProvider`",
+          "Оно требует блокировки на каждое чтение",
+          "Оно всегда пропускает меньше запросов, чем `limit`"
+        ],
+        "correctIndices": [
+          0
+        ]
+      }
+    },
+    {
+      "type": "quiz",
+      "title": "Quiz 4/4",
+      "content": {
+        "question": "Как `WaitAsync` понимает, сколько спать?",
+        "options": [
+          "Фиксированно `window` при каждом отказе",
+          "Опрашивает `TryAcquire` каждую миллисекунду",
+          "Пока самая старая метка не выйдет из окна",
+          "Ждёт сигнала от другого вызова `TryAcquire`"
+        ],
+        "correctIndices": [
+          2
+        ]
+      }
+    }
+  ]
+}

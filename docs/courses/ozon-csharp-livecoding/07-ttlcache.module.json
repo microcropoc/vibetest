@@ -1,0 +1,104 @@
+{
+  "schemaVersion": 1,
+  "title": "День 7. TtlCache",
+  "steps": [
+    {
+      "type": "theory",
+      "title": "Условие",
+      "content": "## Условие\n\nIn-memory кэш справочника (например, тарифы доставки) с ограниченным временем жизни записей.\n\n```csharp\nTValue GetOrAdd(TKey key, Func<TKey, TValue> factory);\nbool TryGet(TKey key, out TValue value);\n```\n\n**Требования**\n\n- Запись живёт `ttl` с момента добавления; просроченная считается отсутствующей (проверка при чтении).\n- Время — через `TimeProvider`.\n- Потокобезопасность.\n\n**Пример:** `ttl = 1 мин`: `GetOrAdd(\"a\", _ => 1)` → 1; через 2 мин `TryGet(\"a\")` → false, `GetOrAdd(\"a\", _ => 2)` → 2."
+    },
+    {
+      "type": "theory",
+      "title": "Уточняющие вопросы и план",
+      "content": "## Уточняющие вопросы\n\n- Ленивое удаление при чтении или фоновая очистка?\n- Factory дорогая? Можно ли вызывать её под блокировкой?\n- Нужен ли лимит размера?\n\n## План\n\n1. `Dictionary<TKey, Entry(Value, ExpiresAt)>` под `lock`.\n2. Чтение: запись есть и `ExpiresAt > now` → попадание.\n3. Иначе вызвать factory и сохранить с новым `ExpiresAt`.\n4. Тест: `FakeTimeProvider.Advance(ttl)`."
+    },
+    {
+      "type": "svg",
+      "title": "Схема: TtlCache",
+      "content": {
+        "caption": "Компонент TtlCache",
+        "description": "Поток данных и ограничение ресурсов.",
+        "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 320 120\" width=\"100%\" role=\"img\" aria-label=\"Компонент TtlCache\"><rect id=\"ozon-d07-n0\" x=\"16\" y=\"36\" width=\"88\" height=\"48\" rx=\"6\" fill=\"#e3f2fd\" stroke=\"#1565c0\"/><text id=\"ozon-d07-t0\" x=\"60\" y=\"64\" text-anchor=\"middle\" font-size=\"9\" fill=\"#0d47a1\">Get/Set</text><rect id=\"ozon-d07-n1\" x=\"116\" y=\"36\" width=\"88\" height=\"48\" rx=\"6\" fill=\"#e3f2fd\" stroke=\"#1565c0\"/><text id=\"ozon-d07-t1\" x=\"160\" y=\"64\" text-anchor=\"middle\" font-size=\"9\" fill=\"#0d47a1\">TTL clock</text><line id=\"ozon-d07-a1\" x1=\"104\" y1=\"60\" x2=\"116\" y2=\"60\" stroke=\"#37474f\"/><rect id=\"ozon-d07-n2\" x=\"216\" y=\"36\" width=\"88\" height=\"48\" rx=\"6\" fill=\"#e3f2fd\" stroke=\"#1565c0\"/><text id=\"ozon-d07-t2\" x=\"260\" y=\"64\" text-anchor=\"middle\" font-size=\"9\" fill=\"#0d47a1\">Expired evict</text><line id=\"ozon-d07-a2\" x1=\"204\" y1=\"60\" x2=\"216\" y2=\"60\" stroke=\"#37474f\"/></svg>"
+      }
+    },
+    {
+      "type": "theory",
+      "title": "Решение",
+      "content": "## Полный код\n\n```csharp\npublic interface ITtlCache<TKey, TValue> where TKey : notnull\n{\n    TValue GetOrAdd(TKey key, Func<TKey, TValue> factory);\n    bool TryGet(TKey key, out TValue value);\n}\n\npublic sealed class TtlCache<TKey, TValue> : ITtlCache<TKey, TValue> where TKey : notnull\n{\n    private readonly object _sync = new();\n    private readonly TimeSpan _ttl;\n    private readonly TimeProvider _time;\n    private readonly Dictionary<TKey, Entry> _map = new();\n\n    private sealed record Entry(TValue Value, DateTimeOffset ExpiresAt);\n\n    public TtlCache(TimeSpan ttl, TimeProvider? time = null)\n    {\n        _ttl = ttl;\n        _time = time ?? TimeProvider.System;\n    }\n\n    public TValue GetOrAdd(TKey key, Func<TKey, TValue> factory)\n    {\n        lock (_sync)\n        {\n            if (_map.TryGetValue(key, out var e) && e.ExpiresAt > _time.GetUtcNow())\n                return e.Value;\n            var value = factory(key);\n            _map[key] = new Entry(value, _time.GetUtcNow().Add(_ttl));\n            return value;\n        }\n    }\n\n    public bool TryGet(TKey key, out TValue value)\n    {\n        lock (_sync)\n        {\n            if (_map.TryGetValue(key, out var e) && e.ExpiresAt > _time.GetUtcNow())\n            {\n                value = e.Value;\n                return true;\n            }\n            value = default!;\n            return false;\n        }\n    }\n}\n```"
+    },
+    {
+      "type": "theory",
+      "title": "Ошибки и крайние случаи",
+      "content": "## Ошибки\n\n- `DateTime.Now` вместо `TimeProvider` — TTL нельзя протестировать без ожидания.\n- Просроченные ключи, к которым больше не обращаются, остаются в памяти навсегда (в эталоне — осознанное упрощение).\n- Долгая factory под `lock` блокирует все остальные ключи.\n\n## Крайние случаи\n\n- `ttl = 0` → каждое чтение — промах.\n- Factory бросила исключение → ничего не кэшируется, исключение уходит вызывающему."
+    },
+    {
+      "type": "theory",
+      "title": "Что спросят дальше",
+      "content": "## Что спросят дальше\n\n- Фоновая очистка просроченных записей или вытеснение по размеру.\n- `IMemoryCache` / `HybridCache` в .NET: что они дают из коробки?\n- Как избежать одновременного пересчёта ключа (SingleFlight, день 2)?"
+    },
+    {
+      "type": "quiz",
+      "title": "Quiz 1/4",
+      "content": {
+        "question": "Когда эталон удаляет просроченную запись?",
+        "options": [
+          "Не удаляет: запись перезапишется при следующем `GetOrAdd`",
+          "Фоновым таймером каждые `ttl`",
+          "Сразу при истечении через `CancellationToken`",
+          "При каждом `TryGet` по любому ключу"
+        ],
+        "correctIndices": [
+          0
+        ]
+      }
+    },
+    {
+      "type": "quiz",
+      "title": "Quiz 2/4",
+      "content": {
+        "question": "Зачем `TimeProvider` вместо `DateTime.UtcNow`?",
+        "options": [
+          "Чтобы время было точнее на миллисекунды",
+          "Чтобы кэш работал в разных часовых поясах",
+          "Сдвигать время в тестах через `FakeTimeProvider`",
+          "Он быстрее, чем обращение к системным часам"
+        ],
+        "correctIndices": [
+          2
+        ]
+      }
+    },
+    {
+      "type": "quiz",
+      "title": "Quiz 3/4",
+      "content": {
+        "question": "Какая проблема есть у вызова factory под `lock`?",
+        "options": [
+          "Factory будет вызвана дважды",
+          "Компилятор запрещает вызывать делегаты под `lock`",
+          "Запись не сохранится, если factory синхронная",
+          "Долгая factory блокирует все остальные ключи"
+        ],
+        "correctIndices": [
+          3
+        ]
+      }
+    },
+    {
+      "type": "quiz",
+      "title": "Quiz 4/4",
+      "content": {
+        "question": "`ttl = 1 мин`, запись добавлена в 12:00. Что вернёт `TryGet` в 12:01:00 ровно?",
+        "options": [
+          "`true`: граница включительная",
+          "`false`: нужна строгая проверка `ExpiresAt > now`",
+          "Исключение: запись в процессе удаления",
+          "Зависит от того, вызывался ли перед этим `GetOrAdd` по ключу"
+        ],
+        "correctIndices": [
+          1
+        ]
+      }
+    }
+  ]
+}

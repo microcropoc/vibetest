@@ -1,0 +1,2582 @@
+{
+  "schemaVersion": 1,
+  "title": "Лайвкодинг в Ozon на C#",
+  "description": "24 прикладные задачи уровня Ozon middle+/senior: enrichment, single-flight, batching, rate limit, retry, circuit breaker, кэши, concurrency limiter, идемпотентность, inventory, state machine, агрегации, fan-out, merge, top-K, sliding window, priority queue, timeout budget, webhooks, graceful worker, correlator, pipeline, outbox. Theory + SVG + quiz, решения на .NET 8.",
+  "modules": [
+    {
+      "title": "День 0. Формат лайвкодинга Ozon",
+      "steps": [
+        {
+          "type": "theory",
+          "title": "Условие",
+          "content": "## Условие\n\n24 задачи middleware уровня Ozon (middle+/senior). На секции ~45–60 мин: уточнения, интерфейс, in-memory MVP, edge cases, отмена."
+        },
+        {
+          "type": "theory",
+          "title": "Уточняющие вопросы и план",
+          "content": "## План на секции\n\n1. Пересказать задачу своими словами.\n2. Уточнить нагрузку, инварианты и поведение при ошибках.\n3. Зафиксировать контракт (интерфейс) и основной сценарий.\n4. Реализовать, затем отмена, крайние случаи, как тестировать и какие метрики снимать."
+        },
+        {
+          "type": "svg",
+          "title": "Схема: формат Ozon",
+          "content": {
+            "caption": "Компонент формат Ozon",
+            "description": "Поток данных и ограничение ресурсов.",
+            "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 320 120\" width=\"100%\" role=\"img\" aria-label=\"Компонент формат Ozon\"><rect id=\"ozon-d00-n0\" x=\"16\" y=\"36\" width=\"88\" height=\"48\" rx=\"6\" fill=\"#e3f2fd\" stroke=\"#1565c0\"/><text id=\"ozon-d00-t0\" x=\"60\" y=\"64\" text-anchor=\"middle\" font-size=\"9\" fill=\"#0d47a1\">Уточнения</text><rect id=\"ozon-d00-n1\" x=\"116\" y=\"36\" width=\"88\" height=\"48\" rx=\"6\" fill=\"#e3f2fd\" stroke=\"#1565c0\"/><text id=\"ozon-d00-t1\" x=\"160\" y=\"64\" text-anchor=\"middle\" font-size=\"9\" fill=\"#0d47a1\">Код</text><line id=\"ozon-d00-a1\" x1=\"104\" y1=\"60\" x2=\"116\" y2=\"60\" stroke=\"#37474f\"/><rect id=\"ozon-d00-n2\" x=\"216\" y=\"36\" width=\"88\" height=\"48\" rx=\"6\" fill=\"#e3f2fd\" stroke=\"#1565c0\"/><text id=\"ozon-d00-t2\" x=\"260\" y=\"64\" text-anchor=\"middle\" font-size=\"9\" fill=\"#0d47a1\">Edge</text><line id=\"ozon-d00-a2\" x1=\"204\" y1=\"60\" x2=\"216\" y2=\"60\" stroke=\"#37474f\"/></svg>"
+          }
+        },
+        {
+          "type": "theory",
+          "title": "Решение",
+          "content": "## Каркас\n\n```csharp\npublic sealed class LiveCodingSession\n{\n    public async Task RunAsync(CancellationToken ct) => await Task.CompletedTask;\n}\n```"
+        },
+        {
+          "type": "theory",
+          "title": "Ошибки и крайние случаи",
+          "content": "## Ошибки\n\n- Неограниченные очереди и параллелизм.\n- Блокирующие `.Wait()` / `.Result` в async-коде.\n- Игнорирование `CancellationToken`."
+        },
+        {
+          "type": "theory",
+          "title": "Что спросят дальше",
+          "content": "## Что спросят дальше\n\n- Как сохранить состояние между рестартами?\n- Какие метрики и алерты нужны?\n- Как масштабировать на несколько инстансов?"
+        },
+        {
+          "type": "quiz",
+          "title": "Quiz 1/4",
+          "content": {
+            "question": "Сколько обычно длится задача лайвкодинга на секции?",
+            "options": [
+              "10–15 минут: только код без обсуждения",
+              "45–60 минут с уточнениями и обсуждением",
+              "Несколько часов, как домашнее задание",
+              "Время не ограничено, оценивают только итоговое решение"
+            ],
+            "correctIndices": [
+              1
+            ]
+          }
+        },
+        {
+          "type": "quiz",
+          "title": "Quiz 2/4",
+          "content": {
+            "question": "С чего начинать решение после чтения условия?",
+            "options": [
+              "Сразу писать реализацию, вопросы задать в конце, если останется время",
+              "Выбрать базу данных и схему таблиц",
+              "Написать unit-тесты на все крайние случаи",
+              "Пересказать задачу, уточнить нагрузку и инварианты"
+            ],
+            "correctIndices": [
+              3
+            ]
+          }
+        },
+        {
+          "type": "quiz",
+          "title": "Quiz 3/4",
+          "content": {
+            "question": "Интервьюер просит «in-memory MVP». Что это значит?",
+            "options": [
+              "Рабочий код без внешних систем, но с корректной конкурентностью",
+              "Псевдокод без компиляции",
+              "Реализация только для одного потока, конкуренцию можно не учитывать",
+              "Схема на доске без кода"
+            ],
+            "correctIndices": [
+              0
+            ]
+          }
+        },
+        {
+          "type": "quiz",
+          "title": "Quiz 4/4",
+          "content": {
+            "question": "Что обычно спрашивают после работающего решения?",
+            "options": [
+              "Как переименовать классы и методы по код-стайлу команды",
+              "Какой IDE вы пользуетесь",
+              "Масштабирование на несколько инстансов и метрики",
+              "Как переписать решение на другом языке"
+            ],
+            "correctIndices": [
+              2
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "title": "День 1. Enrichment",
+      "steps": [
+        {
+          "type": "theory",
+          "title": "Условие",
+          "content": "## Условие\n\nСервис каталога получает список `ids` и должен вернуть карточки товаров из внешнего `IProductClient`.\n\n```csharp\nTask<IReadOnlyList<ProductCard>> EnrichAsync(IReadOnlyList<int> ids, CancellationToken ct);\n```\n\n**Требования**\n\n- Результат в том же порядке, что `ids`; дубликаты сохраняются.\n- Уже загруженные карточки берутся из in-memory кэша без HTTP.\n- Не более `maxParallel` одновременных запросов к клиенту.\n- `ct` отменяет и ожидание слота, и HTTP.\n\n**Пример:** `ids = [3, 1, 3]`, `maxParallel = 2` → `[card3, card1, card3]`; одновременно в клиенте не больше двух запросов."
+        },
+        {
+          "type": "theory",
+          "title": "Уточняющие вопросы и план",
+          "content": "## Уточняющие вопросы\n\n- Сколько ids в запросе и сколько живёт кэш?\n- Ошибка по одному id валит весь ответ или возвращаем частичный результат?\n- Допустим ли повторный HTTP для дубликата, который ещё грузится?\n\n## План\n\n1. Массив результатов по индексу — порядок сохраняется автоматически.\n2. `ConcurrentDictionary` как кэш, `SemaphoreSlim(maxParallel)` как ограничитель.\n3. Повторная проверка кэша после получения слота.\n4. Тесты: порядок, дубликаты, счётчик одновременных запросов, отмена."
+        },
+        {
+          "type": "svg",
+          "title": "Схема: Enrichment",
+          "content": {
+            "caption": "Компонент Enrichment",
+            "description": "Поток данных и ограничение ресурсов.",
+            "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 320 120\" width=\"100%\" role=\"img\" aria-label=\"Компонент Enrichment\"><rect id=\"ozon-d01-n0\" x=\"16\" y=\"36\" width=\"88\" height=\"48\" rx=\"6\" fill=\"#e3f2fd\" stroke=\"#1565c0\"/><text id=\"ozon-d01-t0\" x=\"60\" y=\"64\" text-anchor=\"middle\" font-size=\"9\" fill=\"#0d47a1\">ids in order</text><rect id=\"ozon-d01-n1\" x=\"116\" y=\"36\" width=\"88\" height=\"48\" rx=\"6\" fill=\"#e3f2fd\" stroke=\"#1565c0\"/><text id=\"ozon-d01-t1\" x=\"160\" y=\"64\" text-anchor=\"middle\" font-size=\"9\" fill=\"#0d47a1\">Cache + HTTP</text><line id=\"ozon-d01-a1\" x1=\"104\" y1=\"60\" x2=\"116\" y2=\"60\" stroke=\"#37474f\"/><rect id=\"ozon-d01-n2\" x=\"216\" y=\"36\" width=\"88\" height=\"48\" rx=\"6\" fill=\"#e3f2fd\" stroke=\"#1565c0\"/><text id=\"ozon-d01-t2\" x=\"260\" y=\"64\" text-anchor=\"middle\" font-size=\"9\" fill=\"#0d47a1\">cards out</text><line id=\"ozon-d01-a2\" x1=\"204\" y1=\"60\" x2=\"216\" y2=\"60\" stroke=\"#37474f\"/></svg>"
+          }
+        },
+        {
+          "type": "theory",
+          "title": "Решение",
+          "content": "## Полный код\n\n```csharp\nusing System.Collections.Concurrent;\n\npublic interface IProductEnricher\n{\n    Task<IReadOnlyList<ProductCard>> EnrichAsync(IReadOnlyList<int> ids, CancellationToken ct);\n}\n\npublic sealed class ProductEnricher(IProductClient client, int maxParallel) : IProductEnricher\n{\n    private readonly SemaphoreSlim _gate = new(maxParallel, maxParallel);\n    private readonly ConcurrentDictionary<int, ProductCard> _cache = new();\n\n    public async Task<IReadOnlyList<ProductCard>> EnrichAsync(IReadOnlyList<int> ids, CancellationToken ct)\n    {\n        var results = new ProductCard[ids.Count];\n        var tasks = ids.Select((id, index) => LoadOneAsync(id, index, results, ct)).ToArray();\n        await Task.WhenAll(tasks).ConfigureAwait(false);\n        return results;\n    }\n\n    private async Task LoadOneAsync(int id, int index, ProductCard[] results, CancellationToken ct)\n    {\n        if (_cache.TryGetValue(id, out var hit))\n        {\n            results[index] = hit;\n            return;\n        }\n        await _gate.WaitAsync(ct).ConfigureAwait(false);\n        try\n        {\n            if (_cache.TryGetValue(id, out hit))\n            {\n                results[index] = hit;\n                return;\n            }\n            var card = await client.GetAsync(id, ct).ConfigureAwait(false);\n            results[index] = _cache.GetOrAdd(id, card);\n        }\n        finally { _gate.Release(); }\n    }\n}\n\npublic interface IProductClient { Task<ProductCard> GetAsync(int id, CancellationToken ct); }\npublic sealed record ProductCard(int Id, string Title, decimal Price);\n```"
+        },
+        {
+          "type": "theory",
+          "title": "Ошибки и крайние случаи",
+          "content": "## Ошибки\n\n- Обычный `Dictionary` как кэш: запись из нескольких задач одновременно ломает его внутреннее состояние.\n- `Release` не в `finally` — после первой ошибки HTTP лимит «съедается».\n- Сбор результатов в `List` по мере завершения — порядок не совпадёт с `ids`.\n\n## Крайние случаи\n\n- Пустой `ids` → пустой список без обращений к клиенту.\n- Все id в кэше → ни одного HTTP.\n- Один и тот же id грузится параллельно — два HTTP, если не использовать SingleFlight (день 2)."
+        },
+        {
+          "type": "theory",
+          "title": "Что спросят дальше",
+          "content": "## Что спросят дальше\n\n- Как защититься от cache stampede в распределённом кэше (Redis)?\n- Как ограничить параллелизм на все инстансы сервиса, а не на один?\n- Какие метрики: hit rate кэша, время ожидания слота, ошибки клиента."
+        },
+        {
+          "type": "quiz",
+          "title": "Quiz 1/4",
+          "content": {
+            "question": "Как гарантировать, что карточки вернутся в порядке `ids`?",
+            "options": [
+              "Добавлять в `List` по мере завершения запросов",
+              "Писать результат в массив по индексу исходного id",
+              "Отсортировать результат по `Id` карточки",
+              "Использовать `ConcurrentBag` и `OrderBy` по времени"
+            ],
+            "correctIndices": [
+              1
+            ]
+          }
+        },
+        {
+          "type": "quiz",
+          "title": "Quiz 2/4",
+          "content": {
+            "question": "Почему в эталоне кэш — `ConcurrentDictionary`, а не `Dictionary`?",
+            "options": [
+              "Запись в кэш идёт из нескольких задач одновременно",
+              "`Dictionary` не поддерживает ключи типа `int`",
+              "`ConcurrentDictionary` быстрее на чтение в однопоточном коде",
+              "Чтобы кэш автоматически очищался по TTL"
+            ],
+            "correctIndices": [
+              0
+            ]
+          }
+        },
+        {
+          "type": "quiz",
+          "title": "Quiz 3/4",
+          "content": {
+            "question": "Зачем проверять кэш повторно после `WaitAsync`?",
+            "options": [
+              "Первая проверка не потокобезопасна и может вернуть мусор",
+              "Без неё `SemaphoreSlim` не отпустит слот",
+              "Чтобы обновить TTL записи",
+              "Пока ждали слот, другая задача могла загрузить тот же id"
+            ],
+            "correctIndices": [
+              3
+            ]
+          }
+        },
+        {
+          "type": "quiz",
+          "title": "Quiz 4/4",
+          "content": {
+            "question": "`maxParallel = 2`, запросов 100. Как ведёт себя эталон?",
+            "options": [
+              "Создаёт только 2 задачи и обрабатывает id по очереди",
+              "Запускает 100 HTTP сразу, семафор ограничивает только кэш",
+              "100 задач, но в клиенте одновременно не больше двух",
+              "Бросает исключение: задач больше лимита"
+            ],
+            "correctIndices": [
+              2
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "title": "День 2. SingleFlight",
+      "steps": [
+        {
+          "type": "theory",
+          "title": "Условие",
+          "content": "## Условие\n\nЗащита от «шторма» одинаковых запросов: пока запрос по ключу выполняется, новые вызовы с тем же ключом ждут его результат.\n\n```csharp\nTask<T> RunAsync<T>(string key, Func<CancellationToken, Task<T>> factory, CancellationToken ct);\n```\n\n**Требования**\n\n- Параллельные вызовы с одним `key` запускают factory один раз и получают один результат или одно исключение.\n- После завершения ключ освобождается: следующий вызов снова запускает factory.\n- `ct` отменяет только ожидание вызывающего; общий запрос продолжается для остальных.\n- Корректно работает с синхронно завершающейся factory (`Task.FromResult`).\n\n**Пример:** три параллельных `RunAsync(\"sku-1\", LoadPrice)` → `LoadPrice` вызван один раз, все получают `42`. Затем `RunAsync(\"sku-1\", _ => Task.FromResult(43))` → `43`."
+        },
+        {
+          "type": "theory",
+          "title": "Уточняющие вопросы и план",
+          "content": "## Уточняющие вопросы\n\n- Если первый вызывающий отменил запрос, отменяем общую factory или только его ожидание?\n- Может ли один ключ использоваться с разными типами `T`?\n- Кэшировать ли результат после завершения или только схлопывать одновременные вызовы?\n\n## План\n\n1. Словарь `key → Task<T>` под `lock`.\n2. Под `lock` положить `TaskCompletionSource<T>.Task` **до** запуска factory.\n3. Factory запускать с собственным токеном, вызывающий ждёт через `WaitAsync(ct)`.\n4. В `finally` удалять ключ, только если в словаре лежит именно эта задача."
+        },
+        {
+          "type": "svg",
+          "title": "Схема: SingleFlight",
+          "content": {
+            "caption": "Компонент SingleFlight",
+            "description": "Поток данных и ограничение ресурсов.",
+            "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 320 120\" width=\"100%\" role=\"img\" aria-label=\"Компонент SingleFlight\"><rect id=\"ozon-d02-n0\" x=\"16\" y=\"36\" width=\"88\" height=\"48\" rx=\"6\" fill=\"#e3f2fd\" stroke=\"#1565c0\"/><text id=\"ozon-d02-t0\" x=\"60\" y=\"64\" text-anchor=\"middle\" font-size=\"9\" fill=\"#0d47a1\">Caller A</text><rect id=\"ozon-d02-n1\" x=\"116\" y=\"36\" width=\"88\" height=\"48\" rx=\"6\" fill=\"#e3f2fd\" stroke=\"#1565c0\"/><text id=\"ozon-d02-t1\" x=\"160\" y=\"64\" text-anchor=\"middle\" font-size=\"9\" fill=\"#0d47a1\">Shared Task</text><line id=\"ozon-d02-a1\" x1=\"104\" y1=\"60\" x2=\"116\" y2=\"60\" stroke=\"#37474f\"/><rect id=\"ozon-d02-n2\" x=\"216\" y=\"36\" width=\"88\" height=\"48\" rx=\"6\" fill=\"#e3f2fd\" stroke=\"#1565c0\"/><text id=\"ozon-d02-t2\" x=\"260\" y=\"64\" text-anchor=\"middle\" font-size=\"9\" fill=\"#0d47a1\">Caller B</text><line id=\"ozon-d02-a2\" x1=\"204\" y1=\"60\" x2=\"216\" y2=\"60\" stroke=\"#37474f\"/></svg>"
+          }
+        },
+        {
+          "type": "theory",
+          "title": "Решение",
+          "content": "## Полный код\n\n```csharp\npublic interface ISingleFlight\n{\n    Task<T> RunAsync<T>(string key, Func<CancellationToken, Task<T>> factory, CancellationToken ct);\n}\n\npublic sealed class SingleFlight : ISingleFlight\n{\n    private readonly object _sync = new();\n    private readonly Dictionary<string, object> _inFlight = new();\n\n    public async Task<T> RunAsync<T>(string key, Func<CancellationToken, Task<T>> factory, CancellationToken ct)\n    {\n        Task<T> shared;\n        lock (_sync)\n        {\n            if (_inFlight.TryGetValue(key, out var existing))\n            {\n                shared = (Task<T>)existing;\n            }\n            else\n            {\n                var tcs = new TaskCompletionSource<T>(TaskCreationOptions.RunContinuationsAsynchronously);\n                shared = tcs.Task;\n                _inFlight[key] = shared;\n                _ = CompleteFlightAsync(key, factory, tcs);\n            }\n        }\n        return await shared.WaitAsync(ct).ConfigureAwait(false);\n    }\n\n    private async Task CompleteFlightAsync<T>(\n        string key,\n        Func<CancellationToken, Task<T>> factory,\n        TaskCompletionSource<T> tcs)\n    {\n        try\n        {\n            var result = await factory(CancellationToken.None).ConfigureAwait(false);\n            tcs.TrySetResult(result);\n        }\n        catch (Exception ex)\n        {\n            tcs.TrySetException(ex);\n        }\n        finally\n        {\n            lock (_sync)\n            {\n                if (_inFlight.TryGetValue(key, out var current) && ReferenceEquals(current, tcs.Task))\n                {\n                    _inFlight.Remove(key);\n                }\n            }\n        }\n    }\n}\n```"
+        },
+        {
+          "type": "theory",
+          "title": "Ошибки и крайние случаи",
+          "content": "## Ошибки\n\n- Запуск factory внутри `lock` с записью в словарь **после**: синхронная factory успевает выполнить `finally` и удалить ключ раньше, чем задача попадёт в словарь, — ключ «застревает» с завершённой задачей навсегда.\n- Передать в factory `ct` первого вызывающего: его отмена отменит запрос у всех.\n- Удалять ключ без проверки `ReferenceEquals` — можно удалить уже новую задачу.\n\n## Крайние случаи\n\n- Factory бросила исключение → все ожидающие получают его, следующий вызов запускает factory заново.\n- Один ключ с `RunAsync<int>` и `RunAsync<string>` → `InvalidCastException`; ключи должны включать тип или быть разделены по сервисам."
+        },
+        {
+          "type": "theory",
+          "title": "Что спросят дальше",
+          "content": "## Что спросят дальше\n\n- Как сделать SingleFlight поверх распределённого кэша (lock в Redis)?\n- Как ограничить память, если ключей миллионы? (шардирование словаря, короткое время жизни записей)\n- Какие метрики: число схлопнутых вызовов, время выполнения factory."
+        },
+        {
+          "type": "quiz",
+          "title": "Quiz 1/4",
+          "content": {
+            "question": "Почему `TaskCompletionSource` кладут в словарь до запуска factory?",
+            "options": [
+              "Так factory выполнится быстрее за счёт пула потоков",
+              "Синхронная factory удалит ключ раньше, чем задача попадёт в словарь",
+              "Без TCS нельзя вернуть результат из `lock`",
+              "Чтобы `WaitAsync` не выбрасывал исключение"
+            ],
+            "correctIndices": [
+              1
+            ]
+          }
+        },
+        {
+          "type": "quiz",
+          "title": "Quiz 2/4",
+          "content": {
+            "question": "Первый вызывающий отменил свой `ct`. Что происходит в эталоне?",
+            "options": [
+              "Factory отменяется для всех ожидающих",
+              "Ключ удаляется, следующий вызов запускает factory заново",
+              "Остальные ожидающие получают `OperationCanceledException`",
+              "Отменяется только его ожидание"
+            ],
+            "correctIndices": [
+              3
+            ]
+          }
+        },
+        {
+          "type": "quiz",
+          "title": "Quiz 3/4",
+          "content": {
+            "question": "`RunAsync<int>(\"k\", …)` и параллельно `RunAsync<string>(\"k\", …)`. Результат?",
+            "options": [
+              "`InvalidCastException` при приведении общей задачи",
+              "Две независимые factory, каждая своего типа",
+              "Вторая factory ждёт первую и получает `default`",
+              "Компилятор не даст использовать один ключ с разными `T`"
+            ],
+            "correctIndices": [
+              0
+            ]
+          }
+        },
+        {
+          "type": "quiz",
+          "title": "Quiz 4/4",
+          "content": {
+            "question": "Зачем в `finally` проверять `ReferenceEquals(current, tcs.Task)`?",
+            "options": [
+              "Чтобы сравнить результаты двух factory",
+              "Чтобы не освобождать `lock` дважды",
+              "Чтобы не удалить задачу следующего вызова",
+              "Без проверки словарь бросит исключение на отсутствующий ключ"
+            ],
+            "correctIndices": [
+              2
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "title": "День 3. AsyncBatcher",
+      "steps": [
+        {
+          "type": "theory",
+          "title": "Условие",
+          "content": "## Условие\n\nDownstream-сервис принимает запросы пачками. Нужно копить одиночные вызовы и отправлять их батчами.\n\n```csharp\nValueTask<TResult> EnqueueAsync(TItem item, CancellationToken ct);\n// processor: Func<IReadOnlyList<TItem>, CancellationToken, Task<IReadOnlyList<TResult>>>\n```\n\n**Требования**\n\n- Батч уходит, когда набралось `maxBatchSize` элементов или прошло `maxDelay` с первого элемента батча.\n- Каждый вызывающий получает свой результат: `results[i]` соответствует `items[i]`.\n- Ошибка processor передаётся всем элементам батча, следующие батчи обрабатываются.\n- `DisposeAsync` останавливает цикл, незавершённые вызовы отменяются.\n\n**Пример:** `maxBatchSize = 10`, `maxDelay = 50 мс`: 25 вызовов подряд → батчи 10, 10, 5; одиночный вызов → батч из одного элемента через ~50 мс."
+        },
+        {
+          "type": "theory",
+          "title": "Уточняющие вопросы и план",
+          "content": "## Уточняющие вопросы\n\n- Что важнее — задержка (`maxDelay`) или размер батча?\n- Processor возвращает результаты по позиции или по ключу?\n- Нужен ли лимит очереди (back-pressure) для вызывающих?\n\n## План\n\n1. `Channel<(item, TCS)>` как очередь, один фоновый цикл-читатель.\n2. Ждать первый элемент без таймаута, потом добирать до размера или дедлайна.\n3. Дедлайн — `CancellationTokenSource(remaining, TimeProvider)`, связанный с токеном остановки.\n4. Результаты и ошибки раздавать через TCS каждого элемента."
+        },
+        {
+          "type": "svg",
+          "title": "Схема: AsyncBatcher",
+          "content": {
+            "caption": "Компонент AsyncBatcher",
+            "description": "Поток данных и ограничение ресурсов.",
+            "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 320 120\" width=\"100%\" role=\"img\" aria-label=\"Компонент AsyncBatcher\"><rect id=\"ozon-d03-n0\" x=\"16\" y=\"36\" width=\"88\" height=\"48\" rx=\"6\" fill=\"#e3f2fd\" stroke=\"#1565c0\"/><text id=\"ozon-d03-t0\" x=\"60\" y=\"64\" text-anchor=\"middle\" font-size=\"9\" fill=\"#0d47a1\">Enqueue</text><rect id=\"ozon-d03-n1\" x=\"116\" y=\"36\" width=\"88\" height=\"48\" rx=\"6\" fill=\"#e3f2fd\" stroke=\"#1565c0\"/><text id=\"ozon-d03-t1\" x=\"160\" y=\"64\" text-anchor=\"middle\" font-size=\"9\" fill=\"#0d47a1\">Batch window</text><line id=\"ozon-d03-a1\" x1=\"104\" y1=\"60\" x2=\"116\" y2=\"60\" stroke=\"#37474f\"/><rect id=\"ozon-d03-n2\" x=\"216\" y=\"36\" width=\"88\" height=\"48\" rx=\"6\" fill=\"#e3f2fd\" stroke=\"#1565c0\"/><text id=\"ozon-d03-t2\" x=\"260\" y=\"64\" text-anchor=\"middle\" font-size=\"9\" fill=\"#0d47a1\">Per-item result</text><line id=\"ozon-d03-a2\" x1=\"204\" y1=\"60\" x2=\"216\" y2=\"60\" stroke=\"#37474f\"/></svg>"
+          }
+        },
+        {
+          "type": "theory",
+          "title": "Решение",
+          "content": "## Полный код\n\n```csharp\npublic interface IAsyncBatcher<TItem, TResult>\n{\n    ValueTask<TResult> EnqueueAsync(TItem item, CancellationToken ct);\n}\n\npublic sealed class AsyncBatcher<TItem, TResult> : IAsyncBatcher<TItem, TResult>, IAsyncDisposable\n{\n    private readonly Func<IReadOnlyList<TItem>, CancellationToken, Task<IReadOnlyList<TResult>>> _processor;\n    private readonly int _maxBatchSize;\n    private readonly TimeSpan _maxDelay;\n    private readonly TimeProvider _time;\n    private readonly Channel<(TItem Item, TaskCompletionSource<TResult> Tcs)> _channel =\n        Channel.CreateUnbounded<(TItem, TaskCompletionSource<TResult>)>();\n    private readonly CancellationTokenSource _cts = new();\n    private readonly Task _loop;\n\n    public AsyncBatcher(\n        Func<IReadOnlyList<TItem>, CancellationToken, Task<IReadOnlyList<TResult>>> processor,\n        int maxBatchSize,\n        TimeSpan maxDelay,\n        TimeProvider? time = null)\n    {\n        if (maxBatchSize <= 0) throw new ArgumentOutOfRangeException(nameof(maxBatchSize));\n        _processor = processor;\n        _maxBatchSize = maxBatchSize;\n        _maxDelay = maxDelay;\n        _time = time ?? TimeProvider.System;\n        _loop = Task.Run(() => RunAsync(_cts.Token));\n    }\n\n    public async ValueTask<TResult> EnqueueAsync(TItem item, CancellationToken ct)\n    {\n        var tcs = new TaskCompletionSource<TResult>(TaskCreationOptions.RunContinuationsAsynchronously);\n        await _channel.Writer.WriteAsync((item, tcs), ct).ConfigureAwait(false);\n        return await tcs.Task.WaitAsync(ct).ConfigureAwait(false);\n    }\n\n    private async Task RunAsync(CancellationToken ct)\n    {\n        var batch = new List<(TItem Item, TaskCompletionSource<TResult> Tcs)>(_maxBatchSize);\n        try\n        {\n            // Ждём первый элемент без таймаута: пустой батч не отправляем.\n            while (await _channel.Reader.WaitToReadAsync(ct).ConfigureAwait(false))\n            {\n                batch.Clear();\n                var deadline = _time.GetUtcNow() + _maxDelay;\n                while (batch.Count < _maxBatchSize)\n                {\n                    if (_channel.Reader.TryRead(out var next))\n                    {\n                        batch.Add(next);\n                        continue;\n                    }\n                    var remaining = deadline - _time.GetUtcNow();\n                    if (remaining <= TimeSpan.Zero) break;\n                    using var delayCts = new CancellationTokenSource(remaining, _time);\n                    using var linked = CancellationTokenSource.CreateLinkedTokenSource(ct, delayCts.Token);\n                    try\n                    {\n                        if (!await _channel.Reader.WaitToReadAsync(linked.Token).ConfigureAwait(false)) break;\n                    }\n                    catch (OperationCanceledException) when (!ct.IsCancellationRequested)\n                    {\n                        break;\n                    }\n                }\n                if (batch.Count > 0) await FlushAsync(batch, ct).ConfigureAwait(false);\n            }\n        }\n        catch (OperationCanceledException) when (ct.IsCancellationRequested)\n        {\n        }\n        finally\n        {\n            foreach (var (_, tcs) in batch) tcs.TrySetCanceled();\n            while (_channel.Reader.TryRead(out var left)) left.Tcs.TrySetCanceled();\n        }\n    }\n\n    private async Task FlushAsync(List<(TItem Item, TaskCompletionSource<TResult> Tcs)> batch, CancellationToken ct)\n    {\n        try\n        {\n            var results = await _processor(batch.Select(x => x.Item).ToList(), ct).ConfigureAwait(false);\n            if (results.Count != batch.Count)\n                throw new InvalidOperationException(\"Processor must return one result per item\");\n            for (var i = 0; i < batch.Count; i++) batch[i].Tcs.TrySetResult(results[i]);\n        }\n        catch (Exception ex)\n        {\n            foreach (var (_, tcs) in batch) tcs.TrySetException(ex);\n        }\n        batch.Clear();\n    }\n\n    public async ValueTask DisposeAsync()\n    {\n        _channel.Writer.TryComplete();\n        _cts.Cancel();\n        await _loop.ConfigureAwait(false);\n        _cts.Dispose();\n    }\n}\n```"
+        },
+        {
+          "type": "theory",
+          "title": "Ошибки и крайние случаи",
+          "content": "## Ошибки\n\n- Ожидание следующего элемента без таймаута: одиночный элемент никогда не отправится.\n- Исключение processor убивает фоновый цикл — все последующие вызовы висят.\n- Потеря соответствия «элемент → результат» при перестановке в батче.\n\n## Крайние случаи\n\n- `maxDelay = 0` → каждый элемент уходит отдельно, если очередь пуста.\n- Processor вернул меньше результатов, чем элементов → ошибка для всего батча.\n- Dispose при непустой очереди → оставшиеся вызовы получают отмену."
+        },
+        {
+          "type": "theory",
+          "title": "Что спросят дальше",
+          "content": "## Что спросят дальше\n\n- Как подбирать размер батча динамически по задержке downstream?\n- Как ограничить очередь и что возвращать вызывающим при переполнении?\n- Как батчить по ключу (например, отдельно на каждого продавца)?"
+        },
+        {
+          "type": "quiz",
+          "title": "Quiz 1/4",
+          "content": {
+            "question": "Когда эталон отправляет неполный батч?",
+            "options": [
+              "Только при вызове `DisposeAsync`",
+              "Когда с первого элемента батча прошло `maxDelay`",
+              "Когда очередь канала пуста в момент чтения",
+              "Никогда: батч всегда ждёт `maxBatchSize` элементов"
+            ],
+            "correctIndices": [
+              1
+            ]
+          }
+        },
+        {
+          "type": "quiz",
+          "title": "Quiz 2/4",
+          "content": {
+            "question": "Как каждый вызывающий получает свой результат?",
+            "options": [
+              "Свой `TaskCompletionSource` на каждый элемент",
+              "Все вызывающие получают список результатов батча и ищут свой",
+              "Результат пишется в общий словарь по элементу",
+              "Processor сам вызывает колбэк каждого вызывающего"
+            ],
+            "correctIndices": [
+              0
+            ]
+          }
+        },
+        {
+          "type": "quiz",
+          "title": "Quiz 3/4",
+          "content": {
+            "question": "Processor бросил исключение. Что делает эталон?",
+            "options": [
+              "Повторяет батч до успеха",
+              "Останавливает цикл, и все новые вызовы получают ту же ошибку",
+              "Отбрасывает батч, вызывающие получают `default`",
+              "Отдаёт исключение всем элементам батча, цикл продолжается"
+            ],
+            "correctIndices": [
+              3
+            ]
+          }
+        },
+        {
+          "type": "quiz",
+          "title": "Quiz 4/4",
+          "content": {
+            "question": "Зачем ждать первый элемент через `WaitToReadAsync` без таймаута?",
+            "options": [
+              "Иначе `Channel` бросит исключение при чтении из пустого буфера",
+              "Чтобы первый элемент всегда уходил отдельным батчем",
+              "Чтобы не отправлять пустые батчи и не крутить таймер впустую",
+              "Так `maxDelay` отсчитывается от старта сервиса"
+            ],
+            "correctIndices": [
+              2
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "title": "День 4. RateLimiter",
+      "steps": [
+        {
+          "type": "theory",
+          "title": "Условие",
+          "content": "## Условие\n\nОграничить обращения к партнёрскому API: не больше `limit` разрешений за скользящее окно `window`.\n\n```csharp\nbool TryAcquire(int permits = 1);\nValueTask WaitAsync(int permits, CancellationToken ct);\n```\n\n**Требования**\n\n- За любой интервал длиной `window` выдано не более `limit` разрешений.\n- `permits` в диапазоне `(0, limit]`, иначе `ArgumentOutOfRangeException`.\n- `WaitAsync` ждёт освобождения окна и уважает `ct`; время — через `TimeProvider`.\n\n**Пример:** `limit = 3`, `window = 1 с`: `TryAcquire(2)` → true, `TryAcquire(2)` → false, через 1 с `TryAcquire(2)` → true."
+        },
+        {
+          "type": "theory",
+          "title": "Уточняющие вопросы и план",
+          "content": "## Уточняющие вопросы\n\n- Скользящее окно или фиксированное (сброс каждую секунду)?\n- Лимит на весь сервис или на клиента/ключ?\n- Что возвращать при отказе: `false`, ожидание или HTTP 429?\n\n## План\n\n1. Очередь меток времени выданных разрешений под `lock`.\n2. Перед проверкой удалять метки старше `now − window`.\n3. `WaitAsync`: спать до истечения самой старой метки (`Task.Delay(delay, TimeProvider, ct)`).\n4. Тесты на `FakeTimeProvider`."
+        },
+        {
+          "type": "svg",
+          "title": "Схема: RateLimiter",
+          "content": {
+            "caption": "Компонент RateLimiter",
+            "description": "Поток данных и ограничение ресурсов.",
+            "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 320 120\" width=\"100%\" role=\"img\" aria-label=\"Компонент RateLimiter\"><rect id=\"ozon-d04-n0\" x=\"16\" y=\"36\" width=\"88\" height=\"48\" rx=\"6\" fill=\"#e3f2fd\" stroke=\"#1565c0\"/><text id=\"ozon-d04-t0\" x=\"60\" y=\"64\" text-anchor=\"middle\" font-size=\"9\" fill=\"#0d47a1\">Acquire</text><rect id=\"ozon-d04-n1\" x=\"116\" y=\"36\" width=\"88\" height=\"48\" rx=\"6\" fill=\"#e3f2fd\" stroke=\"#1565c0\"/><text id=\"ozon-d04-t1\" x=\"160\" y=\"64\" text-anchor=\"middle\" font-size=\"9\" fill=\"#0d47a1\">Sliding window</text><line id=\"ozon-d04-a1\" x1=\"104\" y1=\"60\" x2=\"116\" y2=\"60\" stroke=\"#37474f\"/><rect id=\"ozon-d04-n2\" x=\"216\" y=\"36\" width=\"88\" height=\"48\" rx=\"6\" fill=\"#e3f2fd\" stroke=\"#1565c0\"/><text id=\"ozon-d04-t2\" x=\"260\" y=\"64\" text-anchor=\"middle\" font-size=\"9\" fill=\"#0d47a1\">Permit / wait</text><line id=\"ozon-d04-a2\" x1=\"204\" y1=\"60\" x2=\"216\" y2=\"60\" stroke=\"#37474f\"/></svg>"
+          }
+        },
+        {
+          "type": "theory",
+          "title": "Решение",
+          "content": "## Полный код\n\n```csharp\npublic interface IRateLimiter\n{\n    bool TryAcquire(int permits = 1);\n    ValueTask WaitAsync(int permits, CancellationToken ct);\n}\n\npublic sealed class SlidingWindowRateLimiter : IRateLimiter\n{\n    private readonly object _sync = new();\n    private readonly int _limit;\n    private readonly TimeSpan _window;\n    private readonly TimeProvider _time;\n    private readonly Queue<DateTimeOffset> _timestamps = new();\n\n    public SlidingWindowRateLimiter(int limit, TimeSpan window, TimeProvider? time = null)\n    {\n        if (limit <= 0) throw new ArgumentOutOfRangeException(nameof(limit));\n        _limit = limit;\n        _window = window;\n        _time = time ?? TimeProvider.System;\n    }\n\n    public bool TryAcquire(int permits = 1)\n    {\n        ValidatePermits(permits);\n        lock (_sync)\n        {\n            Prune();\n            if (_timestamps.Count + permits > _limit) return false;\n            var now = _time.GetUtcNow();\n            for (var i = 0; i < permits; i++) _timestamps.Enqueue(now);\n            return true;\n        }\n    }\n\n    public async ValueTask WaitAsync(int permits, CancellationToken ct)\n    {\n        ValidatePermits(permits);\n        while (!TryAcquire(permits))\n        {\n            DateTimeOffset wakeAt;\n            lock (_sync)\n            {\n                wakeAt = _timestamps.Count > 0\n                    ? _timestamps.Peek().Add(_window)\n                    : _time.GetUtcNow();\n            }\n            var delay = wakeAt - _time.GetUtcNow();\n            if (delay > TimeSpan.Zero)\n                await Task.Delay(delay, _time, ct).ConfigureAwait(false);\n            else\n                await Task.Yield();\n        }\n    }\n\n    private void ValidatePermits(int permits)\n    {\n        if (permits <= 0 || permits > _limit)\n            throw new ArgumentOutOfRangeException(nameof(permits));\n    }\n\n    private void Prune()\n    {\n        var cutoff = _time.GetUtcNow() - _window;\n        while (_timestamps.Count > 0 && _timestamps.Peek() < cutoff)\n            _timestamps.Dequeue();\n    }\n}\n```"
+        },
+        {
+          "type": "theory",
+          "title": "Ошибки и крайние случаи",
+          "content": "## Ошибки\n\n- `permits > limit` без проверки — `WaitAsync` крутится вечно.\n- Фиксированное окно вместо скользящего: на стыке окон проходит до `2 × limit`.\n- `DateTime.Now` и `Thread.Sleep` в тестах — медленно и нестабильно.\n\n## Крайние случаи\n\n- `permits = 0` или отрицательный → исключение.\n- Одновременно ждут несколько `WaitAsync` — кто первый проснётся, тот и получит разрешение (справедливость не гарантируется)."
+        },
+        {
+          "type": "theory",
+          "title": "Что спросят дальше",
+          "content": "## Что спросят дальше\n\n- Token bucket против скользящего окна: что проще масштабировать?\n- Как сделать распределённый лимит (Redis + Lua, sorted set)?\n- Как сообщать клиенту `Retry-After`?"
+        },
+        {
+          "type": "quiz",
+          "title": "Quiz 1/4",
+          "content": {
+            "question": "Что хранит скользящее окно в эталоне?",
+            "options": [
+              "Один счётчик, сбрасываемый каждые `window`",
+              "Очередь меток времени выданных разрешений",
+              "Время последнего вызова `TryAcquire`",
+              "Массив счётчиков по секундам без очистки"
+            ],
+            "correctIndices": [
+              1
+            ]
+          }
+        },
+        {
+          "type": "quiz",
+          "title": "Quiz 2/4",
+          "content": {
+            "question": "Почему `permits > limit` отклоняется исключением?",
+            "options": [
+              "Очередь меток физически не может хранить больше `limit` элементов",
+              "Иначе `TryAcquire` вернёт `true` без проверки",
+              "Так требует интерфейс `System.Threading.RateLimiting`",
+              "Такой запрос не влезет в окно, `WaitAsync` ждал бы вечно"
+            ],
+            "correctIndices": [
+              3
+            ]
+          }
+        },
+        {
+          "type": "quiz",
+          "title": "Quiz 3/4",
+          "content": {
+            "question": "Чем плохо фиксированное окно (сброс счётчика раз в секунду)?",
+            "options": [
+              "На стыке окон проходит почти `2 × limit` запросов",
+              "Оно не работает с `TimeProvider`",
+              "Оно требует блокировки на каждое чтение",
+              "Оно всегда пропускает меньше запросов, чем `limit`"
+            ],
+            "correctIndices": [
+              0
+            ]
+          }
+        },
+        {
+          "type": "quiz",
+          "title": "Quiz 4/4",
+          "content": {
+            "question": "Как `WaitAsync` понимает, сколько спать?",
+            "options": [
+              "Фиксированно `window` при каждом отказе",
+              "Опрашивает `TryAcquire` каждую миллисекунду",
+              "Пока самая старая метка не выйдет из окна",
+              "Ждёт сигнала от другого вызова `TryAcquire`"
+            ],
+            "correctIndices": [
+              2
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "title": "День 5. RetryPolicy",
+      "steps": [
+        {
+          "type": "theory",
+          "title": "Условие",
+          "content": "## Условие\n\nОбёртка для вызовов нестабильного сервиса: повторять транзиентные ошибки с растущей паузой.\n\n```csharp\nTask<T> ExecuteAsync<T>(Func<CancellationToken, Task<T>> action, CancellationToken ct);\n```\n\n**Требования**\n\n- До `maxAttempts` попыток, пауза `baseDelay × 2^attempt` плюс случайный jitter.\n- `OperationCanceledException` не повторяется.\n- После исчерпания попыток пробрасывается последнее исключение.\n\n**Пример:** `maxAttempts = 3`, `baseDelay = 100 мс`: action дважды падает с `HttpRequestException`, на третий раз возвращает `ok` → результат `ok`, паузы ~100 и ~200 мс."
+        },
+        {
+          "type": "theory",
+          "title": "Уточняющие вопросы и план",
+          "content": "## Уточняющие вопросы\n\n- Какие ошибки транзиентные (5xx, таймаут), а какие нет (4xx, ошибка валидации)?\n- Операция идемпотентна? Можно ли её повторять?\n- Нужен ли общий бюджет времени на все попытки?\n\n## План\n\n1. Цикл по попыткам с `ct.ThrowIfCancellationRequested()`.\n2. `catch (OperationCanceledException) { throw; }` раньше общего `catch`.\n3. Пауза `baseDelay × 2^attempt + jitter` через `Task.Delay(delay, ct)`.\n4. Фильтр `when (attempt < max − 1)`: последняя ошибка уходит наружу."
+        },
+        {
+          "type": "svg",
+          "title": "Схема: RetryPolicy",
+          "content": {
+            "caption": "Компонент RetryPolicy",
+            "description": "Поток данных и ограничение ресурсов.",
+            "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 320 120\" width=\"100%\" role=\"img\" aria-label=\"Компонент RetryPolicy\"><rect id=\"ozon-d05-n0\" x=\"16\" y=\"36\" width=\"88\" height=\"48\" rx=\"6\" fill=\"#e3f2fd\" stroke=\"#1565c0\"/><text id=\"ozon-d05-t0\" x=\"60\" y=\"64\" text-anchor=\"middle\" font-size=\"9\" fill=\"#0d47a1\">Attempt</text><rect id=\"ozon-d05-n1\" x=\"116\" y=\"36\" width=\"88\" height=\"48\" rx=\"6\" fill=\"#e3f2fd\" stroke=\"#1565c0\"/><text id=\"ozon-d05-t1\" x=\"160\" y=\"64\" text-anchor=\"middle\" font-size=\"9\" fill=\"#0d47a1\">Backoff+jitter</text><line id=\"ozon-d05-a1\" x1=\"104\" y1=\"60\" x2=\"116\" y2=\"60\" stroke=\"#37474f\"/><rect id=\"ozon-d05-n2\" x=\"216\" y=\"36\" width=\"88\" height=\"48\" rx=\"6\" fill=\"#e3f2fd\" stroke=\"#1565c0\"/><text id=\"ozon-d05-t2\" x=\"260\" y=\"64\" text-anchor=\"middle\" font-size=\"9\" fill=\"#0d47a1\">Success / fail</text><line id=\"ozon-d05-a2\" x1=\"204\" y1=\"60\" x2=\"216\" y2=\"60\" stroke=\"#37474f\"/></svg>"
+          }
+        },
+        {
+          "type": "theory",
+          "title": "Решение",
+          "content": "## Полный код\n\n```csharp\npublic interface IRetryPolicy\n{\n    Task<T> ExecuteAsync<T>(\n        Func<CancellationToken, Task<T>> action,\n        CancellationToken ct);\n}\n\npublic sealed class RetryPolicy : IRetryPolicy\n{\n    private readonly int _maxAttempts;\n    private readonly TimeSpan _baseDelay;\n    private readonly Random _jitter = new();\n\n    public RetryPolicy(int maxAttempts = 5, TimeSpan? baseDelay = null)\n    {\n        _maxAttempts = maxAttempts;\n        _baseDelay = baseDelay ?? TimeSpan.FromMilliseconds(100);\n    }\n\n    public async Task<T> ExecuteAsync<T>(\n        Func<CancellationToken, Task<T>> action,\n        CancellationToken ct)\n    {\n        Exception? last = null;\n        for (var attempt = 0; attempt < _maxAttempts; attempt++)\n        {\n            ct.ThrowIfCancellationRequested();\n            try\n            {\n                return await action(ct).ConfigureAwait(false);\n            }\n            catch (OperationCanceledException) { throw; }\n            catch (Exception ex) when (attempt < _maxAttempts - 1)\n            {\n                last = ex;\n                var exp = Math.Pow(2, attempt);\n                var jitterMs = _jitter.Next(0, (int)(_baseDelay.TotalMilliseconds * 0.25) + 1);\n                var delay = TimeSpan.FromMilliseconds(_baseDelay.TotalMilliseconds * exp + jitterMs);\n                await Task.Delay(delay, ct).ConfigureAwait(false);\n            }\n        }\n        throw last ?? new InvalidOperationException(\"Retry exhausted\");\n    }\n}\n```"
+        },
+        {
+          "type": "theory",
+          "title": "Ошибки и крайние случаи",
+          "content": "## Ошибки\n\n- Повтор `OperationCanceledException`: отменённый пользователем запрос продолжает долбить сервис.\n- Нет верхней границы попыток или паузы.\n- Без jitter все клиенты повторяют синхронно и снова кладут сервис (thundering herd).\n\n## Крайние случаи\n\n- Неидемпотентная операция (списание денег) — повтор без ключа идемпотентности опасен.\n- Отмена во время паузы → `Task.Delay` бросает `OperationCanceledException`."
+        },
+        {
+          "type": "theory",
+          "title": "Что спросят дальше",
+          "content": "## Что спросят дальше\n\n- Retry budget: как ограничить долю повторов от общего трафика?\n- Как совместить retry с circuit breaker (день 6)?\n- Polly / `Microsoft.Extensions.Resilience`: что даёт готовая библиотека?"
+        },
+        {
+          "type": "quiz",
+          "title": "Quiz 1/4",
+          "content": {
+            "question": "Почему `OperationCanceledException` не повторяется?",
+            "options": [
+              "Отмену запросил вызывающий, повтор нарушит его решение",
+              "Это исключение нельзя поймать в `catch`",
+              "`Task.Delay` после отмены всегда падает",
+              "Оно означает таймаут сервера, который повторять бесполезно"
+            ],
+            "correctIndices": [
+              0
+            ]
+          }
+        },
+        {
+          "type": "quiz",
+          "title": "Quiz 2/4",
+          "content": {
+            "question": "Зачем добавлять jitter к паузе?",
+            "options": [
+              "Чтобы пауза становилась короче при последних попытках",
+              "Чтобы тесты были детерминированными",
+              "Чтобы клиенты не повторяли синхронно после сбоя",
+              "Чтобы компенсировать неточность `Task.Delay`"
+            ],
+            "correctIndices": [
+              2
+            ]
+          }
+        },
+        {
+          "type": "quiz",
+          "title": "Quiz 3/4",
+          "content": {
+            "question": "Какую ошибку обычно не стоит повторять?",
+            "options": [
+              "HTTP 503 Service Unavailable",
+              "Таймаут соединения",
+              "HTTP 429 с заголовком `Retry-After`",
+              "HTTP 400 из-за невалидного запроса"
+            ],
+            "correctIndices": [
+              3
+            ]
+          }
+        },
+        {
+          "type": "quiz",
+          "title": "Quiz 4/4",
+          "content": {
+            "question": "Что делает фильтр `when (attempt < _maxAttempts - 1)` в эталоне?",
+            "options": [
+              "Пропускает первую попытку без паузы",
+              "Последняя ошибка не ловится и уходит вызывающему",
+              "Ограничивает паузу сверху",
+              "Повторяет только исключения определённого типа"
+            ],
+            "correctIndices": [
+              1
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "title": "День 6. CircuitBreaker",
+      "steps": [
+        {
+          "type": "theory",
+          "title": "Условие",
+          "content": "## Условие\n\nЗащитить сервис от каскадного отказа зависимости: после серии ошибок временно перестать её вызывать.\n\n```csharp\nCircuitState State { get; }\nTask<T> ExecuteAsync<T>(Func<CancellationToken, Task<T>> action, CancellationToken ct);\n```\n\n**Требования**\n\n- Closed: после `failureThreshold` ошибок подряд → Open.\n- Open: вызовы сразу отклоняются `CircuitOpenException` в течение `openDuration`.\n- Half-Open: проходит ровно один пробный вызов, остальные отклоняются; успех → Closed, ошибка → Open.\n- Отмена (`OperationCanceledException`) не считается ошибкой зависимости.\n\n**Пример:** `failureThreshold = 2`, `openDuration = 10 с`: две ошибки → Open; через 11 с первый вызов — пробный, параллельный второй получает `CircuitOpenException`."
+        },
+        {
+          "type": "theory",
+          "title": "Уточняющие вопросы и план",
+          "content": "## Уточняющие вопросы\n\n- Считаем ошибки подряд или долю ошибок за окно?\n- Сколько пробных вызовов в Half-Open?\n- Какие исключения считать отказом зависимости?\n\n## План\n\n1. Состояние, счётчик ошибок, время открытия и флаг пробного вызова под `lock`.\n2. Вход: Open и cooldown не истёк → отказ; истёк → Half-Open; в Half-Open пропустить только один вызов.\n3. Успех → Closed и сброс счётчика; ошибка в Half-Open или порог → Open.\n4. Отмена пробного вызова освобождает флаг, не меняя состояние."
+        },
+        {
+          "type": "svg",
+          "title": "Схема: CircuitBreaker",
+          "content": {
+            "caption": "Компонент CircuitBreaker",
+            "description": "Поток данных и ограничение ресурсов.",
+            "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 320 120\" width=\"100%\" role=\"img\" aria-label=\"Компонент CircuitBreaker\"><rect id=\"ozon-d06-n0\" x=\"16\" y=\"36\" width=\"88\" height=\"48\" rx=\"6\" fill=\"#e3f2fd\" stroke=\"#1565c0\"/><text id=\"ozon-d06-t0\" x=\"60\" y=\"64\" text-anchor=\"middle\" font-size=\"9\" fill=\"#0d47a1\">Closed</text><rect id=\"ozon-d06-n1\" x=\"116\" y=\"36\" width=\"88\" height=\"48\" rx=\"6\" fill=\"#e3f2fd\" stroke=\"#1565c0\"/><text id=\"ozon-d06-t1\" x=\"160\" y=\"64\" text-anchor=\"middle\" font-size=\"9\" fill=\"#0d47a1\">Open / half-open</text><line id=\"ozon-d06-a1\" x1=\"104\" y1=\"60\" x2=\"116\" y2=\"60\" stroke=\"#37474f\"/><rect id=\"ozon-d06-n2\" x=\"216\" y=\"36\" width=\"88\" height=\"48\" rx=\"6\" fill=\"#e3f2fd\" stroke=\"#1565c0\"/><text id=\"ozon-d06-t2\" x=\"260\" y=\"64\" text-anchor=\"middle\" font-size=\"9\" fill=\"#0d47a1\">Probe call</text><line id=\"ozon-d06-a2\" x1=\"204\" y1=\"60\" x2=\"216\" y2=\"60\" stroke=\"#37474f\"/></svg>"
+          }
+        },
+        {
+          "type": "theory",
+          "title": "Решение",
+          "content": "## Полный код\n\n```csharp\npublic enum CircuitState { Closed, Open, HalfOpen }\n\npublic interface ICircuitBreaker\n{\n    CircuitState State { get; }\n    Task<T> ExecuteAsync<T>(Func<CancellationToken, Task<T>> action, CancellationToken ct);\n}\n\npublic sealed class CircuitOpenException() : InvalidOperationException(\"Circuit is open\");\n\npublic sealed class CircuitBreaker : ICircuitBreaker\n{\n    private readonly object _sync = new();\n    private readonly int _failureThreshold;\n    private readonly TimeSpan _openDuration;\n    private readonly TimeProvider _time;\n    private int _failures;\n    private DateTimeOffset _openedAt;\n    private bool _probeInFlight;\n    private CircuitState _state = CircuitState.Closed;\n\n    public CircuitBreaker(int failureThreshold, TimeSpan openDuration, TimeProvider? time = null)\n    {\n        if (failureThreshold <= 0) throw new ArgumentOutOfRangeException(nameof(failureThreshold));\n        _failureThreshold = failureThreshold;\n        _openDuration = openDuration;\n        _time = time ?? TimeProvider.System;\n    }\n\n    public CircuitState State { get { lock (_sync) return _state; } }\n\n    public async Task<T> ExecuteAsync<T>(Func<CancellationToken, Task<T>> action, CancellationToken ct)\n    {\n        var isProbe = EnterIsProbe();\n        try\n        {\n            var result = await action(ct).ConfigureAwait(false);\n            OnSuccess();\n            return result;\n        }\n        catch (OperationCanceledException)\n        {\n            if (isProbe) ReleaseProbe();\n            throw;\n        }\n        catch\n        {\n            OnFailure();\n            throw;\n        }\n    }\n\n    private bool EnterIsProbe()\n    {\n        lock (_sync)\n        {\n            if (_state == CircuitState.Open)\n            {\n                if (_time.GetUtcNow() - _openedAt < _openDuration) throw new CircuitOpenException();\n                _state = CircuitState.HalfOpen;\n            }\n            if (_state == CircuitState.HalfOpen)\n            {\n                if (_probeInFlight) throw new CircuitOpenException();\n                _probeInFlight = true;\n                return true;\n            }\n            return false;\n        }\n    }\n\n    private void OnSuccess()\n    {\n        lock (_sync)\n        {\n            _failures = 0;\n            _probeInFlight = false;\n            _state = CircuitState.Closed;\n        }\n    }\n\n    private void OnFailure()\n    {\n        lock (_sync)\n        {\n            _failures++;\n            if (_state == CircuitState.HalfOpen || _failures >= _failureThreshold)\n            {\n                _state = CircuitState.Open;\n                _openedAt = _time.GetUtcNow();\n                _probeInFlight = false;\n            }\n        }\n    }\n\n    private void ReleaseProbe()\n    {\n        lock (_sync) { _probeInFlight = false; }\n    }\n}\n```"
+        },
+        {
+          "type": "theory",
+          "title": "Ошибки и крайние случаи",
+          "content": "## Ошибки\n\n- В Half-Open пропускать всех: при живой нагрузке на едва поднявшуюся зависимость сразу обрушится весь трафик.\n- Считать отмену пользователя ошибкой зависимости — breaker открывается без причины.\n- Флаг пробного вызова не сбрасывается при отмене — breaker навсегда застревает в Half-Open.\n\n## Крайние случаи\n\n- Долгий вызов из Closed завершился успехом, когда breaker уже Open → переводит в Closed (упрощение; обсудить).\n- `failureThreshold <= 0` → исключение в конструкторе."
+        },
+        {
+          "type": "theory",
+          "title": "Что спросят дальше",
+          "content": "## Что спросят дальше\n\n- Порог по доле ошибок в скользящем окне вместо «подряд».\n- Bulkhead + circuit breaker: изоляция пулов по зависимостям.\n- Метрики и алерты на переходы состояний."
+        },
+        {
+          "type": "quiz",
+          "title": "Quiz 1/4",
+          "content": {
+            "question": "Сколько вызовов эталон пропускает в Half-Open?",
+            "options": [
+              "Все вызовы, пока не случится ошибка",
+              "Ни одного: ждёт ещё один `openDuration`",
+              "Один пробный вызов",
+              "Столько, сколько `failureThreshold`"
+            ],
+            "correctIndices": [
+              2
+            ]
+          }
+        },
+        {
+          "type": "quiz",
+          "title": "Quiz 2/4",
+          "content": {
+            "question": "Пробный вызов завершился ошибкой. Новое состояние?",
+            "options": [
+              "Closed со счётчиком ошибок 1",
+              "Open с новым отсчётом `openDuration`",
+              "Half-Open, следующий вызов снова пробный",
+              "Open до ручного сброса"
+            ],
+            "correctIndices": [
+              1
+            ]
+          }
+        },
+        {
+          "type": "quiz",
+          "title": "Quiz 3/4",
+          "content": {
+            "question": "Почему `OperationCanceledException` не вызывает `OnFailure`?",
+            "options": [
+              "Отмену запросил вызывающий, зависимость может быть здорова",
+              "Это исключение нельзя пробросить из `ExecuteAsync`",
+              "Отмена всегда означает таймаут зависимости",
+              "Иначе `lock` будет захвачен дважды"
+            ],
+            "correctIndices": [
+              0
+            ]
+          }
+        },
+        {
+          "type": "quiz",
+          "title": "Quiz 4/4",
+          "content": {
+            "question": "Что будет, если при отмене пробного вызова не сбросить флаг?",
+            "options": [
+              "Breaker сразу перейдёт в Closed",
+              "Следующий вызов станет пробным автоматически по таймауту",
+              "Ничего: флаг сбросится в `OnSuccess` другого вызова",
+              "Breaker застрянет в Half-Open и будет всех отклонять"
+            ],
+            "correctIndices": [
+              3
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "title": "День 7. TtlCache",
+      "steps": [
+        {
+          "type": "theory",
+          "title": "Условие",
+          "content": "## Условие\n\nIn-memory кэш справочника (например, тарифы доставки) с ограниченным временем жизни записей.\n\n```csharp\nTValue GetOrAdd(TKey key, Func<TKey, TValue> factory);\nbool TryGet(TKey key, out TValue value);\n```\n\n**Требования**\n\n- Запись живёт `ttl` с момента добавления; просроченная считается отсутствующей (проверка при чтении).\n- Время — через `TimeProvider`.\n- Потокобезопасность.\n\n**Пример:** `ttl = 1 мин`: `GetOrAdd(\"a\", _ => 1)` → 1; через 2 мин `TryGet(\"a\")` → false, `GetOrAdd(\"a\", _ => 2)` → 2."
+        },
+        {
+          "type": "theory",
+          "title": "Уточняющие вопросы и план",
+          "content": "## Уточняющие вопросы\n\n- Ленивое удаление при чтении или фоновая очистка?\n- Factory дорогая? Можно ли вызывать её под блокировкой?\n- Нужен ли лимит размера?\n\n## План\n\n1. `Dictionary<TKey, Entry(Value, ExpiresAt)>` под `lock`.\n2. Чтение: запись есть и `ExpiresAt > now` → попадание.\n3. Иначе вызвать factory и сохранить с новым `ExpiresAt`.\n4. Тест: `FakeTimeProvider.Advance(ttl)`."
+        },
+        {
+          "type": "svg",
+          "title": "Схема: TtlCache",
+          "content": {
+            "caption": "Компонент TtlCache",
+            "description": "Поток данных и ограничение ресурсов.",
+            "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 320 120\" width=\"100%\" role=\"img\" aria-label=\"Компонент TtlCache\"><rect id=\"ozon-d07-n0\" x=\"16\" y=\"36\" width=\"88\" height=\"48\" rx=\"6\" fill=\"#e3f2fd\" stroke=\"#1565c0\"/><text id=\"ozon-d07-t0\" x=\"60\" y=\"64\" text-anchor=\"middle\" font-size=\"9\" fill=\"#0d47a1\">Get/Set</text><rect id=\"ozon-d07-n1\" x=\"116\" y=\"36\" width=\"88\" height=\"48\" rx=\"6\" fill=\"#e3f2fd\" stroke=\"#1565c0\"/><text id=\"ozon-d07-t1\" x=\"160\" y=\"64\" text-anchor=\"middle\" font-size=\"9\" fill=\"#0d47a1\">TTL clock</text><line id=\"ozon-d07-a1\" x1=\"104\" y1=\"60\" x2=\"116\" y2=\"60\" stroke=\"#37474f\"/><rect id=\"ozon-d07-n2\" x=\"216\" y=\"36\" width=\"88\" height=\"48\" rx=\"6\" fill=\"#e3f2fd\" stroke=\"#1565c0\"/><text id=\"ozon-d07-t2\" x=\"260\" y=\"64\" text-anchor=\"middle\" font-size=\"9\" fill=\"#0d47a1\">Expired evict</text><line id=\"ozon-d07-a2\" x1=\"204\" y1=\"60\" x2=\"216\" y2=\"60\" stroke=\"#37474f\"/></svg>"
+          }
+        },
+        {
+          "type": "theory",
+          "title": "Решение",
+          "content": "## Полный код\n\n```csharp\npublic interface ITtlCache<TKey, TValue> where TKey : notnull\n{\n    TValue GetOrAdd(TKey key, Func<TKey, TValue> factory);\n    bool TryGet(TKey key, out TValue value);\n}\n\npublic sealed class TtlCache<TKey, TValue> : ITtlCache<TKey, TValue> where TKey : notnull\n{\n    private readonly object _sync = new();\n    private readonly TimeSpan _ttl;\n    private readonly TimeProvider _time;\n    private readonly Dictionary<TKey, Entry> _map = new();\n\n    private sealed record Entry(TValue Value, DateTimeOffset ExpiresAt);\n\n    public TtlCache(TimeSpan ttl, TimeProvider? time = null)\n    {\n        _ttl = ttl;\n        _time = time ?? TimeProvider.System;\n    }\n\n    public TValue GetOrAdd(TKey key, Func<TKey, TValue> factory)\n    {\n        lock (_sync)\n        {\n            if (_map.TryGetValue(key, out var e) && e.ExpiresAt > _time.GetUtcNow())\n                return e.Value;\n            var value = factory(key);\n            _map[key] = new Entry(value, _time.GetUtcNow().Add(_ttl));\n            return value;\n        }\n    }\n\n    public bool TryGet(TKey key, out TValue value)\n    {\n        lock (_sync)\n        {\n            if (_map.TryGetValue(key, out var e) && e.ExpiresAt > _time.GetUtcNow())\n            {\n                value = e.Value;\n                return true;\n            }\n            value = default!;\n            return false;\n        }\n    }\n}\n```"
+        },
+        {
+          "type": "theory",
+          "title": "Ошибки и крайние случаи",
+          "content": "## Ошибки\n\n- `DateTime.Now` вместо `TimeProvider` — TTL нельзя протестировать без ожидания.\n- Просроченные ключи, к которым больше не обращаются, остаются в памяти навсегда (в эталоне — осознанное упрощение).\n- Долгая factory под `lock` блокирует все остальные ключи.\n\n## Крайние случаи\n\n- `ttl = 0` → каждое чтение — промах.\n- Factory бросила исключение → ничего не кэшируется, исключение уходит вызывающему."
+        },
+        {
+          "type": "theory",
+          "title": "Что спросят дальше",
+          "content": "## Что спросят дальше\n\n- Фоновая очистка просроченных записей или вытеснение по размеру.\n- `IMemoryCache` / `HybridCache` в .NET: что они дают из коробки?\n- Как избежать одновременного пересчёта ключа (SingleFlight, день 2)?"
+        },
+        {
+          "type": "quiz",
+          "title": "Quiz 1/4",
+          "content": {
+            "question": "Когда эталон удаляет просроченную запись?",
+            "options": [
+              "Не удаляет: запись перезапишется при следующем `GetOrAdd`",
+              "Фоновым таймером каждые `ttl`",
+              "Сразу при истечении через `CancellationToken`",
+              "При каждом `TryGet` по любому ключу"
+            ],
+            "correctIndices": [
+              0
+            ]
+          }
+        },
+        {
+          "type": "quiz",
+          "title": "Quiz 2/4",
+          "content": {
+            "question": "Зачем `TimeProvider` вместо `DateTime.UtcNow`?",
+            "options": [
+              "Чтобы время было точнее на миллисекунды",
+              "Чтобы кэш работал в разных часовых поясах",
+              "Сдвигать время в тестах через `FakeTimeProvider`",
+              "Он быстрее, чем обращение к системным часам"
+            ],
+            "correctIndices": [
+              2
+            ]
+          }
+        },
+        {
+          "type": "quiz",
+          "title": "Quiz 3/4",
+          "content": {
+            "question": "Какая проблема есть у вызова factory под `lock`?",
+            "options": [
+              "Factory будет вызвана дважды",
+              "Компилятор запрещает вызывать делегаты под `lock`",
+              "Запись не сохранится, если factory синхронная",
+              "Долгая factory блокирует все остальные ключи"
+            ],
+            "correctIndices": [
+              3
+            ]
+          }
+        },
+        {
+          "type": "quiz",
+          "title": "Quiz 4/4",
+          "content": {
+            "question": "`ttl = 1 мин`, запись добавлена в 12:00. Что вернёт `TryGet` в 12:01:00 ровно?",
+            "options": [
+              "`true`: граница включительная",
+              "`false`: нужна строгая проверка `ExpiresAt > now`",
+              "Исключение: запись в процессе удаления",
+              "Зависит от того, вызывался ли перед этим `GetOrAdd` по ключу"
+            ],
+            "correctIndices": [
+              1
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "title": "День 8. LruCache",
+      "steps": [
+        {
+          "type": "theory",
+          "title": "Условие",
+          "content": "## Условие\n\nКэш карточек товаров с ограниченной ёмкостью: при переполнении вытесняется давно неиспользуемый элемент.\n\n```csharp\nbool TryGet(TKey key, out TValue value);\nvoid Set(TKey key, TValue value);\n```\n\n**Требования**\n\n- Обе операции за O(1).\n- `TryGet` при попадании делает ключ самым свежим.\n- При превышении `capacity` вытесняется самый давно использованный ключ.\n- Потокобезопасность.\n\n**Пример:** `capacity = 2`: Set A, Set B, TryGet A, Set C → B вытеснен, A и C остались."
+        },
+        {
+          "type": "theory",
+          "title": "Уточняющие вопросы и план",
+          "content": "## Уточняющие вопросы\n\n- Считается ли `Set` существующего ключа использованием?\n- Ёмкость в элементах или в байтах?\n- Нагрузка на чтение и запись — можно ли обойтись одним `lock`?\n\n## План\n\n1. `Dictionary<TKey, LinkedListNode>` + `LinkedList` в порядке использования.\n2. Попадание: перенести узел в начало.\n3. Вставка: добавить в начало, при переполнении удалить хвост и его ключ из словаря.\n4. Все операции под одним `lock`."
+        },
+        {
+          "type": "svg",
+          "title": "Схема: LruCache",
+          "content": {
+            "caption": "Компонент LruCache",
+            "description": "Поток данных и ограничение ресурсов.",
+            "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 320 120\" width=\"100%\" role=\"img\" aria-label=\"Компонент LruCache\"><rect id=\"ozon-d08-n0\" x=\"16\" y=\"36\" width=\"88\" height=\"48\" rx=\"6\" fill=\"#e3f2fd\" stroke=\"#1565c0\"/><text id=\"ozon-d08-t0\" x=\"60\" y=\"64\" text-anchor=\"middle\" font-size=\"9\" fill=\"#0d47a1\">Get touch</text><rect id=\"ozon-d08-n1\" x=\"116\" y=\"36\" width=\"88\" height=\"48\" rx=\"6\" fill=\"#e3f2fd\" stroke=\"#1565c0\"/><text id=\"ozon-d08-t1\" x=\"160\" y=\"64\" text-anchor=\"middle\" font-size=\"9\" fill=\"#0d47a1\">Dict+list</text><line id=\"ozon-d08-a1\" x1=\"104\" y1=\"60\" x2=\"116\" y2=\"60\" stroke=\"#37474f\"/><rect id=\"ozon-d08-n2\" x=\"216\" y=\"36\" width=\"88\" height=\"48\" rx=\"6\" fill=\"#e3f2fd\" stroke=\"#1565c0\"/><text id=\"ozon-d08-t2\" x=\"260\" y=\"64\" text-anchor=\"middle\" font-size=\"9\" fill=\"#0d47a1\">Evict LRU</text><line id=\"ozon-d08-a2\" x1=\"204\" y1=\"60\" x2=\"216\" y2=\"60\" stroke=\"#37474f\"/></svg>"
+          }
+        },
+        {
+          "type": "theory",
+          "title": "Решение",
+          "content": "## Полный код\n\n```csharp\npublic interface ILruCache<TKey, TValue> where TKey : notnull\n{\n    bool TryGet(TKey key, out TValue value);\n    void Set(TKey key, TValue value);\n}\n\npublic sealed class LruCache<TKey, TValue> : ILruCache<TKey, TValue> where TKey : notnull\n{\n    private readonly object _sync = new();\n    private readonly int _capacity;\n    private readonly Dictionary<TKey, LinkedListNode<(TKey Key, TValue Value)>> _map = new();\n    private readonly LinkedList<(TKey Key, TValue Value)> _list = new();\n\n    public LruCache(int capacity)\n    {\n        if (capacity <= 0) throw new ArgumentOutOfRangeException(nameof(capacity));\n        _capacity = capacity;\n    }\n\n    public bool TryGet(TKey key, out TValue value)\n    {\n        lock (_sync)\n        {\n        if (!_map.TryGetValue(key, out var node))\n        {\n            value = default!;\n            return false;\n        }\n        _list.Remove(node);\n        _list.AddFirst(node);\n        value = node.Value.Value;\n        return true;\n        }\n    }\n\n    public void Set(TKey key, TValue value)\n    {\n        lock (_sync)\n        {\n        if (_map.TryGetValue(key, out var existing))\n        {\n            existing.Value = (key, value);\n            _list.Remove(existing);\n            _list.AddFirst(existing);\n            return;\n        }\n        var node = _list.AddFirst((key, value));\n        _map[key] = node;\n        if (_map.Count > _capacity)\n        {\n            var tail = _list.Last!;\n            _map.Remove(tail.Value.Key);\n            _list.RemoveLast();\n        }\n        }\n    }\n}\n```"
+        },
+        {
+          "type": "theory",
+          "title": "Ошибки и крайние случаи",
+          "content": "## Ошибки\n\n- Хранить порядок в `List` и искать элемент линейно — O(n).\n- Не обновлять порядок при `TryGet` — получится FIFO, а не LRU.\n- Удалить узел из списка, но забыть удалить ключ из словаря.\n\n## Крайние случаи\n\n- `capacity <= 0` → исключение в конструкторе.\n- `Set` существующего ключа обновляет значение и порядок, размер не растёт."
+        },
+        {
+          "type": "theory",
+          "title": "Что спросят дальше",
+          "content": "## Что спросят дальше\n\n- Как снизить конкуренцию за `lock`: шардирование по хэшу ключа.\n- Почему в production часто выбирают W-TinyLFU (Caffeine), а не чистый LRU?\n- Вытеснение по размеру значения, а не по количеству."
+        },
+        {
+          "type": "quiz",
+          "title": "Quiz 1/4",
+          "content": {
+            "question": "Какая структура даёт LRU за O(1)?",
+            "options": [
+              "`Dictionary` + двусвязный список",
+              "`SortedDictionary` по времени доступа",
+              "`Queue` + `HashSet`",
+              "`List` с удалением и вставкой в начало"
+            ],
+            "correctIndices": [
+              0
+            ]
+          }
+        },
+        {
+          "type": "quiz",
+          "title": "Quiz 2/4",
+          "content": {
+            "question": "`capacity = 2`: Set A, Set B, TryGet A, Set C. Кто вытеснен?",
+            "options": [
+              "A",
+              "C",
+              "Никто: `TryGet` не меняет порядок",
+              "B"
+            ],
+            "correctIndices": [
+              3
+            ]
+          }
+        },
+        {
+          "type": "quiz",
+          "title": "Quiz 3/4",
+          "content": {
+            "question": "Почему `TryGet` в эталоне тоже под `lock`?",
+            "options": [
+              "Чтение из `Dictionary` без `lock` всегда бросает исключение",
+              "Чтобы значение не устарело по TTL",
+              "Он переставляет узел в списке — это запись",
+              "Иначе `LinkedList` не найдёт узел"
+            ],
+            "correctIndices": [
+              2
+            ]
+          }
+        },
+        {
+          "type": "quiz",
+          "title": "Quiz 4/4",
+          "content": {
+            "question": "Чем опасно заменить `lock` на `ConcurrentDictionary` без блокировки списка?",
+            "options": [
+              "`ConcurrentDictionary` не хранит ссылки на узлы",
+              "Список и словарь разойдутся при параллельных операциях",
+              "Это сделает `TryGet` O(n)",
+              "Ничем, так даже быстрее и корректно"
+            ],
+            "correctIndices": [
+              1
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "title": "День 9. KeyedConcurrencyLimiter",
+      "steps": [
+        {
+          "type": "theory",
+          "title": "Условие",
+          "content": "## Условие\n\nОграничить параллельную обработку по ключу (например, не больше одной операции на заказ), не блокируя другие ключи.\n\n```csharp\nTask<T> RunAsync<T>(string key, Func<CancellationToken, Task<T>> action, CancellationToken ct);\n```\n\n**Требования**\n\n- Не более `perKeyLimit` одновременных action на один ключ.\n- Разные ключи не блокируют друг друга.\n- Ресурсы ключа освобождаются, когда по нему нет вызовов.\n- `ct` отменяет ожидание слота.\n\n**Пример:** `perKeyLimit = 1`: два вызова `\"order-1\"` выполняются по очереди, вызов `\"order-2\"` идёт параллельно."
+        },
+        {
+          "type": "theory",
+          "title": "Уточняющие вопросы и план",
+          "content": "## Уточняющие вопросы\n\n- Сколько различных ключей в секунду? Нужно ли удалять неактивные?\n- Нужна ли справедливость (FIFO) внутри ключа?\n- Есть ли ещё и глобальный лимит?\n\n## План\n\n1. Словарь `key → Gate(SemaphoreSlim, RefCount)` под `lock`.\n2. Перед ожиданием увеличить `RefCount`, чтобы gate не удалили.\n3. `WaitAsync(ct)` → action → `Release` в `finally`.\n4. Уменьшить `RefCount`; при нуле удалить и освободить gate."
+        },
+        {
+          "type": "svg",
+          "title": "Схема: KeyedConcurrencyLimiter",
+          "content": {
+            "caption": "Компонент KeyedConcurrencyLimiter",
+            "description": "Поток данных и ограничение ресурсов.",
+            "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 320 120\" width=\"100%\" role=\"img\" aria-label=\"Компонент KeyedConcurrencyLimiter\"><rect id=\"ozon-d09-n0\" x=\"16\" y=\"36\" width=\"88\" height=\"48\" rx=\"6\" fill=\"#e3f2fd\" stroke=\"#1565c0\"/><text id=\"ozon-d09-t0\" x=\"60\" y=\"64\" text-anchor=\"middle\" font-size=\"9\" fill=\"#0d47a1\">Key A wait</text><rect id=\"ozon-d09-n1\" x=\"116\" y=\"36\" width=\"88\" height=\"48\" rx=\"6\" fill=\"#e3f2fd\" stroke=\"#1565c0\"/><text id=\"ozon-d09-t1\" x=\"160\" y=\"64\" text-anchor=\"middle\" font-size=\"9\" fill=\"#0d47a1\">Per-key sem</text><line id=\"ozon-d09-a1\" x1=\"104\" y1=\"60\" x2=\"116\" y2=\"60\" stroke=\"#37474f\"/><rect id=\"ozon-d09-n2\" x=\"216\" y=\"36\" width=\"88\" height=\"48\" rx=\"6\" fill=\"#e3f2fd\" stroke=\"#1565c0\"/><text id=\"ozon-d09-t2\" x=\"260\" y=\"64\" text-anchor=\"middle\" font-size=\"9\" fill=\"#0d47a1\">Key B parallel</text><line id=\"ozon-d09-a2\" x1=\"204\" y1=\"60\" x2=\"216\" y2=\"60\" stroke=\"#37474f\"/></svg>"
+          }
+        },
+        {
+          "type": "theory",
+          "title": "Решение",
+          "content": "## Полный код\n\n```csharp\npublic interface IKeyedConcurrencyLimiter\n{\n    Task<T> RunAsync<T>(string key, Func<CancellationToken, Task<T>> action, CancellationToken ct);\n}\n\npublic sealed class KeyedConcurrencyLimiter : IKeyedConcurrencyLimiter, IDisposable\n{\n    private readonly object _sync = new();\n    private readonly int _perKeyLimit;\n    private readonly Dictionary<string, Gate> _gates = new();\n\n    private sealed class Gate : IDisposable\n    {\n        public readonly SemaphoreSlim Semaphore;\n        public int RefCount;\n        public Gate(int limit) => Semaphore = new SemaphoreSlim(limit, limit);\n        public void Dispose() => Semaphore.Dispose();\n    }\n\n    public KeyedConcurrencyLimiter(int perKeyLimit = 1) => _perKeyLimit = perKeyLimit;\n\n    public async Task<T> RunAsync<T>(string key, Func<CancellationToken, Task<T>> action, CancellationToken ct)\n    {\n        Gate gate;\n        lock (_sync)\n        {\n            if (!_gates.TryGetValue(key, out gate!))\n            {\n                gate = new Gate(_perKeyLimit);\n                _gates[key] = gate;\n            }\n            gate.RefCount++;\n        }\n        try\n        {\n            await gate.Semaphore.WaitAsync(ct).ConfigureAwait(false);\n        }\n        catch\n        {\n            ReleaseGate(key, gate);\n            throw;\n        }\n        try\n        {\n            return await action(ct).ConfigureAwait(false);\n        }\n        finally\n        {\n            gate.Semaphore.Release();\n            ReleaseGate(key, gate);\n        }\n    }\n\n    private void ReleaseGate(string key, Gate gate)\n    {\n        lock (_sync)\n        {\n            gate.RefCount--;\n            if (gate.RefCount == 0)\n            {\n                _gates.Remove(key);\n                gate.Dispose();\n            }\n        }\n    }\n\n    public void Dispose()\n    {\n        lock (_sync)\n        {\n            foreach (var g in _gates.Values) g.Dispose();\n            _gates.Clear();\n        }\n    }\n}\n```"
+        },
+        {
+          "type": "theory",
+          "title": "Ошибки и крайние случаи",
+          "content": "## Ошибки\n\n- Один глобальный `SemaphoreSlim` — ключи блокируют друг друга.\n- Никогда не удалять семафоры — утечка памяти при большом числе ключей.\n- Удалять gate, пока на нём кто-то ждёт, — следующий вызов создаст второй семафор и нарушит лимит.\n\n## Крайние случаи\n\n- Отмена во время ожидания: `RefCount` нужно уменьшить, а `Release` вызывать нельзя — слот не был получен. Поэтому в эталоне `WaitAsync` в отдельном `try/catch`.\n- Миллион уникальных ключей — словарь растёт только на время активных вызовов."
+        },
+        {
+          "type": "theory",
+          "title": "Что спросят дальше",
+          "content": "## Что спросят дальше\n\n- Распределённая блокировка по ключу (Redis, advisory lock в PostgreSQL).\n- Справедливость между ключами при общем лимите.\n- Как сделать тот же лимитер через `Channel` на ключ (actor-подход)?"
+        },
+        {
+          "type": "quiz",
+          "title": "Quiz 1/4",
+          "content": {
+            "question": "`perKeyLimit = 1`, ключ A занят. Что с вызовом по ключу B?",
+            "options": [
+              "Ждёт, пока освободится A",
+              "Выполняется сразу: у ключа свой семафор",
+              "Получает исключение о превышении лимита",
+              "Ставится в общую очередь FIFO"
+            ],
+            "correctIndices": [
+              1
+            ]
+          }
+        },
+        {
+          "type": "quiz",
+          "title": "Quiz 2/4",
+          "content": {
+            "question": "Зачем `RefCount` у gate?",
+            "options": [
+              "Чтобы считать общее число выполненных операций",
+              "Чтобы ограничить глобальный параллелизм",
+              "Для справедливой очереди внутри ключа",
+              "Не удалить семафор, пока на нём ждут или работают"
+            ],
+            "correctIndices": [
+              3
+            ]
+          }
+        },
+        {
+          "type": "quiz",
+          "title": "Quiz 3/4",
+          "content": {
+            "question": "Что будет, если никогда не удалять семафоры ключей?",
+            "options": [
+              "Память растёт с числом уникальных ключей",
+              "Лимит начнёт пропускать лишние вызовы",
+              "Семафоры перестанут освобождаться",
+              "Ничего: `SemaphoreSlim` удаляется сборщиком мусора из словаря"
+            ],
+            "correctIndices": [
+              0
+            ]
+          }
+        },
+        {
+          "type": "quiz",
+          "title": "Quiz 4/4",
+          "content": {
+            "question": "`WaitAsync(ct)` отменён. Можно ли вызывать `Release`?",
+            "options": [
+              "Да: `Release` всегда парный к `WaitAsync`",
+              "Да, но только если `RefCount > 0`",
+              "Нет: слот не был получен, `Release` превысит лимит",
+              "Нет: семафор после отмены уже освобождён автоматически"
+            ],
+            "correctIndices": [
+              2
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "title": "День 10. IdempotentConsumer",
+      "steps": [
+        {
+          "type": "theory",
+          "title": "Условие",
+          "content": "## Условие\n\nConsumer очереди получает сообщения с гарантией at-least-once. Нужно не обработать одно сообщение дважды.\n\n```csharp\nbool TryClaim(string messageId);\nvoid Release(string messageId);\n```\n\n**Требования**\n\n- Первый `TryClaim` по id → true, повторные (в том числе параллельные) → false.\n- `Release` снимает claim при неуспешной обработке, чтобы повторная доставка обработалась.\n- Claim истекает через `ttl` — память не растёт бесконечно.\n\n**Пример:** `TryClaim(\"msg-7\")` → true; `TryClaim(\"msg-7\")` → false; `Release(\"msg-7\")`; `TryClaim(\"msg-7\")` → true."
+        },
+        {
+          "type": "theory",
+          "title": "Уточняющие вопросы и план",
+          "content": "## Уточняющие вопросы\n\n- Сколько времени брокер может передоставлять сообщение (выбор `ttl`)?\n- Что делать, если обработка упала: снимать claim или нет?\n- Хранилище только в памяти или общее для инстансов?\n\n## План\n\n1. `HashSet` claimed + словарь сроков под одним `lock`.\n2. `TryClaim`: очистить просроченные, проверить и добавить атомарно.\n3. `Release` — удалить из обоих.\n4. Тест: 100 параллельных `TryClaim` одного id → ровно один true."
+        },
+        {
+          "type": "svg",
+          "title": "Схема: IdempotentConsumer",
+          "content": {
+            "caption": "Компонент IdempotentConsumer",
+            "description": "Поток данных и ограничение ресурсов.",
+            "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 320 120\" width=\"100%\" role=\"img\" aria-label=\"Компонент IdempotentConsumer\"><rect id=\"ozon-d10-n0\" x=\"16\" y=\"36\" width=\"88\" height=\"48\" rx=\"6\" fill=\"#e3f2fd\" stroke=\"#1565c0\"/><text id=\"ozon-d10-t0\" x=\"60\" y=\"64\" text-anchor=\"middle\" font-size=\"9\" fill=\"#0d47a1\">messageId</text><rect id=\"ozon-d10-n1\" x=\"116\" y=\"36\" width=\"88\" height=\"48\" rx=\"6\" fill=\"#e3f2fd\" stroke=\"#1565c0\"/><text id=\"ozon-d10-t1\" x=\"160\" y=\"64\" text-anchor=\"middle\" font-size=\"9\" fill=\"#0d47a1\">TryClaim</text><line id=\"ozon-d10-a1\" x1=\"104\" y1=\"60\" x2=\"116\" y2=\"60\" stroke=\"#37474f\"/><rect id=\"ozon-d10-n2\" x=\"216\" y=\"36\" width=\"88\" height=\"48\" rx=\"6\" fill=\"#e3f2fd\" stroke=\"#1565c0\"/><text id=\"ozon-d10-t2\" x=\"260\" y=\"64\" text-anchor=\"middle\" font-size=\"9\" fill=\"#0d47a1\">once / skip</text><line id=\"ozon-d10-a2\" x1=\"204\" y1=\"60\" x2=\"216\" y2=\"60\" stroke=\"#37474f\"/></svg>"
+          }
+        },
+        {
+          "type": "theory",
+          "title": "Решение",
+          "content": "## Полный код\n\n```csharp\npublic interface IIdempotentConsumer\n{\n    bool TryClaim(string messageId);\n    void Release(string messageId);\n}\n\npublic sealed class IdempotentConsumer : IIdempotentConsumer\n{\n    private readonly object _sync = new();\n    private readonly HashSet<string> _claimed = new();\n    private readonly TimeSpan _ttl;\n    private readonly TimeProvider _time;\n    private readonly Dictionary<string, DateTimeOffset> _expires = new();\n\n    public IdempotentConsumer(TimeSpan? ttl = null, TimeProvider? time = null)\n    {\n        _ttl = ttl ?? TimeSpan.FromHours(24);\n        _time = time ?? TimeProvider.System;\n    }\n\n    public bool TryClaim(string messageId)\n    {\n        lock (_sync)\n        {\n            PruneExpired();\n            if (_claimed.Contains(messageId)) return false;\n            _claimed.Add(messageId);\n            _expires[messageId] = _time.GetUtcNow().Add(_ttl);\n            return true;\n        }\n    }\n\n    public void Release(string messageId)\n    {\n        lock (_sync)\n        {\n            _claimed.Remove(messageId);\n            _expires.Remove(messageId);\n        }\n    }\n\n    private void PruneExpired()\n    {\n        var now = _time.GetUtcNow();\n        foreach (var kv in _expires.ToList())\n        {\n            if (kv.Value <= now)\n            {\n                _claimed.Remove(kv.Key);\n                _expires.Remove(kv.Key);\n            }\n        }\n    }\n}\n```"
+        },
+        {
+          "type": "theory",
+          "title": "Ошибки и крайние случаи",
+          "content": "## Ошибки\n\n- Проверка `Contains` и `Add` в разных критических секциях — два потока оба получат true.\n- Claim без срока жизни — утечка памяти.\n- Claim ставится после обработки, а не до неё — параллельная доставка обработается дважды.\n\n## Крайние случаи\n\n- Пустой или null `messageId` — валидировать.\n- Обработка дольше `ttl` → claim истечёт, возможен дубль; `ttl` должен быть больше максимального времени обработки."
+        },
+        {
+          "type": "theory",
+          "title": "Что спросят дальше",
+          "content": "## Что спросят дальше\n\n- Уникальный индекс в БД как claim (`INSERT … ON CONFLICT DO NOTHING`).\n- Inbox-паттерн: claim и бизнес-изменение в одной транзакции.\n- Что делать с «ядовитыми» сообщениями, которые всегда падают?"
+        },
+        {
+          "type": "quiz",
+          "title": "Quiz 1/4",
+          "content": {
+            "question": "Почему `Contains` и `Add` в эталоне под одним `lock`?",
+            "options": [
+              "`HashSet.Add` не работает без `lock`",
+              "Иначе два потока оба получат `true`",
+              "Чтобы `PruneExpired` не удалил новый claim",
+              "Так быстрее, чем два отдельных `lock`"
+            ],
+            "correctIndices": [
+              1
+            ]
+          }
+        },
+        {
+          "type": "quiz",
+          "title": "Quiz 2/4",
+          "content": {
+            "question": "Гарантия доставки at-least-once означает…",
+            "options": [
+              "Брокер доставляет каждое сообщение ровно один раз",
+              "Сообщение может потеряться, повторов не бывает",
+              "Consumer должен подтверждать сообщение до обработки",
+              "Сообщение может прийти повторно — нужна идемпотентность"
+            ],
+            "correctIndices": [
+              3
+            ]
+          }
+        },
+        {
+          "type": "quiz",
+          "title": "Quiz 3/4",
+          "content": {
+            "question": "Зачем `Release` при ошибке обработки?",
+            "options": [
+              "Чтобы повторная доставка обработалась",
+              "Чтобы освободить `lock` для других сообщений",
+              "Чтобы брокер удалил сообщение из очереди",
+              "Чтобы сбросить `ttl` у всех claim"
+            ],
+            "correctIndices": [
+              0
+            ]
+          }
+        },
+        {
+          "type": "quiz",
+          "title": "Quiz 4/4",
+          "content": {
+            "question": "`ttl` claim меньше времени обработки сообщения. Риск?",
+            "options": [
+              "Сообщение никогда не будет обработано",
+              "`TryClaim` начнёт всегда возвращать `false`",
+              "Claim истечёт посреди обработки — возможен дубль",
+              "Никакого: `ttl` влияет только на память"
+            ],
+            "correctIndices": [
+              2
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "title": "День 11. InventoryReservation",
+      "steps": [
+        {
+          "type": "theory",
+          "title": "Условие",
+          "content": "## Условие\n\nРезервирование товара на складе при оформлении заказа.\n\n```csharp\nbool TryReserve(string sku, int quantity);\nvoid Release(string sku, int quantity);\nint Available(string sku);\n```\n\n**Требования**\n\n- `Available = остаток − резерв`, не уходит в минус.\n- Конкурентные `TryReserve` не приводят к overselling.\n- `quantity <= 0` → false; `Release` не делает резерв отрицательным.\n\n**Пример:** остаток 5, два параллельных `TryReserve(\"sku\", 3)` → ровно один true, `Available(\"sku\")` = 2."
+        },
+        {
+          "type": "theory",
+          "title": "Уточняющие вопросы и план",
+          "content": "## Уточняющие вопросы\n\n- Резерв истекает, если заказ не оплатили?\n- Остаток меняется извне (поставки)?\n- Один склад или несколько?\n\n## План\n\n1. Словари остатков и резервов под `lock`.\n2. `TryReserve`: проверка `onHand − held >= quantity` и увеличение резерва в одной секции.\n3. `Release`: уменьшить резерв с нижней границей 0.\n4. Тест: много параллельных резервов → сумма успешных не больше остатка."
+        },
+        {
+          "type": "svg",
+          "title": "Схема: InventoryReservation",
+          "content": {
+            "caption": "Компонент InventoryReservation",
+            "description": "Поток данных и ограничение ресурсов.",
+            "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 320 120\" width=\"100%\" role=\"img\" aria-label=\"Компонент InventoryReservation\"><rect id=\"ozon-d11-n0\" x=\"16\" y=\"36\" width=\"88\" height=\"48\" rx=\"6\" fill=\"#e3f2fd\" stroke=\"#1565c0\"/><text id=\"ozon-d11-t0\" x=\"60\" y=\"64\" text-anchor=\"middle\" font-size=\"9\" fill=\"#0d47a1\">Reserve</text><rect id=\"ozon-d11-n1\" x=\"116\" y=\"36\" width=\"88\" height=\"48\" rx=\"6\" fill=\"#e3f2fd\" stroke=\"#1565c0\"/><text id=\"ozon-d11-t1\" x=\"160\" y=\"64\" text-anchor=\"middle\" font-size=\"9\" fill=\"#0d47a1\">Stock lock</text><line id=\"ozon-d11-a1\" x1=\"104\" y1=\"60\" x2=\"116\" y2=\"60\" stroke=\"#37474f\"/><rect id=\"ozon-d11-n2\" x=\"216\" y=\"36\" width=\"88\" height=\"48\" rx=\"6\" fill=\"#e3f2fd\" stroke=\"#1565c0\"/><text id=\"ozon-d11-t2\" x=\"260\" y=\"64\" text-anchor=\"middle\" font-size=\"9\" fill=\"#0d47a1\">Release</text><line id=\"ozon-d11-a2\" x1=\"204\" y1=\"60\" x2=\"216\" y2=\"60\" stroke=\"#37474f\"/></svg>"
+          }
+        },
+        {
+          "type": "theory",
+          "title": "Решение",
+          "content": "## Полный код\n\n```csharp\npublic interface IInventoryReservation\n{\n    bool TryReserve(string sku, int quantity);\n    void Release(string sku, int quantity);\n    int Available(string sku);\n}\n\npublic sealed class InventoryReservation : IInventoryReservation\n{\n    private readonly object _sync = new();\n    private readonly Dictionary<string, int> _stock = new();\n    private readonly Dictionary<string, int> _reserved = new();\n\n    public InventoryReservation(IReadOnlyDictionary<string, int> initialStock)\n    {\n        foreach (var kv in initialStock)\n            _stock[kv.Key] = kv.Value;\n    }\n\n    public bool TryReserve(string sku, int quantity)\n    {\n        if (quantity <= 0) return false;\n        lock (_sync)\n        {\n            _stock.TryGetValue(sku, out var onHand);\n            _reserved.TryGetValue(sku, out var held);\n            if (onHand - held < quantity) return false;\n            _reserved[sku] = held + quantity;\n            return true;\n        }\n    }\n\n    public void Release(string sku, int quantity)\n    {\n        lock (_sync)\n        {\n            _reserved.TryGetValue(sku, out var held);\n            var next = Math.Max(0, held - quantity);\n            if (next == 0) _reserved.Remove(sku);\n            else _reserved[sku] = next;\n        }\n    }\n\n    public int Available(string sku)\n    {\n        lock (_sync)\n        {\n            _stock.TryGetValue(sku, out var onHand);\n            _reserved.TryGetValue(sku, out var held);\n            return onHand - held;\n        }\n    }\n}\n```"
+        },
+        {
+          "type": "theory",
+          "title": "Ошибки и крайние случаи",
+          "content": "## Ошибки\n\n- Проверка остатка и списание в разных критических секциях → overselling.\n- Отрицательный резерв после двойного `Release`.\n- Хранить только `Available` без разделения на остаток и резерв — нельзя отменить резерв корректно.\n\n## Крайние случаи\n\n- Неизвестный sku → остаток 0, резерв невозможен.\n- Резерв ровно на весь остаток → `Available = 0`."
+        },
+        {
+          "type": "theory",
+          "title": "Что спросят дальше",
+          "content": "## Что спросят дальше\n\n- Как то же в БД: `UPDATE … SET reserved = reserved + @q WHERE on_hand - reserved >= @q`.\n- Резервы с TTL и фоновое снятие.\n- Сага: компенсация резерва при отказе оплаты."
+        },
+        {
+          "type": "quiz",
+          "title": "Quiz 1/4",
+          "content": {
+            "question": "Остаток 5, параллельно два `TryReserve(3)`. Сколько успешных?",
+            "options": [
+              "Оба: каждый видел остаток 5",
+              "Ровно один",
+              "Ни одного: запросы конфликтуют",
+              "Зависит от порядка — может быть и два"
+            ],
+            "correctIndices": [
+              1
+            ]
+          }
+        },
+        {
+          "type": "quiz",
+          "title": "Quiz 2/4",
+          "content": {
+            "question": "Что приводит к overselling?",
+            "options": [
+              "Проверка и резерв в разных критических секциях",
+              "Использование `Dictionary` для остатков",
+              "Вызов `Release` с количеством больше резерва",
+              "Возврат `false` при `quantity <= 0`"
+            ],
+            "correctIndices": [
+              0
+            ]
+          }
+        },
+        {
+          "type": "quiz",
+          "title": "Quiz 3/4",
+          "content": {
+            "question": "Зачем в `Release` `Math.Max(0, held - quantity)`?",
+            "options": [
+              "Чтобы остаток не превысил начальный",
+              "Чтобы вернуть освободившийся товар следующему покупателю",
+              "Чтобы не держать `lock` слишком долго",
+              "Лишний `Release` не сделает резерв отрицательным"
+            ],
+            "correctIndices": [
+              3
+            ]
+          }
+        },
+        {
+          "type": "quiz",
+          "title": "Quiz 4/4",
+          "content": {
+            "question": "Как то же требование реализуют в SQL одним запросом?",
+            "options": [
+              "`SELECT` остатка, затем `UPDATE` без условия",
+              "`INSERT` в таблицу резервов без проверки",
+              "Условный `UPDATE … WHERE on_hand - reserved >= @q`",
+              "Уровень изоляции `READ UNCOMMITTED`"
+            ],
+            "correctIndices": [
+              2
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "title": "День 12. OrderStateMachine",
+      "steps": [
+        {
+          "type": "theory",
+          "title": "Условие",
+          "content": "## Условие\n\nЖизненный цикл заказа: разрешены только определённые переходы.\n\n```csharp\nOrderStatus Status { get; }\nbool TryTransition(OrderStatus target);\n```\n\nГраф: `Created → Paid | Cancelled`, `Paid → Shipped | Cancelled`, `Shipped → Completed`; `Cancelled` и `Completed` — терминальные.\n\n**Требования**\n\n- Недопустимый переход возвращает `false` и не меняет статус.\n- Конкурентные переходы атомарны.\n\n**Пример:** Created → Paid → `true`; Paid → Created → `false`; из Paid параллельно Shipped и Cancelled — успешен ровно один."
+        },
+        {
+          "type": "theory",
+          "title": "Уточняющие вопросы и план",
+          "content": "## Уточняющие вопросы\n\n- Недопустимый переход — `false` или исключение?\n- Нужна ли история переходов (аудит)?\n- Переход в тот же статус — ошибка или no-op?\n\n## План\n\n1. Статическая таблица допустимых переходов.\n2. `TryTransition`: проверка и изменение статуса под одним `lock`.\n3. Табличный тест: все пары (from, to).\n4. Тест гонки: Shipped против Cancelled."
+        },
+        {
+          "type": "svg",
+          "title": "Схема: OrderStateMachine",
+          "content": {
+            "caption": "Компонент OrderStateMachine",
+            "description": "Поток данных и ограничение ресурсов.",
+            "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 320 120\" width=\"100%\" role=\"img\" aria-label=\"Компонент OrderStateMachine\"><rect id=\"ozon-d12-n0\" x=\"16\" y=\"36\" width=\"88\" height=\"48\" rx=\"6\" fill=\"#e3f2fd\" stroke=\"#1565c0\"/><text id=\"ozon-d12-t0\" x=\"60\" y=\"64\" text-anchor=\"middle\" font-size=\"9\" fill=\"#0d47a1\">State</text><rect id=\"ozon-d12-n1\" x=\"116\" y=\"36\" width=\"88\" height=\"48\" rx=\"6\" fill=\"#e3f2fd\" stroke=\"#1565c0\"/><text id=\"ozon-d12-t1\" x=\"160\" y=\"64\" text-anchor=\"middle\" font-size=\"9\" fill=\"#0d47a1\">Valid edge</text><line id=\"ozon-d12-a1\" x1=\"104\" y1=\"60\" x2=\"116\" y2=\"60\" stroke=\"#37474f\"/><rect id=\"ozon-d12-n2\" x=\"216\" y=\"36\" width=\"88\" height=\"48\" rx=\"6\" fill=\"#e3f2fd\" stroke=\"#1565c0\"/><text id=\"ozon-d12-t2\" x=\"260\" y=\"64\" text-anchor=\"middle\" font-size=\"9\" fill=\"#0d47a1\">New state</text><line id=\"ozon-d12-a2\" x1=\"204\" y1=\"60\" x2=\"216\" y2=\"60\" stroke=\"#37474f\"/></svg>"
+          }
+        },
+        {
+          "type": "theory",
+          "title": "Решение",
+          "content": "## Полный код\n\n```csharp\npublic enum OrderStatus { Created, Paid, Shipped, Cancelled, Completed }\n\npublic interface IOrderStateMachine\n{\n    OrderStatus Status { get; }\n    bool TryTransition(OrderStatus target);\n}\n\npublic sealed class OrderStateMachine : IOrderStateMachine\n{\n    private static readonly Dictionary<OrderStatus, HashSet<OrderStatus>> Allowed = new()\n    {\n        [OrderStatus.Created] = [OrderStatus.Paid, OrderStatus.Cancelled],\n        [OrderStatus.Paid] = [OrderStatus.Shipped, OrderStatus.Cancelled],\n        [OrderStatus.Shipped] = [OrderStatus.Completed],\n        [OrderStatus.Cancelled] = [],\n        [OrderStatus.Completed] = [],\n    };\n\n    private readonly object _sync = new();\n    private OrderStatus _status = OrderStatus.Created;\n\n    public OrderStatus Status { get { lock (_sync) return _status; } }\n\n    public bool TryTransition(OrderStatus target)\n    {\n        lock (_sync)\n        {\n            if (!Allowed[_status].Contains(target)) return false;\n            _status = target;\n            return true;\n        }\n    }\n}\n```"
+        },
+        {
+          "type": "theory",
+          "title": "Ошибки и крайние случаи",
+          "content": "## Ошибки\n\n- Проверка допустимости и запись статуса без общей блокировки — два конфликтующих перехода оба «успешны».\n- Логика переходов размазана по `if` в сервисах вместо одной таблицы.\n- Разрешить выход из терминального статуса.\n\n## Крайние случаи\n\n- Переход в текущий статус (Paid → Paid) — по таблице запрещён.\n- Неизвестное значение enum → `Allowed[_status]` должен содержать все статусы."
+        },
+        {
+          "type": "theory",
+          "title": "Что спросят дальше",
+          "content": "## Что спросят дальше\n\n- Хранение в БД с оптимистичной блокировкой (`WHERE status = @expected`).\n- Event sourcing: статус как свёртка событий.\n- Побочные эффекты переходов (уведомления) через outbox (день 24)."
+        },
+        {
+          "type": "quiz",
+          "title": "Quiz 1/4",
+          "content": {
+            "question": "Paid → Created. Что вернёт эталон?",
+            "options": [
+              "`false`, статус остаётся Paid",
+              "`true`: откат статуса разрешён",
+              "`InvalidOperationException`",
+              "`false`, статус становится Cancelled"
+            ],
+            "correctIndices": [
+              0
+            ]
+          }
+        },
+        {
+          "type": "quiz",
+          "title": "Quiz 2/4",
+          "content": {
+            "question": "Из Paid параллельно вызвали `TryTransition(Shipped)` и `TryTransition(Cancelled)`. Итог?",
+            "options": [
+              "Оба вернут `true`, победит последний",
+              "Успешен ровно один переход",
+              "Оба вернут `false` из-за конфликта",
+              "Статус станет Completed"
+            ],
+            "correctIndices": [
+              1
+            ]
+          }
+        },
+        {
+          "type": "quiz",
+          "title": "Quiz 3/4",
+          "content": {
+            "question": "Какие статусы в эталоне терминальные?",
+            "options": [
+              "Shipped и Completed",
+              "Только Completed",
+              "Cancelled и Completed",
+              "Cancelled, Shipped и Completed"
+            ],
+            "correctIndices": [
+              2
+            ]
+          }
+        },
+        {
+          "type": "quiz",
+          "title": "Quiz 4/4",
+          "content": {
+            "question": "Как защитить переход при хранении заказа в БД?",
+            "options": [
+              "Прочитать статус, проверить в коде и сделать `UPDATE` без условия",
+              "Хранить статус только в памяти инстанса",
+              "Уровень изоляции `READ COMMITTED` сам предотвращает гонку",
+              "`UPDATE … WHERE id = @id AND status = @expected`"
+            ],
+            "correctIndices": [
+              3
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "title": "День 13. PriceAggregator",
+      "steps": [
+        {
+          "type": "theory",
+          "title": "Условие",
+          "content": "## Условие\n\nСобрать цену товара у нескольких поставщиков; медленный поставщик не должен тормозить ответ.\n\n```csharp\nTask<IReadOnlyList<PriceQuote>> GetPricesAsync(string sku, CancellationToken ct);\n// PriceQuote(string Source, decimal? Price)\n```\n\n**Требования**\n\n- Опросить все источники параллельно, у каждого свой таймаут `perSourceTimeout`.\n- Упавший или не успевший источник → `Price = null`, остальные ответы возвращаются.\n- Отмена вызывающего пробрасывается как `OperationCanceledException`.\n\n**Пример:** A = 100, B не ответил за таймаут, C = 90 → `[A: 100, B: null, C: 90]`; минимальная доступная цена — 90."
+        },
+        {
+          "type": "theory",
+          "title": "Уточняющие вопросы и план",
+          "content": "## Уточняющие вопросы\n\n- Нужен ли минимум, среднее или все цены?\n- Сколько источников и какой общий SLA ответа?\n- Какой минимум ответивших источников нужен для валидного результата?\n\n## План\n\n1. Для каждого источника связанный CTS с `CancelAfter(perSourceTimeout)`.\n2. Ошибку источника превращать в `Price = null`, но не отмену вызывающего.\n3. `Task.WhenAll` по всем источникам — каждая задача сама обрабатывает ошибки.\n4. Тесты: медленный источник, упавший источник, внешняя отмена."
+        },
+        {
+          "type": "svg",
+          "title": "Схема: PriceAggregator",
+          "content": {
+            "caption": "Компонент PriceAggregator",
+            "description": "Поток данных и ограничение ресурсов.",
+            "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 320 120\" width=\"100%\" role=\"img\" aria-label=\"Компонент PriceAggregator\"><rect id=\"ozon-d13-n0\" x=\"16\" y=\"36\" width=\"88\" height=\"48\" rx=\"6\" fill=\"#e3f2fd\" stroke=\"#1565c0\"/><text id=\"ozon-d13-t0\" x=\"60\" y=\"64\" text-anchor=\"middle\" font-size=\"9\" fill=\"#0d47a1\">Sources</text><rect id=\"ozon-d13-n1\" x=\"116\" y=\"36\" width=\"88\" height=\"48\" rx=\"6\" fill=\"#e3f2fd\" stroke=\"#1565c0\"/><text id=\"ozon-d13-t1\" x=\"160\" y=\"64\" text-anchor=\"middle\" font-size=\"9\" fill=\"#0d47a1\">Timeout each</text><line id=\"ozon-d13-a1\" x1=\"104\" y1=\"60\" x2=\"116\" y2=\"60\" stroke=\"#37474f\"/><rect id=\"ozon-d13-n2\" x=\"216\" y=\"36\" width=\"88\" height=\"48\" rx=\"6\" fill=\"#e3f2fd\" stroke=\"#1565c0\"/><text id=\"ozon-d13-t2\" x=\"260\" y=\"64\" text-anchor=\"middle\" font-size=\"9\" fill=\"#0d47a1\">Partial min price</text><line id=\"ozon-d13-a2\" x1=\"204\" y1=\"60\" x2=\"216\" y2=\"60\" stroke=\"#37474f\"/></svg>"
+          }
+        },
+        {
+          "type": "theory",
+          "title": "Решение",
+          "content": "## Полный код\n\n```csharp\npublic sealed record PriceQuote(string Source, decimal? Price)\n{\n    public bool IsAvailable => Price is not null;\n}\n\npublic interface IPriceAggregator\n{\n    Task<IReadOnlyList<PriceQuote>> GetPricesAsync(string sku, CancellationToken ct);\n}\n\npublic sealed class PriceAggregator(IReadOnlyList<IPriceSource> sources, TimeSpan perSourceTimeout) : IPriceAggregator\n{\n    public async Task<IReadOnlyList<PriceQuote>> GetPricesAsync(string sku, CancellationToken ct)\n    {\n        var tasks = sources.Select(s => FetchOneAsync(s, sku, ct));\n        return await Task.WhenAll(tasks).ConfigureAwait(false);\n    }\n\n    private async Task<PriceQuote> FetchOneAsync(IPriceSource source, string sku, CancellationToken ct)\n    {\n        using var timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(ct);\n        timeoutCts.CancelAfter(perSourceTimeout);\n        try\n        {\n            var price = await source.GetPriceAsync(sku, timeoutCts.Token).ConfigureAwait(false);\n            return new PriceQuote(source.Name, price);\n        }\n        catch (Exception) when (!ct.IsCancellationRequested)\n        {\n            return new PriceQuote(source.Name, Price: null);\n        }\n    }\n}\n\npublic interface IPriceSource\n{\n    string Name { get; }\n    Task<decimal> GetPriceAsync(string sku, CancellationToken ct);\n}\n```"
+        },
+        {
+          "type": "theory",
+          "title": "Ошибки и крайние случаи",
+          "content": "## Ошибки\n\n- Один общий таймаут без изоляции: медленный источник съедает время остальных.\n- `catch (Exception)` без фильтра превращает отмену вызывающего в «частичный результат».\n- Цена `0` вместо отсутствия значения — клиент посчитает её минимальной.\n\n## Крайние случаи\n\n- Все источники недоступны → список с `null`; решать на уровне вызывающего (ошибка или fallback).\n- Источник ответил после таймаута — результат игнорируется."
+        },
+        {
+          "type": "theory",
+          "title": "Что спросят дальше",
+          "content": "## Что спросят дальше\n\n- Hedged requests: дублировать запрос к медленному источнику.\n- Fallback на последнюю известную цену из кэша.\n- Метрики латентности и доли таймаутов по каждому источнику."
+        },
+        {
+          "type": "quiz",
+          "title": "Quiz 1/4",
+          "content": {
+            "question": "Источник B не ответил за `perSourceTimeout`. Что в ответе?",
+            "options": [
+              "Весь запрос падает с `TimeoutException`",
+              "B с `Price = null`, остальные цены на месте",
+              "B пропускается, список короче числа источников",
+              "Цена B = 0"
+            ],
+            "correctIndices": [
+              1
+            ]
+          }
+        },
+        {
+          "type": "quiz",
+          "title": "Quiz 2/4",
+          "content": {
+            "question": "Зачем фильтр `when (!ct.IsCancellationRequested)` в `catch`?",
+            "options": [
+              "Чтобы не ловить исключения таймаута источника",
+              "Без него `Task.WhenAll` зависнет",
+              "Чтобы повторить запрос к источнику",
+              "Не выдавать отмену вызывающего за частичный результат"
+            ],
+            "correctIndices": [
+              3
+            ]
+          }
+        },
+        {
+          "type": "quiz",
+          "title": "Quiz 3/4",
+          "content": {
+            "question": "Почему `Price` сделан `decimal?`, а не `decimal` с 0?",
+            "options": [
+              "`decimal` не сериализуется в JSON",
+              "`decimal?` быстрее в вычислениях",
+              "Ноль выглядит как реальная минимальная цена",
+              "Так требует `Task.WhenAll`"
+            ],
+            "correctIndices": [
+              2
+            ]
+          }
+        },
+        {
+          "type": "quiz",
+          "title": "Quiz 4/4",
+          "content": {
+            "question": "Как устроен таймаут на источник в эталоне?",
+            "options": [
+              "Связанный CTS с `CancelAfter(perSourceTimeout)`",
+              "Общий `Task.WhenAny` с `Task.Delay` на весь запрос",
+              "`Thread.Sleep` перед каждым вызовом",
+              "Таймаут `HttpClient.Timeout` на все источники"
+            ],
+            "correctIndices": [
+              0
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "title": "День 14. SearchFanOut",
+      "steps": [
+        {
+          "type": "theory",
+          "title": "Условие",
+          "content": "## Условие\n\nПоиск по нескольким бэкендам (товары, продавцы, категории) с объединением выдачи.\n\n```csharp\nTask<IReadOnlyList<SearchHit>> SearchAsync(string query, CancellationToken ct);\n// SearchHit(string Id, string Title, double Score)\n```\n\n**Требования**\n\n- Запрос ко всем бэкендам, одновременно не более `maxParallel`.\n- Дубликаты по `Id` схлопываются, остаётся hit с максимальным `Score`.\n- Результат отсортирован по `Score` по убыванию, при равенстве — по `Id`.\n\n**Пример:** backend1 → `{id=5, 0.7}`, backend2 → `{id=5, 0.9}, {id=2, 0.8}` → `[5 (0.9), 2 (0.8)]`."
+        },
+        {
+          "type": "theory",
+          "title": "Уточняющие вопросы и план",
+          "content": "## Уточняющие вопросы\n\n- Ошибка одного бэкенда валит поиск или отдаём частичную выдачу?\n- Нужен ли общий дедлайн?\n- Сопоставимы ли `Score` разных бэкендов?\n\n## План\n\n1. `SemaphoreSlim(maxParallel)` вокруг вызова каждого бэкенда.\n2. `Task.WhenAll` по бэкендам.\n3. Словарь `Id → лучший hit`.\n4. Сортировка `OrderByDescending(Score).ThenBy(Id)` — детерминированный порядок."
+        },
+        {
+          "type": "svg",
+          "title": "Схема: SearchFanOut",
+          "content": {
+            "caption": "Компонент SearchFanOut",
+            "description": "Поток данных и ограничение ресурсов.",
+            "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 320 120\" width=\"100%\" role=\"img\" aria-label=\"Компонент SearchFanOut\"><rect id=\"ozon-d14-n0\" x=\"16\" y=\"36\" width=\"88\" height=\"48\" rx=\"6\" fill=\"#e3f2fd\" stroke=\"#1565c0\"/><text id=\"ozon-d14-t0\" x=\"60\" y=\"64\" text-anchor=\"middle\" font-size=\"9\" fill=\"#0d47a1\">Queries</text><rect id=\"ozon-d14-n1\" x=\"116\" y=\"36\" width=\"88\" height=\"48\" rx=\"6\" fill=\"#e3f2fd\" stroke=\"#1565c0\"/><text id=\"ozon-d14-t1\" x=\"160\" y=\"64\" text-anchor=\"middle\" font-size=\"9\" fill=\"#0d47a1\">Sem fan-out</text><line id=\"ozon-d14-a1\" x1=\"104\" y1=\"60\" x2=\"116\" y2=\"60\" stroke=\"#37474f\"/><rect id=\"ozon-d14-n2\" x=\"216\" y=\"36\" width=\"88\" height=\"48\" rx=\"6\" fill=\"#e3f2fd\" stroke=\"#1565c0\"/><text id=\"ozon-d14-t2\" x=\"260\" y=\"64\" text-anchor=\"middle\" font-size=\"9\" fill=\"#0d47a1\">Dedupe merge</text><line id=\"ozon-d14-a2\" x1=\"204\" y1=\"60\" x2=\"216\" y2=\"60\" stroke=\"#37474f\"/></svg>"
+          }
+        },
+        {
+          "type": "theory",
+          "title": "Решение",
+          "content": "## Полный код\n\n```csharp\npublic sealed record SearchHit(string Id, string Title, double Score);\n\npublic interface ISearchFanOut\n{\n    Task<IReadOnlyList<SearchHit>> SearchAsync(string query, CancellationToken ct);\n}\n\npublic sealed class SearchFanOut(IReadOnlyList<ISearchBackend> backends, int maxParallel) : ISearchFanOut\n{\n    public async Task<IReadOnlyList<SearchHit>> SearchAsync(string query, CancellationToken ct)\n    {\n        using var gate = new SemaphoreSlim(maxParallel, maxParallel);\n        var tasks = backends.Select(b => SearchBackendAsync(b, query, gate, ct)).ToArray();\n        var batches = await Task.WhenAll(tasks).ConfigureAwait(false);\n        var bestById = new Dictionary<string, SearchHit>();\n        foreach (var hit in batches.SelectMany(x => x))\n        {\n            if (!bestById.TryGetValue(hit.Id, out var existing) || hit.Score > existing.Score)\n                bestById[hit.Id] = hit;\n        }\n        return bestById.Values.OrderByDescending(h => h.Score).ThenBy(h => h.Id).ToList();\n    }\n\n    private static async Task<IReadOnlyList<SearchHit>> SearchBackendAsync(\n        ISearchBackend backend, string query, SemaphoreSlim gate, CancellationToken ct)\n    {\n        await gate.WaitAsync(ct).ConfigureAwait(false);\n        try\n        {\n            return await backend.SearchAsync(query, ct).ConfigureAwait(false);\n        }\n        finally { gate.Release(); }\n    }\n}\n\npublic interface ISearchBackend\n{\n    Task<IReadOnlyList<SearchHit>> SearchAsync(string query, CancellationToken ct);\n}\n```"
+        },
+        {
+          "type": "theory",
+          "title": "Ошибки и крайние случаи",
+          "content": "## Ошибки\n\n- Нет лимита параллелизма при десятках бэкендов.\n- Дедупликация «первый победил» вместо «максимальный score» — выдача зависит от таймингов.\n- Сортировка без tie-break — порядок равных результатов плавает между запросами.\n\n## Крайние случаи\n\n- Пустой запрос или ноль бэкендов → пустой список.\n- Один бэкенд бросил исключение → в эталоне падает весь поиск (обсудите частичную выдачу)."
+        },
+        {
+          "type": "theory",
+          "title": "Что спросят дальше",
+          "content": "## Что спросят дальше\n\n- Нормализация score разных бэкендов перед слиянием.\n- Частичная выдача и таймаут на бэкенд (как в дне 13).\n- Кэширование популярных запросов."
+        },
+        {
+          "type": "quiz",
+          "title": "Quiz 1/4",
+          "content": {
+            "question": "Два бэкенда вернули `id=5` со score 0.7 и 0.9. Что попадёт в выдачу?",
+            "options": [
+              "Оба hit, дубликаты не схлопываются",
+              "Один hit `id=5` со score 0.9",
+              "Hit от бэкенда, ответившего первым",
+              "Один hit со средним score 0.8"
+            ],
+            "correctIndices": [
+              1
+            ]
+          }
+        },
+        {
+          "type": "quiz",
+          "title": "Quiz 2/4",
+          "content": {
+            "question": "Зачем `ThenBy(h => h.Id)` после сортировки по score?",
+            "options": [
+              "Чтобы ускорить сортировку",
+              "Чтобы удалить дубликаты",
+              "Без него `OrderByDescending` бросит исключение",
+              "Стабильный порядок равных по score результатов"
+            ],
+            "correctIndices": [
+              3
+            ]
+          }
+        },
+        {
+          "type": "quiz",
+          "title": "Quiz 3/4",
+          "content": {
+            "question": "Как в эталоне ограничен параллелизм запросов к бэкендам?",
+            "options": [
+              "`SemaphoreSlim(maxParallel)` на вызов бэкенда",
+              "`Parallel.ForEach` с `MaxDegreeOfParallelism`",
+              "Бэкенды вызываются строго по очереди",
+              "`ThreadPool.SetMaxThreads(maxParallel)`"
+            ],
+            "correctIndices": [
+              0
+            ]
+          }
+        },
+        {
+          "type": "quiz",
+          "title": "Quiz 4/4",
+          "content": {
+            "question": "Один бэкенд бросил исключение. Что делает эталон?",
+            "options": [
+              "Игнорирует бэкенд и возвращает остальные результаты",
+              "Повторяет запрос к бэкенду",
+              "Весь `SearchAsync` падает",
+              "Возвращает пустой список"
+            ],
+            "correctIndices": [
+              2
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "title": "День 15. PagedMerge",
+      "steps": [
+        {
+          "type": "theory",
+          "title": "Условие",
+          "content": "## Условие\n\nОбъединить несколько отсортированных постраничных источников (например, заказы из разных шардов) в один отсортированный поток.\n\n```csharp\nIAsyncEnumerable<T> MergeSortedAsync<T>(\n    IReadOnlyList<IAsyncEnumerable<T>> streams,\n    IComparer<T> comparer,\n    CancellationToken ct = default);\n```\n\n**Требования**\n\n- Каждый вход отсортирован по `comparer`, выход — общий отсортированный поток.\n- В памяти не больше одного текущего элемента на поток.\n- Отмена через `WithCancellation`; все enumerator'ы освобождаются.\n\n**Пример:** `[1, 4, 7]`, `[2, 3]`, `[]` → `1, 2, 3, 4, 7`."
+        },
+        {
+          "type": "theory",
+          "title": "Уточняющие вопросы и план",
+          "content": "## Уточняющие вопросы\n\n- Сколько потоков (k) и какой объём каждого?\n- Потоки действительно отсортированы? Проверять ли?\n- Нужна ли дедупликация одинаковых элементов?\n\n## План\n\n1. Открыть enumerator каждого потока, первые элементы — в `PriorityQueue<int, T>(comparer)`.\n2. Извлечь минимум, `yield return`, продвинуть его поток.\n3. `[EnumeratorCancellation]` на параметре `ct`.\n4. `DisposeAsync` всех enumerator'ов в `finally`."
+        },
+        {
+          "type": "svg",
+          "title": "Схема: PagedMerge",
+          "content": {
+            "caption": "Компонент PagedMerge",
+            "description": "Поток данных и ограничение ресурсов.",
+            "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 320 120\" width=\"100%\" role=\"img\" aria-label=\"Компонент PagedMerge\"><rect id=\"ozon-d15-n0\" x=\"16\" y=\"36\" width=\"88\" height=\"48\" rx=\"6\" fill=\"#e3f2fd\" stroke=\"#1565c0\"/><text id=\"ozon-d15-t0\" x=\"60\" y=\"64\" text-anchor=\"middle\" font-size=\"9\" fill=\"#0d47a1\">k streams</text><rect id=\"ozon-d15-n1\" x=\"116\" y=\"36\" width=\"88\" height=\"48\" rx=\"6\" fill=\"#e3f2fd\" stroke=\"#1565c0\"/><text id=\"ozon-d15-t1\" x=\"160\" y=\"64\" text-anchor=\"middle\" font-size=\"9\" fill=\"#0d47a1\">Heap heads</text><line id=\"ozon-d15-a1\" x1=\"104\" y1=\"60\" x2=\"116\" y2=\"60\" stroke=\"#37474f\"/><rect id=\"ozon-d15-n2\" x=\"216\" y=\"36\" width=\"88\" height=\"48\" rx=\"6\" fill=\"#e3f2fd\" stroke=\"#1565c0\"/><text id=\"ozon-d15-t2\" x=\"260\" y=\"64\" text-anchor=\"middle\" font-size=\"9\" fill=\"#0d47a1\">Merged order</text><line id=\"ozon-d15-a2\" x1=\"204\" y1=\"60\" x2=\"216\" y2=\"60\" stroke=\"#37474f\"/></svg>"
+          }
+        },
+        {
+          "type": "theory",
+          "title": "Решение",
+          "content": "## Полный код\n\n```csharp\nusing System.Runtime.CompilerServices;\n\npublic static class PagedMerge\n{\n    public static async IAsyncEnumerable<T> MergeSortedAsync<T>(\n        IReadOnlyList<IAsyncEnumerable<T>> streams,\n        IComparer<T> comparer,\n        [EnumeratorCancellation] CancellationToken ct = default)\n    {\n        var enumerators = new IAsyncEnumerator<T>?[streams.Count];\n        var heap = new PriorityQueue<int, T>(comparer);\n        try\n        {\n            for (var i = 0; i < streams.Count; i++)\n            {\n                enumerators[i] = streams[i].GetAsyncEnumerator(ct);\n                if (await enumerators[i]!.MoveNextAsync().ConfigureAwait(false))\n                    heap.Enqueue(i, enumerators[i]!.Current);\n            }\n            while (heap.TryDequeue(out var streamIndex, out var value))\n            {\n                yield return value;\n                var en = enumerators[streamIndex]!;\n                if (await en.MoveNextAsync().ConfigureAwait(false))\n                    heap.Enqueue(streamIndex, en.Current);\n            }\n        }\n        finally\n        {\n            foreach (var en in enumerators)\n                if (en is not null) await en.DisposeAsync().ConfigureAwait(false);\n        }\n    }\n}\n```"
+        },
+        {
+          "type": "theory",
+          "title": "Ошибки и крайние случаи",
+          "content": "## Ошибки\n\n- `ToListAsync` всех потоков и сортировка — теряется потоковость и растёт память.\n- Нет `[EnumeratorCancellation]` — токен из `WithCancellation` не доходит до итератора.\n- Enumerator'ы не освобождаются при раннем выходе из `await foreach`.\n\n## Крайние случаи\n\n- Пустой поток среди остальных — просто не попадает в кучу.\n- Один поток — выход совпадает со входом."
+        },
+        {
+          "type": "theory",
+          "title": "Что спросят дальше",
+          "content": "## Что спросят дальше\n\n- Сложность: O(N log k) по времени, O(k) по памяти.\n- Слияние на стороне БД (keyset pagination по шардам).\n- Back-pressure, если один поток сильно медленнее остальных."
+        },
+        {
+          "type": "quiz",
+          "title": "Quiz 1/4",
+          "content": {
+            "question": "Что лежит в куче в эталоне?",
+            "options": [
+              "Все элементы всех потоков",
+              "Только минимальный элемент каждого потока без индекса",
+              "Индекс потока с приоритетом — его текущим элементом",
+              "Enumerator'ы, отсортированные по длине потока"
+            ],
+            "correctIndices": [
+              2
+            ]
+          }
+        },
+        {
+          "type": "quiz",
+          "title": "Quiz 2/4",
+          "content": {
+            "question": "Сложность слияния k потоков с суммарно N элементами?",
+            "options": [
+              "O(N log N)",
+              "O(N × k)",
+              "O(k log N)",
+              "O(N log k)"
+            ],
+            "correctIndices": [
+              3
+            ]
+          }
+        },
+        {
+          "type": "quiz",
+          "title": "Quiz 3/4",
+          "content": {
+            "question": "Зачем `[EnumeratorCancellation]` на параметре `ct`?",
+            "options": [
+              "Передать в итератор токен из `WithCancellation`",
+              "Чтобы итератор ловил `OperationCanceledException`",
+              "Чтобы параметр стал обязательным",
+              "Без него итератор не компилируется"
+            ],
+            "correctIndices": [
+              0
+            ]
+          }
+        },
+        {
+          "type": "quiz",
+          "title": "Quiz 4/4",
+          "content": {
+            "question": "Почему `DisposeAsync` enumerator'ов в `finally`?",
+            "options": [
+              "Иначе куча не освободит память",
+              "Вызывающий может выйти из `await foreach` раньше конца потоков",
+              "`MoveNextAsync` требует явного `DisposeAsync` перед каждым вызовом",
+              "Чтобы сбросить позицию потоков в начало"
+            ],
+            "correctIndices": [
+              1
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "title": "День 16. TopKProducts",
+      "steps": [
+        {
+          "type": "theory",
+          "title": "Условие",
+          "content": "## Условие\n\nВитрина «Популярное»: считать просмотры товаров и отдавать Top-K.\n\n```csharp\nvoid RecordView(string productId);\nIReadOnlyList<(string ProductId, long Count)> GetTopK(int k);\n```\n\n**Требования**\n\n- Потокобезопасный подсчёт.\n- Top-K по убыванию количества; при равенстве — `productId` по возрастанию (ordinal).\n- `k` больше числа товаров → все товары.\n\n**Пример:** A×3, C×3, B×1 → `GetTopK(2)` = `[(A, 3), (C, 3)]`."
+        },
+        {
+          "type": "theory",
+          "title": "Уточняющие вопросы и план",
+          "content": "## Уточняющие вопросы\n\n- Как часто вызывают `GetTopK` по сравнению с `RecordView`?\n- Окно времени (за час) или за всё время?\n- Допустима ли приблизительная статистика?\n\n## План\n\n1. `Dictionary<string, long>` под `lock`.\n2. `GetTopK`: сортировка по count убыв., затем по id (ordinal), `Take(k)`.\n3. Обсудить кучу размера K для O(n log K).\n4. Тест на tie-break."
+        },
+        {
+          "type": "svg",
+          "title": "Схема: TopKProducts",
+          "content": {
+            "caption": "Компонент TopKProducts",
+            "description": "Поток данных и ограничение ресурсов.",
+            "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 320 120\" width=\"100%\" role=\"img\" aria-label=\"Компонент TopKProducts\"><rect id=\"ozon-d16-n0\" x=\"16\" y=\"36\" width=\"88\" height=\"48\" rx=\"6\" fill=\"#e3f2fd\" stroke=\"#1565c0\"/><text id=\"ozon-d16-t0\" x=\"60\" y=\"64\" text-anchor=\"middle\" font-size=\"9\" fill=\"#0d47a1\">Events</text><rect id=\"ozon-d16-n1\" x=\"116\" y=\"36\" width=\"88\" height=\"48\" rx=\"6\" fill=\"#e3f2fd\" stroke=\"#1565c0\"/><text id=\"ozon-d16-t1\" x=\"160\" y=\"64\" text-anchor=\"middle\" font-size=\"9\" fill=\"#0d47a1\">Count map</text><line id=\"ozon-d16-a1\" x1=\"104\" y1=\"60\" x2=\"116\" y2=\"60\" stroke=\"#37474f\"/><rect id=\"ozon-d16-n2\" x=\"216\" y=\"36\" width=\"88\" height=\"48\" rx=\"6\" fill=\"#e3f2fd\" stroke=\"#1565c0\"/><text id=\"ozon-d16-t2\" x=\"260\" y=\"64\" text-anchor=\"middle\" font-size=\"9\" fill=\"#0d47a1\">Top K heap</text><line id=\"ozon-d16-a2\" x1=\"204\" y1=\"60\" x2=\"216\" y2=\"60\" stroke=\"#37474f\"/></svg>"
+          }
+        },
+        {
+          "type": "theory",
+          "title": "Решение",
+          "content": "## Полный код\n\n```csharp\npublic interface ITopKProducts\n{\n    IReadOnlyList<(string ProductId, long Count)> GetTopK(int k);\n    void RecordView(string productId);\n}\n\npublic sealed class TopKProducts : ITopKProducts\n{\n    private readonly object _sync = new();\n    private readonly Dictionary<string, long> _counts = new();\n\n    public void RecordView(string productId)\n    {\n        lock (_sync)\n        {\n            _counts.TryGetValue(productId, out var c);\n            _counts[productId] = c + 1;\n        }\n    }\n\n    public IReadOnlyList<(string ProductId, long Count)> GetTopK(int k)\n    {\n        lock (_sync)\n        {\n            return _counts\n                .OrderByDescending(kv => kv.Value)\n                .ThenBy(kv => kv.Key, StringComparer.Ordinal)\n                .Take(k)\n                .Select(kv => (kv.Key, kv.Value))\n                .ToList();\n        }\n    }\n}\n```"
+        },
+        {
+          "type": "theory",
+          "title": "Ошибки и крайние случаи",
+          "content": "## Ошибки\n\n- Нет tie-break — порядок равных товаров случаен и «мигает» на витрине.\n- Сортировка с культурозависимым сравнением строк вместо ordinal.\n- `Dictionary` без синхронизации при параллельных `RecordView`.\n\n## Крайние случаи\n\n- `k = 0` → пустой список.\n- Нет просмотров → пустой список."
+        },
+        {
+          "type": "theory",
+          "title": "Что спросят дальше",
+          "content": "## Что спросят дальше\n\n- Count-Min Sketch + куча для приблизительного Top-K при миллионах товаров.\n- Скользящее окно популярности (день 17).\n- Предрасчёт Top-K фоново вместо сортировки на каждый запрос."
+        },
+        {
+          "type": "quiz",
+          "title": "Quiz 1/4",
+          "content": {
+            "question": "A×3, C×3, B×1. Что вернёт `GetTopK(2)`?",
+            "options": [
+              "`[(A, 3), (C, 3)]`",
+              "`[(C, 3), (A, 3)]`",
+              "`[(A, 3), (B, 1)]`",
+              "Порядок A и C не определён"
+            ],
+            "correctIndices": [
+              0
+            ]
+          }
+        },
+        {
+          "type": "quiz",
+          "title": "Quiz 2/4",
+          "content": {
+            "question": "Зачем `StringComparer.Ordinal` в tie-break?",
+            "options": [
+              "Ordinal сортирует по длине строки",
+              "Без него `ThenBy` не компилируется",
+              "Порядок не зависит от культуры",
+              "Он игнорирует регистр"
+            ],
+            "correctIndices": [
+              2
+            ]
+          }
+        },
+        {
+          "type": "quiz",
+          "title": "Quiz 3/4",
+          "content": {
+            "question": "Сложность `GetTopK` в эталоне для n товаров?",
+            "options": [
+              "O(k)",
+              "O(n log k)",
+              "O(1) за счёт словаря",
+              "O(n log n)"
+            ],
+            "correctIndices": [
+              3
+            ]
+          }
+        },
+        {
+          "type": "quiz",
+          "title": "Quiz 4/4",
+          "content": {
+            "question": "Как ускорить `GetTopK` при малом k и большом n?",
+            "options": [
+              "Заменить `Dictionary` на `SortedDictionary` по id",
+              "Min-heap размера k за один проход: O(n log k)",
+              "Кэшировать результат навсегда",
+              "Сортировать только первые k элементов словаря"
+            ],
+            "correctIndices": [
+              1
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "title": "День 17. SlidingWindowCounter",
+      "steps": [
+        {
+          "type": "theory",
+          "title": "Условие",
+          "content": "## Условие\n\nСчитать события (например, ошибки оплаты) за последние `window` для алертинга.\n\n```csharp\nvoid RecordEvent();\nint CountInWindow();\n```\n\n**Требования**\n\n- Учитываются события за последние `window`.\n- Время — через `TimeProvider`.\n- Потокобезопасность; память ограничена числом событий в окне.\n\n**Пример:** `window = 60 с`: три события в t = 0, одно в t = 30; при t = 61 `CountInWindow()` → 1."
+        },
+        {
+          "type": "theory",
+          "title": "Уточняющие вопросы и план",
+          "content": "## Уточняющие вопросы\n\n- Точный счётчик или приблизительный (бакеты)?\n- Сколько событий в секунду?\n- Граница окна включительная?\n\n## План\n\n1. `Queue<DateTimeOffset>` под `lock`.\n2. `Prune`: удалять из головы метки старше `now − window`.\n3. `Prune` при записи и при чтении.\n4. Тест на `FakeTimeProvider`."
+        },
+        {
+          "type": "svg",
+          "title": "Схема: SlidingWindowCounter",
+          "content": {
+            "caption": "Компонент SlidingWindowCounter",
+            "description": "Поток данных и ограничение ресурсов.",
+            "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 320 120\" width=\"100%\" role=\"img\" aria-label=\"Компонент SlidingWindowCounter\"><rect id=\"ozon-d17-n0\" x=\"16\" y=\"36\" width=\"88\" height=\"48\" rx=\"6\" fill=\"#e3f2fd\" stroke=\"#1565c0\"/><text id=\"ozon-d17-t0\" x=\"60\" y=\"64\" text-anchor=\"middle\" font-size=\"9\" fill=\"#0d47a1\">Record event</text><rect id=\"ozon-d17-n1\" x=\"116\" y=\"36\" width=\"88\" height=\"48\" rx=\"6\" fill=\"#e3f2fd\" stroke=\"#1565c0\"/><text id=\"ozon-d17-t1\" x=\"160\" y=\"64\" text-anchor=\"middle\" font-size=\"9\" fill=\"#0d47a1\">Prune old</text><line id=\"ozon-d17-a1\" x1=\"104\" y1=\"60\" x2=\"116\" y2=\"60\" stroke=\"#37474f\"/><rect id=\"ozon-d17-n2\" x=\"216\" y=\"36\" width=\"88\" height=\"48\" rx=\"6\" fill=\"#e3f2fd\" stroke=\"#1565c0\"/><text id=\"ozon-d17-t2\" x=\"260\" y=\"64\" text-anchor=\"middle\" font-size=\"9\" fill=\"#0d47a1\">Count in window</text><line id=\"ozon-d17-a2\" x1=\"204\" y1=\"60\" x2=\"216\" y2=\"60\" stroke=\"#37474f\"/></svg>"
+          }
+        },
+        {
+          "type": "theory",
+          "title": "Решение",
+          "content": "## Полный код\n\n```csharp\npublic interface ISlidingWindowCounter\n{\n    void RecordEvent();\n    int CountInWindow();\n}\n\npublic sealed class SlidingWindowCounter : ISlidingWindowCounter\n{\n    private readonly object _sync = new();\n    private readonly TimeSpan _window;\n    private readonly TimeProvider _time;\n    private readonly Queue<DateTimeOffset> _events = new();\n\n    public SlidingWindowCounter(TimeSpan window, TimeProvider? time = null)\n    {\n        _window = window;\n        _time = time ?? TimeProvider.System;\n    }\n\n    public void RecordEvent()\n    {\n        lock (_sync)\n        {\n            Prune();\n            _events.Enqueue(_time.GetUtcNow());\n        }\n    }\n\n    public int CountInWindow()\n    {\n        lock (_sync)\n        {\n            Prune();\n            return _events.Count;\n        }\n    }\n\n    private void Prune()\n    {\n        var cutoff = _time.GetUtcNow() - _window;\n        while (_events.Count > 0 && _events.Peek() < cutoff)\n            _events.Dequeue();\n    }\n}\n```"
+        },
+        {
+          "type": "theory",
+          "title": "Ошибки и крайние случаи",
+          "content": "## Ошибки\n\n- Хранить все события без удаления — память растёт бесконечно.\n- Пересчитывать весь список на каждое чтение вместо удаления из головы.\n- `DateTime.Now` — прыжки времени при переводе часов.\n\n## Крайние случаи\n\n- Событие ровно на границе окна: эталон удаляет строго старше `cutoff` (`<`), граничное учитывается.\n- Всплеск в 10⁶ событий в окне — очередь большая; обсудить бакеты."
+        },
+        {
+          "type": "theory",
+          "title": "Что спросят дальше",
+          "content": "## Что спросят дальше\n\n- Бакеты по секундам: память O(window / bucket) ценой точности.\n- Распределённый счётчик (Redis sorted set / INCR с TTL).\n- Связь с rate limiter (день 4)."
+        },
+        {
+          "type": "quiz",
+          "title": "Quiz 1/4",
+          "content": {
+            "question": "`window = 60 с`: три события в t=0, одно в t=30. Что вернёт `CountInWindow()` при t=61?",
+            "options": [
+              "4",
+              "3",
+              "1",
+              "0"
+            ],
+            "correctIndices": [
+              2
+            ]
+          }
+        },
+        {
+          "type": "quiz",
+          "title": "Quiz 2/4",
+          "content": {
+            "question": "Почему `Prune` вызывается и в `RecordEvent`?",
+            "options": [
+              "Без этого новое событие не добавится",
+              "Чтобы `CountInWindow` работал за O(1) без блокировки",
+              "Чтобы сдвинуть окно вперёд на `window`",
+              "Иначе при редком чтении очередь растёт бесконечно"
+            ],
+            "correctIndices": [
+              3
+            ]
+          }
+        },
+        {
+          "type": "quiz",
+          "title": "Quiz 3/4",
+          "content": {
+            "question": "Как ограничить память при миллионах событий в окне?",
+            "options": [
+              "Хранить только последнюю метку",
+              "Бакеты-счётчики по интервалам вместо меток",
+              "Увеличить `window`",
+              "Заменить `Queue` на `List`"
+            ],
+            "correctIndices": [
+              1
+            ]
+          }
+        },
+        {
+          "type": "quiz",
+          "title": "Quiz 4/4",
+          "content": {
+            "question": "Событие ровно в `now − window`. Учитывается ли оно в эталоне?",
+            "options": [
+              "Да: удаляются только метки строго раньше `cutoff`",
+              "Нет: граница исключается",
+              "Зависит от порядка вызовов",
+              "Учитывается только при `RecordEvent`"
+            ],
+            "correctIndices": [
+              0
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "title": "День 18. PriorityJobQueue",
+      "steps": [
+        {
+          "type": "theory",
+          "title": "Условие",
+          "content": "## Условие\n\nОчередь фоновых задач: срочные (пересчёт цены) раньше обычных (обновление описания).\n\n```csharp\nvoid Enqueue(Job job);          // Job(string Id, int Priority)\nbool TryDequeue(out Job job);\n```\n\n**Требования**\n\n- Сначала задачи с большим `Priority`.\n- При равном приоритете — FIFO.\n- Потокобезопасность.\n\n**Пример:** Enqueue a(1), b(1), c(2) → Dequeue: c, a, b."
+        },
+        {
+          "type": "theory",
+          "title": "Уточняющие вопросы и план",
+          "content": "## Уточняющие вопросы\n\n- Больший приоритет — большее число?\n- Возможен ли голод низкоприоритетных задач?\n- Нужно ли асинхронное ожидание задачи (`DequeueAsync`)?\n\n## План\n\n1. `PriorityQueue<Job, (int Priority, long Seq)>`.\n2. Приоритет `-job.Priority` — у `PriorityQueue` min-куча.\n3. `Seq` — счётчик вставок для FIFO.\n4. Все операции под `lock`: `PriorityQueue` не потокобезопасна."
+        },
+        {
+          "type": "svg",
+          "title": "Схема: PriorityJobQueue",
+          "content": {
+            "caption": "Компонент PriorityJobQueue",
+            "description": "Поток данных и ограничение ресурсов.",
+            "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 320 120\" width=\"100%\" role=\"img\" aria-label=\"Компонент PriorityJobQueue\"><rect id=\"ozon-d18-n0\" x=\"16\" y=\"36\" width=\"88\" height=\"48\" rx=\"6\" fill=\"#e3f2fd\" stroke=\"#1565c0\"/><text id=\"ozon-d18-t0\" x=\"60\" y=\"64\" text-anchor=\"middle\" font-size=\"9\" fill=\"#0d47a1\">Enqueue job</text><rect id=\"ozon-d18-n1\" x=\"116\" y=\"36\" width=\"88\" height=\"48\" rx=\"6\" fill=\"#e3f2fd\" stroke=\"#1565c0\"/><text id=\"ozon-d18-t1\" x=\"160\" y=\"64\" text-anchor=\"middle\" font-size=\"9\" fill=\"#0d47a1\">Priority queue</text><line id=\"ozon-d18-a1\" x1=\"104\" y1=\"60\" x2=\"116\" y2=\"60\" stroke=\"#37474f\"/><rect id=\"ozon-d18-n2\" x=\"216\" y=\"36\" width=\"88\" height=\"48\" rx=\"6\" fill=\"#e3f2fd\" stroke=\"#1565c0\"/><text id=\"ozon-d18-t2\" x=\"260\" y=\"64\" text-anchor=\"middle\" font-size=\"9\" fill=\"#0d47a1\">Dequeue FIFO tie</text><line id=\"ozon-d18-a2\" x1=\"204\" y1=\"60\" x2=\"216\" y2=\"60\" stroke=\"#37474f\"/></svg>"
+          }
+        },
+        {
+          "type": "theory",
+          "title": "Решение",
+          "content": "## Полный код\n\n```csharp\nusing System.Diagnostics.CodeAnalysis;\n\npublic sealed record Job(string Id, int Priority);\n\npublic interface IPriorityJobQueue\n{\n    void Enqueue(Job job);\n    bool TryDequeue([MaybeNullWhen(false)] out Job job);\n}\n\npublic sealed class PriorityJobQueue : IPriorityJobQueue\n{\n    private readonly object _sync = new();\n    private readonly PriorityQueue<Job, (int Priority, long Seq)> _queue = new();\n    private long _sequence;\n\n    public void Enqueue(Job job)\n    {\n        lock (_sync)\n        {\n            _queue.Enqueue(job, (-job.Priority, _sequence++));\n        }\n    }\n\n    public bool TryDequeue([MaybeNullWhen(false)] out Job job)\n    {\n        lock (_sync)\n        {\n            return _queue.TryDequeue(out job, out _);\n        }\n    }\n}\n```"
+        },
+        {
+          "type": "theory",
+          "title": "Ошибки и крайние случаи",
+          "content": "## Ошибки\n\n- `PriorityQueue` без блокировки при параллельном доступе — порча кучи.\n- Нет sequence: `PriorityQueue` не стабильна, FIFO при равном приоритете не гарантирован.\n- Забыть, что `PriorityQueue` — min-куча, и получить обратный порядок.\n\n## Крайние случаи\n\n- `TryDequeue` на пустой очереди → false.\n- Поток срочных задач — обычные никогда не выполнятся (обсудить aging)."
+        },
+        {
+          "type": "theory",
+          "title": "Что спросят дальше",
+          "content": "## Что спросят дальше\n\n- `DequeueAsync` с ожиданием через `SemaphoreSlim` или `Channel`.\n- Aging: повышать приоритет давно ждущих задач.\n- Персистентная очередь с приоритетами (PostgreSQL + `SKIP LOCKED`)."
+        },
+        {
+          "type": "quiz",
+          "title": "Quiz 1/4",
+          "content": {
+            "question": "Enqueue a(1), b(1), c(2). Порядок `TryDequeue`?",
+            "options": [
+              "a, b, c",
+              "c, b, a",
+              "c, a, b",
+              "a, c, b"
+            ],
+            "correctIndices": [
+              2
+            ]
+          }
+        },
+        {
+          "type": "quiz",
+          "title": "Quiz 2/4",
+          "content": {
+            "question": "Зачем `Seq` в ключе приоритета?",
+            "options": [
+              "Чтобы ключи были уникальны, иначе `Enqueue` бросит исключение",
+              "Для ускорения `TryDequeue`",
+              "Чтобы ограничить размер очереди",
+              "`PriorityQueue` не стабильна — без счётчика нет FIFO"
+            ],
+            "correctIndices": [
+              3
+            ]
+          }
+        },
+        {
+          "type": "quiz",
+          "title": "Quiz 3/4",
+          "content": {
+            "question": "Почему приоритет кладётся как `-job.Priority`?",
+            "options": [
+              "`PriorityQueue` отдаёт минимальный приоритет первым",
+              "Чтобы отрицательные приоритеты стали положительными",
+              "Так `Seq` сравнивается раньше приоритета",
+              "Это требование `IComparer<int>`"
+            ],
+            "correctIndices": [
+              0
+            ]
+          }
+        },
+        {
+          "type": "quiz",
+          "title": "Quiz 4/4",
+          "content": {
+            "question": "Что будет без `lock` при параллельных `Enqueue`?",
+            "options": [
+              "Ничего: `PriorityQueue` потокобезопасна",
+              "Возможна порча внутренней кучи и потеря задач",
+              "Только нарушение FIFO при равных приоритетах",
+              "`Enqueue` будет ждать, пока завершится предыдущий"
+            ],
+            "correctIndices": [
+              1
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "title": "День 19. TimeoutBudget",
+      "steps": [
+        {
+          "type": "theory",
+          "title": "Условие",
+          "content": "## Условие\n\nУ запроса общий дедлайн; вложенные вызовы должны укладываться в оставшееся время.\n\n```csharp\nCancellationToken Token { get; }\nTimeSpan Remaining { get; }\nITimeoutBudget CreateChild(TimeSpan maxSlice);\n```\n\n**Требования**\n\n- Дочерний бюджет получает `min(Remaining, maxSlice)` и отменяется вместе с родителем.\n- `Remaining` не бывает отрицательным.\n- Время — через `TimeProvider`.\n\n**Пример:** бюджет 100 мс; через 60 мс `CreateChild(80 мс)` → у дочернего ~40 мс."
+        },
+        {
+          "type": "theory",
+          "title": "Уточняющие вопросы и план",
+          "content": "## Уточняющие вопросы\n\n- Бюджет передаётся между сервисами (gRPC deadline) или только внутри процесса?\n- Что делать, если бюджета не осталось: не вызывать или вызвать с нулевым таймаутом?\n\n## План\n\n1. Дедлайн = `now + total`, `Remaining = max(0, deadline − now)`.\n2. `CreateLinkedTokenSource(outer)` + `CancelAfter(total)`.\n3. `CreateChild`: `min(Remaining, maxSlice)`, родительский токен как outer.\n4. `Dispose` освобождает CTS."
+        },
+        {
+          "type": "svg",
+          "title": "Схема: TimeoutBudget",
+          "content": {
+            "caption": "Компонент TimeoutBudget",
+            "description": "Поток данных и ограничение ресурсов.",
+            "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 320 120\" width=\"100%\" role=\"img\" aria-label=\"Компонент TimeoutBudget\"><rect id=\"ozon-d19-n0\" x=\"16\" y=\"36\" width=\"88\" height=\"48\" rx=\"6\" fill=\"#e3f2fd\" stroke=\"#1565c0\"/><text id=\"ozon-d19-t0\" x=\"60\" y=\"64\" text-anchor=\"middle\" font-size=\"9\" fill=\"#0d47a1\">Parent budget</text><rect id=\"ozon-d19-n1\" x=\"116\" y=\"36\" width=\"88\" height=\"48\" rx=\"6\" fill=\"#e3f2fd\" stroke=\"#1565c0\"/><text id=\"ozon-d19-t1\" x=\"160\" y=\"64\" text-anchor=\"middle\" font-size=\"9\" fill=\"#0d47a1\">Child slice</text><line id=\"ozon-d19-a1\" x1=\"104\" y1=\"60\" x2=\"116\" y2=\"60\" stroke=\"#37474f\"/><rect id=\"ozon-d19-n2\" x=\"216\" y=\"36\" width=\"88\" height=\"48\" rx=\"6\" fill=\"#e3f2fd\" stroke=\"#1565c0\"/><text id=\"ozon-d19-t2\" x=\"260\" y=\"64\" text-anchor=\"middle\" font-size=\"9\" fill=\"#0d47a1\">Cancel on expire</text><line id=\"ozon-d19-a2\" x1=\"204\" y1=\"60\" x2=\"216\" y2=\"60\" stroke=\"#37474f\"/></svg>"
+          }
+        },
+        {
+          "type": "theory",
+          "title": "Решение",
+          "content": "## Полный код\n\n```csharp\npublic interface ITimeoutBudget\n{\n    CancellationToken Token { get; }\n    TimeSpan Remaining { get; }\n    ITimeoutBudget CreateChild(TimeSpan maxSlice);\n}\n\npublic sealed class TimeoutBudget : ITimeoutBudget, IDisposable\n{\n    private readonly CancellationTokenSource _cts;\n    private readonly TimeProvider _time;\n    private readonly DateTimeOffset _deadline;\n\n    public TimeoutBudget(TimeSpan total, TimeProvider? time = null, CancellationToken outer = default)\n    {\n        _time = time ?? TimeProvider.System;\n        _deadline = _time.GetUtcNow().Add(total);\n        _cts = CancellationTokenSource.CreateLinkedTokenSource(outer);\n        _cts.CancelAfter(total);\n    }\n\n    public CancellationToken Token => _cts.Token;\n\n    public TimeSpan Remaining\n    {\n        get\n        {\n            var r = _deadline - _time.GetUtcNow();\n            return r > TimeSpan.Zero ? r : TimeSpan.Zero;\n        }\n    }\n\n    public ITimeoutBudget CreateChild(TimeSpan maxSlice)\n    {\n        var slice = Remaining < maxSlice ? Remaining : maxSlice;\n        return new TimeoutBudget(slice, _time, _cts.Token);\n    }\n\n    public void Dispose() => _cts.Dispose();\n}\n```"
+        },
+        {
+          "type": "theory",
+          "title": "Ошибки и крайние случаи",
+          "content": "## Ошибки\n\n- Дочерний вызов с собственным фиксированным таймаутом, не учитывающим остаток родителя.\n- Отрицательный `Remaining` → `ArgumentOutOfRangeException` в `CancelAfter`.\n- Не освобождать CTS — висящие таймеры.\n\n## Крайние случаи\n\n- Нулевой бюджет → дочерний токен отменяется сразу.\n- Отмена родителя → отменяются все дочерние."
+        },
+        {
+          "type": "theory",
+          "title": "Что спросят дальше",
+          "content": "## Что спросят дальше\n\n- Передача дедлайна по сети (gRPC deadline, заголовок).\n- Резерв времени на обработку ответа (не отдавать детям весь остаток).\n- Метрики: сколько запросов упёрлось в бюджет."
+        },
+        {
+          "type": "quiz",
+          "title": "Quiz 1/4",
+          "content": {
+            "question": "Бюджет 100 мс, прошло 60 мс. `CreateChild(80 мс)` получит…",
+            "options": [
+              "80 мс",
+              "100 мс",
+              "~40 мс",
+              "140 мс"
+            ],
+            "correctIndices": [
+              2
+            ]
+          }
+        },
+        {
+          "type": "quiz",
+          "title": "Quiz 2/4",
+          "content": {
+            "question": "Родительский бюджет отменён. Что с дочерним токеном?",
+            "options": [
+              "Продолжает работать до своего таймаута",
+              "Отменяется, только если дочерний бюджет истёк",
+              "Бросает исключение при следующем чтении `Remaining`",
+              "Отменяется: он связан с токеном родителя"
+            ],
+            "correctIndices": [
+              3
+            ]
+          }
+        },
+        {
+          "type": "quiz",
+          "title": "Quiz 3/4",
+          "content": {
+            "question": "Зачем `Remaining` ограничен снизу нулём?",
+            "options": [
+              "Чтобы бюджет можно было продлить",
+              "Иначе сломается `CancelAfter` и расчёт дочернего бюджета",
+              "`TimeSpan` не может быть отрицательным",
+              "Чтобы токен отменялся позже"
+            ],
+            "correctIndices": [
+              1
+            ]
+          }
+        },
+        {
+          "type": "quiz",
+          "title": "Quiz 4/4",
+          "content": {
+            "question": "Чем плох фиксированный таймаут 1 с на каждый вложенный вызов?",
+            "options": [
+              "Сумма таймаутов может превысить дедлайн запроса",
+              "Фиксированный таймаут нельзя отменить",
+              "Он не работает с `HttpClient`",
+              "Он слишком короткий для большинства внешних сервисов"
+            ],
+            "correctIndices": [
+              0
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "title": "День 20. WebhookDispatcher",
+      "steps": [
+        {
+          "type": "theory",
+          "title": "Условие",
+          "content": "## Условие\n\nОтправка вебхуков партнёрам: очередь, ограничение параллелизма, повторы.\n\n```csharp\nValueTask EnqueueAsync(WebhookPayload payload, CancellationToken ct);\n```\n\n**Требования**\n\n- Bounded-очередь `queueCapacity`: при переполнении `EnqueueAsync` ждёт.\n- Одновременно не более `maxConcurrency` доставок.\n- Транзиентные ошибки повторяются; после исчерпания попыток вызывается `onFailed` (DLQ).\n- `DisposeAsync` останавливает доставку без исключений.\n\n**Пример:** партнёр дважды отвечает 503, затем 200 → доставлено. Если 503 всегда → `onFailed` вызван один раз."
+        },
+        {
+          "type": "theory",
+          "title": "Уточняющие вопросы и план",
+          "content": "## Уточняющие вопросы\n\n- Что делать при переполнении очереди: ждать, отбрасывать, сохранять в БД?\n- Нужен ли порядок доставки для одного партнёра?\n- Ограничение на партнёра или общее?\n\n## План\n\n1. `Channel.CreateBounded` с `FullMode = Wait`.\n2. Цикл-насос: `WaitAsync` семафора, запуск доставки, список активных задач.\n3. Доставка: retry-политика, ошибки → `onFailed`, `Release` в `finally`.\n4. Остановка: завершить writer, отменить, дождаться насоса и активных доставок."
+        },
+        {
+          "type": "svg",
+          "title": "Схема: WebhookDispatcher",
+          "content": {
+            "caption": "Компонент WebhookDispatcher",
+            "description": "Поток данных и ограничение ресурсов.",
+            "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 320 120\" width=\"100%\" role=\"img\" aria-label=\"Компонент WebhookDispatcher\"><rect id=\"ozon-d20-n0\" x=\"16\" y=\"36\" width=\"88\" height=\"48\" rx=\"6\" fill=\"#e3f2fd\" stroke=\"#1565c0\"/><text id=\"ozon-d20-t0\" x=\"60\" y=\"64\" text-anchor=\"middle\" font-size=\"9\" fill=\"#0d47a1\">Webhook in</text><rect id=\"ozon-d20-n1\" x=\"116\" y=\"36\" width=\"88\" height=\"48\" rx=\"6\" fill=\"#e3f2fd\" stroke=\"#1565c0\"/><text id=\"ozon-d20-t1\" x=\"160\" y=\"64\" text-anchor=\"middle\" font-size=\"9\" fill=\"#0d47a1\">Queue+retry</text><line id=\"ozon-d20-a1\" x1=\"104\" y1=\"60\" x2=\"116\" y2=\"60\" stroke=\"#37474f\"/><rect id=\"ozon-d20-n2\" x=\"216\" y=\"36\" width=\"88\" height=\"48\" rx=\"6\" fill=\"#e3f2fd\" stroke=\"#1565c0\"/><text id=\"ozon-d20-t2\" x=\"260\" y=\"64\" text-anchor=\"middle\" font-size=\"9\" fill=\"#0d47a1\">HTTP out</text><line id=\"ozon-d20-a2\" x1=\"204\" y1=\"60\" x2=\"216\" y2=\"60\" stroke=\"#37474f\"/></svg>"
+          }
+        },
+        {
+          "type": "theory",
+          "title": "Решение",
+          "content": "## Полный код\n\n```csharp\npublic sealed record WebhookPayload(string Url, string Body);\n\npublic interface IRetryPolicy\n{\n    Task<T> ExecuteAsync<T>(Func<CancellationToken, Task<T>> action, CancellationToken ct);\n}\n\npublic sealed class SimpleRetryPolicy : IRetryPolicy\n{\n    private readonly int _maxAttempts;\n    public SimpleRetryPolicy(int maxAttempts = 3) => _maxAttempts = maxAttempts;\n\n    public async Task<T> ExecuteAsync<T>(Func<CancellationToken, Task<T>> action, CancellationToken ct)\n    {\n        for (var attempt = 1; ; attempt++)\n        {\n            try { return await action(ct).ConfigureAwait(false); }\n            catch (OperationCanceledException) { throw; }\n            catch (Exception) when (attempt < _maxAttempts)\n            {\n                await Task.Delay(TimeSpan.FromMilliseconds(50 * attempt), ct).ConfigureAwait(false);\n            }\n        }\n    }\n}\n\npublic interface IWebhookDispatcher\n{\n    ValueTask EnqueueAsync(WebhookPayload payload, CancellationToken ct);\n}\n\npublic sealed class WebhookDispatcher : IWebhookDispatcher, IAsyncDisposable\n{\n    private readonly HttpClient _http;\n    private readonly IRetryPolicy _retry;\n    private readonly Action<WebhookPayload, Exception> _onFailed;\n    private readonly SemaphoreSlim _concurrency;\n    private readonly Channel<WebhookPayload> _queue;\n    private readonly CancellationTokenSource _cts = new();\n    private readonly Task _pump;\n\n    public WebhookDispatcher(\n        HttpClient http,\n        IRetryPolicy retry,\n        Action<WebhookPayload, Exception> onFailed,\n        int queueCapacity,\n        int maxConcurrency)\n    {\n        _http = http;\n        _retry = retry;\n        _onFailed = onFailed;\n        _concurrency = new SemaphoreSlim(maxConcurrency, maxConcurrency);\n        _queue = Channel.CreateBounded<WebhookPayload>(new BoundedChannelOptions(queueCapacity)\n        {\n            FullMode = BoundedChannelFullMode.Wait,\n        });\n        _pump = Task.Run(() => PumpAsync(_cts.Token));\n    }\n\n    public ValueTask EnqueueAsync(WebhookPayload payload, CancellationToken ct) =>\n        _queue.Writer.WriteAsync(payload, ct);\n\n    private async Task PumpAsync(CancellationToken ct)\n    {\n        var inFlight = new List<Task>();\n        try\n        {\n            await foreach (var item in _queue.Reader.ReadAllAsync(ct).ConfigureAwait(false))\n            {\n                await _concurrency.WaitAsync(ct).ConfigureAwait(false);\n                inFlight.RemoveAll(t => t.IsCompleted);\n                inFlight.Add(DeliverWithReleaseAsync(item, ct));\n            }\n        }\n        catch (OperationCanceledException) when (ct.IsCancellationRequested)\n        {\n        }\n        await Task.WhenAll(inFlight).ConfigureAwait(false);\n    }\n\n    private async Task DeliverWithReleaseAsync(WebhookPayload item, CancellationToken ct)\n    {\n        try\n        {\n            await _retry.ExecuteAsync(async token =>\n            {\n                using var content = new StringContent(item.Body);\n                using var resp = await _http.PostAsync(item.Url, content, token).ConfigureAwait(false);\n                resp.EnsureSuccessStatusCode();\n                return true;\n            }, ct).ConfigureAwait(false);\n        }\n        catch (OperationCanceledException) when (ct.IsCancellationRequested)\n        {\n        }\n        catch (Exception ex)\n        {\n            _onFailed(item, ex);\n        }\n        finally\n        {\n            _concurrency.Release();\n        }\n    }\n\n    public async ValueTask DisposeAsync()\n    {\n        _queue.Writer.TryComplete();\n        _cts.Cancel();\n        await _pump.ConfigureAwait(false);\n        _cts.Dispose();\n        _concurrency.Dispose();\n    }\n}\n```"
+        },
+        {
+          "type": "theory",
+          "title": "Ошибки и крайние случаи",
+          "content": "## Ошибки\n\n- Unbounded-очередь — при недоступном партнёре память растёт до OOM.\n- Fire-and-forget доставки: исключения теряются, `Dispose` семафора при активных доставках.\n- Повтор без паузы — DDoS партнёра.\n\n## Крайние случаи\n\n- Постоянный 4xx — повторять бессмысленно, сразу в DLQ (в эталоне повторяется любая ошибка; обсудить).\n- `DisposeAsync` во время доставки — доставка отменяется, насос дожидается её."
+        },
+        {
+          "type": "theory",
+          "title": "Что спросят дальше",
+          "content": "## Что спросят дальше\n\n- Подпись вебхуков (HMAC) и защита от повторного воспроизведения.\n- Отдельная очередь и лимит на каждого партнёра.\n- Персистентная очередь (outbox, день 24), чтобы не терять вебхуки при рестарте."
+        },
+        {
+          "type": "quiz",
+          "title": "Quiz 1/4",
+          "content": {
+            "question": "Очередь заполнена. Что делает `EnqueueAsync` в эталоне?",
+            "options": [
+              "Отбрасывает самый старый вебхук",
+              "Ждёт свободного места",
+              "Сразу бросает исключение",
+              "Увеличивает ёмкость очереди"
+            ],
+            "correctIndices": [
+              1
+            ]
+          }
+        },
+        {
+          "type": "quiz",
+          "title": "Quiz 2/4",
+          "content": {
+            "question": "Зачем насос хранит список активных доставок?",
+            "options": [
+              "Чтобы доставлять вебхуки строго в порядке постановки",
+              "Чтобы повторять упавшие доставки",
+              "Чтобы ограничить размер очереди",
+              "Дождаться их при остановке до `Dispose` семафора"
+            ],
+            "correctIndices": [
+              3
+            ]
+          }
+        },
+        {
+          "type": "quiz",
+          "title": "Quiz 3/4",
+          "content": {
+            "question": "Доставка исчерпала все попытки. Что происходит?",
+            "options": [
+              "Вызывается `onFailed` (например, запись в DLQ)",
+              "Исключение теряется в fire-and-forget задаче",
+              "Насос останавливается",
+              "Вебхук возвращается в конец очереди"
+            ],
+            "correctIndices": [
+              0
+            ]
+          }
+        },
+        {
+          "type": "quiz",
+          "title": "Quiz 4/4",
+          "content": {
+            "question": "Почему `Release` семафора в `finally` доставки?",
+            "options": [
+              "Чтобы следующая доставка ждала повторов",
+              "`SemaphoreSlim` требует `finally` для компиляции",
+              "Иначе упавшая доставка навсегда займёт слот",
+              "Чтобы `onFailed` вызывался после освобождения"
+            ],
+            "correctIndices": [
+              2
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "title": "День 21. GracefulBackgroundWorker",
+      "steps": [
+        {
+          "type": "theory",
+          "title": "Условие",
+          "content": "## Условие\n\nФоновый обработчик очереди, который корректно останавливается при деплое.\n\n```csharp\nChannelWriter<WorkUnit> Input { get; }\nTask StopAsync(CancellationToken ct);\n```\n\n**Требования**\n\n- Фоновый цикл читает bounded-канал.\n- `StopAsync` перестаёт принимать новые элементы, прерывает обработку по токену и дожидается завершения цикла (`ct` ограничивает ожидание).\n- Отмена не выходит наружу как исключение цикла.\n\n**Пример:** в очереди 100 элементов, вызван `StopAsync` → цикл завершается, `Input.TryWrite` возвращает false."
+        },
+        {
+          "type": "theory",
+          "title": "Уточняющие вопросы и план",
+          "content": "## Уточняющие вопросы\n\n- Дорабатывать очередь при остановке или прерывать сразу?\n- Сколько времени даёт оркестратор на остановку (`terminationGracePeriod`)?\n- Что делать с ошибкой обработки одного элемента?\n\n## План\n\n1. Bounded `Channel` + цикл `await foreach ReadAllAsync(ct)`.\n2. `StopAsync`: `TryComplete` writer, `Cancel`, `await _loop.WaitAsync(ct)`.\n3. Ловить `OperationCanceledException` в цикле только при нашей отмене.\n4. В production — `BackgroundService` (пакет `Microsoft.Extensions.Hosting`)."
+        },
+        {
+          "type": "svg",
+          "title": "Схема: GracefulBackgroundWorker",
+          "content": {
+            "caption": "Компонент GracefulBackgroundWorker",
+            "description": "Поток данных и ограничение ресурсов.",
+            "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 320 120\" width=\"100%\" role=\"img\" aria-label=\"Компонент GracefulBackgroundWorker\"><rect id=\"ozon-d21-n0\" x=\"16\" y=\"36\" width=\"88\" height=\"48\" rx=\"6\" fill=\"#e3f2fd\" stroke=\"#1565c0\"/><text id=\"ozon-d21-t0\" x=\"60\" y=\"64\" text-anchor=\"middle\" font-size=\"9\" fill=\"#0d47a1\">Start loop</text><rect id=\"ozon-d21-n1\" x=\"116\" y=\"36\" width=\"88\" height=\"48\" rx=\"6\" fill=\"#e3f2fd\" stroke=\"#1565c0\"/><text id=\"ozon-d21-t1\" x=\"160\" y=\"64\" text-anchor=\"middle\" font-size=\"9\" fill=\"#0d47a1\">Channel read</text><line id=\"ozon-d21-a1\" x1=\"104\" y1=\"60\" x2=\"116\" y2=\"60\" stroke=\"#37474f\"/><rect id=\"ozon-d21-n2\" x=\"216\" y=\"36\" width=\"88\" height=\"48\" rx=\"6\" fill=\"#e3f2fd\" stroke=\"#1565c0\"/><text id=\"ozon-d21-t2\" x=\"260\" y=\"64\" text-anchor=\"middle\" font-size=\"9\" fill=\"#0d47a1\">Stop complete</text><line id=\"ozon-d21-a2\" x1=\"204\" y1=\"60\" x2=\"216\" y2=\"60\" stroke=\"#37474f\"/></svg>"
+          }
+        },
+        {
+          "type": "theory",
+          "title": "Решение",
+          "content": "## Полный код\n\n```csharp\npublic sealed record WorkUnit(int Id);\n\n// В production — BackgroundService из Microsoft.Extensions.Hosting.\npublic sealed class GracefulBackgroundWorker : IAsyncDisposable\n{\n    private readonly Channel<WorkUnit> _channel = Channel.CreateBounded<WorkUnit>(\n        new BoundedChannelOptions(256) { FullMode = BoundedChannelFullMode.Wait });\n    private readonly CancellationTokenSource _cts = new();\n    private readonly Task _loop;\n\n    public GracefulBackgroundWorker() =>\n        _loop = Task.Run(() => RunAsync(_cts.Token));\n\n    public ChannelWriter<WorkUnit> Input => _channel.Writer;\n\n    private async Task RunAsync(CancellationToken ct)\n    {\n        try\n        {\n            await foreach (var unit in _channel.Reader.ReadAllAsync(ct).ConfigureAwait(false))\n                await ProcessAsync(unit, ct).ConfigureAwait(false);\n        }\n        catch (OperationCanceledException) when (ct.IsCancellationRequested) { }\n    }\n\n    public async Task StopAsync(CancellationToken ct)\n    {\n        _channel.Writer.TryComplete();\n        _cts.Cancel();\n        await _loop.WaitAsync(ct).ConfigureAwait(false);\n    }\n\n    public async ValueTask DisposeAsync() => await StopAsync(CancellationToken.None);\n\n    private static Task ProcessAsync(WorkUnit unit, CancellationToken ct) =>\n        Task.Delay(10, ct);\n}\n```"
+        },
+        {
+          "type": "theory",
+          "title": "Ошибки и крайние случаи",
+          "content": "## Ошибки\n\n- `Thread.Abort` / `Environment.Exit` вместо кооперативной отмены.\n- Не дождаться цикла в `StopAsync` — процесс завершится посреди обработки.\n- Исключение обработки элемента убивает цикл — остальные элементы не обработаются.\n\n## Крайние случаи\n\n- Остановка во время долгой обработки — `ProcessAsync` должен уважать токен.\n- Повторный `StopAsync` — `TryComplete` и `Cancel` идемпотентны."
+        },
+        {
+          "type": "theory",
+          "title": "Что спросят дальше",
+          "content": "## Что спросят дальше\n\n- Режим «дочитать очередь» перед остановкой (сначала `Complete`, отмена по таймауту).\n- `HostOptions.ShutdownTimeout` и preStop hook в Kubernetes.\n- Health checks: readiness = false во время остановки."
+        },
+        {
+          "type": "quiz",
+          "title": "Quiz 1/4",
+          "content": {
+            "question": "Что делает `Input.TryWrite` после `StopAsync`?",
+            "options": [
+              "Записывает элемент, он обработается после рестарта",
+              "Бросает `OperationCanceledException`",
+              "Возвращает `false`: writer завершён",
+              "Блокируется до освобождения места"
+            ],
+            "correctIndices": [
+              2
+            ]
+          }
+        },
+        {
+          "type": "quiz",
+          "title": "Quiz 2/4",
+          "content": {
+            "question": "Зачем `StopAsync` ждёт `_loop`?",
+            "options": [
+              "Чтобы цикл успел прочитать и обработать все 100 элементов",
+              "Без этого `Cancel` не сработает",
+              "Чтобы освободить канал для новых записей",
+              "Чтобы не оборвать обработку текущего элемента"
+            ],
+            "correctIndices": [
+              3
+            ]
+          }
+        },
+        {
+          "type": "quiz",
+          "title": "Quiz 3/4",
+          "content": {
+            "question": "Эталон при остановке дорабатывает очередь?",
+            "options": [
+              "Да: обрабатывает все элементы до конца",
+              "Нет: токен отменяется сразу, остаток не обрабатывается",
+              "Да, но не дольше `ShutdownTimeout`",
+              "Только элементы с высоким приоритетом"
+            ],
+            "correctIndices": [
+              1
+            ]
+          }
+        },
+        {
+          "type": "quiz",
+          "title": "Quiz 4/4",
+          "content": {
+            "question": "Зачем фильтр `when (ct.IsCancellationRequested)` в `catch`?",
+            "options": [
+              "Глотать только свою остановку, а не чужие отмены",
+              "Чтобы ловить все исключения обработки",
+              "Без него цикл не компилируется",
+              "Чтобы перезапустить цикл после отмены"
+            ],
+            "correctIndices": [
+              0
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "title": "День 22. AdapterCorrelator",
+      "steps": [
+        {
+          "type": "theory",
+          "title": "Условие",
+          "content": "## Условие\n\nАдаптер к внешней системе: запрос уходит в очередь, ответ приходит асинхронно и в любом порядке с тем же correlation id.\n\n```csharp\nTask<TResponse> SendAsync<TRequest, TResponse>(\n    TRequest request,\n    Func<TRequest, string> getCorrelationId,\n    Func<TRequest, CancellationToken, Task> send,\n    CancellationToken ct);\nbool TryComplete(string correlationId, object response);\n```\n\n**Требования**\n\n- Ожидание регистрируется **до** отправки запроса.\n- `TryComplete` находит ожидающего по correlation id.\n- Отмена или ошибка отправки удаляют запись; дубликат id — ошибка.\n\n**Пример:** отправлены id=1 и id=2, ответ id=2 пришёл первым → второй вызов получает свой ответ, первый продолжает ждать."
+        },
+        {
+          "type": "theory",
+          "title": "Уточняющие вопросы и план",
+          "content": "## Уточняющие вопросы\n\n- Нужен ли таймаут ожидания ответа?\n- Что делать с ответом без ожидающего (опоздал, неизвестен)?\n- Уникальность correlation id гарантирует вызывающий?\n\n## План\n\n1. Словарь `id → TaskCompletionSource<object>` под `lock`.\n2. Регистрация TCS, затем `send`.\n3. `ct.Register(() => tcs.TrySetCanceled(ct))`.\n4. `finally` удаляет запись, если она всё ещё наша."
+        },
+        {
+          "type": "svg",
+          "title": "Схема: AdapterCorrelator",
+          "content": {
+            "caption": "Компонент AdapterCorrelator",
+            "description": "Поток данных и ограничение ресурсов.",
+            "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 320 120\" width=\"100%\" role=\"img\" aria-label=\"Компонент AdapterCorrelator\"><rect id=\"ozon-d22-n0\" x=\"16\" y=\"36\" width=\"88\" height=\"48\" rx=\"6\" fill=\"#e3f2fd\" stroke=\"#1565c0\"/><text id=\"ozon-d22-t0\" x=\"60\" y=\"64\" text-anchor=\"middle\" font-size=\"9\" fill=\"#0d47a1\">Request+id</text><rect id=\"ozon-d22-n1\" x=\"116\" y=\"36\" width=\"88\" height=\"48\" rx=\"6\" fill=\"#e3f2fd\" stroke=\"#1565c0\"/><text id=\"ozon-d22-t1\" x=\"160\" y=\"64\" text-anchor=\"middle\" font-size=\"9\" fill=\"#0d47a1\">Pending map</text><line id=\"ozon-d22-a1\" x1=\"104\" y1=\"60\" x2=\"116\" y2=\"60\" stroke=\"#37474f\"/><rect id=\"ozon-d22-n2\" x=\"216\" y=\"36\" width=\"88\" height=\"48\" rx=\"6\" fill=\"#e3f2fd\" stroke=\"#1565c0\"/><text id=\"ozon-d22-t2\" x=\"260\" y=\"64\" text-anchor=\"middle\" font-size=\"9\" fill=\"#0d47a1\">Match response</text><line id=\"ozon-d22-a2\" x1=\"204\" y1=\"60\" x2=\"216\" y2=\"60\" stroke=\"#37474f\"/></svg>"
+          }
+        },
+        {
+          "type": "theory",
+          "title": "Решение",
+          "content": "## Полный код\n\n```csharp\npublic interface IAdapterCorrelator\n{\n    Task<TResponse> SendAsync<TRequest, TResponse>(\n        TRequest request,\n        Func<TRequest, string> getCorrelationId,\n        Func<TRequest, CancellationToken, Task> send,\n        CancellationToken ct);\n\n    bool TryComplete(string correlationId, object response);\n}\n\npublic sealed class AdapterCorrelator : IAdapterCorrelator\n{\n    private readonly object _sync = new();\n    private readonly Dictionary<string, TaskCompletionSource<object>> _pending = new();\n\n    public async Task<TResponse> SendAsync<TRequest, TResponse>(\n        TRequest request,\n        Func<TRequest, string> getCorrelationId,\n        Func<TRequest, CancellationToken, Task> send,\n        CancellationToken ct)\n    {\n        var id = getCorrelationId(request);\n        var tcs = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);\n        lock (_sync)\n        {\n            if (!_pending.TryAdd(id, tcs))\n                throw new InvalidOperationException($\"Duplicate correlation id '{id}'\");\n        }\n        try\n        {\n            using var reg = ct.Register(() => tcs.TrySetCanceled(ct));\n            await send(request, ct).ConfigureAwait(false);\n            var result = await tcs.Task.ConfigureAwait(false);\n            return (TResponse)result;\n        }\n        finally\n        {\n            lock (_sync)\n            {\n                if (_pending.TryGetValue(id, out var current) && ReferenceEquals(current, tcs))\n                    _pending.Remove(id);\n            }\n        }\n    }\n\n    public bool TryComplete(string correlationId, object response)\n    {\n        TaskCompletionSource<object>? tcs;\n        lock (_sync)\n        {\n            if (!_pending.Remove(correlationId, out tcs)) return false;\n        }\n        return tcs.TrySetResult(response);\n    }\n}\n```"
+        },
+        {
+          "type": "theory",
+          "title": "Ошибки и крайние случаи",
+          "content": "## Ошибки\n\n- Регистрация после отправки — быстрый ответ придёт раньше и потеряется.\n- Запись не удаляется при отмене или ошибке — утечка памяти.\n- `TrySetResult` под `lock` без `RunContinuationsAsynchronously` — продолжение вызывающего выполнится под блокировкой.\n\n## Крайние случаи\n\n- Ответ пришёл после отмены → `TryComplete` вернёт false.\n- Два запроса с одним id → второй получает `InvalidOperationException`."
+        },
+        {
+          "type": "theory",
+          "title": "Что спросят дальше",
+          "content": "## Что спросят дальше\n\n- Таймаут ожидания ответа и метрика «ответов без ожидающего».\n- Correlation id в заголовках сообщений (Kafka, RabbitMQ reply-to).\n- Что делать при рестарте инстанса, ожидавшего ответ?"
+        },
+        {
+          "type": "quiz",
+          "title": "Quiz 1/4",
+          "content": {
+            "question": "Почему TCS регистрируется до вызова `send`?",
+            "options": [
+              "Так `send` выполнится быстрее",
+              "Ответ может прийти раньше, чем `send` завершится",
+              "Без этого `ct.Register` не сработает",
+              "Чтобы проверить уникальность запроса в `send`"
+            ],
+            "correctIndices": [
+              1
+            ]
+          }
+        },
+        {
+          "type": "quiz",
+          "title": "Quiz 2/4",
+          "content": {
+            "question": "Вызывающий отменил `ct`. Что с записью в словаре?",
+            "options": [
+              "Остаётся до прихода ответа",
+              "Удаляется только при следующем `SendAsync`",
+              "Удаляется в `finally`, поздний ответ не найдёт ожидающего",
+              "Переходит в состояние faulted и остаётся"
+            ],
+            "correctIndices": [
+              2
+            ]
+          }
+        },
+        {
+          "type": "quiz",
+          "title": "Quiz 3/4",
+          "content": {
+            "question": "Зачем `TaskCreationOptions.RunContinuationsAsynchronously`?",
+            "options": [
+              "Чтобы `SendAsync` работал в пуле потоков",
+              "Чтобы TCS можно было завершить повторно",
+              "Без него `TrySetCanceled` бросает исключение",
+              "Продолжение не выполнится внутри `TryComplete`"
+            ],
+            "correctIndices": [
+              3
+            ]
+          }
+        },
+        {
+          "type": "quiz",
+          "title": "Quiz 4/4",
+          "content": {
+            "question": "Второй `SendAsync` с уже ожидающим correlation id. Что делает эталон?",
+            "options": [
+              "Бросает `InvalidOperationException`",
+              "Перезаписывает первое ожидание",
+              "Оба получат один и тот же ответ",
+              "Ждёт завершения первого запроса"
+            ],
+            "correctIndices": [
+              0
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "title": "День 23. BoundedPipeline",
+      "steps": [
+        {
+          "type": "theory",
+          "title": "Условие",
+          "content": "## Условие\n\nОбработать пачку элементов параллельно (например, ресайз фото товаров), сохранив порядок результата.\n\n```csharp\nTask<IReadOnlyList<TOut>> ProcessAsync(IReadOnlyList<TIn> input, CancellationToken ct);\n```\n\n**Требования**\n\n- Не более `maxParallel` одновременных worker.\n- Результат в порядке входа.\n- Отмена останавливает ожидание слотов.\n\n**Пример:** `maxParallel = 2`, item0 обрабатывается 300 мс, item1 — 10 мс → результат `[out0, out1]`."
+        },
+        {
+          "type": "theory",
+          "title": "Уточняющие вопросы и план",
+          "content": "## Уточняющие вопросы\n\n- Размер входа: влезает в память целиком или нужен потоковый вариант?\n- Ошибка одного элемента — падает всё или частичный результат?\n- Нужно ли выдавать результаты по мере готовности?\n\n## План\n\n1. Массив результатов по индексу.\n2. `SemaphoreSlim(maxParallel)` вокруг worker.\n3. `Task.WhenAll` по всем элементам.\n4. Для потокового варианта — `Channel` между стадиями и буфер переупорядочивания."
+        },
+        {
+          "type": "svg",
+          "title": "Схема: BoundedPipeline",
+          "content": {
+            "caption": "Компонент BoundedPipeline",
+            "description": "Поток данных и ограничение ресурсов.",
+            "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 320 120\" width=\"100%\" role=\"img\" aria-label=\"Компонент BoundedPipeline\"><rect id=\"ozon-d23-n0\" x=\"16\" y=\"36\" width=\"88\" height=\"48\" rx=\"6\" fill=\"#e3f2fd\" stroke=\"#1565c0\"/><text id=\"ozon-d23-t0\" x=\"60\" y=\"64\" text-anchor=\"middle\" font-size=\"9\" fill=\"#0d47a1\">Input order</text><rect id=\"ozon-d23-n1\" x=\"116\" y=\"36\" width=\"88\" height=\"48\" rx=\"6\" fill=\"#e3f2fd\" stroke=\"#1565c0\"/><text id=\"ozon-d23-t1\" x=\"160\" y=\"64\" text-anchor=\"middle\" font-size=\"9\" fill=\"#0d47a1\">Workers</text><line id=\"ozon-d23-a1\" x1=\"104\" y1=\"60\" x2=\"116\" y2=\"60\" stroke=\"#37474f\"/><rect id=\"ozon-d23-n2\" x=\"216\" y=\"36\" width=\"88\" height=\"48\" rx=\"6\" fill=\"#e3f2fd\" stroke=\"#1565c0\"/><text id=\"ozon-d23-t2\" x=\"260\" y=\"64\" text-anchor=\"middle\" font-size=\"9\" fill=\"#0d47a1\">Ordered output</text><line id=\"ozon-d23-a2\" x1=\"204\" y1=\"60\" x2=\"216\" y2=\"60\" stroke=\"#37474f\"/></svg>"
+          }
+        },
+        {
+          "type": "theory",
+          "title": "Решение",
+          "content": "## Полный код\n\n```csharp\npublic interface IBoundedPipeline<TIn, TOut>\n{\n    Task<IReadOnlyList<TOut>> ProcessAsync(IReadOnlyList<TIn> input, CancellationToken ct);\n}\n\npublic sealed class BoundedPipeline<TIn, TOut> : IBoundedPipeline<TIn, TOut>\n{\n    private readonly Func<TIn, CancellationToken, Task<TOut>> _worker;\n    private readonly int _maxParallel;\n\n    public BoundedPipeline(Func<TIn, CancellationToken, Task<TOut>> worker, int maxParallel)\n    {\n        _worker = worker;\n        _maxParallel = maxParallel;\n    }\n\n    public async Task<IReadOnlyList<TOut>> ProcessAsync(IReadOnlyList<TIn> input, CancellationToken ct)\n    {\n        var results = new TOut[input.Count];\n        using var gate = new SemaphoreSlim(_maxParallel, _maxParallel);\n        var tasks = new Task[input.Count];\n        for (var i = 0; i < input.Count; i++)\n        {\n            var index = i;\n            tasks[i] = RunIndexAsync(index, input[index], results, gate, ct);\n        }\n        await Task.WhenAll(tasks).ConfigureAwait(false);\n        return results;\n    }\n\n    private async Task RunIndexAsync(int index, TIn item, TOut[] results, SemaphoreSlim gate, CancellationToken ct)\n    {\n        await gate.WaitAsync(ct).ConfigureAwait(false);\n        try\n        {\n            results[index] = await _worker(item, ct).ConfigureAwait(false);\n        }\n        finally { gate.Release(); }\n    }\n}\n```"
+        },
+        {
+          "type": "theory",
+          "title": "Ошибки и крайние случаи",
+          "content": "## Ошибки\n\n- Сбор результатов в `ConcurrentBag` — порядок теряется.\n- Нет лимита — тысячи одновременных worker.\n- Создание задачи на каждый элемент при миллионах элементов — память (обсудить `Parallel.ForEachAsync` или каналы).\n\n## Крайние случаи\n\n- Пустой вход → пустой список.\n- Worker бросил исключение → `Task.WhenAll` пробросит его; остальные worker'ы продолжат работу до завершения."
+        },
+        {
+          "type": "theory",
+          "title": "Что спросят дальше",
+          "content": "## Что спросят дальше\n\n- Потоковый пайплайн: результаты по готовности с буфером переупорядочивания.\n- TPL Dataflow (`TransformBlock` с `EnsureOrdered`).\n- Back-pressure между стадиями через bounded `Channel`."
+        },
+        {
+          "type": "quiz",
+          "title": "Quiz 1/4",
+          "content": {
+            "question": "item0 обрабатывается 300 мс, item1 — 10 мс. Порядок результата?",
+            "options": [
+              "`[out1, out0]`",
+              "`[out0, out1]`",
+              "Зависит от планировщика потоков",
+              "`[out1]`, затем исключение по таймауту"
+            ],
+            "correctIndices": [
+              1
+            ]
+          }
+        },
+        {
+          "type": "quiz",
+          "title": "Quiz 2/4",
+          "content": {
+            "question": "За счёт чего эталон сохраняет порядок?",
+            "options": [
+              "Worker'ы запускаются строго по очереди",
+              "`Task.WhenAll` возвращает результаты в порядке завершения",
+              "Семафор выдаёт слоты по порядку индексов",
+              "Каждый worker пишет результат в массив по своему индексу"
+            ],
+            "correctIndices": [
+              3
+            ]
+          }
+        },
+        {
+          "type": "quiz",
+          "title": "Quiz 3/4",
+          "content": {
+            "question": "Один worker бросил исключение. Что вернёт `ProcessAsync`?",
+            "options": [
+              "Вернёт результат с `default` на месте упавшего элемента",
+              "Сразу отменит остальные worker'ы и вернёт частичный результат",
+              "Пробросит исключение после завершения всех задач",
+              "Повторит упавший элемент"
+            ],
+            "correctIndices": [
+              2
+            ]
+          }
+        },
+        {
+          "type": "quiz",
+          "title": "Quiz 4/4",
+          "content": {
+            "question": "Чем плох `Parallel.ForEach` с async-лямбдой для этой задачи?",
+            "options": [
+              "Лямбда станет `async void`",
+              "Он не поддерживает лимит параллелизма",
+              "Он всегда выполняет элементы по порядку",
+              "Он не компилируется с `IReadOnlyList`"
+            ],
+            "correctIndices": [
+              0
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "title": "День 24. Outbox",
+      "steps": [
+        {
+          "type": "theory",
+          "title": "Условие",
+          "content": "## Условие\n\nПри создании заказа нужно надёжно опубликовать событие `OrderPlaced` в брокер.\n\n```csharp\nTask PlaceAsync(OrderDraft order, CancellationToken ct);\n```\n\n**Требования**\n\n- Заказ и сообщение в таблице outbox сохраняются одним `SaveChangesAsync` (одна транзакция).\n- Публикация в брокер — отдельный процесс, читающий outbox.\n- Повторная публикация допустима, consumer идемпотентен (день 10).\n\n**Пример:** `PlaceAsync` упал на `SaveChangesAsync` → нет ни заказа, ни outbox-строки; успех → обе записи, publisher позже отправит событие."
+        },
+        {
+          "type": "theory",
+          "title": "Уточняющие вопросы и план",
+          "content": "## Уточняющие вопросы\n\n- Какая БД и есть ли транзакции между заказом и outbox (одна БД)?\n- Допустимая задержка публикации?\n- Нужен ли порядок событий по заказу?\n\n## План\n\n1. Репозиторий заказов и outbox в одном unit of work.\n2. `PlaceAsync`: добавить заказ, добавить `OutboxMessage`, один `SaveChangesAsync`.\n3. Publisher: `SELECT … FOR UPDATE SKIP LOCKED`, публикация, отметка отправленных.\n4. Consumer — идемпотентный (`TryClaim` по `message.Id`)."
+        },
+        {
+          "type": "svg",
+          "title": "Схема: Outbox",
+          "content": {
+            "caption": "Компонент Outbox",
+            "description": "Поток данных и ограничение ресурсов.",
+            "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 320 120\" width=\"100%\" role=\"img\" aria-label=\"Компонент Outbox\"><rect id=\"ozon-d24-n0\" x=\"16\" y=\"36\" width=\"88\" height=\"48\" rx=\"6\" fill=\"#e3f2fd\" stroke=\"#1565c0\"/><text id=\"ozon-d24-t0\" x=\"60\" y=\"64\" text-anchor=\"middle\" font-size=\"9\" fill=\"#0d47a1\">DB tx</text><rect id=\"ozon-d24-n1\" x=\"116\" y=\"36\" width=\"88\" height=\"48\" rx=\"6\" fill=\"#e3f2fd\" stroke=\"#1565c0\"/><text id=\"ozon-d24-t1\" x=\"160\" y=\"64\" text-anchor=\"middle\" font-size=\"9\" fill=\"#0d47a1\">Outbox row</text><line id=\"ozon-d24-a1\" x1=\"104\" y1=\"60\" x2=\"116\" y2=\"60\" stroke=\"#37474f\"/><rect id=\"ozon-d24-n2\" x=\"216\" y=\"36\" width=\"88\" height=\"48\" rx=\"6\" fill=\"#e3f2fd\" stroke=\"#1565c0\"/><text id=\"ozon-d24-t2\" x=\"260\" y=\"64\" text-anchor=\"middle\" font-size=\"9\" fill=\"#0d47a1\">Publisher</text><line id=\"ozon-d24-a2\" x1=\"204\" y1=\"60\" x2=\"216\" y2=\"60\" stroke=\"#37474f\"/></svg>"
+          }
+        },
+        {
+          "type": "theory",
+          "title": "Решение",
+          "content": "## Полный код\n\n```csharp\npublic sealed record OutboxMessage(Guid Id, string Type, string PayloadJson, DateTimeOffset CreatedAt);\n\npublic interface IOutboxStore\n{\n    Task AddAsync(OutboxMessage message, CancellationToken ct);\n}\n\npublic interface IUnitOfWork\n{\n    Task SaveChangesAsync(CancellationToken ct);\n}\n\npublic interface IOrderRepository\n{\n    void AddOrder(OrderDraft order);\n}\n\npublic sealed record OrderDraft(Guid Id, decimal Total);\n\npublic sealed class OutboxDbContext : IUnitOfWork, IOutboxStore, IOrderRepository\n{\n    private readonly List<OrderDraft> _orders = new();\n    private readonly List<OutboxMessage> _outbox = new();\n\n    public void AddOrder(OrderDraft order) => _orders.Add(order);\n\n    public Task AddAsync(OutboxMessage message, CancellationToken ct)\n    {\n        _outbox.Add(message);\n        return Task.CompletedTask;\n    }\n\n    public async Task SaveChangesAsync(CancellationToken ct)\n    {\n        // Single transaction: orders + outbox rows commit together.\n        await PersistAsync(_orders, _outbox, ct).ConfigureAwait(false);\n    }\n\n    private static Task PersistAsync(\n        IReadOnlyList<OrderDraft> orders,\n        IReadOnlyList<OutboxMessage> outbox,\n        CancellationToken ct) => Task.CompletedTask;\n}\n\npublic sealed class PlaceOrderService(IOrderRepository orders, IOutboxStore outbox, IUnitOfWork uow)\n{\n    public async Task PlaceAsync(OrderDraft order, CancellationToken ct)\n    {\n        orders.AddOrder(order);\n        await outbox.AddAsync(new OutboxMessage(\n            Guid.NewGuid(),\n            \"OrderPlaced\",\n            order.Id.ToString(),\n            DateTimeOffset.UtcNow), ct).ConfigureAwait(false);\n        await uow.SaveChangesAsync(ct).ConfigureAwait(false);\n    }\n}\n```"
+        },
+        {
+          "type": "theory",
+          "title": "Ошибки и крайние случаи",
+          "content": "## Ошибки\n\n- Публикация в брокер прямо в `PlaceAsync` до или после commit — при сбое между ними событие теряется или публикуется без заказа.\n- Два `SaveChangesAsync` (заказ, потом outbox) — это две транзакции.\n- Ожидать exactly-once: publisher может упасть после публикации до отметки.\n\n## Крайние случаи\n\n- Publisher опубликовал, но не отметил строку → повторная публикация, consumer дедуплицирует.\n- Много воркеров-publisher'ов → `SKIP LOCKED`, чтобы не брать одни и те же строки."
+        },
+        {
+          "type": "theory",
+          "title": "Что спросят дальше",
+          "content": "## Что спросят дальше\n\n- CDC (Debezium) вместо polling outbox.\n- Inbox-паттерн на стороне consumer.\n- Порядок событий: партиционирование по `orderId`."
+        },
+        {
+          "type": "quiz",
+          "title": "Quiz 1/4",
+          "content": {
+            "question": "Какую проблему решает outbox?",
+            "options": [
+              "Заказ и событие фиксируются одной транзакцией",
+              "Гарантирует exactly-once доставку без идемпотентного consumer",
+              "Ускоряет публикацию за счёт батчей",
+              "Позволяет не использовать брокер сообщений"
+            ],
+            "correctIndices": [
+              0
+            ]
+          }
+        },
+        {
+          "type": "quiz",
+          "title": "Quiz 2/4",
+          "content": {
+            "question": "Publisher отправил событие и упал до отметки строки. Что будет?",
+            "options": [
+              "Событие потеряется",
+              "Повторная публикация — consumer дедуплицирует",
+              "Транзакция заказа откатится вместе с outbox-строкой",
+              "Брокер сам удалит дубликат"
+            ],
+            "correctIndices": [
+              1
+            ]
+          }
+        },
+        {
+          "type": "quiz",
+          "title": "Quiz 3/4",
+          "content": {
+            "question": "Почему нельзя вызвать брокер прямо в `PlaceAsync` после `SaveChangesAsync`?",
+            "options": [
+              "Брокер нельзя вызывать из async-метода",
+              "Это увеличит задержку ответа в разы",
+              "При сбое между commit и публикацией событие теряется",
+              "Брокер не принимает события без outbox-таблицы"
+            ],
+            "correctIndices": [
+              2
+            ]
+          }
+        },
+        {
+          "type": "quiz",
+          "title": "Quiz 4/4",
+          "content": {
+            "question": "Зачем publisher'у `FOR UPDATE SKIP LOCKED`?",
+            "options": [
+              "Чтобы читать строки без транзакции",
+              "Чтобы гарантировать порядок публикации по всей таблице",
+              "Чтобы удалить строки после чтения",
+              "Воркеры берут разные строки, не блокируя друг друга"
+            ],
+            "correctIndices": [
+              3
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

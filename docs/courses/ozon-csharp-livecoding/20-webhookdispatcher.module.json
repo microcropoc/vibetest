@@ -1,0 +1,104 @@
+{
+  "schemaVersion": 1,
+  "title": "День 20. WebhookDispatcher",
+  "steps": [
+    {
+      "type": "theory",
+      "title": "Условие",
+      "content": "## Условие\n\nОтправка вебхуков партнёрам: очередь, ограничение параллелизма, повторы.\n\n```csharp\nValueTask EnqueueAsync(WebhookPayload payload, CancellationToken ct);\n```\n\n**Требования**\n\n- Bounded-очередь `queueCapacity`: при переполнении `EnqueueAsync` ждёт.\n- Одновременно не более `maxConcurrency` доставок.\n- Транзиентные ошибки повторяются; после исчерпания попыток вызывается `onFailed` (DLQ).\n- `DisposeAsync` останавливает доставку без исключений.\n\n**Пример:** партнёр дважды отвечает 503, затем 200 → доставлено. Если 503 всегда → `onFailed` вызван один раз."
+    },
+    {
+      "type": "theory",
+      "title": "Уточняющие вопросы и план",
+      "content": "## Уточняющие вопросы\n\n- Что делать при переполнении очереди: ждать, отбрасывать, сохранять в БД?\n- Нужен ли порядок доставки для одного партнёра?\n- Ограничение на партнёра или общее?\n\n## План\n\n1. `Channel.CreateBounded` с `FullMode = Wait`.\n2. Цикл-насос: `WaitAsync` семафора, запуск доставки, список активных задач.\n3. Доставка: retry-политика, ошибки → `onFailed`, `Release` в `finally`.\n4. Остановка: завершить writer, отменить, дождаться насоса и активных доставок."
+    },
+    {
+      "type": "svg",
+      "title": "Схема: WebhookDispatcher",
+      "content": {
+        "caption": "Компонент WebhookDispatcher",
+        "description": "Поток данных и ограничение ресурсов.",
+        "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 320 120\" width=\"100%\" role=\"img\" aria-label=\"Компонент WebhookDispatcher\"><rect id=\"ozon-d20-n0\" x=\"16\" y=\"36\" width=\"88\" height=\"48\" rx=\"6\" fill=\"#e3f2fd\" stroke=\"#1565c0\"/><text id=\"ozon-d20-t0\" x=\"60\" y=\"64\" text-anchor=\"middle\" font-size=\"9\" fill=\"#0d47a1\">Webhook in</text><rect id=\"ozon-d20-n1\" x=\"116\" y=\"36\" width=\"88\" height=\"48\" rx=\"6\" fill=\"#e3f2fd\" stroke=\"#1565c0\"/><text id=\"ozon-d20-t1\" x=\"160\" y=\"64\" text-anchor=\"middle\" font-size=\"9\" fill=\"#0d47a1\">Queue+retry</text><line id=\"ozon-d20-a1\" x1=\"104\" y1=\"60\" x2=\"116\" y2=\"60\" stroke=\"#37474f\"/><rect id=\"ozon-d20-n2\" x=\"216\" y=\"36\" width=\"88\" height=\"48\" rx=\"6\" fill=\"#e3f2fd\" stroke=\"#1565c0\"/><text id=\"ozon-d20-t2\" x=\"260\" y=\"64\" text-anchor=\"middle\" font-size=\"9\" fill=\"#0d47a1\">HTTP out</text><line id=\"ozon-d20-a2\" x1=\"204\" y1=\"60\" x2=\"216\" y2=\"60\" stroke=\"#37474f\"/></svg>"
+      }
+    },
+    {
+      "type": "theory",
+      "title": "Решение",
+      "content": "## Полный код\n\n```csharp\npublic sealed record WebhookPayload(string Url, string Body);\n\npublic interface IRetryPolicy\n{\n    Task<T> ExecuteAsync<T>(Func<CancellationToken, Task<T>> action, CancellationToken ct);\n}\n\npublic sealed class SimpleRetryPolicy : IRetryPolicy\n{\n    private readonly int _maxAttempts;\n    public SimpleRetryPolicy(int maxAttempts = 3) => _maxAttempts = maxAttempts;\n\n    public async Task<T> ExecuteAsync<T>(Func<CancellationToken, Task<T>> action, CancellationToken ct)\n    {\n        for (var attempt = 1; ; attempt++)\n        {\n            try { return await action(ct).ConfigureAwait(false); }\n            catch (OperationCanceledException) { throw; }\n            catch (Exception) when (attempt < _maxAttempts)\n            {\n                await Task.Delay(TimeSpan.FromMilliseconds(50 * attempt), ct).ConfigureAwait(false);\n            }\n        }\n    }\n}\n\npublic interface IWebhookDispatcher\n{\n    ValueTask EnqueueAsync(WebhookPayload payload, CancellationToken ct);\n}\n\npublic sealed class WebhookDispatcher : IWebhookDispatcher, IAsyncDisposable\n{\n    private readonly HttpClient _http;\n    private readonly IRetryPolicy _retry;\n    private readonly Action<WebhookPayload, Exception> _onFailed;\n    private readonly SemaphoreSlim _concurrency;\n    private readonly Channel<WebhookPayload> _queue;\n    private readonly CancellationTokenSource _cts = new();\n    private readonly Task _pump;\n\n    public WebhookDispatcher(\n        HttpClient http,\n        IRetryPolicy retry,\n        Action<WebhookPayload, Exception> onFailed,\n        int queueCapacity,\n        int maxConcurrency)\n    {\n        _http = http;\n        _retry = retry;\n        _onFailed = onFailed;\n        _concurrency = new SemaphoreSlim(maxConcurrency, maxConcurrency);\n        _queue = Channel.CreateBounded<WebhookPayload>(new BoundedChannelOptions(queueCapacity)\n        {\n            FullMode = BoundedChannelFullMode.Wait,\n        });\n        _pump = Task.Run(() => PumpAsync(_cts.Token));\n    }\n\n    public ValueTask EnqueueAsync(WebhookPayload payload, CancellationToken ct) =>\n        _queue.Writer.WriteAsync(payload, ct);\n\n    private async Task PumpAsync(CancellationToken ct)\n    {\n        var inFlight = new List<Task>();\n        try\n        {\n            await foreach (var item in _queue.Reader.ReadAllAsync(ct).ConfigureAwait(false))\n            {\n                await _concurrency.WaitAsync(ct).ConfigureAwait(false);\n                inFlight.RemoveAll(t => t.IsCompleted);\n                inFlight.Add(DeliverWithReleaseAsync(item, ct));\n            }\n        }\n        catch (OperationCanceledException) when (ct.IsCancellationRequested)\n        {\n        }\n        await Task.WhenAll(inFlight).ConfigureAwait(false);\n    }\n\n    private async Task DeliverWithReleaseAsync(WebhookPayload item, CancellationToken ct)\n    {\n        try\n        {\n            await _retry.ExecuteAsync(async token =>\n            {\n                using var content = new StringContent(item.Body);\n                using var resp = await _http.PostAsync(item.Url, content, token).ConfigureAwait(false);\n                resp.EnsureSuccessStatusCode();\n                return true;\n            }, ct).ConfigureAwait(false);\n        }\n        catch (OperationCanceledException) when (ct.IsCancellationRequested)\n        {\n        }\n        catch (Exception ex)\n        {\n            _onFailed(item, ex);\n        }\n        finally\n        {\n            _concurrency.Release();\n        }\n    }\n\n    public async ValueTask DisposeAsync()\n    {\n        _queue.Writer.TryComplete();\n        _cts.Cancel();\n        await _pump.ConfigureAwait(false);\n        _cts.Dispose();\n        _concurrency.Dispose();\n    }\n}\n```"
+    },
+    {
+      "type": "theory",
+      "title": "Ошибки и крайние случаи",
+      "content": "## Ошибки\n\n- Unbounded-очередь — при недоступном партнёре память растёт до OOM.\n- Fire-and-forget доставки: исключения теряются, `Dispose` семафора при активных доставках.\n- Повтор без паузы — DDoS партнёра.\n\n## Крайние случаи\n\n- Постоянный 4xx — повторять бессмысленно, сразу в DLQ (в эталоне повторяется любая ошибка; обсудить).\n- `DisposeAsync` во время доставки — доставка отменяется, насос дожидается её."
+    },
+    {
+      "type": "theory",
+      "title": "Что спросят дальше",
+      "content": "## Что спросят дальше\n\n- Подпись вебхуков (HMAC) и защита от повторного воспроизведения.\n- Отдельная очередь и лимит на каждого партнёра.\n- Персистентная очередь (outbox, день 24), чтобы не терять вебхуки при рестарте."
+    },
+    {
+      "type": "quiz",
+      "title": "Quiz 1/4",
+      "content": {
+        "question": "Очередь заполнена. Что делает `EnqueueAsync` в эталоне?",
+        "options": [
+          "Отбрасывает самый старый вебхук",
+          "Ждёт свободного места",
+          "Сразу бросает исключение",
+          "Увеличивает ёмкость очереди"
+        ],
+        "correctIndices": [
+          1
+        ]
+      }
+    },
+    {
+      "type": "quiz",
+      "title": "Quiz 2/4",
+      "content": {
+        "question": "Зачем насос хранит список активных доставок?",
+        "options": [
+          "Чтобы доставлять вебхуки строго в порядке постановки",
+          "Чтобы повторять упавшие доставки",
+          "Чтобы ограничить размер очереди",
+          "Дождаться их при остановке до `Dispose` семафора"
+        ],
+        "correctIndices": [
+          3
+        ]
+      }
+    },
+    {
+      "type": "quiz",
+      "title": "Quiz 3/4",
+      "content": {
+        "question": "Доставка исчерпала все попытки. Что происходит?",
+        "options": [
+          "Вызывается `onFailed` (например, запись в DLQ)",
+          "Исключение теряется в fire-and-forget задаче",
+          "Насос останавливается",
+          "Вебхук возвращается в конец очереди"
+        ],
+        "correctIndices": [
+          0
+        ]
+      }
+    },
+    {
+      "type": "quiz",
+      "title": "Quiz 4/4",
+      "content": {
+        "question": "Почему `Release` семафора в `finally` доставки?",
+        "options": [
+          "Чтобы следующая доставка ждала повторов",
+          "`SemaphoreSlim` требует `finally` для компиляции",
+          "Иначе упавшая доставка навсегда займёт слот",
+          "Чтобы `onFailed` вызывался после освобождения"
+        ],
+        "correctIndices": [
+          2
+        ]
+      }
+    }
+  ]
+}

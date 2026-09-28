@@ -1,0 +1,5 @@
+{
+  "schemaVersion": 1,
+  "title": "Лайвкодинг в Ozon на C#",
+  "description": "24 прикладные задачи уровня Ozon middle+/senior: enrichment, single-flight, batching, rate limit, retry, circuit breaker, кэши, concurrency limiter, идемпотентность, inventory, state machine, агрегации, fan-out, merge, top-K, sliding window, priority queue, timeout budget, webhooks, graceful worker, correlator, pipeline, outbox. Theory + SVG + quiz, решения на .NET 8."
+}

@@ -1,0 +1,104 @@
+{
+  "schemaVersion": 1,
+  "title": "День 3. AsyncBatcher",
+  "steps": [
+    {
+      "type": "theory",
+      "title": "Условие",
+      "content": "## Условие\n\nDownstream-сервис принимает запросы пачками. Нужно копить одиночные вызовы и отправлять их батчами.\n\n```csharp\nValueTask<TResult> EnqueueAsync(TItem item, CancellationToken ct);\n// processor: Func<IReadOnlyList<TItem>, CancellationToken, Task<IReadOnlyList<TResult>>>\n```\n\n**Требования**\n\n- Батч уходит, когда набралось `maxBatchSize` элементов или прошло `maxDelay` с первого элемента батча.\n- Каждый вызывающий получает свой результат: `results[i]` соответствует `items[i]`.\n- Ошибка processor передаётся всем элементам батча, следующие батчи обрабатываются.\n- `DisposeAsync` останавливает цикл, незавершённые вызовы отменяются.\n\n**Пример:** `maxBatchSize = 10`, `maxDelay = 50 мс`: 25 вызовов подряд → батчи 10, 10, 5; одиночный вызов → батч из одного элемента через ~50 мс."
+    },
+    {
+      "type": "theory",
+      "title": "Уточняющие вопросы и план",
+      "content": "## Уточняющие вопросы\n\n- Что важнее — задержка (`maxDelay`) или размер батча?\n- Processor возвращает результаты по позиции или по ключу?\n- Нужен ли лимит очереди (back-pressure) для вызывающих?\n\n## План\n\n1. `Channel<(item, TCS)>` как очередь, один фоновый цикл-читатель.\n2. Ждать первый элемент без таймаута, потом добирать до размера или дедлайна.\n3. Дедлайн — `CancellationTokenSource(remaining, TimeProvider)`, связанный с токеном остановки.\n4. Результаты и ошибки раздавать через TCS каждого элемента."
+    },
+    {
+      "type": "svg",
+      "title": "Схема: AsyncBatcher",
+      "content": {
+        "caption": "Компонент AsyncBatcher",
+        "description": "Поток данных и ограничение ресурсов.",
+        "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 320 120\" width=\"100%\" role=\"img\" aria-label=\"Компонент AsyncBatcher\"><rect id=\"ozon-d03-n0\" x=\"16\" y=\"36\" width=\"88\" height=\"48\" rx=\"6\" fill=\"#e3f2fd\" stroke=\"#1565c0\"/><text id=\"ozon-d03-t0\" x=\"60\" y=\"64\" text-anchor=\"middle\" font-size=\"9\" fill=\"#0d47a1\">Enqueue</text><rect id=\"ozon-d03-n1\" x=\"116\" y=\"36\" width=\"88\" height=\"48\" rx=\"6\" fill=\"#e3f2fd\" stroke=\"#1565c0\"/><text id=\"ozon-d03-t1\" x=\"160\" y=\"64\" text-anchor=\"middle\" font-size=\"9\" fill=\"#0d47a1\">Batch window</text><line id=\"ozon-d03-a1\" x1=\"104\" y1=\"60\" x2=\"116\" y2=\"60\" stroke=\"#37474f\"/><rect id=\"ozon-d03-n2\" x=\"216\" y=\"36\" width=\"88\" height=\"48\" rx=\"6\" fill=\"#e3f2fd\" stroke=\"#1565c0\"/><text id=\"ozon-d03-t2\" x=\"260\" y=\"64\" text-anchor=\"middle\" font-size=\"9\" fill=\"#0d47a1\">Per-item result</text><line id=\"ozon-d03-a2\" x1=\"204\" y1=\"60\" x2=\"216\" y2=\"60\" stroke=\"#37474f\"/></svg>"
+      }
+    },
+    {
+      "type": "theory",
+      "title": "Решение",
+      "content": "## Полный код\n\n```csharp\npublic interface IAsyncBatcher<TItem, TResult>\n{\n    ValueTask<TResult> EnqueueAsync(TItem item, CancellationToken ct);\n}\n\npublic sealed class AsyncBatcher<TItem, TResult> : IAsyncBatcher<TItem, TResult>, IAsyncDisposable\n{\n    private readonly Func<IReadOnlyList<TItem>, CancellationToken, Task<IReadOnlyList<TResult>>> _processor;\n    private readonly int _maxBatchSize;\n    private readonly TimeSpan _maxDelay;\n    private readonly TimeProvider _time;\n    private readonly Channel<(TItem Item, TaskCompletionSource<TResult> Tcs)> _channel =\n        Channel.CreateUnbounded<(TItem, TaskCompletionSource<TResult>)>();\n    private readonly CancellationTokenSource _cts = new();\n    private readonly Task _loop;\n\n    public AsyncBatcher(\n        Func<IReadOnlyList<TItem>, CancellationToken, Task<IReadOnlyList<TResult>>> processor,\n        int maxBatchSize,\n        TimeSpan maxDelay,\n        TimeProvider? time = null)\n    {\n        if (maxBatchSize <= 0) throw new ArgumentOutOfRangeException(nameof(maxBatchSize));\n        _processor = processor;\n        _maxBatchSize = maxBatchSize;\n        _maxDelay = maxDelay;\n        _time = time ?? TimeProvider.System;\n        _loop = Task.Run(() => RunAsync(_cts.Token));\n    }\n\n    public async ValueTask<TResult> EnqueueAsync(TItem item, CancellationToken ct)\n    {\n        var tcs = new TaskCompletionSource<TResult>(TaskCreationOptions.RunContinuationsAsynchronously);\n        await _channel.Writer.WriteAsync((item, tcs), ct).ConfigureAwait(false);\n        return await tcs.Task.WaitAsync(ct).ConfigureAwait(false);\n    }\n\n    private async Task RunAsync(CancellationToken ct)\n    {\n        var batch = new List<(TItem Item, TaskCompletionSource<TResult> Tcs)>(_maxBatchSize);\n        try\n        {\n            // Ждём первый элемент без таймаута: пустой батч не отправляем.\n            while (await _channel.Reader.WaitToReadAsync(ct).ConfigureAwait(false))\n            {\n                batch.Clear();\n                var deadline = _time.GetUtcNow() + _maxDelay;\n                while (batch.Count < _maxBatchSize)\n                {\n                    if (_channel.Reader.TryRead(out var next))\n                    {\n                        batch.Add(next);\n                        continue;\n                    }\n                    var remaining = deadline - _time.GetUtcNow();\n                    if (remaining <= TimeSpan.Zero) break;\n                    using var delayCts = new CancellationTokenSource(remaining, _time);\n                    using var linked = CancellationTokenSource.CreateLinkedTokenSource(ct, delayCts.Token);\n                    try\n                    {\n                        if (!await _channel.Reader.WaitToReadAsync(linked.Token).ConfigureAwait(false)) break;\n                    }\n                    catch (OperationCanceledException) when (!ct.IsCancellationRequested)\n                    {\n                        break;\n                    }\n                }\n                if (batch.Count > 0) await FlushAsync(batch, ct).ConfigureAwait(false);\n            }\n        }\n        catch (OperationCanceledException) when (ct.IsCancellationRequested)\n        {\n        }\n        finally\n        {\n            foreach (var (_, tcs) in batch) tcs.TrySetCanceled();\n            while (_channel.Reader.TryRead(out var left)) left.Tcs.TrySetCanceled();\n        }\n    }\n\n    private async Task FlushAsync(List<(TItem Item, TaskCompletionSource<TResult> Tcs)> batch, CancellationToken ct)\n    {\n        try\n        {\n            var results = await _processor(batch.Select(x => x.Item).ToList(), ct).ConfigureAwait(false);\n            if (results.Count != batch.Count)\n                throw new InvalidOperationException(\"Processor must return one result per item\");\n            for (var i = 0; i < batch.Count; i++) batch[i].Tcs.TrySetResult(results[i]);\n        }\n        catch (Exception ex)\n        {\n            foreach (var (_, tcs) in batch) tcs.TrySetException(ex);\n        }\n        batch.Clear();\n    }\n\n    public async ValueTask DisposeAsync()\n    {\n        _channel.Writer.TryComplete();\n        _cts.Cancel();\n        await _loop.ConfigureAwait(false);\n        _cts.Dispose();\n    }\n}\n```"
+    },
+    {
+      "type": "theory",
+      "title": "Ошибки и крайние случаи",
+      "content": "## Ошибки\n\n- Ожидание следующего элемента без таймаута: одиночный элемент никогда не отправится.\n- Исключение processor убивает фоновый цикл — все последующие вызовы висят.\n- Потеря соответствия «элемент → результат» при перестановке в батче.\n\n## Крайние случаи\n\n- `maxDelay = 0` → каждый элемент уходит отдельно, если очередь пуста.\n- Processor вернул меньше результатов, чем элементов → ошибка для всего батча.\n- Dispose при непустой очереди → оставшиеся вызовы получают отмену."
+    },
+    {
+      "type": "theory",
+      "title": "Что спросят дальше",
+      "content": "## Что спросят дальше\n\n- Как подбирать размер батча динамически по задержке downstream?\n- Как ограничить очередь и что возвращать вызывающим при переполнении?\n- Как батчить по ключу (например, отдельно на каждого продавца)?"
+    },
+    {
+      "type": "quiz",
+      "title": "Quiz 1/4",
+      "content": {
+        "question": "Когда эталон отправляет неполный батч?",
+        "options": [
+          "Только при вызове `DisposeAsync`",
+          "Когда с первого элемента батча прошло `maxDelay`",
+          "Когда очередь канала пуста в момент чтения",
+          "Никогда: батч всегда ждёт `maxBatchSize` элементов"
+        ],
+        "correctIndices": [
+          1
+        ]
+      }
+    },
+    {
+      "type": "quiz",
+      "title": "Quiz 2/4",
+      "content": {
+        "question": "Как каждый вызывающий получает свой результат?",
+        "options": [
+          "Свой `TaskCompletionSource` на каждый элемент",
+          "Все вызывающие получают список результатов батча и ищут свой",
+          "Результат пишется в общий словарь по элементу",
+          "Processor сам вызывает колбэк каждого вызывающего"
+        ],
+        "correctIndices": [
+          0
+        ]
+      }
+    },
+    {
+      "type": "quiz",
+      "title": "Quiz 3/4",
+      "content": {
+        "question": "Processor бросил исключение. Что делает эталон?",
+        "options": [
+          "Повторяет батч до успеха",
+          "Останавливает цикл, и все новые вызовы получают ту же ошибку",
+          "Отбрасывает батч, вызывающие получают `default`",
+          "Отдаёт исключение всем элементам батча, цикл продолжается"
+        ],
+        "correctIndices": [
+          3
+        ]
+      }
+    },
+    {
+      "type": "quiz",
+      "title": "Quiz 4/4",
+      "content": {
+        "question": "Зачем ждать первый элемент через `WaitToReadAsync` без таймаута?",
+        "options": [
+          "Иначе `Channel` бросит исключение при чтении из пустого буфера",
+          "Чтобы первый элемент всегда уходил отдельным батчем",
+          "Чтобы не отправлять пустые батчи и не крутить таймер впустую",
+          "Так `maxDelay` отсчитывается от старта сервиса"
+        ],
+        "correctIndices": [
+          2
+        ]
+      }
+    }
+  ]
+}

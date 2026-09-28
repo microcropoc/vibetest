@@ -1,0 +1,104 @@
+{
+  "schemaVersion": 1,
+  "title": "День 14. SearchFanOut",
+  "steps": [
+    {
+      "type": "theory",
+      "title": "Условие",
+      "content": "## Условие\n\nПоиск по нескольким бэкендам (товары, продавцы, категории) с объединением выдачи.\n\n```csharp\nTask<IReadOnlyList<SearchHit>> SearchAsync(string query, CancellationToken ct);\n// SearchHit(string Id, string Title, double Score)\n```\n\n**Требования**\n\n- Запрос ко всем бэкендам, одновременно не более `maxParallel`.\n- Дубликаты по `Id` схлопываются, остаётся hit с максимальным `Score`.\n- Результат отсортирован по `Score` по убыванию, при равенстве — по `Id`.\n\n**Пример:** backend1 → `{id=5, 0.7}`, backend2 → `{id=5, 0.9}, {id=2, 0.8}` → `[5 (0.9), 2 (0.8)]`."
+    },
+    {
+      "type": "theory",
+      "title": "Уточняющие вопросы и план",
+      "content": "## Уточняющие вопросы\n\n- Ошибка одного бэкенда валит поиск или отдаём частичную выдачу?\n- Нужен ли общий дедлайн?\n- Сопоставимы ли `Score` разных бэкендов?\n\n## План\n\n1. `SemaphoreSlim(maxParallel)` вокруг вызова каждого бэкенда.\n2. `Task.WhenAll` по бэкендам.\n3. Словарь `Id → лучший hit`.\n4. Сортировка `OrderByDescending(Score).ThenBy(Id)` — детерминированный порядок."
+    },
+    {
+      "type": "svg",
+      "title": "Схема: SearchFanOut",
+      "content": {
+        "caption": "Компонент SearchFanOut",
+        "description": "Поток данных и ограничение ресурсов.",
+        "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 320 120\" width=\"100%\" role=\"img\" aria-label=\"Компонент SearchFanOut\"><rect id=\"ozon-d14-n0\" x=\"16\" y=\"36\" width=\"88\" height=\"48\" rx=\"6\" fill=\"#e3f2fd\" stroke=\"#1565c0\"/><text id=\"ozon-d14-t0\" x=\"60\" y=\"64\" text-anchor=\"middle\" font-size=\"9\" fill=\"#0d47a1\">Queries</text><rect id=\"ozon-d14-n1\" x=\"116\" y=\"36\" width=\"88\" height=\"48\" rx=\"6\" fill=\"#e3f2fd\" stroke=\"#1565c0\"/><text id=\"ozon-d14-t1\" x=\"160\" y=\"64\" text-anchor=\"middle\" font-size=\"9\" fill=\"#0d47a1\">Sem fan-out</text><line id=\"ozon-d14-a1\" x1=\"104\" y1=\"60\" x2=\"116\" y2=\"60\" stroke=\"#37474f\"/><rect id=\"ozon-d14-n2\" x=\"216\" y=\"36\" width=\"88\" height=\"48\" rx=\"6\" fill=\"#e3f2fd\" stroke=\"#1565c0\"/><text id=\"ozon-d14-t2\" x=\"260\" y=\"64\" text-anchor=\"middle\" font-size=\"9\" fill=\"#0d47a1\">Dedupe merge</text><line id=\"ozon-d14-a2\" x1=\"204\" y1=\"60\" x2=\"216\" y2=\"60\" stroke=\"#37474f\"/></svg>"
+      }
+    },
+    {
+      "type": "theory",
+      "title": "Решение",
+      "content": "## Полный код\n\n```csharp\npublic sealed record SearchHit(string Id, string Title, double Score);\n\npublic interface ISearchFanOut\n{\n    Task<IReadOnlyList<SearchHit>> SearchAsync(string query, CancellationToken ct);\n}\n\npublic sealed class SearchFanOut(IReadOnlyList<ISearchBackend> backends, int maxParallel) : ISearchFanOut\n{\n    public async Task<IReadOnlyList<SearchHit>> SearchAsync(string query, CancellationToken ct)\n    {\n        using var gate = new SemaphoreSlim(maxParallel, maxParallel);\n        var tasks = backends.Select(b => SearchBackendAsync(b, query, gate, ct)).ToArray();\n        var batches = await Task.WhenAll(tasks).ConfigureAwait(false);\n        var bestById = new Dictionary<string, SearchHit>();\n        foreach (var hit in batches.SelectMany(x => x))\n        {\n            if (!bestById.TryGetValue(hit.Id, out var existing) || hit.Score > existing.Score)\n                bestById[hit.Id] = hit;\n        }\n        return bestById.Values.OrderByDescending(h => h.Score).ThenBy(h => h.Id).ToList();\n    }\n\n    private static async Task<IReadOnlyList<SearchHit>> SearchBackendAsync(\n        ISearchBackend backend, string query, SemaphoreSlim gate, CancellationToken ct)\n    {\n        await gate.WaitAsync(ct).ConfigureAwait(false);\n        try\n        {\n            return await backend.SearchAsync(query, ct).ConfigureAwait(false);\n        }\n        finally { gate.Release(); }\n    }\n}\n\npublic interface ISearchBackend\n{\n    Task<IReadOnlyList<SearchHit>> SearchAsync(string query, CancellationToken ct);\n}\n```"
+    },
+    {
+      "type": "theory",
+      "title": "Ошибки и крайние случаи",
+      "content": "## Ошибки\n\n- Нет лимита параллелизма при десятках бэкендов.\n- Дедупликация «первый победил» вместо «максимальный score» — выдача зависит от таймингов.\n- Сортировка без tie-break — порядок равных результатов плавает между запросами.\n\n## Крайние случаи\n\n- Пустой запрос или ноль бэкендов → пустой список.\n- Один бэкенд бросил исключение → в эталоне падает весь поиск (обсудите частичную выдачу)."
+    },
+    {
+      "type": "theory",
+      "title": "Что спросят дальше",
+      "content": "## Что спросят дальше\n\n- Нормализация score разных бэкендов перед слиянием.\n- Частичная выдача и таймаут на бэкенд (как в дне 13).\n- Кэширование популярных запросов."
+    },
+    {
+      "type": "quiz",
+      "title": "Quiz 1/4",
+      "content": {
+        "question": "Два бэкенда вернули `id=5` со score 0.7 и 0.9. Что попадёт в выдачу?",
+        "options": [
+          "Оба hit, дубликаты не схлопываются",
+          "Один hit `id=5` со score 0.9",
+          "Hit от бэкенда, ответившего первым",
+          "Один hit со средним score 0.8"
+        ],
+        "correctIndices": [
+          1
+        ]
+      }
+    },
+    {
+      "type": "quiz",
+      "title": "Quiz 2/4",
+      "content": {
+        "question": "Зачем `ThenBy(h => h.Id)` после сортировки по score?",
+        "options": [
+          "Чтобы ускорить сортировку",
+          "Чтобы удалить дубликаты",
+          "Без него `OrderByDescending` бросит исключение",
+          "Стабильный порядок равных по score результатов"
+        ],
+        "correctIndices": [
+          3
+        ]
+      }
+    },
+    {
+      "type": "quiz",
+      "title": "Quiz 3/4",
+      "content": {
+        "question": "Как в эталоне ограничен параллелизм запросов к бэкендам?",
+        "options": [
+          "`SemaphoreSlim(maxParallel)` на вызов бэкенда",
+          "`Parallel.ForEach` с `MaxDegreeOfParallelism`",
+          "Бэкенды вызываются строго по очереди",
+          "`ThreadPool.SetMaxThreads(maxParallel)`"
+        ],
+        "correctIndices": [
+          0
+        ]
+      }
+    },
+    {
+      "type": "quiz",
+      "title": "Quiz 4/4",
+      "content": {
+        "question": "Один бэкенд бросил исключение. Что делает эталон?",
+        "options": [
+          "Игнорирует бэкенд и возвращает остальные результаты",
+          "Повторяет запрос к бэкенду",
+          "Весь `SearchAsync` падает",
+          "Возвращает пустой список"
+        ],
+        "correctIndices": [
+          2
+        ]
+      }
+    }
+  ]
+}

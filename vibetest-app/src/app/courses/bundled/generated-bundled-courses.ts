@@ -22,5 +22,10 @@ export const BUNDLED_COURSES: readonly BundledCourseEntry[] = [
     "courseId": "6bc56204-d1ae-41ec-bee1-e5bf082486de",
     "file": "javascript-for-csharp.json",
     "title": "JavaScript для C#-разработчика"
+  },
+  {
+    "courseId": "31524c07-1452-4f54-8d92-11b0ebc98279",
+    "file": "ozon-csharp-livecoding.json",
+    "title": "Лайвкодинг в Ozon на C#"
   }
 ];

@@ -1,0 +1,104 @@
+{
+  "schemaVersion": 1,
+  "title": "День 9. KeyedConcurrencyLimiter",
+  "steps": [
+    {
+      "type": "theory",
+      "title": "Условие",
+      "content": "## Условие\n\nОграничить параллельную обработку по ключу (например, не больше одной операции на заказ), не блокируя другие ключи.\n\n```csharp\nTask<T> RunAsync<T>(string key, Func<CancellationToken, Task<T>> action, CancellationToken ct);\n```\n\n**Требования**\n\n- Не более `perKeyLimit` одновременных action на один ключ.\n- Разные ключи не блокируют друг друга.\n- Ресурсы ключа освобождаются, когда по нему нет вызовов.\n- `ct` отменяет ожидание слота.\n\n**Пример:** `perKeyLimit = 1`: два вызова `\"order-1\"` выполняются по очереди, вызов `\"order-2\"` идёт параллельно."
+    },
+    {
+      "type": "theory",
+      "title": "Уточняющие вопросы и план",
+      "content": "## Уточняющие вопросы\n\n- Сколько различных ключей в секунду? Нужно ли удалять неактивные?\n- Нужна ли справедливость (FIFO) внутри ключа?\n- Есть ли ещё и глобальный лимит?\n\n## План\n\n1. Словарь `key → Gate(SemaphoreSlim, RefCount)` под `lock`.\n2. Перед ожиданием увеличить `RefCount`, чтобы gate не удалили.\n3. `WaitAsync(ct)` → action → `Release` в `finally`.\n4. Уменьшить `RefCount`; при нуле удалить и освободить gate."
+    },
+    {
+      "type": "svg",
+      "title": "Схема: KeyedConcurrencyLimiter",
+      "content": {
+        "caption": "Компонент KeyedConcurrencyLimiter",
+        "description": "Поток данных и ограничение ресурсов.",
+        "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 320 120\" width=\"100%\" role=\"img\" aria-label=\"Компонент KeyedConcurrencyLimiter\"><rect id=\"ozon-d09-n0\" x=\"16\" y=\"36\" width=\"88\" height=\"48\" rx=\"6\" fill=\"#e3f2fd\" stroke=\"#1565c0\"/><text id=\"ozon-d09-t0\" x=\"60\" y=\"64\" text-anchor=\"middle\" font-size=\"9\" fill=\"#0d47a1\">Key A wait</text><rect id=\"ozon-d09-n1\" x=\"116\" y=\"36\" width=\"88\" height=\"48\" rx=\"6\" fill=\"#e3f2fd\" stroke=\"#1565c0\"/><text id=\"ozon-d09-t1\" x=\"160\" y=\"64\" text-anchor=\"middle\" font-size=\"9\" fill=\"#0d47a1\">Per-key sem</text><line id=\"ozon-d09-a1\" x1=\"104\" y1=\"60\" x2=\"116\" y2=\"60\" stroke=\"#37474f\"/><rect id=\"ozon-d09-n2\" x=\"216\" y=\"36\" width=\"88\" height=\"48\" rx=\"6\" fill=\"#e3f2fd\" stroke=\"#1565c0\"/><text id=\"ozon-d09-t2\" x=\"260\" y=\"64\" text-anchor=\"middle\" font-size=\"9\" fill=\"#0d47a1\">Key B parallel</text><line id=\"ozon-d09-a2\" x1=\"204\" y1=\"60\" x2=\"216\" y2=\"60\" stroke=\"#37474f\"/></svg>"
+      }
+    },
+    {
+      "type": "theory",
+      "title": "Решение",
+      "content": "## Полный код\n\n```csharp\npublic interface IKeyedConcurrencyLimiter\n{\n    Task<T> RunAsync<T>(string key, Func<CancellationToken, Task<T>> action, CancellationToken ct);\n}\n\npublic sealed class KeyedConcurrencyLimiter : IKeyedConcurrencyLimiter, IDisposable\n{\n    private readonly object _sync = new();\n    private readonly int _perKeyLimit;\n    private readonly Dictionary<string, Gate> _gates = new();\n\n    private sealed class Gate : IDisposable\n    {\n        public readonly SemaphoreSlim Semaphore;\n        public int RefCount;\n        public Gate(int limit) => Semaphore = new SemaphoreSlim(limit, limit);\n        public void Dispose() => Semaphore.Dispose();\n    }\n\n    public KeyedConcurrencyLimiter(int perKeyLimit = 1) => _perKeyLimit = perKeyLimit;\n\n    public async Task<T> RunAsync<T>(string key, Func<CancellationToken, Task<T>> action, CancellationToken ct)\n    {\n        Gate gate;\n        lock (_sync)\n        {\n            if (!_gates.TryGetValue(key, out gate!))\n            {\n                gate = new Gate(_perKeyLimit);\n                _gates[key] = gate;\n            }\n            gate.RefCount++;\n        }\n        try\n        {\n            await gate.Semaphore.WaitAsync(ct).ConfigureAwait(false);\n        }\n        catch\n        {\n            ReleaseGate(key, gate);\n            throw;\n        }\n        try\n        {\n            return await action(ct).ConfigureAwait(false);\n        }\n        finally\n        {\n            gate.Semaphore.Release();\n            ReleaseGate(key, gate);\n        }\n    }\n\n    private void ReleaseGate(string key, Gate gate)\n    {\n        lock (_sync)\n        {\n            gate.RefCount--;\n            if (gate.RefCount == 0)\n            {\n                _gates.Remove(key);\n                gate.Dispose();\n            }\n        }\n    }\n\n    public void Dispose()\n    {\n        lock (_sync)\n        {\n            foreach (var g in _gates.Values) g.Dispose();\n            _gates.Clear();\n        }\n    }\n}\n```"
+    },
+    {
+      "type": "theory",
+      "title": "Ошибки и крайние случаи",
+      "content": "## Ошибки\n\n- Один глобальный `SemaphoreSlim` — ключи блокируют друг друга.\n- Никогда не удалять семафоры — утечка памяти при большом числе ключей.\n- Удалять gate, пока на нём кто-то ждёт, — следующий вызов создаст второй семафор и нарушит лимит.\n\n## Крайние случаи\n\n- Отмена во время ожидания: `RefCount` нужно уменьшить, а `Release` вызывать нельзя — слот не был получен. Поэтому в эталоне `WaitAsync` в отдельном `try/catch`.\n- Миллион уникальных ключей — словарь растёт только на время активных вызовов."
+    },
+    {
+      "type": "theory",
+      "title": "Что спросят дальше",
+      "content": "## Что спросят дальше\n\n- Распределённая блокировка по ключу (Redis, advisory lock в PostgreSQL).\n- Справедливость между ключами при общем лимите.\n- Как сделать тот же лимитер через `Channel` на ключ (actor-подход)?"
+    },
+    {
+      "type": "quiz",
+      "title": "Quiz 1/4",
+      "content": {
+        "question": "`perKeyLimit = 1`, ключ A занят. Что с вызовом по ключу B?",
+        "options": [
+          "Ждёт, пока освободится A",
+          "Выполняется сразу: у ключа свой семафор",
+          "Получает исключение о превышении лимита",
+          "Ставится в общую очередь FIFO"
+        ],
+        "correctIndices": [
+          1
+        ]
+      }
+    },
+    {
+      "type": "quiz",
+      "title": "Quiz 2/4",
+      "content": {
+        "question": "Зачем `RefCount` у gate?",
+        "options": [
+          "Чтобы считать общее число выполненных операций",
+          "Чтобы ограничить глобальный параллелизм",
+          "Для справедливой очереди внутри ключа",
+          "Не удалить семафор, пока на нём ждут или работают"
+        ],
+        "correctIndices": [
+          3
+        ]
+      }
+    },
+    {
+      "type": "quiz",
+      "title": "Quiz 3/4",
+      "content": {
+        "question": "Что будет, если никогда не удалять семафоры ключей?",
+        "options": [
+          "Память растёт с числом уникальных ключей",
+          "Лимит начнёт пропускать лишние вызовы",
+          "Семафоры перестанут освобождаться",
+          "Ничего: `SemaphoreSlim` удаляется сборщиком мусора из словаря"
+        ],
+        "correctIndices": [
+          0
+        ]
+      }
+    },
+    {
+      "type": "quiz",
+      "title": "Quiz 4/4",
+      "content": {
+        "question": "`WaitAsync(ct)` отменён. Можно ли вызывать `Release`?",
+        "options": [
+          "Да: `Release` всегда парный к `WaitAsync`",
+          "Да, но только если `RefCount > 0`",
+          "Нет: слот не был получен, `Release` превысит лимит",
+          "Нет: семафор после отмены уже освобождён автоматически"
+        ],
+        "correctIndices": [
+          2
+        ]
+      }
+    }
+  ]
+}

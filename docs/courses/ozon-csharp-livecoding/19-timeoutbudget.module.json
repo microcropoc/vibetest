@@ -1,0 +1,104 @@
+{
+  "schemaVersion": 1,
+  "title": "День 19. TimeoutBudget",
+  "steps": [
+    {
+      "type": "theory",
+      "title": "Условие",
+      "content": "## Условие\n\nУ запроса общий дедлайн; вложенные вызовы должны укладываться в оставшееся время.\n\n```csharp\nCancellationToken Token { get; }\nTimeSpan Remaining { get; }\nITimeoutBudget CreateChild(TimeSpan maxSlice);\n```\n\n**Требования**\n\n- Дочерний бюджет получает `min(Remaining, maxSlice)` и отменяется вместе с родителем.\n- `Remaining` не бывает отрицательным.\n- Время — через `TimeProvider`.\n\n**Пример:** бюджет 100 мс; через 60 мс `CreateChild(80 мс)` → у дочернего ~40 мс."
+    },
+    {
+      "type": "theory",
+      "title": "Уточняющие вопросы и план",
+      "content": "## Уточняющие вопросы\n\n- Бюджет передаётся между сервисами (gRPC deadline) или только внутри процесса?\n- Что делать, если бюджета не осталось: не вызывать или вызвать с нулевым таймаутом?\n\n## План\n\n1. Дедлайн = `now + total`, `Remaining = max(0, deadline − now)`.\n2. `CreateLinkedTokenSource(outer)` + `CancelAfter(total)`.\n3. `CreateChild`: `min(Remaining, maxSlice)`, родительский токен как outer.\n4. `Dispose` освобождает CTS."
+    },
+    {
+      "type": "svg",
+      "title": "Схема: TimeoutBudget",
+      "content": {
+        "caption": "Компонент TimeoutBudget",
+        "description": "Поток данных и ограничение ресурсов.",
+        "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 320 120\" width=\"100%\" role=\"img\" aria-label=\"Компонент TimeoutBudget\"><rect id=\"ozon-d19-n0\" x=\"16\" y=\"36\" width=\"88\" height=\"48\" rx=\"6\" fill=\"#e3f2fd\" stroke=\"#1565c0\"/><text id=\"ozon-d19-t0\" x=\"60\" y=\"64\" text-anchor=\"middle\" font-size=\"9\" fill=\"#0d47a1\">Parent budget</text><rect id=\"ozon-d19-n1\" x=\"116\" y=\"36\" width=\"88\" height=\"48\" rx=\"6\" fill=\"#e3f2fd\" stroke=\"#1565c0\"/><text id=\"ozon-d19-t1\" x=\"160\" y=\"64\" text-anchor=\"middle\" font-size=\"9\" fill=\"#0d47a1\">Child slice</text><line id=\"ozon-d19-a1\" x1=\"104\" y1=\"60\" x2=\"116\" y2=\"60\" stroke=\"#37474f\"/><rect id=\"ozon-d19-n2\" x=\"216\" y=\"36\" width=\"88\" height=\"48\" rx=\"6\" fill=\"#e3f2fd\" stroke=\"#1565c0\"/><text id=\"ozon-d19-t2\" x=\"260\" y=\"64\" text-anchor=\"middle\" font-size=\"9\" fill=\"#0d47a1\">Cancel on expire</text><line id=\"ozon-d19-a2\" x1=\"204\" y1=\"60\" x2=\"216\" y2=\"60\" stroke=\"#37474f\"/></svg>"
+      }
+    },
+    {
+      "type": "theory",
+      "title": "Решение",
+      "content": "## Полный код\n\n```csharp\npublic interface ITimeoutBudget\n{\n    CancellationToken Token { get; }\n    TimeSpan Remaining { get; }\n    ITimeoutBudget CreateChild(TimeSpan maxSlice);\n}\n\npublic sealed class TimeoutBudget : ITimeoutBudget, IDisposable\n{\n    private readonly CancellationTokenSource _cts;\n    private readonly TimeProvider _time;\n    private readonly DateTimeOffset _deadline;\n\n    public TimeoutBudget(TimeSpan total, TimeProvider? time = null, CancellationToken outer = default)\n    {\n        _time = time ?? TimeProvider.System;\n        _deadline = _time.GetUtcNow().Add(total);\n        _cts = CancellationTokenSource.CreateLinkedTokenSource(outer);\n        _cts.CancelAfter(total);\n    }\n\n    public CancellationToken Token => _cts.Token;\n\n    public TimeSpan Remaining\n    {\n        get\n        {\n            var r = _deadline - _time.GetUtcNow();\n            return r > TimeSpan.Zero ? r : TimeSpan.Zero;\n        }\n    }\n\n    public ITimeoutBudget CreateChild(TimeSpan maxSlice)\n    {\n        var slice = Remaining < maxSlice ? Remaining : maxSlice;\n        return new TimeoutBudget(slice, _time, _cts.Token);\n    }\n\n    public void Dispose() => _cts.Dispose();\n}\n```"
+    },
+    {
+      "type": "theory",
+      "title": "Ошибки и крайние случаи",
+      "content": "## Ошибки\n\n- Дочерний вызов с собственным фиксированным таймаутом, не учитывающим остаток родителя.\n- Отрицательный `Remaining` → `ArgumentOutOfRangeException` в `CancelAfter`.\n- Не освобождать CTS — висящие таймеры.\n\n## Крайние случаи\n\n- Нулевой бюджет → дочерний токен отменяется сразу.\n- Отмена родителя → отменяются все дочерние."
+    },
+    {
+      "type": "theory",
+      "title": "Что спросят дальше",
+      "content": "## Что спросят дальше\n\n- Передача дедлайна по сети (gRPC deadline, заголовок).\n- Резерв времени на обработку ответа (не отдавать детям весь остаток).\n- Метрики: сколько запросов упёрлось в бюджет."
+    },
+    {
+      "type": "quiz",
+      "title": "Quiz 1/4",
+      "content": {
+        "question": "Бюджет 100 мс, прошло 60 мс. `CreateChild(80 мс)` получит…",
+        "options": [
+          "80 мс",
+          "100 мс",
+          "~40 мс",
+          "140 мс"
+        ],
+        "correctIndices": [
+          2
+        ]
+      }
+    },
+    {
+      "type": "quiz",
+      "title": "Quiz 2/4",
+      "content": {
+        "question": "Родительский бюджет отменён. Что с дочерним токеном?",
+        "options": [
+          "Продолжает работать до своего таймаута",
+          "Отменяется, только если дочерний бюджет истёк",
+          "Бросает исключение при следующем чтении `Remaining`",
+          "Отменяется: он связан с токеном родителя"
+        ],
+        "correctIndices": [
+          3
+        ]
+      }
+    },
+    {
+      "type": "quiz",
+      "title": "Quiz 3/4",
+      "content": {
+        "question": "Зачем `Remaining` ограничен снизу нулём?",
+        "options": [
+          "Чтобы бюджет можно было продлить",
+          "Иначе сломается `CancelAfter` и расчёт дочернего бюджета",
+          "`TimeSpan` не может быть отрицательным",
+          "Чтобы токен отменялся позже"
+        ],
+        "correctIndices": [
+          1
+        ]
+      }
+    },
+    {
+      "type": "quiz",
+      "title": "Quiz 4/4",
+      "content": {
+        "question": "Чем плох фиксированный таймаут 1 с на каждый вложенный вызов?",
+        "options": [
+          "Сумма таймаутов может превысить дедлайн запроса",
+          "Фиксированный таймаут нельзя отменить",
+          "Он не работает с `HttpClient`",
+          "Он слишком короткий для большинства внешних сервисов"
+        ],
+        "correctIndices": [
+          0
+        ]
+      }
+    }
+  ]
+}

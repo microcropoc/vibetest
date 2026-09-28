@@ -1,0 +1,89 @@
+{
+  "schemaVersion": 1,
+  "title": "Коллекции и алгоритмы",
+  "steps": [
+    {
+      "type": "theory",
+      "title": "Структуры данных в livecoding",
+      "content": "## API\n\n- `PriorityQueue<TElement,TPriority>` (.NET 6+).\n- `SortedDictionary`, `Dictionary`, custom heap.\n- Merge k sorted lists, top-K, dedup.\n\n```csharp\nvar pq = new PriorityQueue<int, int>();\npq.Enqueue(item, priority);\nwhile (pq.TryDequeue(out var x, out _)) { /* ... */ }\n```\n\n## Подводные камни\n\n- LRU через `List<T>.Remove` — O(n) на каждое обращение; нужен `Dictionary` + `LinkedList` с узлами.\n- `PriorityQueue<TElement, TPriority>` не стабильна: при равном приоритете порядок не FIFO — добавьте sequence в ключ.\n- Top-K через полную сортировку O(n log n), когда достаточно кучи размера K — O(n log K)."
+    },
+    {
+      "type": "svg",
+      "title": "Top-K / merge",
+      "content": {
+        "caption": "Куча для Top-K и fan-in",
+        "description": "Сложность O(n log k) vs sort O(n log n).",
+        "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 320 120\" width=\"100%\" role=\"img\" aria-label=\"Куча для Top-K и fan-in\"><rect id=\"c69-09-n0\" x=\"16\" y=\"36\" width=\"88\" height=\"48\" rx=\"6\" fill=\"#e3f2fd\" stroke=\"#1565c0\"/><text id=\"c69-09-t0\" x=\"60\" y=\"64\" text-anchor=\"middle\" font-size=\"9\" fill=\"#0d47a1\">Dict</text><rect id=\"c69-09-n1\" x=\"116\" y=\"36\" width=\"88\" height=\"48\" rx=\"6\" fill=\"#e3f2fd\" stroke=\"#1565c0\"/><text id=\"c69-09-t1\" x=\"160\" y=\"64\" text-anchor=\"middle\" font-size=\"9\" fill=\"#0d47a1\">LinkedList</text><line id=\"c69-09-a1\" x1=\"104\" y1=\"60\" x2=\"116\" y2=\"60\" stroke=\"#37474f\"/><rect id=\"c69-09-n2\" x=\"216\" y=\"36\" width=\"88\" height=\"48\" rx=\"6\" fill=\"#e3f2fd\" stroke=\"#1565c0\"/><text id=\"c69-09-t2\" x=\"260\" y=\"64\" text-anchor=\"middle\" font-size=\"9\" fill=\"#0d47a1\">LRU</text><line id=\"c69-09-a2\" x1=\"204\" y1=\"60\" x2=\"216\" y2=\"60\" stroke=\"#37474f\"/></svg>"
+      }
+    },
+    {
+      "type": "theory",
+      "title": "Ошибки и дни Ozon",
+      "content": "## Ошибки\n\n- Sort full dataset при большом n.\n- Off-by-one в окнах.\n\n## Дни Ozon\n\n**13** PriceAggregator, **15** PagedMerge, **16** TopKProducts, **8** LruCache."
+    },
+    {
+      "type": "quiz",
+      "title": "Quiz 1/4",
+      "content": {
+        "question": "Как получить LRU с O(1) на `Get` и `Set`?",
+        "options": [
+          "`Dictionary` + двусвязный `LinkedList`",
+          "`SortedDictionary` по времени последнего доступа",
+          "`List<T>` с удалением и вставкой в начало",
+          "`Queue<T>` + `HashSet<T>`"
+        ],
+        "correctIndices": [
+          0
+        ]
+      }
+    },
+    {
+      "type": "quiz",
+      "title": "Quiz 2/4",
+      "content": {
+        "question": "`PriorityQueue` с одинаковыми приоритетами…",
+        "options": [
+          "Всегда отдаёт элементы в порядке вставки",
+          "Бросает исключение на дубликат приоритета при `Enqueue`",
+          "Не гарантирует FIFO: нужен ключ (priority, sequence)",
+          "Отдаёт элементы в обратном порядке вставки"
+        ],
+        "correctIndices": [
+          2
+        ]
+      }
+    },
+    {
+      "type": "quiz",
+      "title": "Quiz 3/4",
+      "content": {
+        "question": "Top-K по частоте при малом K эффективнее всего через…",
+        "options": [
+          "`SortedSet` всех счётчиков с перестройкой на каждое событие",
+          "Сортировку всех событий по `productId`",
+          "Хранение только последних K событий",
+          "Подсчёт в `Dictionary` + min-heap размера K"
+        ],
+        "correctIndices": [
+          3
+        ]
+      }
+    },
+    {
+      "type": "quiz",
+      "title": "Quiz 4/4",
+      "content": {
+        "question": "Скользящее окно событий за 60 с — типичная структура?",
+        "options": [
+          "Массив всех событий с сортировкой на каждый запрос",
+          "Очередь меток, устаревшие удаляются из головы",
+          "Один счётчик, сбрасываемый каждые 60 с",
+          "Словарь по секундам без удаления старых ключей"
+        ],
+        "correctIndices": [
+          1
+        ]
+      }
+    }
+  ]
+}

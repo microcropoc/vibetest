@@ -1,0 +1,89 @@
+{
+  "schemaVersion": 1,
+  "title": "System.Threading.Channels",
+  "steps": [
+    {
+      "type": "theory",
+      "title": "Channel<T>",
+      "content": "## API\n\nBounded/unbounded очереди producer/consumer.\n\n```csharp\nvar channel = Channel.CreateBounded<WorkItem>(new BoundedChannelOptions(1000)\n{\n    FullMode = BoundedChannelFullMode.Wait,\n    SingleReader = false,\n    SingleWriter = false,\n});\nawait channel.Writer.WriteAsync(item, ct);\nawait foreach (var x in channel.Reader.ReadAllAsync(ct)) { /* ... */ }\n```\n\n## Подводные камни\n\n- Никто не вызвал `Writer.Complete()` — `ReadAllAsync` у consumer никогда не завершится.\n- `TryWrite` на заполненном bounded-канале с `FullMode = Wait` возвращает `false`, а не ждёт; для back-pressure нужен `WriteAsync`.\n- `SingleReader = true` при нескольких читателях — неопределённое поведение: флаг включает оптимизации, а не проверку."
+    },
+    {
+      "type": "svg",
+      "title": "Producer / consumer",
+      "content": {
+        "caption": "Bounded channel back-pressure",
+        "description": "Wait mode блокирует writer при переполнении.",
+        "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 320 120\" width=\"100%\" role=\"img\" aria-label=\"Bounded channel back-pressure\"><rect id=\"c69-07-n0\" x=\"16\" y=\"36\" width=\"88\" height=\"48\" rx=\"6\" fill=\"#e3f2fd\" stroke=\"#1565c0\"/><text id=\"c69-07-t0\" x=\"60\" y=\"64\" text-anchor=\"middle\" font-size=\"9\" fill=\"#0d47a1\">Writer</text><rect id=\"c69-07-n1\" x=\"116\" y=\"36\" width=\"88\" height=\"48\" rx=\"6\" fill=\"#e3f2fd\" stroke=\"#1565c0\"/><text id=\"c69-07-t1\" x=\"160\" y=\"64\" text-anchor=\"middle\" font-size=\"9\" fill=\"#0d47a1\">Buffer</text><line id=\"c69-07-a1\" x1=\"104\" y1=\"60\" x2=\"116\" y2=\"60\" stroke=\"#37474f\"/><rect id=\"c69-07-n2\" x=\"216\" y=\"36\" width=\"88\" height=\"48\" rx=\"6\" fill=\"#e3f2fd\" stroke=\"#1565c0\"/><text id=\"c69-07-t2\" x=\"260\" y=\"64\" text-anchor=\"middle\" font-size=\"9\" fill=\"#0d47a1\">Reader</text><line id=\"c69-07-a2\" x1=\"204\" y1=\"60\" x2=\"216\" y2=\"60\" stroke=\"#37474f\"/></svg>"
+      }
+    },
+    {
+      "type": "theory",
+      "title": "Ошибки и дни Ozon",
+      "content": "## Ошибки\n\n- Не завершить Writer → reader висит.\n- Unbounded channel → OOM под нагрузкой.\n\n## Дни Ozon\n\n**3** AsyncBatcher, **22** AdapterCorrelator, **23** BoundedPipeline, **24** Outbox."
+    },
+    {
+      "type": "quiz",
+      "title": "Quiz 1/4",
+      "content": {
+        "question": "Что означает `BoundedChannelFullMode.Wait`?",
+        "options": [
+          "`WriteAsync` ждёт свободного места в буфере",
+          "При переполнении удаляется самый старый элемент",
+          "Новый элемент отбрасывается без ожидания",
+          "Буфер растёт без лимита"
+        ],
+        "correctIndices": [
+          0
+        ]
+      }
+    },
+    {
+      "type": "quiz",
+      "title": "Quiz 2/4",
+      "content": {
+        "question": "Зачем producer вызывает `channel.Writer.Complete()`?",
+        "options": [
+          "Сбросить буфер и отбросить непрочитанные элементы",
+          "Дождаться, пока reader прочитает все элементы",
+          "Сказать reader, что элементов больше не будет",
+          "Разблокировать writer, ожидающий в `WriteAsync`"
+        ],
+        "correctIndices": [
+          2
+        ]
+      }
+    },
+    {
+      "type": "quiz",
+      "title": "Quiz 3/4",
+      "content": {
+        "question": "Чем удобен `await foreach (var x in reader.ReadAllAsync(ct))`?",
+        "options": [
+          "Читает все элементы сразу в список",
+          "Каждый элемент получат все reader'ы канала (broadcast)",
+          "Не требует вызова `Complete` у writer",
+          "Цикл с отменой, завершающийся после `Complete`"
+        ],
+        "correctIndices": [
+          3
+        ]
+      }
+    },
+    {
+      "type": "quiz",
+      "title": "Quiz 4/4",
+      "content": {
+        "question": "Как bounded channel даёт back-pressure?",
+        "options": [
+          "Reader замедляется, когда буфер почти пуст",
+          "Полный буфер заставляет `WriteAsync` ждать",
+          "Лишние элементы сохраняются на диск",
+          "`WriteAsync` бросает исключение, и producer делает retry"
+        ],
+        "correctIndices": [
+          1
+        ]
+      }
+    }
+  ]
+}

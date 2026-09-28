@@ -1,0 +1,89 @@
+{
+  "schemaVersion": 1,
+  "title": "BackgroundService",
+  "steps": [
+    {
+      "type": "theory",
+      "title": "IHostedService / BackgroundService",
+      "content": "## API\n\n```csharp\npublic sealed class Worker(ILogger<Worker> log) : BackgroundService\n{\n    protected override async Task ExecuteAsync(CancellationToken stoppingToken)\n    {\n        while (!stoppingToken.IsCancellationRequested)\n        {\n            await Task.Delay(TimeSpan.FromSeconds(1), stoppingToken);\n            log.LogDebug(\"Tick\");\n        }\n    }\n}\n```\n\nGraceful shutdown через `stoppingToken`.\n\n## Подводные камни\n\n- Долгая синхронная работа в начале `ExecuteAsync` до первого `await` блокирует старт хоста (.NET 8).\n- Необработанное исключение в `ExecuteAsync` по умолчанию останавливает хост (`BackgroundServiceExceptionBehavior.StopHost`).\n- Игнорировать `stoppingToken`: остановка ждёт `ShutdownTimeout` (30 с) и обрывает работу посередине."
+    },
+    {
+      "type": "svg",
+      "title": "Host lifecycle",
+      "content": {
+        "caption": "Stopping token останавливает фон",
+        "description": "ExecuteAsync должен завершиться после cancel.",
+        "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 320 120\" width=\"100%\" role=\"img\" aria-label=\"Stopping token останавливает фон\"><rect id=\"c69-12-n0\" x=\"16\" y=\"36\" width=\"88\" height=\"48\" rx=\"6\" fill=\"#e3f2fd\" stroke=\"#1565c0\"/><text id=\"c69-12-t0\" x=\"60\" y=\"64\" text-anchor=\"middle\" font-size=\"9\" fill=\"#0d47a1\">Start</text><rect id=\"c69-12-n1\" x=\"116\" y=\"36\" width=\"88\" height=\"48\" rx=\"6\" fill=\"#e3f2fd\" stroke=\"#1565c0\"/><text id=\"c69-12-t1\" x=\"160\" y=\"64\" text-anchor=\"middle\" font-size=\"9\" fill=\"#0d47a1\">Loop</text><line id=\"c69-12-a1\" x1=\"104\" y1=\"60\" x2=\"116\" y2=\"60\" stroke=\"#37474f\"/><rect id=\"c69-12-n2\" x=\"216\" y=\"36\" width=\"88\" height=\"48\" rx=\"6\" fill=\"#e3f2fd\" stroke=\"#1565c0\"/><text id=\"c69-12-t2\" x=\"260\" y=\"64\" text-anchor=\"middle\" font-size=\"9\" fill=\"#0d47a1\">Stop</text><line id=\"c69-12-a2\" x1=\"204\" y1=\"60\" x2=\"216\" y2=\"60\" stroke=\"#37474f\"/></svg>"
+      }
+    },
+    {
+      "type": "theory",
+      "title": "Ошибки и дни Ozon",
+      "content": "## Ошибки\n\n- Блокирующий sync код в ExecuteAsync.\n- Игнор stoppingToken.\n\n## Дни Ozon\n\n**21** GracefulBackgroundWorker, **20** WebhookDispatcher, **24** Outbox."
+    },
+    {
+      "type": "quiz",
+      "title": "Quiz 1/4",
+      "content": {
+        "question": "Что сигнализирует `stoppingToken` в `ExecuteAsync`?",
+        "options": [
+          "Начало graceful shutdown хоста",
+          "Таймаут текущего HTTP-запроса",
+          "Исключение в другом hosted service",
+          "Истечение `HostOptions.ShutdownTimeout`"
+        ],
+        "correctIndices": [
+          0
+        ]
+      }
+    },
+    {
+      "type": "quiz",
+      "title": "Quiz 2/4",
+      "content": {
+        "question": "Worker читает `Channel`. Что должна делать корректная остановка?",
+        "options": [
+          "Вызвать `Environment.Exit(0)`",
+          "Очистить канал и сразу вернуть управление",
+          "Завершить writer, прервать цикл по токену и дождаться его",
+          "Игнорировать токен — хост сам дождётся всех задач"
+        ],
+        "correctIndices": [
+          2
+        ]
+      }
+    },
+    {
+      "type": "quiz",
+      "title": "Quiz 3/4",
+      "content": {
+        "question": "Чем опасен долгий синхронный код в начале `ExecuteAsync` до первого `await`?",
+        "options": [
+          "Ничем: `ExecuteAsync` всегда стартует в отдельном потоке",
+          "Хост перезапустит сервис по таймауту",
+          "`stoppingToken` сразу станет отменённым",
+          "Блокирует `StartAsync` хоста и запуск остальных сервисов"
+        ],
+        "correctIndices": [
+          3
+        ]
+      }
+    },
+    {
+      "type": "quiz",
+      "title": "Quiz 4/4",
+      "content": {
+        "question": "Необработанное исключение в `ExecuteAsync` (.NET 8, настройки по умолчанию)…",
+        "options": [
+          "Молча игнорируется, сервис перестаёт работать",
+          "Логируется и останавливает хост",
+          "Сервис автоматически перезапускается",
+          "Всплывает из `host.Run()` без логирования"
+        ],
+        "correctIndices": [
+          1
+        ]
+      }
+    }
+  ]
+}

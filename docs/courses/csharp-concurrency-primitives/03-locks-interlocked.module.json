@@ -1,0 +1,89 @@
+{
+  "schemaVersion": 1,
+  "title": "lock и Interlocked",
+  "steps": [
+    {
+      "type": "theory",
+      "title": "lock / Monitor / Interlocked",
+      "content": "## API\n\n- `lock` — взаимное исключение для in-memory критических секций.\n- `Interlocked` — атомарные операции без полного lock.\n- `ReaderWriterLockSlim` — many readers / single writer.\n\n```csharp\nprivate int _count;\npublic void Increment() => Interlocked.Increment(ref _count);\n\nprivate readonly object _gate = new();\npublic void AddToList(List<int> list, int value)\n{\n    lock (_gate) { list.Add(value); }\n}\n```\n\n## Подводные камни\n\n- `await` внутри `lock` запрещён компилятором; для асинхронной критической секции нужен `SemaphoreSlim(1, 1)`.\n- `lock (this)`, `lock` на строку или `Type` — внешний код может захватить тот же монитор.\n- Разный порядок захвата двух блокировок в разных методах → deadlock под нагрузкой."
+    },
+    {
+      "type": "svg",
+      "title": "Критическая секция",
+      "content": {
+        "caption": "lock сериализует доступ к общему состоянию",
+        "description": "Interlocked подходит для счётчиков и CAS-паттернов.",
+        "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 320 120\" width=\"100%\" role=\"img\" aria-label=\"lock сериализует доступ к общему состоянию\"><rect id=\"c69-03-n0\" x=\"16\" y=\"36\" width=\"88\" height=\"48\" rx=\"6\" fill=\"#e3f2fd\" stroke=\"#1565c0\"/><text id=\"c69-03-t0\" x=\"60\" y=\"64\" text-anchor=\"middle\" font-size=\"9\" fill=\"#0d47a1\">Thread A</text><rect id=\"c69-03-n1\" x=\"116\" y=\"36\" width=\"88\" height=\"48\" rx=\"6\" fill=\"#e3f2fd\" stroke=\"#1565c0\"/><text id=\"c69-03-t1\" x=\"160\" y=\"64\" text-anchor=\"middle\" font-size=\"9\" fill=\"#0d47a1\">lock</text><line id=\"c69-03-a1\" x1=\"104\" y1=\"60\" x2=\"116\" y2=\"60\" stroke=\"#37474f\"/><rect id=\"c69-03-n2\" x=\"216\" y=\"36\" width=\"88\" height=\"48\" rx=\"6\" fill=\"#e3f2fd\" stroke=\"#1565c0\"/><text id=\"c69-03-t2\" x=\"260\" y=\"64\" text-anchor=\"middle\" font-size=\"9\" fill=\"#0d47a1\">Thread B</text><line id=\"c69-03-a2\" x1=\"204\" y1=\"60\" x2=\"216\" y2=\"60\" stroke=\"#37474f\"/></svg>"
+      }
+    },
+    {
+      "type": "theory",
+      "title": "Ошибки и дни Ozon",
+      "content": "## Ошибки\n\n- `await` внутри `lock` — запрещено.\n- Lock ordering → deadlock.\n\n## Дни Ozon\n\n**7** TtlCache, **8** LruCache, **11** InventoryReservation, **16** TopKProducts, **17** SlidingWindowCounter."
+    },
+    {
+      "type": "quiz",
+      "title": "Quiz 1/4",
+      "content": {
+        "question": "Почему нельзя `await` внутри `lock`?",
+        "options": [
+          "Разрешено, но только с `ConfigureAwait(false)`",
+          "Продолжение может выполниться в другом потоке, а `Monitor` привязан к потоку",
+          "Это ограничение только Debug-сборки",
+          "`lock` вообще нельзя использовать в async-методах"
+        ],
+        "correctIndices": [
+          1
+        ]
+      }
+    },
+    {
+      "type": "quiz",
+      "title": "Quiz 2/4",
+      "content": {
+        "question": "Когда `Interlocked` достаточно вместо `lock`?",
+        "options": [
+          "Одна операция над одним полем: инкремент счётчика, CAS флага",
+          "Нужно атомарно обновить два связанных поля",
+          "Внутри критической секции есть `await`",
+          "Нужно проверить наличие ключа и добавить элемент в `Dictionary`"
+        ],
+        "correctIndices": [
+          0
+        ]
+      }
+    },
+    {
+      "type": "quiz",
+      "title": "Quiz 3/4",
+      "content": {
+        "question": "Когда оправдан `ReaderWriterLockSlim`?",
+        "options": [
+          "Async-код с `await` внутри секции",
+          "Записей больше, чем чтений, и они короткие",
+          "Как замена `Interlocked.Increment`",
+          "Частые чтения, редкие записи, без `await`"
+        ],
+        "correctIndices": [
+          3
+        ]
+      }
+    },
+    {
+      "type": "quiz",
+      "title": "Quiz 4/4",
+      "content": {
+        "question": "Метод A берёт `lockX`, затем `lockY`; метод B — `lockY`, затем `lockX`. Что будет?",
+        "options": [
+          "Ничего: `Monitor` реентерабелен",
+          "`SynchronizationLockException` при входе",
+          "Возможен deadlock при параллельном вызове",
+          "Компилятор предупредит о порядке блокировок"
+        ],
+        "correctIndices": [
+          2
+        ]
+      }
+    }
+  ]
+}

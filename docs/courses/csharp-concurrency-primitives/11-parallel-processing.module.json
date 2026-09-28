@@ -1,0 +1,89 @@
+{
+  "schemaVersion": 1,
+  "title": "Параллельная обработка",
+  "steps": [
+    {
+      "type": "theory",
+      "title": "Parallel.ForEachAsync и PLINQ",
+      "content": "## API\n\n```csharp\nawait Parallel.ForEachAsync(items, new ParallelOptions\n{\n    MaxDegreeOfParallelism = 8,\n    CancellationToken = ct,\n}, async (item, token) =>\n{\n    await ProcessAsync(item, token);\n});\n```\n\nДля I/O — async lambda; для CPU — `Parallel.ForEach` / PLINQ.\n\n## Подводные камни\n\n- `Parallel.ForEach` с `async`-лямбдой — это `async void`: цикл не ждёт завершения; нужен `Parallel.ForEachAsync`.\n- Запись результатов в `List<T>` из нескольких потоков — гонка; пишите в массив по индексу или в concurrent-коллекцию.\n- Нет ограничения параллелизма: 10 000 одновременных HTTP-запросов исчерпают сокеты и положат downstream."
+    },
+    {
+      "type": "svg",
+      "title": "Fan-out",
+      "content": {
+        "caption": "MDOP ограничивает параллелизм",
+        "description": "Combine results с учётом порядка если нужно.",
+        "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 320 120\" width=\"100%\" role=\"img\" aria-label=\"MDOP ограничивает параллелизм\"><rect id=\"c69-11-n0\" x=\"16\" y=\"36\" width=\"88\" height=\"48\" rx=\"6\" fill=\"#e3f2fd\" stroke=\"#1565c0\"/><text id=\"c69-11-t0\" x=\"60\" y=\"64\" text-anchor=\"middle\" font-size=\"9\" fill=\"#0d47a1\">Items</text><rect id=\"c69-11-n1\" x=\"116\" y=\"36\" width=\"88\" height=\"48\" rx=\"6\" fill=\"#e3f2fd\" stroke=\"#1565c0\"/><text id=\"c69-11-t1\" x=\"160\" y=\"64\" text-anchor=\"middle\" font-size=\"9\" fill=\"#0d47a1\">Sem</text><line id=\"c69-11-a1\" x1=\"104\" y1=\"60\" x2=\"116\" y2=\"60\" stroke=\"#37474f\"/><rect id=\"c69-11-n2\" x=\"216\" y=\"36\" width=\"88\" height=\"48\" rx=\"6\" fill=\"#e3f2fd\" stroke=\"#1565c0\"/><text id=\"c69-11-t2\" x=\"260\" y=\"64\" text-anchor=\"middle\" font-size=\"9\" fill=\"#0d47a1\">Results[]</text><line id=\"c69-11-a2\" x1=\"204\" y1=\"60\" x2=\"216\" y2=\"60\" stroke=\"#37474f\"/></svg>"
+      }
+    },
+    {
+      "type": "theory",
+      "title": "Ошибки и дни Ozon",
+      "content": "## Ошибки\n\n- Shared mutable без sync.\n- Слишком высокий MDOP → socket exhaustion.\n\n## Дни Ozon\n\n**14** SearchFanOut, **16** TopKProducts."
+    },
+    {
+      "type": "quiz",
+      "title": "Quiz 1/4",
+      "content": {
+        "question": "Что задаёт `MaxDegreeOfParallelism` в `Parallel.ForEachAsync`?",
+        "options": [
+          "Число создаваемых потоков ОС",
+          "Размер пакета элементов на итерацию",
+          "Максимум одновременно выполняющихся тел цикла",
+          "Таймаут на одно тело цикла"
+        ],
+        "correctIndices": [
+          2
+        ]
+      }
+    },
+    {
+      "type": "quiz",
+      "title": "Quiz 2/4",
+      "content": {
+        "question": "Как сохранить порядок результатов при параллельной обработке?",
+        "options": [
+          "Складывать в `ConcurrentBag` — он сохраняет порядок добавления",
+          "Писать результат в массив по индексу исходного элемента",
+          "Сортировать по времени завершения",
+          "Использовать `ConcurrentQueue` — порядок совпадёт со входом"
+        ],
+        "correctIndices": [
+          1
+        ]
+      }
+    },
+    {
+      "type": "quiz",
+      "title": "Quiz 3/4",
+      "content": {
+        "question": "Fan-out к 5 источникам с общим дедлайном, один завис. Что делать?",
+        "options": [
+          "Отдать частичный результат, зависший отменить по таймауту",
+          "Ждать все источники: иначе ответ будет некорректным и неполным",
+          "Бросить исключение на первом таймауте",
+          "Повторять зависший источник до успеха"
+        ],
+        "correctIndices": [
+          0
+        ]
+      }
+    },
+    {
+      "type": "quiz",
+      "title": "Quiz 4/4",
+      "content": {
+        "question": "`Parallel.ForEach(items, async item => await SendAsync(item))` — в чём проблема?",
+        "options": [
+          "Проблемы нет, `Parallel.ForEach` понимает async-лямбды",
+          "Код не компилируется",
+          "Все отправки выполнятся последовательно",
+          "Лямбда — `async void`, цикл не ждёт отправок"
+        ],
+        "correctIndices": [
+          3
+        ]
+      }
+    }
+  ]
+}

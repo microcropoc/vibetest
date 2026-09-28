@@ -1,0 +1,89 @@
+{
+  "schemaVersion": 1,
+  "title": "TimeProvider и таймеры",
+  "steps": [
+    {
+      "type": "theory",
+      "title": "TimeProvider (.NET 8)",
+      "content": "## API\n\n- `TimeProvider.System` / injectable fake time в тестах.\n- `ITimer`, `GetUtcNow()`.\n\n```csharp\npublic sealed class TtlEntry(TimeProvider time, TimeSpan ttl)\n{\n    private readonly long _expires = time.GetUtcNow().Add(ttl).Ticks;\n    public bool IsExpired() => time.GetUtcNow().Ticks >= _expires;\n}\n```\n\n## Подводные камни\n\n- `DateTime.Now` в логике TTL и окон — локальное время прыгает при переводе часов; нужен UTC или `TimeProvider`.\n- `Thread.Sleep` и реальные задержки в тестах — медленно и нестабильно; используйте `FakeTimeProvider`.\n- `Task.Delay` в цикле накапливает дрейф на время работы тела; для равномерного тика — `PeriodicTimer`."
+    },
+    {
+      "type": "svg",
+      "title": "Время и TTL",
+      "content": {
+        "caption": "TimeProvider делает TTL тестируемым",
+        "description": "FakeTimeProvider в unit-тестах без Thread.Sleep.",
+        "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 320 120\" width=\"100%\" role=\"img\" aria-label=\"TimeProvider делает TTL тестируемым\"><rect id=\"c69-08-n0\" x=\"16\" y=\"36\" width=\"88\" height=\"48\" rx=\"6\" fill=\"#e3f2fd\" stroke=\"#1565c0\"/><text id=\"c69-08-t0\" x=\"60\" y=\"64\" text-anchor=\"middle\" font-size=\"9\" fill=\"#0d47a1\">UtcNow</text><rect id=\"c69-08-n1\" x=\"116\" y=\"36\" width=\"88\" height=\"48\" rx=\"6\" fill=\"#e3f2fd\" stroke=\"#1565c0\"/><text id=\"c69-08-t1\" x=\"160\" y=\"64\" text-anchor=\"middle\" font-size=\"9\" fill=\"#0d47a1\">TTL</text><line id=\"c69-08-a1\" x1=\"104\" y1=\"60\" x2=\"116\" y2=\"60\" stroke=\"#37474f\"/><rect id=\"c69-08-n2\" x=\"216\" y=\"36\" width=\"88\" height=\"48\" rx=\"6\" fill=\"#e3f2fd\" stroke=\"#1565c0\"/><text id=\"c69-08-t2\" x=\"260\" y=\"64\" text-anchor=\"middle\" font-size=\"9\" fill=\"#0d47a1\">Expire</text><line id=\"c69-08-a2\" x1=\"204\" y1=\"60\" x2=\"216\" y2=\"60\" stroke=\"#37474f\"/></svg>"
+      }
+    },
+    {
+      "type": "theory",
+      "title": "Ошибки и дни Ozon",
+      "content": "## Ошибки\n\n- `DateTime.Now` в библиотечном коде.\n- Drift таймеров под нагрузкой.\n\n## Дни Ozon\n\n**4** RateLimiter, **7** TtlCache, **17** SlidingWindowCounter, **19** TimeoutBudget, **20** WebhookDispatcher."
+    },
+    {
+      "type": "quiz",
+      "title": "Quiz 1/4",
+      "content": {
+        "question": "Зачем `TimeProvider` в .NET 8?",
+        "options": [
+          "Подменять время в тестах",
+          "Получать время с NTP-сервера",
+          "Ускорять `Task.Delay` в production",
+          "Заменить `Stopwatch` для замеров производительности"
+        ],
+        "correctIndices": [
+          0
+        ]
+      }
+    },
+    {
+      "type": "quiz",
+      "title": "Quiz 2/4",
+      "content": {
+        "question": "Как протестировать TTL-кэш без реального ожидания?",
+        "options": [
+          "`Thread.Sleep(ttl)` в тесте",
+          "Выставить TTL = 0 и проверить, что записи нет",
+          "`FakeTimeProvider.Advance(ttl)` и проверить промах",
+          "Подменить `DateTime.UtcNow` через статический сеттер"
+        ],
+        "correctIndices": [
+          2
+        ]
+      }
+    },
+    {
+      "type": "quiz",
+      "title": "Quiz 3/4",
+      "content": {
+        "question": "Чем `PeriodicTimer` лучше цикла `work; await Task.Delay(period)`?",
+        "options": [
+          "`Task.Delay` нельзя отменить",
+          "Тики по расписанию: время работы тела не сдвигает интервал",
+          "`PeriodicTimer` запускает тело параллельно, если предыдущее не завершилось",
+          "`PeriodicTimer` не требует `Dispose`"
+        ],
+        "correctIndices": [
+          1
+        ]
+      }
+    },
+    {
+      "type": "quiz",
+      "title": "Quiz 4/4",
+      "content": {
+        "question": "Какое время использовать для момента истечения TTL?",
+        "options": [
+          "`DateTime.Now`",
+          "`DateTime.Today` плюс TTL",
+          "`Environment.TickCount`, приведённый к `DateTime`",
+          "`timeProvider.GetUtcNow()`"
+        ],
+        "correctIndices": [
+          3
+        ]
+      }
+    }
+  ]
+}

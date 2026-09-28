@@ -14,6 +14,11 @@ export const BUNDLED_COURSES: readonly BundledCourseEntry[] = [
     "title": "Алгоритмы на JavaScript: Blind 75"
   },
   {
+    "courseId": "34d5fac1-0c3d-4e66-858d-479298013ae2",
+    "file": "csharp-concurrency-primitives.json",
+    "title": "C#: примитивы асинхронности и конкурентности"
+  },
+  {
     "courseId": "6bc56204-d1ae-41ec-bee1-e5bf082486de",
     "file": "javascript-for-csharp.json",
     "title": "JavaScript для C#-разработчика"

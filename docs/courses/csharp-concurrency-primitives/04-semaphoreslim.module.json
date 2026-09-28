@@ -1,0 +1,89 @@
+{
+  "schemaVersion": 1,
+  "title": "SemaphoreSlim",
+  "steps": [
+    {
+      "type": "theory",
+      "title": "SemaphoreSlim",
+      "content": "## API\n\nОграничение числа одновременных операций.\n\n```csharp\npublic async Task<T> WithPermitAsync<T>(\n    SemaphoreSlim gate, Func<Task<T>> action, CancellationToken ct)\n{\n    await gate.WaitAsync(ct).ConfigureAwait(false);\n    try { return await action().ConfigureAwait(false); }\n    finally { gate.Release(); }\n}\n```\n\n`WaitAsync(CancellationToken)` — обязателен в server code.\n\n## Подводные камни\n\n- `Release` не в `finally` — каждое исключение «съедает» слот, и лимит постепенно падает до нуля.\n- `Release` без успешного `WaitAsync` (например, ожидание отменено) — лимит растёт или `SemaphoreFullException` при заданном `maxCount`.\n- Один `SemaphoreSlim` на всё приложение там, где нужен лимит на ключ или на конкретный downstream."
+    },
+    {
+      "type": "svg",
+      "title": "Слоты семафора",
+      "content": {
+        "caption": "N разрешений — не более N параллельных задач",
+        "description": "Release в finally защищает от утечки слотов.",
+        "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 320 120\" width=\"100%\" role=\"img\" aria-label=\"N разрешений — не более N параллельных задач\"><rect id=\"c69-04-n0\" x=\"16\" y=\"36\" width=\"88\" height=\"48\" rx=\"6\" fill=\"#e3f2fd\" stroke=\"#1565c0\"/><text id=\"c69-04-t0\" x=\"60\" y=\"64\" text-anchor=\"middle\" font-size=\"9\" fill=\"#0d47a1\">Wait</text><rect id=\"c69-04-n1\" x=\"116\" y=\"36\" width=\"88\" height=\"48\" rx=\"6\" fill=\"#e3f2fd\" stroke=\"#1565c0\"/><text id=\"c69-04-t1\" x=\"160\" y=\"64\" text-anchor=\"middle\" font-size=\"9\" fill=\"#0d47a1\">N slots</text><line id=\"c69-04-a1\" x1=\"104\" y1=\"60\" x2=\"116\" y2=\"60\" stroke=\"#37474f\"/><rect id=\"c69-04-n2\" x=\"216\" y=\"36\" width=\"88\" height=\"48\" rx=\"6\" fill=\"#e3f2fd\" stroke=\"#1565c0\"/><text id=\"c69-04-t2\" x=\"260\" y=\"64\" text-anchor=\"middle\" font-size=\"9\" fill=\"#0d47a1\">Release</text><line id=\"c69-04-a2\" x1=\"204\" y1=\"60\" x2=\"216\" y2=\"60\" stroke=\"#37474f\"/></svg>"
+      }
+    },
+    {
+      "type": "theory",
+      "title": "Ошибки и дни Ozon",
+      "content": "## Ошибки\n\n- Release без Wait.\n- Забытый finally при exception.\n\n## Дни Ozon\n\n**1** Enrichment (bounded fetch), **9** KeyedConcurrencyLimiter, **22** AdapterCorrelator, **23** BoundedPipeline."
+    },
+    {
+      "type": "quiz",
+      "title": "Quiz 1/4",
+      "content": {
+        "question": "`new SemaphoreSlim(3, 3)`: вызвали `Release()` без предшествующего `WaitAsync`. Что будет?",
+        "options": [
+          "Ничего: лишний `Release` игнорируется",
+          "Лимит молча вырастет до 4",
+          "`SemaphoreFullException`",
+          "Следующий `WaitAsync` зависнет"
+        ],
+        "correctIndices": [
+          2
+        ]
+      }
+    },
+    {
+      "type": "quiz",
+      "title": "Quiz 2/4",
+      "content": {
+        "question": "Где правильно вызывать `Release`?",
+        "options": [
+          "В `finally` блока `try`, открытого до `WaitAsync`",
+          "В `finally` после успешного `await WaitAsync`",
+          "Только в ветке успеха: при ошибке слот должен остаться занят",
+          "В `catch`, чтобы освободить слот при исключении"
+        ],
+        "correctIndices": [
+          1
+        ]
+      }
+    },
+    {
+      "type": "quiz",
+      "title": "Quiz 3/4",
+      "content": {
+        "question": "`WaitAsync(ct)` отменён. Что с семафором?",
+        "options": [
+          "Слот не получен, `Release` вызывать нельзя",
+          "Слот получен, нужно вызвать `Release`",
+          "Семафор переходит в состояние faulted",
+          "Счётчик уменьшился и восстановится по таймауту"
+        ],
+        "correctIndices": [
+          0
+        ]
+      }
+    },
+    {
+      "type": "quiz",
+      "title": "Quiz 4/4",
+      "content": {
+        "question": "Bounded fan-out: 1000 id, не больше 10 запросов одновременно. Какой код верный?",
+        "options": [
+          "`Parallel.ForEach` с `MaxDegreeOfParallelism = 10` и `.Result` внутри",
+          "Запустить 1000 задач и вызвать `ThreadPool.SetMaxThreads(10, 10)`",
+          "`lock` вокруг HTTP-вызова",
+          "`SemaphoreSlim(10)` с `try/finally Release` вокруг запроса + `Task.WhenAll`"
+        ],
+        "correctIndices": [
+          3
+        ]
+      }
+    }
+  ]
+}

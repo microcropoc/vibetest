@@ -1,0 +1,5 @@
+{
+  "schemaVersion": 1,
+  "title": "C#: примитивы асинхронности и конкурентности",
+  "description": "Подготовка к лайвкодингу на C# (.NET 8): Task и async/await, отмена, lock и Interlocked, SemaphoreSlim, concurrent-коллекции, TaskCompletionSource, Channel, TimeProvider, алгоритмы на коллекциях, IAsyncEnumerable, параллелизм, BackgroundService, атомарность данных и тестирование. Только theory, SVG и quiz — код в fenced-блоках C#. Связан с курсом «Лайвкодинг в Ozon на C#»."
+}

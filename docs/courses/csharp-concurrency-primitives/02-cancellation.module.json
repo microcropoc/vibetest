@@ -1,0 +1,89 @@
+{
+  "schemaVersion": 1,
+  "title": "CancellationToken и кооперативная отмена",
+  "steps": [
+    {
+      "type": "theory",
+      "title": "CancellationToken",
+      "content": "## API\n\n- `CancellationTokenSource` — источник сигнала отмены.\n- `CreateLinkedTokenSource` — объединение таймаута и внешней отмены.\n- `ThrowIfCancellationRequested()` / проверка `IsCancellationRequested`.\n\n```csharp\npublic async Task WorkAsync(CancellationToken ct)\n{\n    while (!ct.IsCancellationRequested)\n    {\n        await Task.Delay(100, ct);\n        ct.ThrowIfCancellationRequested();\n    }\n}\n```\n\n## Подводные камни\n\n- Не передавать `ct` дальше по цепочке: отмена запроса не остановит вложенный HTTP- или SQL-вызов.\n- Не вызывать `Dispose` у `CancellationTokenSource` с таймаутом или связанного CTS — висящие таймеры и регистрации.\n- Ловить `OperationCanceledException` и возвращать `null`: вызывающий не узнает, что операция отменена."
+    },
+    {
+      "type": "svg",
+      "title": "Цепочка отмены",
+      "content": {
+        "caption": "CTS пробрасывает отмену вниз по стеку вызовов",
+        "description": "Linked CTS сочетает shutdown и per-request timeout.",
+        "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 320 120\" width=\"100%\" role=\"img\" aria-label=\"CTS пробрасывает отмену вниз по стеку вызовов\"><rect id=\"c69-02-n0\" x=\"16\" y=\"36\" width=\"88\" height=\"48\" rx=\"6\" fill=\"#e3f2fd\" stroke=\"#1565c0\"/><text id=\"c69-02-t0\" x=\"60\" y=\"64\" text-anchor=\"middle\" font-size=\"9\" fill=\"#0d47a1\">Parent CTS</text><rect id=\"c69-02-n1\" x=\"116\" y=\"36\" width=\"88\" height=\"48\" rx=\"6\" fill=\"#e3f2fd\" stroke=\"#1565c0\"/><text id=\"c69-02-t1\" x=\"160\" y=\"64\" text-anchor=\"middle\" font-size=\"9\" fill=\"#0d47a1\">Linked</text><line id=\"c69-02-a1\" x1=\"104\" y1=\"60\" x2=\"116\" y2=\"60\" stroke=\"#37474f\"/><rect id=\"c69-02-n2\" x=\"216\" y=\"36\" width=\"88\" height=\"48\" rx=\"6\" fill=\"#e3f2fd\" stroke=\"#1565c0\"/><text id=\"c69-02-t2\" x=\"260\" y=\"64\" text-anchor=\"middle\" font-size=\"9\" fill=\"#0d47a1\">Child work</text><line id=\"c69-02-a2\" x1=\"204\" y1=\"60\" x2=\"216\" y2=\"60\" stroke=\"#37474f\"/></svg>"
+      }
+    },
+    {
+      "type": "theory",
+      "title": "Ошибки и дни Ozon",
+      "content": "## Ошибки\n\n- Ловить `OperationCanceledException` и глотать без rethrow при cooperative cancel.\n- Не передавать `ct` во вложенные вызовы.\n\n## Дни Ozon\n\n**1**, **19** TimeoutBudget, **20** WebhookDispatcher, **21** GracefulBackgroundWorker, **23** BoundedPipeline."
+    },
+    {
+      "type": "quiz",
+      "title": "Quiz 1/4",
+      "content": {
+        "question": "Как устроена отмена в .NET?",
+        "options": [
+          "Кооперативно: код сам проверяет токен и передаёт его дальше",
+          "Среда прерывает поток, как `Thread.Abort`",
+          "`Cancel()` немедленно завершает все задачи с этим токеном",
+          "Отмена работает только для задач из `Task.Run`"
+        ],
+        "correctIndices": [
+          0
+        ]
+      }
+    },
+    {
+      "type": "quiz",
+      "title": "Quiz 2/4",
+      "content": {
+        "question": "Зачем `CreateLinkedTokenSource(ct)` вместе с `CancelAfter(timeout)`?",
+        "options": [
+          "Чтобы отмена дочерней операции отменяла и родительский `ct`",
+          "Отмена и по `ct` вызывающего, и по своему таймауту",
+          "Чтобы токен можно было переиспользовать после отмены",
+          "Чтобы `OperationCanceledException` не выбрасывался"
+        ],
+        "correctIndices": [
+          1
+        ]
+      }
+    },
+    {
+      "type": "quiz",
+      "title": "Quiz 3/4",
+      "content": {
+        "question": "Пользователь отменил запрос, метод поймал `OperationCanceledException`. Что правильно?",
+        "options": [
+          "Вернуть `default`, чтобы не ронять запрос",
+          "Повторить операцию с новым токеном",
+          "Пробросить дальше, не логируя как ошибку",
+          "Обернуть в `InvalidOperationException` с понятным сообщением"
+        ],
+        "correctIndices": [
+          2
+        ]
+      }
+    },
+    {
+      "type": "quiz",
+      "title": "Quiz 4/4",
+      "content": {
+        "question": "Что делает `task.WaitAsync(ct)`?",
+        "options": [
+          "Отменяет саму задачу, если она ещё не завершилась",
+          "Передаёт `ct` внутрь уже запущенной задачи",
+          "Блокирует поток до завершения или отмены",
+          "Отменяет только ожидание — сама задача продолжает выполняться"
+        ],
+        "correctIndices": [
+          3
+        ]
+      }
+    }
+  ]
+}

@@ -1,0 +1,89 @@
+{
+  "schemaVersion": 1,
+  "title": "Атомарность и идемпотентность",
+  "steps": [
+    {
+      "type": "theory",
+      "title": "Транзакции и in-memory модели",
+      "content": "## API\n\n- Идempotency keys, compare-and-swap, state machines.\n- Outbox pattern — at-least-once delivery.\n\n```csharp\npublic bool TryReserve(string sku, int qty)\n{\n    lock (_sync)\n    {\n        if (_stock[sku] < qty) return false;\n        _stock[sku] -= qty;\n        return true;\n    }\n}\n```\n\n## Подводные камни\n\n- Публикация в брокер и commit в БД без outbox — при сбое между ними данные и события расходятся.\n- «Проверить остаток, потом списать» двумя запросами без блокировки или условного `UPDATE` → overselling.\n- Рассчитывать на exactly-once: брокеры дают at-least-once, consumer обязан быть идемпотентным."
+    },
+    {
+      "type": "svg",
+      "title": "State + outbox",
+      "content": {
+        "caption": "Согласованность между памятью и доставкой",
+        "description": "Идемпотентность защищает от повторов.",
+        "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 320 120\" width=\"100%\" role=\"img\" aria-label=\"Согласованность между памятью и доставкой\"><rect id=\"c69-13-n0\" x=\"16\" y=\"36\" width=\"88\" height=\"48\" rx=\"6\" fill=\"#e3f2fd\" stroke=\"#1565c0\"/><text id=\"c69-13-t0\" x=\"60\" y=\"64\" text-anchor=\"middle\" font-size=\"9\" fill=\"#0d47a1\">Tx</text><rect id=\"c69-13-n1\" x=\"116\" y=\"36\" width=\"88\" height=\"48\" rx=\"6\" fill=\"#e3f2fd\" stroke=\"#1565c0\"/><text id=\"c69-13-t1\" x=\"160\" y=\"64\" text-anchor=\"middle\" font-size=\"9\" fill=\"#0d47a1\">Row</text><line id=\"c69-13-a1\" x1=\"104\" y1=\"60\" x2=\"116\" y2=\"60\" stroke=\"#37474f\"/><rect id=\"c69-13-n2\" x=\"216\" y=\"36\" width=\"88\" height=\"48\" rx=\"6\" fill=\"#e3f2fd\" stroke=\"#1565c0\"/><text id=\"c69-13-t2\" x=\"260\" y=\"64\" text-anchor=\"middle\" font-size=\"9\" fill=\"#0d47a1\">Outbox</text><line id=\"c69-13-a2\" x1=\"204\" y1=\"60\" x2=\"216\" y2=\"60\" stroke=\"#37474f\"/></svg>"
+      }
+    },
+    {
+      "type": "theory",
+      "title": "Ошибки и дни Ozon",
+      "content": "## Ошибки\n\n- Double spend inventory.\n- Lost update без версионирования.\n\n## Дни Ozon\n\n**10** IdempotentConsumer, **11** InventoryReservation, **12** OrderStateMachine, **24** Outbox."
+    },
+    {
+      "type": "quiz",
+      "title": "Quiz 1/4",
+      "content": {
+        "question": "Какую проблему решает transactional outbox?",
+        "options": [
+          "Гарантирует exactly-once доставку без доработки consumer",
+          "Ускоряет публикацию за счёт батчей",
+          "Заменяет брокер сообщений таблицей в БД",
+          "Данные и событие фиксируются одной транзакцией"
+        ],
+        "correctIndices": [
+          3
+        ]
+      }
+    },
+    {
+      "type": "quiz",
+      "title": "Quiz 2/4",
+      "content": {
+        "question": "Идемпотентный consumer — это когда…",
+        "options": [
+          "Повторная обработка сообщения не меняет результат",
+          "Consumer обрабатывает сообщения строго по одному, без параллелизма",
+          "Брокер не доставляет дубликаты",
+          "Consumer подтверждает сообщение до обработки"
+        ],
+        "correctIndices": [
+          0
+        ]
+      }
+    },
+    {
+      "type": "quiz",
+      "title": "Quiz 3/4",
+      "content": {
+        "question": "Два запроса одновременно резервируют последний товар. Как избежать overselling?",
+        "options": [
+          "Сначала `SELECT qty`, затем `UPDATE`, если хватает",
+          "Условный `UPDATE … WHERE qty >= @n` и проверка числа строк",
+          "Кэшировать остаток в памяти каждого инстанса",
+          "Делать retry, если остаток ушёл в минус"
+        ],
+        "correctIndices": [
+          1
+        ]
+      }
+    },
+    {
+      "type": "quiz",
+      "title": "Quiz 4/4",
+      "content": {
+        "question": "`SELECT … FOR UPDATE SKIP LOCKED` в outbox-publisher нужен, чтобы…",
+        "options": [
+          "Читать строки вообще без блокировок",
+          "Гарантировать порядок публикации по всей таблице outbox",
+          "Воркеры брали разные строки, не блокируя друг друга",
+          "Удалять строки сразу после чтения"
+        ],
+        "correctIndices": [
+          2
+        ]
+      }
+    }
+  ]
+}

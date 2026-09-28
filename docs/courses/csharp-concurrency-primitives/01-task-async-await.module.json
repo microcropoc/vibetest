@@ -1,0 +1,89 @@
+{
+  "schemaVersion": 1,
+  "title": "Task, async и await",
+  "steps": [
+    {
+      "type": "theory",
+      "title": "Task и async/await (.NET 8)",
+      "content": "## API\n\n- `Task` / `Task<T>` — представление асинхронной работы.\n- `async`/`await` — не блокирует поток при I/O.\n- `Task.Run` — offload CPU на пул (осторожно с объёмом).\n- `ConfigureAwait(false)` в библиотеках без UI.\n\n```csharp\npublic async Task<UserDto> LoadUserAsync(HttpClient http, int id, CancellationToken ct)\n{\n    using var resp = await http.GetAsync($\"/users/{id}\", ct).ConfigureAwait(false);\n    resp.EnsureSuccessStatusCode();\n    return await resp.Content.ReadFromJsonAsync<UserDto>(cancellationToken: ct)\n        .ConfigureAwait(false) ?? throw new InvalidOperationException();\n}\n```\n\n## Подводные камни\n\n- `async void` вне обработчиков событий: исключение уронит процесс, а вызывающий не сможет дождаться завершения.\n- `.Result` / `.Wait()` на незавершённой задаче держат поток пула и могут дать deadlock при наличии `SynchronizationContext`.\n- Забытый `await`: задача «улетает», исключение теряется, а код после неё выполняется раньше времени."
+    },
+    {
+      "type": "svg",
+      "title": "await и continuation",
+      "content": {
+        "caption": "await освобождает поток до завершения I/O",
+        "description": "Поток возвращается в пул, continuation планируется после операции.",
+        "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 320 120\" width=\"100%\" role=\"img\" aria-label=\"await освобождает поток до завершения I/O\"><rect id=\"c69-01-n0\" x=\"16\" y=\"36\" width=\"88\" height=\"48\" rx=\"6\" fill=\"#e3f2fd\" stroke=\"#1565c0\"/><text id=\"c69-01-t0\" x=\"60\" y=\"64\" text-anchor=\"middle\" font-size=\"9\" fill=\"#0d47a1\">Caller</text><rect id=\"c69-01-n1\" x=\"116\" y=\"36\" width=\"88\" height=\"48\" rx=\"6\" fill=\"#e3f2fd\" stroke=\"#1565c0\"/><text id=\"c69-01-t1\" x=\"160\" y=\"64\" text-anchor=\"middle\" font-size=\"9\" fill=\"#0d47a1\">await I/O</text><line id=\"c69-01-a1\" x1=\"104\" y1=\"60\" x2=\"116\" y2=\"60\" stroke=\"#37474f\"/><rect id=\"c69-01-n2\" x=\"216\" y=\"36\" width=\"88\" height=\"48\" rx=\"6\" fill=\"#e3f2fd\" stroke=\"#1565c0\"/><text id=\"c69-01-t2\" x=\"260\" y=\"64\" text-anchor=\"middle\" font-size=\"9\" fill=\"#0d47a1\">Resume</text><line id=\"c69-01-a2\" x1=\"204\" y1=\"60\" x2=\"216\" y2=\"60\" stroke=\"#37474f\"/></svg>"
+      }
+    },
+    {
+      "type": "theory",
+      "title": "Ошибки и дни Ozon",
+      "content": "## Ошибки\n\n- `async void` вне event handlers.\n- Захват `SynchronizationContext` → deadlock в UI-тестах.\n- «Fire-and-forget» без логирования ошибок.\n\n## Дни Ozon\n\n**1** Enrichment, **3** AsyncBatcher, **4** RateLimiter, **14** SearchFanOut, **20** WebhookDispatcher, **21** GracefulBackgroundWorker."
+    },
+    {
+      "type": "quiz",
+      "title": "Quiz 1/4",
+      "content": {
+        "question": "Что происходит с потоком при `await` незавершённой I/O-задачи?",
+        "options": [
+          "Поток блокируется до завершения I/O",
+          "Поток возвращается в пул, продолжение выполнится позже",
+          "Под ожидание создаётся новый поток ОС",
+          "Продолжение всегда выполняется на том же потоке"
+        ],
+        "correctIndices": [
+          1
+        ]
+      }
+    },
+    {
+      "type": "quiz",
+      "title": "Quiz 2/4",
+      "content": {
+        "question": "Когда уместен `ConfigureAwait(false)`?",
+        "options": [
+          "В библиотечном коде без привязки к контексту",
+          "В обработчике кнопки WPF перед обновлением UI",
+          "Только внутри `lock`, чтобы не потерять блокировку",
+          "Всегда: в ASP.NET Core он ускоряет любой `await` в разы"
+        ],
+        "correctIndices": [
+          0
+        ]
+      }
+    },
+    {
+      "type": "quiz",
+      "title": "Quiz 3/4",
+      "content": {
+        "question": "Почему плохо оборачивать каждый HTTP-вызов в `Task.Run`?",
+        "options": [
+          "`Task.Run` не поддерживает `CancellationToken`",
+          "`HttpClient` нельзя вызывать из потока пула — будет deadlock на контексте",
+          "`Task.Run` всегда создаёт новый поток ОС",
+          "Это I/O: лишние задачи пула только добавляют очередь"
+        ],
+        "correctIndices": [
+          3
+        ]
+      }
+    },
+    {
+      "type": "quiz",
+      "title": "Quiz 4/4",
+      "content": {
+        "question": "Как дождаться двух независимых I/O-операций с минимальной задержкой?",
+        "options": [
+          "`await FooAsync(); await BarAsync();` подряд",
+          "`Task.WaitAll(a, b)` внутри async-метода",
+          "Запустить обе и сделать `await Task.WhenAll(a, b)`",
+          "`await Task.WhenAny(a, b)` и вернуть результат первой"
+        ],
+        "correctIndices": [
+          2
+        ]
+      }
+    }
+  ]
+}

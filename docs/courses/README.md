@@ -8,6 +8,7 @@
 |------|----------|
 | [javascript-for-csharp.json](./javascript-for-csharp.json) | **JavaScript для C#-разработчика** — 20 модулей (theory, svg, javascript, regex, quiz) |
 | [algorithms-blind-75.json](./algorithms-blind-75.json) | **Алгоритмы на JavaScript: Blind 75** — 17 модулей (theory, svg, javascript, quiz), все задачи NeetCode Blind 75 + разминки |
+| [csharp-concurrency-primitives.json](./csharp-concurrency-primitives.json) | **C#: примитивы асинхронности и конкурентности** — 15 модулей (theory, svg, quiz), .NET 8, подготовка к лайвкодингу Ozon |
 
 ## Исходники и сборка
 
@@ -15,6 +16,7 @@
 
 - [javascript-for-csharp/](./javascript-for-csharp/)
 - [algorithms-blind-75/](./algorithms-blind-75/)
+- [csharp-concurrency-primitives/](./csharp-concurrency-primitives/)
 
 - `course.json` — заголовок и описание курса
 - `NN-slug.module.json` — один модуль ([module-import.schema.json](../schemas/module-import.schema.json))

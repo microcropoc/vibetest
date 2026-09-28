@@ -1,0 +1,89 @@
+{
+  "schemaVersion": 1,
+  "title": "Concurrent-коллекции",
+  "steps": [
+    {
+      "type": "theory",
+      "title": "ConcurrentDictionary и родственники",
+      "content": "## API\n\n- `ConcurrentDictionary<TKey,TValue>` — thread-safe map.\n- `ConcurrentQueue`, `ConcurrentBag` — producer/consumer.\n\n```csharp\nvar seen = new ConcurrentDictionary<string, byte>();\nif (seen.TryAdd(messageId, 0))\n{\n    // первая доставка messageId — обрабатываем\n}\n\nvar views = new ConcurrentDictionary<string, int>();\nviews.AddOrUpdate(sku, 1, (_, count) => count + 1);\n```\n\nДля LRU/TTL нужны **дополнительные** lock или сегментация.\n\n## Подводные камни\n\n- `GetOrAdd(key, factory)` может вызвать factory несколько раз при гонке — для дорогих операций храните `Lazy<T>` или `Task<T>`.\n- `if (!dict.ContainsKey(k)) dict[k] = v;` — check-then-act не атомарен; используйте `TryAdd` / `AddOrUpdate`.\n- `Count` и перечисление — дорогие операции и снимок «на момент», на них нельзя строить инварианты."
+    },
+    {
+      "type": "svg",
+      "title": "Concurrent map",
+      "content": {
+        "caption": "TryGet / TryAdd без внешнего lock",
+        "description": "Не заменяет транзакционность между несколькими ключами.",
+        "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 320 120\" width=\"100%\" role=\"img\" aria-label=\"TryGet / TryAdd без внешнего lock\"><rect id=\"c69-05-n0\" x=\"16\" y=\"36\" width=\"88\" height=\"48\" rx=\"6\" fill=\"#e3f2fd\" stroke=\"#1565c0\"/><text id=\"c69-05-t0\" x=\"60\" y=\"64\" text-anchor=\"middle\" font-size=\"9\" fill=\"#0d47a1\">TryGet</text><rect id=\"c69-05-n1\" x=\"116\" y=\"36\" width=\"88\" height=\"48\" rx=\"6\" fill=\"#e3f2fd\" stroke=\"#1565c0\"/><text id=\"c69-05-t1\" x=\"160\" y=\"64\" text-anchor=\"middle\" font-size=\"9\" fill=\"#0d47a1\">TryAdd</text><line id=\"c69-05-a1\" x1=\"104\" y1=\"60\" x2=\"116\" y2=\"60\" stroke=\"#37474f\"/><rect id=\"c69-05-n2\" x=\"216\" y=\"36\" width=\"88\" height=\"48\" rx=\"6\" fill=\"#e3f2fd\" stroke=\"#1565c0\"/><text id=\"c69-05-t2\" x=\"260\" y=\"64\" text-anchor=\"middle\" font-size=\"9\" fill=\"#0d47a1\">Race?</text><line id=\"c69-05-a2\" x1=\"204\" y1=\"60\" x2=\"216\" y2=\"60\" stroke=\"#37474f\"/></svg>"
+      }
+    },
+    {
+      "type": "theory",
+      "title": "Ошибки и дни Ozon",
+      "content": "## Ошибки\n\n- Составные операции без синхронизации.\n- `GetOrAdd` factory медленная → блокировки.\n\n## Дни Ozon\n\n**7** TtlCache, **8** LruCache, **16** TopKProducts, **18** PriorityJobQueue."
+    },
+    {
+      "type": "quiz",
+      "title": "Quiz 1/4",
+      "content": {
+        "question": "Что `ConcurrentDictionary` НЕ гарантирует?",
+        "options": [
+          "Потокобезопасность `TryGetValue`",
+          "Атомарность `TryAdd` по одному ключу",
+          "Атомарность составной операции над несколькими ключами",
+          "Отсутствие исключения при перечислении во время записи"
+        ],
+        "correctIndices": [
+          2
+        ]
+      }
+    },
+    {
+      "type": "quiz",
+      "title": "Quiz 2/4",
+      "content": {
+        "question": "Что гарантирует `GetOrAdd(key, valueFactory)`?",
+        "options": [
+          "Factory выполнится ровно один раз на ключ",
+          "Factory выполняется под блокировкой ключа",
+          "Второй вызов ждёт, пока первый вернёт значение",
+          "Значение в словаре одно, но factory может вызваться несколько раз"
+        ],
+        "correctIndices": [
+          3
+        ]
+      }
+    },
+    {
+      "type": "quiz",
+      "title": "Quiz 3/4",
+      "content": {
+        "question": "LRU-кэш на одном `ConcurrentDictionary` без блокировок…",
+        "options": [
+          "Достаточен: словарь хранит порядок вставки",
+          "Не держит согласованно порядок использования и вытеснение",
+          "Достаточен, если ёмкость меньше 1000",
+          "Работает, если удалять `Keys.First()` как самый старый элемент"
+        ],
+        "correctIndices": [
+          1
+        ]
+      }
+    },
+    {
+      "type": "quiz",
+      "title": "Quiz 4/4",
+      "content": {
+        "question": "Для чего подходит `ConcurrentQueue<T>`?",
+        "options": [
+          "Неблокирующая FIFO-очередь между потоками без внешнего `lock`",
+          "Очередь с асинхронным ожиданием элемента через `await`",
+          "Очередь с приоритетами",
+          "Ограниченный буфер с back-pressure"
+        ],
+        "correctIndices": [
+          0
+        ]
+      }
+    }
+  ]
+}

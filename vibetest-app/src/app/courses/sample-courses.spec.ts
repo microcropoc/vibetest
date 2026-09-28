@@ -57,11 +57,19 @@ function collectSvgIds(course: Course): readonly string[] {
   return ids;
 }
 
-function assertModuleShape(steps: readonly Step[]): void {
+function courseRequiresPracticeSteps(course: Course): boolean {
+  return course.modules.some((mod) =>
+    mod.steps.some((s) => s.type === 'javascript' || s.type === 'regex'),
+  );
+}
+
+function assertModuleShape(steps: readonly Step[], requirePractice: boolean): void {
   expect(steps.length).toBeGreaterThan(0);
   expect(steps[0]?.type).toBe('theory');
   expect(steps.some((s) => s.type === 'svg')).toBe(true);
-  expect(steps.some((s) => s.type === 'javascript')).toBe(true);
+  if (requirePractice) {
+    expect(steps.some((s) => s.type === 'javascript' || s.type === 'regex')).toBe(true);
+  }
   expect(steps.at(-1)?.type).toBe('quiz');
 }
 
@@ -121,8 +129,9 @@ describe('docs/courses sample courses', () => {
     (slug) => {
       const path = join(docsCoursesDir, `${slug}.json`);
       const course = courseFromPath(path);
+      const requirePractice = courseRequiresPracticeSteps(course);
       for (const mod of course.modules) {
-        assertModuleShape(mod.steps);
+        assertModuleShape(mod.steps, requirePractice);
         for (const step of mod.steps) {
           if (step.type !== 'svg') {
             continue;

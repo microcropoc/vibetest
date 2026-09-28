@@ -1,0 +1,89 @@
+{
+  "schemaVersion": 1,
+  "title": "TaskCompletionSource",
+  "steps": [
+    {
+      "type": "theory",
+      "title": "TaskCompletionSource<T>",
+      "content": "## API\n\nРучное завершение `Task` — callback-API, event bridges.\n\n```csharp\nvar tcs = new TaskCompletionSource<string>(TaskCreationOptions.RunContinuationsAsynchronously);\nregistration = token.Register(() => tcs.TrySetCanceled(token));\n// позже: tcs.TrySetResult(\"ok\");\nreturn tcs.Task;\n```\n\n`RunContinuationsAsynchronously` снижает риск deadlock.\n\n## Подводные камни\n\n- `new TaskCompletionSource<T>()` без `RunContinuationsAsynchronously` — продолжения ожидающих выполнятся синхронно внутри `SetResult`, возможно под вашим `lock`.\n- `SetResult` дважды → `InvalidOperationException`; в гонках используйте `TrySetResult` / `TrySetException`.\n- TCS, который никто не завершил, — ожидающие висят вечно; привязывайте отмену через `ct.Register(() => tcs.TrySetCanceled(ct))`."
+    },
+    {
+      "type": "svg",
+      "title": "Мост callback → Task",
+      "content": {
+        "caption": "TCS связывает imperative API с async",
+        "description": "TrySet* идempotent при правильной guards.",
+        "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 320 120\" width=\"100%\" role=\"img\" aria-label=\"TCS связывает imperative API с async\"><rect id=\"c69-06-n0\" x=\"16\" y=\"36\" width=\"88\" height=\"48\" rx=\"6\" fill=\"#e3f2fd\" stroke=\"#1565c0\"/><text id=\"c69-06-t0\" x=\"60\" y=\"64\" text-anchor=\"middle\" font-size=\"9\" fill=\"#0d47a1\">Callback</text><rect id=\"c69-06-n1\" x=\"116\" y=\"36\" width=\"88\" height=\"48\" rx=\"6\" fill=\"#e3f2fd\" stroke=\"#1565c0\"/><text id=\"c69-06-t1\" x=\"160\" y=\"64\" text-anchor=\"middle\" font-size=\"9\" fill=\"#0d47a1\">TCS</text><line id=\"c69-06-a1\" x1=\"104\" y1=\"60\" x2=\"116\" y2=\"60\" stroke=\"#37474f\"/><rect id=\"c69-06-n2\" x=\"216\" y=\"36\" width=\"88\" height=\"48\" rx=\"6\" fill=\"#e3f2fd\" stroke=\"#1565c0\"/><text id=\"c69-06-t2\" x=\"260\" y=\"64\" text-anchor=\"middle\" font-size=\"9\" fill=\"#0d47a1\">Task</text><line id=\"c69-06-a2\" x1=\"204\" y1=\"60\" x2=\"216\" y2=\"60\" stroke=\"#37474f\"/></svg>"
+      }
+    },
+    {
+      "type": "theory",
+      "title": "Ошибки и дни Ozon",
+      "content": "## Ошибки\n\n- Двойной SetResult.\n- Не отменять TCS при CTS cancel.\n\n## Дни Ozon\n\n**2** SingleFlight, **19** TimeoutBudget, **20** WebhookDispatcher."
+    },
+    {
+      "type": "quiz",
+      "title": "Quiz 1/4",
+      "content": {
+        "question": "Что даёт `TaskCreationOptions.RunContinuationsAsynchronously` для TCS?",
+        "options": [
+          "Без флага `SetResult` можно вызывать только из потока создателя",
+          "Задача TCS запускается в пуле потоков",
+          "Продолжения ожидающих не выполняются синхронно внутри `SetResult`",
+          "TCS можно завершить повторно"
+        ],
+        "correctIndices": [
+          2
+        ]
+      }
+    },
+    {
+      "type": "quiz",
+      "title": "Quiz 2/4",
+      "content": {
+        "question": "Два потока одновременно завершают один TCS. Что использовать?",
+        "options": [
+          "`SetResult` — второй вызов будет проигнорирован",
+          "`lock` вокруг `SetResult`, иначе задача завершится дважды",
+          "Пересоздать TCS перед вторым вызовом",
+          "`TrySet*`: второй вызов просто вернёт `false`"
+        ],
+        "correctIndices": [
+          3
+        ]
+      }
+    },
+    {
+      "type": "quiz",
+      "title": "Quiz 3/4",
+      "content": {
+        "question": "Для чего чаще всего нужен `TaskCompletionSource<T>`?",
+        "options": [
+          "Запустить CPU-работу в пуле потоков без блокировки вызывающего",
+          "Обернуть callback или событие в `Task`, который можно ждать",
+          "Ограничить число параллельных задач",
+          "Отменить уже выполняющийся `Task`"
+        ],
+        "correctIndices": [
+          1
+        ]
+      }
+    },
+    {
+      "type": "quiz",
+      "title": "Quiz 4/4",
+      "content": {
+        "question": "Как отменить ожидание TCS по `CancellationToken`?",
+        "options": [
+          "`ct.Register(() => tcs.TrySetCanceled(ct))`",
+          "Передать `ct` в конструктор `TaskCompletionSource`",
+          "Вызвать `tcs.Task.Dispose()`",
+          "Бросить `OperationCanceledException` в любом потоке"
+        ],
+        "correctIndices": [
+          0
+        ]
+      }
+    }
+  ]
+}

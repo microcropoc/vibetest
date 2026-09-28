@@ -1,0 +1,1327 @@
+{
+  "schemaVersion": 1,
+  "title": "C#: примитивы асинхронности и конкурентности",
+  "description": "Подготовка к лайвкодингу на C# (.NET 8): Task и async/await, отмена, lock и Interlocked, SemaphoreSlim, concurrent-коллекции, TaskCompletionSource, Channel, TimeProvider, алгоритмы на коллекциях, IAsyncEnumerable, параллелизм, BackgroundService, атомарность данных и тестирование. Только theory, SVG и quiz — код в fenced-блоках C#. Связан с курсом «Лайвкодинг в Ozon на C#».",
+  "modules": [
+    {
+      "title": "Введение: карта курса и Ozon",
+      "steps": [
+        {
+          "type": "theory",
+          "title": "Зачем примитивы перед лайвкодингом",
+          "content": "## Два курса\n\n1. **Примитивы** — API и типичные ошибки.\n2. **Ozon livecoding** — 24 однодневные задачи уровня middle+/senior.\n\nНа интервью ждут **компилируемый** код на **.NET 8**, явные **инварианты**, **CancellationToken**, осмысленные **интерфейсы** и обсуждение **крайних случаев**.\n\n```csharp\n// Минимальный каркас решения\npublic interface IFeature { Task RunAsync(CancellationToken ct); }\n```\n\n## Подводные камни\n\n- Учить API списком без сценария: на интервью спрашивают «что будет при отмене или переполнении», а не сигнатуру метода.\n- Путать асинхронность (I/O, `await`) и параллелизм (CPU, несколько потоков) — от этого зависит выбор примитива.\n- Пропускать модули про отмену (02) и `SemaphoreSlim` (04): они нужны почти в каждой задаче курса Ozon."
+        },
+        {
+          "type": "svg",
+          "title": "Схема: два курса",
+          "content": {
+            "caption": "Примитивы питают задачи Ozon",
+            "description": "Сначала API, затем прикладные паттерны лайвкодинга.",
+            "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 320 120\" width=\"100%\" role=\"img\" aria-label=\"Примитивы питают задачи Ozon\"><rect id=\"c69-m00-a-box\" x=\"24\" y=\"28\" width=\"120\" height=\"64\" rx=\"6\" fill=\"#e3f2fd\" stroke=\"#1565c0\"/><text id=\"c69-m00-a-lbl\" x=\"84\" y=\"64\" text-anchor=\"middle\" font-size=\"10\" fill=\"#0d47a1\">Prim</text><line id=\"c69-m00-l1\" x1=\"144\" y1=\"60\" x2=\"158\" y2=\"60\" stroke=\"#37474f\"/><rect id=\"c69-m00-b\" x=\"162\" y=\"28\" width=\"72\" height=\"64\" rx=\"6\" fill=\"#fff3e0\" stroke=\"#ef6c00\"/><text id=\"c69-m00-bl\" x=\"198\" y=\"64\" text-anchor=\"middle\" font-size=\"9\" fill=\"#e65100\">API</text><line id=\"c69-m00-l2\" x1=\"234\" y1=\"60\" x2=\"248\" y2=\"60\" stroke=\"#37474f\"/><rect id=\"c69-m00-c\" x=\"252\" y=\"28\" width=\"52\" height=\"64\" rx=\"6\" fill=\"#e8f5e9\" stroke=\"#2e7d32\"/><text id=\"c69-m00-cl\" x=\"278\" y=\"64\" text-anchor=\"middle\" font-size=\"8\" fill=\"#1b5e20\">Ozon</text></svg>"
+          }
+        },
+        {
+          "type": "theory",
+          "title": "Типичные провалы на секции C#",
+          "content": "## Ошибки\n\n- Путать **CPU-параллелизм** и **I/O async**.\n- **Deadlock** через `.Result` / `.Wait()`.\n- Игнорировать **отмену** и **tаймауты**.\n- Нет **bounded concurrency** — шторм запросов.\n\n## Связь с Ozon\n\nВсе **24 дня** опираются на модули **01–14** этого курса."
+        },
+        {
+          "type": "quiz",
+          "title": "Quiz 1/4",
+          "content": {
+            "question": "Зачем перед задачами Ozon проходить курс примитивов?",
+            "options": [
+              "Чтобы выучить синтаксис C# с нуля перед секцией лайвкодинга",
+              "Чтобы выбор примитива под задачу был автоматическим",
+              "Чтобы на интервью можно было не писать интерфейсы",
+              "Чтобы заменить unit-тесты знанием API"
+            ],
+            "correctIndices": [
+              1
+            ]
+          }
+        },
+        {
+          "type": "quiz",
+          "title": "Quiz 2/4",
+          "content": {
+            "question": "Задача: «обогатить 10 000 товаров данными из HTTP-сервиса». Что уточнить первым?",
+            "options": [
+              "Какой сериализатор JSON использует сервис",
+              "Можно ли заменить `List<T>` на массив",
+              "Допустимый параллелизм и реакцию на ошибку одного запроса",
+              "Нужно ли логировать каждый успешный запрос"
+            ],
+            "correctIndices": [
+              2
+            ]
+          }
+        },
+        {
+          "type": "quiz",
+          "title": "Quiz 3/4",
+          "content": {
+            "question": "Чем асинхронность отличается от параллелизма в .NET?",
+            "options": [
+              "Асинхронный код всегда выполняется на нескольких ядрах одновременно",
+              "`async`-метод автоматически запускается через `Task.Run`",
+              "Это синонимы: оба про `Parallel.ForEach`",
+              "`await` не держит поток во время I/O; параллелизм — несколько потоков под CPU"
+            ],
+            "correctIndices": [
+              3
+            ]
+          }
+        },
+        {
+          "type": "quiz",
+          "title": "Quiz 4/4",
+          "content": {
+            "question": "Какое решение на лайвкодинге считается готовым?",
+            "options": [
+              "Компилируется, держит инварианты под конкуренцией, уважает отмену",
+              "Покрывает happy path, отмену можно добавить потом",
+              "Использует `lock` в каждом методе, чтобы точно не было гонок",
+              "Работает в однопоточном тесте, конкуренцию обсуждаем устно"
+            ],
+            "correctIndices": [
+              0
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "title": "Task, async и await",
+      "steps": [
+        {
+          "type": "theory",
+          "title": "Task и async/await (.NET 8)",
+          "content": "## API\n\n- `Task` / `Task<T>` — представление асинхронной работы.\n- `async`/`await` — не блокирует поток при I/O.\n- `Task.Run` — offload CPU на пул (осторожно с объёмом).\n- `ConfigureAwait(false)` в библиотеках без UI.\n\n```csharp\npublic async Task<UserDto> LoadUserAsync(HttpClient http, int id, CancellationToken ct)\n{\n    using var resp = await http.GetAsync($\"/users/{id}\", ct).ConfigureAwait(false);\n    resp.EnsureSuccessStatusCode();\n    return await resp.Content.ReadFromJsonAsync<UserDto>(cancellationToken: ct)\n        .ConfigureAwait(false) ?? throw new InvalidOperationException();\n}\n```\n\n## Подводные камни\n\n- `async void` вне обработчиков событий: исключение уронит процесс, а вызывающий не сможет дождаться завершения.\n- `.Result` / `.Wait()` на незавершённой задаче держат поток пула и могут дать deadlock при наличии `SynchronizationContext`.\n- Забытый `await`: задача «улетает», исключение теряется, а код после неё выполняется раньше времени."
+        },
+        {
+          "type": "svg",
+          "title": "await и continuation",
+          "content": {
+            "caption": "await освобождает поток до завершения I/O",
+            "description": "Поток возвращается в пул, continuation планируется после операции.",
+            "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 320 120\" width=\"100%\" role=\"img\" aria-label=\"await освобождает поток до завершения I/O\"><rect id=\"c69-01-n0\" x=\"16\" y=\"36\" width=\"88\" height=\"48\" rx=\"6\" fill=\"#e3f2fd\" stroke=\"#1565c0\"/><text id=\"c69-01-t0\" x=\"60\" y=\"64\" text-anchor=\"middle\" font-size=\"9\" fill=\"#0d47a1\">Caller</text><rect id=\"c69-01-n1\" x=\"116\" y=\"36\" width=\"88\" height=\"48\" rx=\"6\" fill=\"#e3f2fd\" stroke=\"#1565c0\"/><text id=\"c69-01-t1\" x=\"160\" y=\"64\" text-anchor=\"middle\" font-size=\"9\" fill=\"#0d47a1\">await I/O</text><line id=\"c69-01-a1\" x1=\"104\" y1=\"60\" x2=\"116\" y2=\"60\" stroke=\"#37474f\"/><rect id=\"c69-01-n2\" x=\"216\" y=\"36\" width=\"88\" height=\"48\" rx=\"6\" fill=\"#e3f2fd\" stroke=\"#1565c0\"/><text id=\"c69-01-t2\" x=\"260\" y=\"64\" text-anchor=\"middle\" font-size=\"9\" fill=\"#0d47a1\">Resume</text><line id=\"c69-01-a2\" x1=\"204\" y1=\"60\" x2=\"216\" y2=\"60\" stroke=\"#37474f\"/></svg>"
+          }
+        },
+        {
+          "type": "theory",
+          "title": "Ошибки и дни Ozon",
+          "content": "## Ошибки\n\n- `async void` вне event handlers.\n- Захват `SynchronizationContext` → deadlock в UI-тестах.\n- «Fire-and-forget» без логирования ошибок.\n\n## Дни Ozon\n\n**1** Enrichment, **3** AsyncBatcher, **4** RateLimiter, **14** SearchFanOut, **20** WebhookDispatcher, **21** GracefulBackgroundWorker."
+        },
+        {
+          "type": "quiz",
+          "title": "Quiz 1/4",
+          "content": {
+            "question": "Что происходит с потоком при `await` незавершённой I/O-задачи?",
+            "options": [
+              "Поток блокируется до завершения I/O",
+              "Поток возвращается в пул, продолжение выполнится позже",
+              "Под ожидание создаётся новый поток ОС",
+              "Продолжение всегда выполняется на том же потоке"
+            ],
+            "correctIndices": [
+              1
+            ]
+          }
+        },
+        {
+          "type": "quiz",
+          "title": "Quiz 2/4",
+          "content": {
+            "question": "Когда уместен `ConfigureAwait(false)`?",
+            "options": [
+              "В библиотечном коде без привязки к контексту",
+              "В обработчике кнопки WPF перед обновлением UI",
+              "Только внутри `lock`, чтобы не потерять блокировку",
+              "Всегда: в ASP.NET Core он ускоряет любой `await` в разы"
+            ],
+            "correctIndices": [
+              0
+            ]
+          }
+        },
+        {
+          "type": "quiz",
+          "title": "Quiz 3/4",
+          "content": {
+            "question": "Почему плохо оборачивать каждый HTTP-вызов в `Task.Run`?",
+            "options": [
+              "`Task.Run` не поддерживает `CancellationToken`",
+              "`HttpClient` нельзя вызывать из потока пула — будет deadlock на контексте",
+              "`Task.Run` всегда создаёт новый поток ОС",
+              "Это I/O: лишние задачи пула только добавляют очередь"
+            ],
+            "correctIndices": [
+              3
+            ]
+          }
+        },
+        {
+          "type": "quiz",
+          "title": "Quiz 4/4",
+          "content": {
+            "question": "Как дождаться двух независимых I/O-операций с минимальной задержкой?",
+            "options": [
+              "`await FooAsync(); await BarAsync();` подряд",
+              "`Task.WaitAll(a, b)` внутри async-метода",
+              "Запустить обе и сделать `await Task.WhenAll(a, b)`",
+              "`await Task.WhenAny(a, b)` и вернуть результат первой"
+            ],
+            "correctIndices": [
+              2
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "title": "CancellationToken и кооперативная отмена",
+      "steps": [
+        {
+          "type": "theory",
+          "title": "CancellationToken",
+          "content": "## API\n\n- `CancellationTokenSource` — источник сигнала отмены.\n- `CreateLinkedTokenSource` — объединение таймаута и внешней отмены.\n- `ThrowIfCancellationRequested()` / проверка `IsCancellationRequested`.\n\n```csharp\npublic async Task WorkAsync(CancellationToken ct)\n{\n    while (!ct.IsCancellationRequested)\n    {\n        await Task.Delay(100, ct);\n        ct.ThrowIfCancellationRequested();\n    }\n}\n```\n\n## Подводные камни\n\n- Не передавать `ct` дальше по цепочке: отмена запроса не остановит вложенный HTTP- или SQL-вызов.\n- Не вызывать `Dispose` у `CancellationTokenSource` с таймаутом или связанного CTS — висящие таймеры и регистрации.\n- Ловить `OperationCanceledException` и возвращать `null`: вызывающий не узнает, что операция отменена."
+        },
+        {
+          "type": "svg",
+          "title": "Цепочка отмены",
+          "content": {
+            "caption": "CTS пробрасывает отмену вниз по стеку вызовов",
+            "description": "Linked CTS сочетает shutdown и per-request timeout.",
+            "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 320 120\" width=\"100%\" role=\"img\" aria-label=\"CTS пробрасывает отмену вниз по стеку вызовов\"><rect id=\"c69-02-n0\" x=\"16\" y=\"36\" width=\"88\" height=\"48\" rx=\"6\" fill=\"#e3f2fd\" stroke=\"#1565c0\"/><text id=\"c69-02-t0\" x=\"60\" y=\"64\" text-anchor=\"middle\" font-size=\"9\" fill=\"#0d47a1\">Parent CTS</text><rect id=\"c69-02-n1\" x=\"116\" y=\"36\" width=\"88\" height=\"48\" rx=\"6\" fill=\"#e3f2fd\" stroke=\"#1565c0\"/><text id=\"c69-02-t1\" x=\"160\" y=\"64\" text-anchor=\"middle\" font-size=\"9\" fill=\"#0d47a1\">Linked</text><line id=\"c69-02-a1\" x1=\"104\" y1=\"60\" x2=\"116\" y2=\"60\" stroke=\"#37474f\"/><rect id=\"c69-02-n2\" x=\"216\" y=\"36\" width=\"88\" height=\"48\" rx=\"6\" fill=\"#e3f2fd\" stroke=\"#1565c0\"/><text id=\"c69-02-t2\" x=\"260\" y=\"64\" text-anchor=\"middle\" font-size=\"9\" fill=\"#0d47a1\">Child work</text><line id=\"c69-02-a2\" x1=\"204\" y1=\"60\" x2=\"216\" y2=\"60\" stroke=\"#37474f\"/></svg>"
+          }
+        },
+        {
+          "type": "theory",
+          "title": "Ошибки и дни Ozon",
+          "content": "## Ошибки\n\n- Ловить `OperationCanceledException` и глотать без rethrow при cooperative cancel.\n- Не передавать `ct` во вложенные вызовы.\n\n## Дни Ozon\n\n**1**, **19** TimeoutBudget, **20** WebhookDispatcher, **21** GracefulBackgroundWorker, **23** BoundedPipeline."
+        },
+        {
+          "type": "quiz",
+          "title": "Quiz 1/4",
+          "content": {
+            "question": "Как устроена отмена в .NET?",
+            "options": [
+              "Кооперативно: код сам проверяет токен и передаёт его дальше",
+              "Среда прерывает поток, как `Thread.Abort`",
+              "`Cancel()` немедленно завершает все задачи с этим токеном",
+              "Отмена работает только для задач из `Task.Run`"
+            ],
+            "correctIndices": [
+              0
+            ]
+          }
+        },
+        {
+          "type": "quiz",
+          "title": "Quiz 2/4",
+          "content": {
+            "question": "Зачем `CreateLinkedTokenSource(ct)` вместе с `CancelAfter(timeout)`?",
+            "options": [
+              "Чтобы отмена дочерней операции отменяла и родительский `ct`",
+              "Отмена и по `ct` вызывающего, и по своему таймауту",
+              "Чтобы токен можно было переиспользовать после отмены",
+              "Чтобы `OperationCanceledException` не выбрасывался"
+            ],
+            "correctIndices": [
+              1
+            ]
+          }
+        },
+        {
+          "type": "quiz",
+          "title": "Quiz 3/4",
+          "content": {
+            "question": "Пользователь отменил запрос, метод поймал `OperationCanceledException`. Что правильно?",
+            "options": [
+              "Вернуть `default`, чтобы не ронять запрос",
+              "Повторить операцию с новым токеном",
+              "Пробросить дальше, не логируя как ошибку",
+              "Обернуть в `InvalidOperationException` с понятным сообщением"
+            ],
+            "correctIndices": [
+              2
+            ]
+          }
+        },
+        {
+          "type": "quiz",
+          "title": "Quiz 4/4",
+          "content": {
+            "question": "Что делает `task.WaitAsync(ct)`?",
+            "options": [
+              "Отменяет саму задачу, если она ещё не завершилась",
+              "Передаёт `ct` внутрь уже запущенной задачи",
+              "Блокирует поток до завершения или отмены",
+              "Отменяет только ожидание — сама задача продолжает выполняться"
+            ],
+            "correctIndices": [
+              3
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "title": "lock и Interlocked",
+      "steps": [
+        {
+          "type": "theory",
+          "title": "lock / Monitor / Interlocked",
+          "content": "## API\n\n- `lock` — взаимное исключение для in-memory критических секций.\n- `Interlocked` — атомарные операции без полного lock.\n- `ReaderWriterLockSlim` — many readers / single writer.\n\n```csharp\nprivate int _count;\npublic void Increment() => Interlocked.Increment(ref _count);\n\nprivate readonly object _gate = new();\npublic void AddToList(List<int> list, int value)\n{\n    lock (_gate) { list.Add(value); }\n}\n```\n\n## Подводные камни\n\n- `await` внутри `lock` запрещён компилятором; для асинхронной критической секции нужен `SemaphoreSlim(1, 1)`.\n- `lock (this)`, `lock` на строку или `Type` — внешний код может захватить тот же монитор.\n- Разный порядок захвата двух блокировок в разных методах → deadlock под нагрузкой."
+        },
+        {
+          "type": "svg",
+          "title": "Критическая секция",
+          "content": {
+            "caption": "lock сериализует доступ к общему состоянию",
+            "description": "Interlocked подходит для счётчиков и CAS-паттернов.",
+            "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 320 120\" width=\"100%\" role=\"img\" aria-label=\"lock сериализует доступ к общему состоянию\"><rect id=\"c69-03-n0\" x=\"16\" y=\"36\" width=\"88\" height=\"48\" rx=\"6\" fill=\"#e3f2fd\" stroke=\"#1565c0\"/><text id=\"c69-03-t0\" x=\"60\" y=\"64\" text-anchor=\"middle\" font-size=\"9\" fill=\"#0d47a1\">Thread A</text><rect id=\"c69-03-n1\" x=\"116\" y=\"36\" width=\"88\" height=\"48\" rx=\"6\" fill=\"#e3f2fd\" stroke=\"#1565c0\"/><text id=\"c69-03-t1\" x=\"160\" y=\"64\" text-anchor=\"middle\" font-size=\"9\" fill=\"#0d47a1\">lock</text><line id=\"c69-03-a1\" x1=\"104\" y1=\"60\" x2=\"116\" y2=\"60\" stroke=\"#37474f\"/><rect id=\"c69-03-n2\" x=\"216\" y=\"36\" width=\"88\" height=\"48\" rx=\"6\" fill=\"#e3f2fd\" stroke=\"#1565c0\"/><text id=\"c69-03-t2\" x=\"260\" y=\"64\" text-anchor=\"middle\" font-size=\"9\" fill=\"#0d47a1\">Thread B</text><line id=\"c69-03-a2\" x1=\"204\" y1=\"60\" x2=\"216\" y2=\"60\" stroke=\"#37474f\"/></svg>"
+          }
+        },
+        {
+          "type": "theory",
+          "title": "Ошибки и дни Ozon",
+          "content": "## Ошибки\n\n- `await` внутри `lock` — запрещено.\n- Lock ordering → deadlock.\n\n## Дни Ozon\n\n**7** TtlCache, **8** LruCache, **11** InventoryReservation, **16** TopKProducts, **17** SlidingWindowCounter."
+        },
+        {
+          "type": "quiz",
+          "title": "Quiz 1/4",
+          "content": {
+            "question": "Почему нельзя `await` внутри `lock`?",
+            "options": [
+              "Разрешено, но только с `ConfigureAwait(false)`",
+              "Продолжение может выполниться в другом потоке, а `Monitor` привязан к потоку",
+              "Это ограничение только Debug-сборки",
+              "`lock` вообще нельзя использовать в async-методах"
+            ],
+            "correctIndices": [
+              1
+            ]
+          }
+        },
+        {
+          "type": "quiz",
+          "title": "Quiz 2/4",
+          "content": {
+            "question": "Когда `Interlocked` достаточно вместо `lock`?",
+            "options": [
+              "Одна операция над одним полем: инкремент счётчика, CAS флага",
+              "Нужно атомарно обновить два связанных поля",
+              "Внутри критической секции есть `await`",
+              "Нужно проверить наличие ключа и добавить элемент в `Dictionary`"
+            ],
+            "correctIndices": [
+              0
+            ]
+          }
+        },
+        {
+          "type": "quiz",
+          "title": "Quiz 3/4",
+          "content": {
+            "question": "Когда оправдан `ReaderWriterLockSlim`?",
+            "options": [
+              "Async-код с `await` внутри секции",
+              "Записей больше, чем чтений, и они короткие",
+              "Как замена `Interlocked.Increment`",
+              "Частые чтения, редкие записи, без `await`"
+            ],
+            "correctIndices": [
+              3
+            ]
+          }
+        },
+        {
+          "type": "quiz",
+          "title": "Quiz 4/4",
+          "content": {
+            "question": "Метод A берёт `lockX`, затем `lockY`; метод B — `lockY`, затем `lockX`. Что будет?",
+            "options": [
+              "Ничего: `Monitor` реентерабелен",
+              "`SynchronizationLockException` при входе",
+              "Возможен deadlock при параллельном вызове",
+              "Компилятор предупредит о порядке блокировок"
+            ],
+            "correctIndices": [
+              2
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "title": "SemaphoreSlim",
+      "steps": [
+        {
+          "type": "theory",
+          "title": "SemaphoreSlim",
+          "content": "## API\n\nОграничение числа одновременных операций.\n\n```csharp\npublic async Task<T> WithPermitAsync<T>(\n    SemaphoreSlim gate, Func<Task<T>> action, CancellationToken ct)\n{\n    await gate.WaitAsync(ct).ConfigureAwait(false);\n    try { return await action().ConfigureAwait(false); }\n    finally { gate.Release(); }\n}\n```\n\n`WaitAsync(CancellationToken)` — обязателен в server code.\n\n## Подводные камни\n\n- `Release` не в `finally` — каждое исключение «съедает» слот, и лимит постепенно падает до нуля.\n- `Release` без успешного `WaitAsync` (например, ожидание отменено) — лимит растёт или `SemaphoreFullException` при заданном `maxCount`.\n- Один `SemaphoreSlim` на всё приложение там, где нужен лимит на ключ или на конкретный downstream."
+        },
+        {
+          "type": "svg",
+          "title": "Слоты семафора",
+          "content": {
+            "caption": "N разрешений — не более N параллельных задач",
+            "description": "Release в finally защищает от утечки слотов.",
+            "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 320 120\" width=\"100%\" role=\"img\" aria-label=\"N разрешений — не более N параллельных задач\"><rect id=\"c69-04-n0\" x=\"16\" y=\"36\" width=\"88\" height=\"48\" rx=\"6\" fill=\"#e3f2fd\" stroke=\"#1565c0\"/><text id=\"c69-04-t0\" x=\"60\" y=\"64\" text-anchor=\"middle\" font-size=\"9\" fill=\"#0d47a1\">Wait</text><rect id=\"c69-04-n1\" x=\"116\" y=\"36\" width=\"88\" height=\"48\" rx=\"6\" fill=\"#e3f2fd\" stroke=\"#1565c0\"/><text id=\"c69-04-t1\" x=\"160\" y=\"64\" text-anchor=\"middle\" font-size=\"9\" fill=\"#0d47a1\">N slots</text><line id=\"c69-04-a1\" x1=\"104\" y1=\"60\" x2=\"116\" y2=\"60\" stroke=\"#37474f\"/><rect id=\"c69-04-n2\" x=\"216\" y=\"36\" width=\"88\" height=\"48\" rx=\"6\" fill=\"#e3f2fd\" stroke=\"#1565c0\"/><text id=\"c69-04-t2\" x=\"260\" y=\"64\" text-anchor=\"middle\" font-size=\"9\" fill=\"#0d47a1\">Release</text><line id=\"c69-04-a2\" x1=\"204\" y1=\"60\" x2=\"216\" y2=\"60\" stroke=\"#37474f\"/></svg>"
+          }
+        },
+        {
+          "type": "theory",
+          "title": "Ошибки и дни Ozon",
+          "content": "## Ошибки\n\n- Release без Wait.\n- Забытый finally при exception.\n\n## Дни Ozon\n\n**1** Enrichment (bounded fetch), **9** KeyedConcurrencyLimiter, **22** AdapterCorrelator, **23** BoundedPipeline."
+        },
+        {
+          "type": "quiz",
+          "title": "Quiz 1/4",
+          "content": {
+            "question": "`new SemaphoreSlim(3, 3)`: вызвали `Release()` без предшествующего `WaitAsync`. Что будет?",
+            "options": [
+              "Ничего: лишний `Release` игнорируется",
+              "Лимит молча вырастет до 4",
+              "`SemaphoreFullException`",
+              "Следующий `WaitAsync` зависнет"
+            ],
+            "correctIndices": [
+              2
+            ]
+          }
+        },
+        {
+          "type": "quiz",
+          "title": "Quiz 2/4",
+          "content": {
+            "question": "Где правильно вызывать `Release`?",
+            "options": [
+              "В `finally` блока `try`, открытого до `WaitAsync`",
+              "В `finally` после успешного `await WaitAsync`",
+              "Только в ветке успеха: при ошибке слот должен остаться занят",
+              "В `catch`, чтобы освободить слот при исключении"
+            ],
+            "correctIndices": [
+              1
+            ]
+          }
+        },
+        {
+          "type": "quiz",
+          "title": "Quiz 3/4",
+          "content": {
+            "question": "`WaitAsync(ct)` отменён. Что с семафором?",
+            "options": [
+              "Слот не получен, `Release` вызывать нельзя",
+              "Слот получен, нужно вызвать `Release`",
+              "Семафор переходит в состояние faulted",
+              "Счётчик уменьшился и восстановится по таймауту"
+            ],
+            "correctIndices": [
+              0
+            ]
+          }
+        },
+        {
+          "type": "quiz",
+          "title": "Quiz 4/4",
+          "content": {
+            "question": "Bounded fan-out: 1000 id, не больше 10 запросов одновременно. Какой код верный?",
+            "options": [
+              "`Parallel.ForEach` с `MaxDegreeOfParallelism = 10` и `.Result` внутри",
+              "Запустить 1000 задач и вызвать `ThreadPool.SetMaxThreads(10, 10)`",
+              "`lock` вокруг HTTP-вызова",
+              "`SemaphoreSlim(10)` с `try/finally Release` вокруг запроса + `Task.WhenAll`"
+            ],
+            "correctIndices": [
+              3
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "title": "Concurrent-коллекции",
+      "steps": [
+        {
+          "type": "theory",
+          "title": "ConcurrentDictionary и родственники",
+          "content": "## API\n\n- `ConcurrentDictionary<TKey,TValue>` — thread-safe map.\n- `ConcurrentQueue`, `ConcurrentBag` — producer/consumer.\n\n```csharp\nvar seen = new ConcurrentDictionary<string, byte>();\nif (seen.TryAdd(messageId, 0))\n{\n    // первая доставка messageId — обрабатываем\n}\n\nvar views = new ConcurrentDictionary<string, int>();\nviews.AddOrUpdate(sku, 1, (_, count) => count + 1);\n```\n\nДля LRU/TTL нужны **дополнительные** lock или сегментация.\n\n## Подводные камни\n\n- `GetOrAdd(key, factory)` может вызвать factory несколько раз при гонке — для дорогих операций храните `Lazy<T>` или `Task<T>`.\n- `if (!dict.ContainsKey(k)) dict[k] = v;` — check-then-act не атомарен; используйте `TryAdd` / `AddOrUpdate`.\n- `Count` и перечисление — дорогие операции и снимок «на момент», на них нельзя строить инварианты."
+        },
+        {
+          "type": "svg",
+          "title": "Concurrent map",
+          "content": {
+            "caption": "TryGet / TryAdd без внешнего lock",
+            "description": "Не заменяет транзакционность между несколькими ключами.",
+            "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 320 120\" width=\"100%\" role=\"img\" aria-label=\"TryGet / TryAdd без внешнего lock\"><rect id=\"c69-05-n0\" x=\"16\" y=\"36\" width=\"88\" height=\"48\" rx=\"6\" fill=\"#e3f2fd\" stroke=\"#1565c0\"/><text id=\"c69-05-t0\" x=\"60\" y=\"64\" text-anchor=\"middle\" font-size=\"9\" fill=\"#0d47a1\">TryGet</text><rect id=\"c69-05-n1\" x=\"116\" y=\"36\" width=\"88\" height=\"48\" rx=\"6\" fill=\"#e3f2fd\" stroke=\"#1565c0\"/><text id=\"c69-05-t1\" x=\"160\" y=\"64\" text-anchor=\"middle\" font-size=\"9\" fill=\"#0d47a1\">TryAdd</text><line id=\"c69-05-a1\" x1=\"104\" y1=\"60\" x2=\"116\" y2=\"60\" stroke=\"#37474f\"/><rect id=\"c69-05-n2\" x=\"216\" y=\"36\" width=\"88\" height=\"48\" rx=\"6\" fill=\"#e3f2fd\" stroke=\"#1565c0\"/><text id=\"c69-05-t2\" x=\"260\" y=\"64\" text-anchor=\"middle\" font-size=\"9\" fill=\"#0d47a1\">Race?</text><line id=\"c69-05-a2\" x1=\"204\" y1=\"60\" x2=\"216\" y2=\"60\" stroke=\"#37474f\"/></svg>"
+          }
+        },
+        {
+          "type": "theory",
+          "title": "Ошибки и дни Ozon",
+          "content": "## Ошибки\n\n- Составные операции без синхронизации.\n- `GetOrAdd` factory медленная → блокировки.\n\n## Дни Ozon\n\n**7** TtlCache, **8** LruCache, **16** TopKProducts, **18** PriorityJobQueue."
+        },
+        {
+          "type": "quiz",
+          "title": "Quiz 1/4",
+          "content": {
+            "question": "Что `ConcurrentDictionary` НЕ гарантирует?",
+            "options": [
+              "Потокобезопасность `TryGetValue`",
+              "Атомарность `TryAdd` по одному ключу",
+              "Атомарность составной операции над несколькими ключами",
+              "Отсутствие исключения при перечислении во время записи"
+            ],
+            "correctIndices": [
+              2
+            ]
+          }
+        },
+        {
+          "type": "quiz",
+          "title": "Quiz 2/4",
+          "content": {
+            "question": "Что гарантирует `GetOrAdd(key, valueFactory)`?",
+            "options": [
+              "Factory выполнится ровно один раз на ключ",
+              "Factory выполняется под блокировкой ключа",
+              "Второй вызов ждёт, пока первый вернёт значение",
+              "Значение в словаре одно, но factory может вызваться несколько раз"
+            ],
+            "correctIndices": [
+              3
+            ]
+          }
+        },
+        {
+          "type": "quiz",
+          "title": "Quiz 3/4",
+          "content": {
+            "question": "LRU-кэш на одном `ConcurrentDictionary` без блокировок…",
+            "options": [
+              "Достаточен: словарь хранит порядок вставки",
+              "Не держит согласованно порядок использования и вытеснение",
+              "Достаточен, если ёмкость меньше 1000",
+              "Работает, если удалять `Keys.First()` как самый старый элемент"
+            ],
+            "correctIndices": [
+              1
+            ]
+          }
+        },
+        {
+          "type": "quiz",
+          "title": "Quiz 4/4",
+          "content": {
+            "question": "Для чего подходит `ConcurrentQueue<T>`?",
+            "options": [
+              "Неблокирующая FIFO-очередь между потоками без внешнего `lock`",
+              "Очередь с асинхронным ожиданием элемента через `await`",
+              "Очередь с приоритетами",
+              "Ограниченный буфер с back-pressure"
+            ],
+            "correctIndices": [
+              0
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "title": "TaskCompletionSource",
+      "steps": [
+        {
+          "type": "theory",
+          "title": "TaskCompletionSource<T>",
+          "content": "## API\n\nРучное завершение `Task` — callback-API, event bridges.\n\n```csharp\nvar tcs = new TaskCompletionSource<string>(TaskCreationOptions.RunContinuationsAsynchronously);\nregistration = token.Register(() => tcs.TrySetCanceled(token));\n// позже: tcs.TrySetResult(\"ok\");\nreturn tcs.Task;\n```\n\n`RunContinuationsAsynchronously` снижает риск deadlock.\n\n## Подводные камни\n\n- `new TaskCompletionSource<T>()` без `RunContinuationsAsynchronously` — продолжения ожидающих выполнятся синхронно внутри `SetResult`, возможно под вашим `lock`.\n- `SetResult` дважды → `InvalidOperationException`; в гонках используйте `TrySetResult` / `TrySetException`.\n- TCS, который никто не завершил, — ожидающие висят вечно; привязывайте отмену через `ct.Register(() => tcs.TrySetCanceled(ct))`."
+        },
+        {
+          "type": "svg",
+          "title": "Мост callback → Task",
+          "content": {
+            "caption": "TCS связывает imperative API с async",
+            "description": "TrySet* идempotent при правильной guards.",
+            "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 320 120\" width=\"100%\" role=\"img\" aria-label=\"TCS связывает imperative API с async\"><rect id=\"c69-06-n0\" x=\"16\" y=\"36\" width=\"88\" height=\"48\" rx=\"6\" fill=\"#e3f2fd\" stroke=\"#1565c0\"/><text id=\"c69-06-t0\" x=\"60\" y=\"64\" text-anchor=\"middle\" font-size=\"9\" fill=\"#0d47a1\">Callback</text><rect id=\"c69-06-n1\" x=\"116\" y=\"36\" width=\"88\" height=\"48\" rx=\"6\" fill=\"#e3f2fd\" stroke=\"#1565c0\"/><text id=\"c69-06-t1\" x=\"160\" y=\"64\" text-anchor=\"middle\" font-size=\"9\" fill=\"#0d47a1\">TCS</text><line id=\"c69-06-a1\" x1=\"104\" y1=\"60\" x2=\"116\" y2=\"60\" stroke=\"#37474f\"/><rect id=\"c69-06-n2\" x=\"216\" y=\"36\" width=\"88\" height=\"48\" rx=\"6\" fill=\"#e3f2fd\" stroke=\"#1565c0\"/><text id=\"c69-06-t2\" x=\"260\" y=\"64\" text-anchor=\"middle\" font-size=\"9\" fill=\"#0d47a1\">Task</text><line id=\"c69-06-a2\" x1=\"204\" y1=\"60\" x2=\"216\" y2=\"60\" stroke=\"#37474f\"/></svg>"
+          }
+        },
+        {
+          "type": "theory",
+          "title": "Ошибки и дни Ozon",
+          "content": "## Ошибки\n\n- Двойной SetResult.\n- Не отменять TCS при CTS cancel.\n\n## Дни Ozon\n\n**2** SingleFlight, **19** TimeoutBudget, **20** WebhookDispatcher."
+        },
+        {
+          "type": "quiz",
+          "title": "Quiz 1/4",
+          "content": {
+            "question": "Что даёт `TaskCreationOptions.RunContinuationsAsynchronously` для TCS?",
+            "options": [
+              "Без флага `SetResult` можно вызывать только из потока создателя",
+              "Задача TCS запускается в пуле потоков",
+              "Продолжения ожидающих не выполняются синхронно внутри `SetResult`",
+              "TCS можно завершить повторно"
+            ],
+            "correctIndices": [
+              2
+            ]
+          }
+        },
+        {
+          "type": "quiz",
+          "title": "Quiz 2/4",
+          "content": {
+            "question": "Два потока одновременно завершают один TCS. Что использовать?",
+            "options": [
+              "`SetResult` — второй вызов будет проигнорирован",
+              "`lock` вокруг `SetResult`, иначе задача завершится дважды",
+              "Пересоздать TCS перед вторым вызовом",
+              "`TrySet*`: второй вызов просто вернёт `false`"
+            ],
+            "correctIndices": [
+              3
+            ]
+          }
+        },
+        {
+          "type": "quiz",
+          "title": "Quiz 3/4",
+          "content": {
+            "question": "Для чего чаще всего нужен `TaskCompletionSource<T>`?",
+            "options": [
+              "Запустить CPU-работу в пуле потоков без блокировки вызывающего",
+              "Обернуть callback или событие в `Task`, который можно ждать",
+              "Ограничить число параллельных задач",
+              "Отменить уже выполняющийся `Task`"
+            ],
+            "correctIndices": [
+              1
+            ]
+          }
+        },
+        {
+          "type": "quiz",
+          "title": "Quiz 4/4",
+          "content": {
+            "question": "Как отменить ожидание TCS по `CancellationToken`?",
+            "options": [
+              "`ct.Register(() => tcs.TrySetCanceled(ct))`",
+              "Передать `ct` в конструктор `TaskCompletionSource`",
+              "Вызвать `tcs.Task.Dispose()`",
+              "Бросить `OperationCanceledException` в любом потоке"
+            ],
+            "correctIndices": [
+              0
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "title": "System.Threading.Channels",
+      "steps": [
+        {
+          "type": "theory",
+          "title": "Channel<T>",
+          "content": "## API\n\nBounded/unbounded очереди producer/consumer.\n\n```csharp\nvar channel = Channel.CreateBounded<WorkItem>(new BoundedChannelOptions(1000)\n{\n    FullMode = BoundedChannelFullMode.Wait,\n    SingleReader = false,\n    SingleWriter = false,\n});\nawait channel.Writer.WriteAsync(item, ct);\nawait foreach (var x in channel.Reader.ReadAllAsync(ct)) { /* ... */ }\n```\n\n## Подводные камни\n\n- Никто не вызвал `Writer.Complete()` — `ReadAllAsync` у consumer никогда не завершится.\n- `TryWrite` на заполненном bounded-канале с `FullMode = Wait` возвращает `false`, а не ждёт; для back-pressure нужен `WriteAsync`.\n- `SingleReader = true` при нескольких читателях — неопределённое поведение: флаг включает оптимизации, а не проверку."
+        },
+        {
+          "type": "svg",
+          "title": "Producer / consumer",
+          "content": {
+            "caption": "Bounded channel back-pressure",
+            "description": "Wait mode блокирует writer при переполнении.",
+            "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 320 120\" width=\"100%\" role=\"img\" aria-label=\"Bounded channel back-pressure\"><rect id=\"c69-07-n0\" x=\"16\" y=\"36\" width=\"88\" height=\"48\" rx=\"6\" fill=\"#e3f2fd\" stroke=\"#1565c0\"/><text id=\"c69-07-t0\" x=\"60\" y=\"64\" text-anchor=\"middle\" font-size=\"9\" fill=\"#0d47a1\">Writer</text><rect id=\"c69-07-n1\" x=\"116\" y=\"36\" width=\"88\" height=\"48\" rx=\"6\" fill=\"#e3f2fd\" stroke=\"#1565c0\"/><text id=\"c69-07-t1\" x=\"160\" y=\"64\" text-anchor=\"middle\" font-size=\"9\" fill=\"#0d47a1\">Buffer</text><line id=\"c69-07-a1\" x1=\"104\" y1=\"60\" x2=\"116\" y2=\"60\" stroke=\"#37474f\"/><rect id=\"c69-07-n2\" x=\"216\" y=\"36\" width=\"88\" height=\"48\" rx=\"6\" fill=\"#e3f2fd\" stroke=\"#1565c0\"/><text id=\"c69-07-t2\" x=\"260\" y=\"64\" text-anchor=\"middle\" font-size=\"9\" fill=\"#0d47a1\">Reader</text><line id=\"c69-07-a2\" x1=\"204\" y1=\"60\" x2=\"216\" y2=\"60\" stroke=\"#37474f\"/></svg>"
+          }
+        },
+        {
+          "type": "theory",
+          "title": "Ошибки и дни Ozon",
+          "content": "## Ошибки\n\n- Не завершить Writer → reader висит.\n- Unbounded channel → OOM под нагрузкой.\n\n## Дни Ozon\n\n**3** AsyncBatcher, **22** AdapterCorrelator, **23** BoundedPipeline, **24** Outbox."
+        },
+        {
+          "type": "quiz",
+          "title": "Quiz 1/4",
+          "content": {
+            "question": "Что означает `BoundedChannelFullMode.Wait`?",
+            "options": [
+              "`WriteAsync` ждёт свободного места в буфере",
+              "При переполнении удаляется самый старый элемент",
+              "Новый элемент отбрасывается без ожидания",
+              "Буфер растёт без лимита"
+            ],
+            "correctIndices": [
+              0
+            ]
+          }
+        },
+        {
+          "type": "quiz",
+          "title": "Quiz 2/4",
+          "content": {
+            "question": "Зачем producer вызывает `channel.Writer.Complete()`?",
+            "options": [
+              "Сбросить буфер и отбросить непрочитанные элементы",
+              "Дождаться, пока reader прочитает все элементы",
+              "Сказать reader, что элементов больше не будет",
+              "Разблокировать writer, ожидающий в `WriteAsync`"
+            ],
+            "correctIndices": [
+              2
+            ]
+          }
+        },
+        {
+          "type": "quiz",
+          "title": "Quiz 3/4",
+          "content": {
+            "question": "Чем удобен `await foreach (var x in reader.ReadAllAsync(ct))`?",
+            "options": [
+              "Читает все элементы сразу в список",
+              "Каждый элемент получат все reader'ы канала (broadcast)",
+              "Не требует вызова `Complete` у writer",
+              "Цикл с отменой, завершающийся после `Complete`"
+            ],
+            "correctIndices": [
+              3
+            ]
+          }
+        },
+        {
+          "type": "quiz",
+          "title": "Quiz 4/4",
+          "content": {
+            "question": "Как bounded channel даёт back-pressure?",
+            "options": [
+              "Reader замедляется, когда буфер почти пуст",
+              "Полный буфер заставляет `WriteAsync` ждать",
+              "Лишние элементы сохраняются на диск",
+              "`WriteAsync` бросает исключение, и producer делает retry"
+            ],
+            "correctIndices": [
+              1
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "title": "TimeProvider и таймеры",
+      "steps": [
+        {
+          "type": "theory",
+          "title": "TimeProvider (.NET 8)",
+          "content": "## API\n\n- `TimeProvider.System` / injectable fake time в тестах.\n- `ITimer`, `GetUtcNow()`.\n\n```csharp\npublic sealed class TtlEntry(TimeProvider time, TimeSpan ttl)\n{\n    private readonly long _expires = time.GetUtcNow().Add(ttl).Ticks;\n    public bool IsExpired() => time.GetUtcNow().Ticks >= _expires;\n}\n```\n\n## Подводные камни\n\n- `DateTime.Now` в логике TTL и окон — локальное время прыгает при переводе часов; нужен UTC или `TimeProvider`.\n- `Thread.Sleep` и реальные задержки в тестах — медленно и нестабильно; используйте `FakeTimeProvider`.\n- `Task.Delay` в цикле накапливает дрейф на время работы тела; для равномерного тика — `PeriodicTimer`."
+        },
+        {
+          "type": "svg",
+          "title": "Время и TTL",
+          "content": {
+            "caption": "TimeProvider делает TTL тестируемым",
+            "description": "FakeTimeProvider в unit-тестах без Thread.Sleep.",
+            "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 320 120\" width=\"100%\" role=\"img\" aria-label=\"TimeProvider делает TTL тестируемым\"><rect id=\"c69-08-n0\" x=\"16\" y=\"36\" width=\"88\" height=\"48\" rx=\"6\" fill=\"#e3f2fd\" stroke=\"#1565c0\"/><text id=\"c69-08-t0\" x=\"60\" y=\"64\" text-anchor=\"middle\" font-size=\"9\" fill=\"#0d47a1\">UtcNow</text><rect id=\"c69-08-n1\" x=\"116\" y=\"36\" width=\"88\" height=\"48\" rx=\"6\" fill=\"#e3f2fd\" stroke=\"#1565c0\"/><text id=\"c69-08-t1\" x=\"160\" y=\"64\" text-anchor=\"middle\" font-size=\"9\" fill=\"#0d47a1\">TTL</text><line id=\"c69-08-a1\" x1=\"104\" y1=\"60\" x2=\"116\" y2=\"60\" stroke=\"#37474f\"/><rect id=\"c69-08-n2\" x=\"216\" y=\"36\" width=\"88\" height=\"48\" rx=\"6\" fill=\"#e3f2fd\" stroke=\"#1565c0\"/><text id=\"c69-08-t2\" x=\"260\" y=\"64\" text-anchor=\"middle\" font-size=\"9\" fill=\"#0d47a1\">Expire</text><line id=\"c69-08-a2\" x1=\"204\" y1=\"60\" x2=\"216\" y2=\"60\" stroke=\"#37474f\"/></svg>"
+          }
+        },
+        {
+          "type": "theory",
+          "title": "Ошибки и дни Ozon",
+          "content": "## Ошибки\n\n- `DateTime.Now` в библиотечном коде.\n- Drift таймеров под нагрузкой.\n\n## Дни Ozon\n\n**4** RateLimiter, **7** TtlCache, **17** SlidingWindowCounter, **19** TimeoutBudget, **20** WebhookDispatcher."
+        },
+        {
+          "type": "quiz",
+          "title": "Quiz 1/4",
+          "content": {
+            "question": "Зачем `TimeProvider` в .NET 8?",
+            "options": [
+              "Подменять время в тестах",
+              "Получать время с NTP-сервера",
+              "Ускорять `Task.Delay` в production",
+              "Заменить `Stopwatch` для замеров производительности"
+            ],
+            "correctIndices": [
+              0
+            ]
+          }
+        },
+        {
+          "type": "quiz",
+          "title": "Quiz 2/4",
+          "content": {
+            "question": "Как протестировать TTL-кэш без реального ожидания?",
+            "options": [
+              "`Thread.Sleep(ttl)` в тесте",
+              "Выставить TTL = 0 и проверить, что записи нет",
+              "`FakeTimeProvider.Advance(ttl)` и проверить промах",
+              "Подменить `DateTime.UtcNow` через статический сеттер"
+            ],
+            "correctIndices": [
+              2
+            ]
+          }
+        },
+        {
+          "type": "quiz",
+          "title": "Quiz 3/4",
+          "content": {
+            "question": "Чем `PeriodicTimer` лучше цикла `work; await Task.Delay(period)`?",
+            "options": [
+              "`Task.Delay` нельзя отменить",
+              "Тики по расписанию: время работы тела не сдвигает интервал",
+              "`PeriodicTimer` запускает тело параллельно, если предыдущее не завершилось",
+              "`PeriodicTimer` не требует `Dispose`"
+            ],
+            "correctIndices": [
+              1
+            ]
+          }
+        },
+        {
+          "type": "quiz",
+          "title": "Quiz 4/4",
+          "content": {
+            "question": "Какое время использовать для момента истечения TTL?",
+            "options": [
+              "`DateTime.Now`",
+              "`DateTime.Today` плюс TTL",
+              "`Environment.TickCount`, приведённый к `DateTime`",
+              "`timeProvider.GetUtcNow()`"
+            ],
+            "correctIndices": [
+              3
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "title": "Коллекции и алгоритмы",
+      "steps": [
+        {
+          "type": "theory",
+          "title": "Структуры данных в livecoding",
+          "content": "## API\n\n- `PriorityQueue<TElement,TPriority>` (.NET 6+).\n- `SortedDictionary`, `Dictionary`, custom heap.\n- Merge k sorted lists, top-K, dedup.\n\n```csharp\nvar pq = new PriorityQueue<int, int>();\npq.Enqueue(item, priority);\nwhile (pq.TryDequeue(out var x, out _)) { /* ... */ }\n```\n\n## Подводные камни\n\n- LRU через `List<T>.Remove` — O(n) на каждое обращение; нужен `Dictionary` + `LinkedList` с узлами.\n- `PriorityQueue<TElement, TPriority>` не стабильна: при равном приоритете порядок не FIFO — добавьте sequence в ключ.\n- Top-K через полную сортировку O(n log n), когда достаточно кучи размера K — O(n log K)."
+        },
+        {
+          "type": "svg",
+          "title": "Top-K / merge",
+          "content": {
+            "caption": "Куча для Top-K и fan-in",
+            "description": "Сложность O(n log k) vs sort O(n log n).",
+            "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 320 120\" width=\"100%\" role=\"img\" aria-label=\"Куча для Top-K и fan-in\"><rect id=\"c69-09-n0\" x=\"16\" y=\"36\" width=\"88\" height=\"48\" rx=\"6\" fill=\"#e3f2fd\" stroke=\"#1565c0\"/><text id=\"c69-09-t0\" x=\"60\" y=\"64\" text-anchor=\"middle\" font-size=\"9\" fill=\"#0d47a1\">Dict</text><rect id=\"c69-09-n1\" x=\"116\" y=\"36\" width=\"88\" height=\"48\" rx=\"6\" fill=\"#e3f2fd\" stroke=\"#1565c0\"/><text id=\"c69-09-t1\" x=\"160\" y=\"64\" text-anchor=\"middle\" font-size=\"9\" fill=\"#0d47a1\">LinkedList</text><line id=\"c69-09-a1\" x1=\"104\" y1=\"60\" x2=\"116\" y2=\"60\" stroke=\"#37474f\"/><rect id=\"c69-09-n2\" x=\"216\" y=\"36\" width=\"88\" height=\"48\" rx=\"6\" fill=\"#e3f2fd\" stroke=\"#1565c0\"/><text id=\"c69-09-t2\" x=\"260\" y=\"64\" text-anchor=\"middle\" font-size=\"9\" fill=\"#0d47a1\">LRU</text><line id=\"c69-09-a2\" x1=\"204\" y1=\"60\" x2=\"216\" y2=\"60\" stroke=\"#37474f\"/></svg>"
+          }
+        },
+        {
+          "type": "theory",
+          "title": "Ошибки и дни Ozon",
+          "content": "## Ошибки\n\n- Sort full dataset при большом n.\n- Off-by-one в окнах.\n\n## Дни Ozon\n\n**13** PriceAggregator, **15** PagedMerge, **16** TopKProducts, **8** LruCache."
+        },
+        {
+          "type": "quiz",
+          "title": "Quiz 1/4",
+          "content": {
+            "question": "Как получить LRU с O(1) на `Get` и `Set`?",
+            "options": [
+              "`Dictionary` + двусвязный `LinkedList`",
+              "`SortedDictionary` по времени последнего доступа",
+              "`List<T>` с удалением и вставкой в начало",
+              "`Queue<T>` + `HashSet<T>`"
+            ],
+            "correctIndices": [
+              0
+            ]
+          }
+        },
+        {
+          "type": "quiz",
+          "title": "Quiz 2/4",
+          "content": {
+            "question": "`PriorityQueue` с одинаковыми приоритетами…",
+            "options": [
+              "Всегда отдаёт элементы в порядке вставки",
+              "Бросает исключение на дубликат приоритета при `Enqueue`",
+              "Не гарантирует FIFO: нужен ключ (priority, sequence)",
+              "Отдаёт элементы в обратном порядке вставки"
+            ],
+            "correctIndices": [
+              2
+            ]
+          }
+        },
+        {
+          "type": "quiz",
+          "title": "Quiz 3/4",
+          "content": {
+            "question": "Top-K по частоте при малом K эффективнее всего через…",
+            "options": [
+              "`SortedSet` всех счётчиков с перестройкой на каждое событие",
+              "Сортировку всех событий по `productId`",
+              "Хранение только последних K событий",
+              "Подсчёт в `Dictionary` + min-heap размера K"
+            ],
+            "correctIndices": [
+              3
+            ]
+          }
+        },
+        {
+          "type": "quiz",
+          "title": "Quiz 4/4",
+          "content": {
+            "question": "Скользящее окно событий за 60 с — типичная структура?",
+            "options": [
+              "Массив всех событий с сортировкой на каждый запрос",
+              "Очередь меток, устаревшие удаляются из головы",
+              "Один счётчик, сбрасываемый каждые 60 с",
+              "Словарь по секундам без удаления старых ключей"
+            ],
+            "correctIndices": [
+              1
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "title": "IAsyncEnumerable",
+      "steps": [
+        {
+          "type": "theory",
+          "title": "Async streams",
+          "content": "## API\n\n```csharp\npublic async IAsyncEnumerable<int> ReadPagesAsync([EnumeratorCancellation] CancellationToken ct)\n{\n    for (var page = 0; page < 10; page++)\n    {\n        await Task.Delay(10, ct);\n        yield return page;\n    }\n}\n```\n\n`await foreach` потребляет поток с отменой.\n\n## Подводные камни\n\n- Без `[EnumeratorCancellation]` токен из `WithCancellation(ct)` не попадёт в async-итератор.\n- Материализация `IAsyncEnumerable` в список уничтожает смысл потоковой обработки и раздувает память.\n- `yield return` внутри `try` с `catch` запрещён — обработку ошибок выносите вокруг `await foreach` или в отдельный метод."
+        },
+        {
+          "type": "svg",
+          "title": "Async iteration",
+          "content": {
+            "caption": "yield return + await",
+            "description": "Back-pressure через await в consumer.",
+            "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 320 120\" width=\"100%\" role=\"img\" aria-label=\"yield return + await\"><rect id=\"c69-10-n0\" x=\"16\" y=\"36\" width=\"88\" height=\"48\" rx=\"6\" fill=\"#e3f2fd\" stroke=\"#1565c0\"/><text id=\"c69-10-t0\" x=\"60\" y=\"64\" text-anchor=\"middle\" font-size=\"9\" fill=\"#0d47a1\">Stream 1</text><rect id=\"c69-10-n1\" x=\"116\" y=\"36\" width=\"88\" height=\"48\" rx=\"6\" fill=\"#e3f2fd\" stroke=\"#1565c0\"/><text id=\"c69-10-t1\" x=\"160\" y=\"64\" text-anchor=\"middle\" font-size=\"9\" fill=\"#0d47a1\">Merge</text><line id=\"c69-10-a1\" x1=\"104\" y1=\"60\" x2=\"116\" y2=\"60\" stroke=\"#37474f\"/><rect id=\"c69-10-n2\" x=\"216\" y=\"36\" width=\"88\" height=\"48\" rx=\"6\" fill=\"#e3f2fd\" stroke=\"#1565c0\"/><text id=\"c69-10-t2\" x=\"260\" y=\"64\" text-anchor=\"middle\" font-size=\"9\" fill=\"#0d47a1\">Consumer</text><line id=\"c69-10-a2\" x1=\"204\" y1=\"60\" x2=\"216\" y2=\"60\" stroke=\"#37474f\"/></svg>"
+          }
+        },
+        {
+          "type": "theory",
+          "title": "Ошибки и дни Ozon",
+          "content": "## Ошибки\n\n- Забыть `[EnumeratorCancellation]`.\n- Materialize entire stream в List.\n\n## Дни Ozon\n\n**14** SearchFanOut, **15** PagedMerge."
+        },
+        {
+          "type": "quiz",
+          "title": "Quiz 1/4",
+          "content": {
+            "question": "Что делает `[EnumeratorCancellation]` на параметре `ct` async-итератора?",
+            "options": [
+              "Связывает `ct` с токеном из `WithCancellation(...)` вызывающего",
+              "Автоматически ловит `OperationCanceledException` внутри итератора",
+              "Отменяет итератор после первого `yield return`",
+              "Делает параметр обязательным"
+            ],
+            "correctIndices": [
+              0
+            ]
+          }
+        },
+        {
+          "type": "quiz",
+          "title": "Quiz 2/4",
+          "content": {
+            "question": "Как слить k отсортированных асинхронных потоков, не загружая всё в память?",
+            "options": [
+              "Загрузить все потоки в списки и вызвать `OrderBy`",
+              "Брать по одному элементу из каждого потока по кругу",
+              "Min-heap по текущим головам потоков",
+              "Конкатенировать потоки и сортировать вставками"
+            ],
+            "correctIndices": [
+              2
+            ]
+          }
+        },
+        {
+          "type": "quiz",
+          "title": "Quiz 3/4",
+          "content": {
+            "question": "Когда `IAsyncEnumerable<T>` лучше, чем `Task<List<T>>`?",
+            "options": [
+              "Нужен произвольный доступ по индексу к загруженным элементам",
+              "Результат нужно перебрать дважды",
+              "Результат маленький и нужен целиком",
+              "Данные идут порциями и обрабатываются по мере прихода"
+            ],
+            "correctIndices": [
+              3
+            ]
+          }
+        },
+        {
+          "type": "quiz",
+          "title": "Quiz 4/4",
+          "content": {
+            "question": "Как отменить `await foreach` по чужому `IAsyncEnumerable`?",
+            "options": [
+              "`source.ConfigureAwait(false)`",
+              "`source.WithCancellation(ct)`",
+              "Бросить исключение из другого потока",
+              "Вызвать `DisposeAsync` у источника из другого потока"
+            ],
+            "correctIndices": [
+              1
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "title": "Параллельная обработка",
+      "steps": [
+        {
+          "type": "theory",
+          "title": "Parallel.ForEachAsync и PLINQ",
+          "content": "## API\n\n```csharp\nawait Parallel.ForEachAsync(items, new ParallelOptions\n{\n    MaxDegreeOfParallelism = 8,\n    CancellationToken = ct,\n}, async (item, token) =>\n{\n    await ProcessAsync(item, token);\n});\n```\n\nДля I/O — async lambda; для CPU — `Parallel.ForEach` / PLINQ.\n\n## Подводные камни\n\n- `Parallel.ForEach` с `async`-лямбдой — это `async void`: цикл не ждёт завершения; нужен `Parallel.ForEachAsync`.\n- Запись результатов в `List<T>` из нескольких потоков — гонка; пишите в массив по индексу или в concurrent-коллекцию.\n- Нет ограничения параллелизма: 10 000 одновременных HTTP-запросов исчерпают сокеты и положат downstream."
+        },
+        {
+          "type": "svg",
+          "title": "Fan-out",
+          "content": {
+            "caption": "MDOP ограничивает параллелизм",
+            "description": "Combine results с учётом порядка если нужно.",
+            "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 320 120\" width=\"100%\" role=\"img\" aria-label=\"MDOP ограничивает параллелизм\"><rect id=\"c69-11-n0\" x=\"16\" y=\"36\" width=\"88\" height=\"48\" rx=\"6\" fill=\"#e3f2fd\" stroke=\"#1565c0\"/><text id=\"c69-11-t0\" x=\"60\" y=\"64\" text-anchor=\"middle\" font-size=\"9\" fill=\"#0d47a1\">Items</text><rect id=\"c69-11-n1\" x=\"116\" y=\"36\" width=\"88\" height=\"48\" rx=\"6\" fill=\"#e3f2fd\" stroke=\"#1565c0\"/><text id=\"c69-11-t1\" x=\"160\" y=\"64\" text-anchor=\"middle\" font-size=\"9\" fill=\"#0d47a1\">Sem</text><line id=\"c69-11-a1\" x1=\"104\" y1=\"60\" x2=\"116\" y2=\"60\" stroke=\"#37474f\"/><rect id=\"c69-11-n2\" x=\"216\" y=\"36\" width=\"88\" height=\"48\" rx=\"6\" fill=\"#e3f2fd\" stroke=\"#1565c0\"/><text id=\"c69-11-t2\" x=\"260\" y=\"64\" text-anchor=\"middle\" font-size=\"9\" fill=\"#0d47a1\">Results[]</text><line id=\"c69-11-a2\" x1=\"204\" y1=\"60\" x2=\"216\" y2=\"60\" stroke=\"#37474f\"/></svg>"
+          }
+        },
+        {
+          "type": "theory",
+          "title": "Ошибки и дни Ozon",
+          "content": "## Ошибки\n\n- Shared mutable без sync.\n- Слишком высокий MDOP → socket exhaustion.\n\n## Дни Ozon\n\n**14** SearchFanOut, **16** TopKProducts."
+        },
+        {
+          "type": "quiz",
+          "title": "Quiz 1/4",
+          "content": {
+            "question": "Что задаёт `MaxDegreeOfParallelism` в `Parallel.ForEachAsync`?",
+            "options": [
+              "Число создаваемых потоков ОС",
+              "Размер пакета элементов на итерацию",
+              "Максимум одновременно выполняющихся тел цикла",
+              "Таймаут на одно тело цикла"
+            ],
+            "correctIndices": [
+              2
+            ]
+          }
+        },
+        {
+          "type": "quiz",
+          "title": "Quiz 2/4",
+          "content": {
+            "question": "Как сохранить порядок результатов при параллельной обработке?",
+            "options": [
+              "Складывать в `ConcurrentBag` — он сохраняет порядок добавления",
+              "Писать результат в массив по индексу исходного элемента",
+              "Сортировать по времени завершения",
+              "Использовать `ConcurrentQueue` — порядок совпадёт со входом"
+            ],
+            "correctIndices": [
+              1
+            ]
+          }
+        },
+        {
+          "type": "quiz",
+          "title": "Quiz 3/4",
+          "content": {
+            "question": "Fan-out к 5 источникам с общим дедлайном, один завис. Что делать?",
+            "options": [
+              "Отдать частичный результат, зависший отменить по таймауту",
+              "Ждать все источники: иначе ответ будет некорректным и неполным",
+              "Бросить исключение на первом таймауте",
+              "Повторять зависший источник до успеха"
+            ],
+            "correctIndices": [
+              0
+            ]
+          }
+        },
+        {
+          "type": "quiz",
+          "title": "Quiz 4/4",
+          "content": {
+            "question": "`Parallel.ForEach(items, async item => await SendAsync(item))` — в чём проблема?",
+            "options": [
+              "Проблемы нет, `Parallel.ForEach` понимает async-лямбды",
+              "Код не компилируется",
+              "Все отправки выполнятся последовательно",
+              "Лямбда — `async void`, цикл не ждёт отправок"
+            ],
+            "correctIndices": [
+              3
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "title": "BackgroundService",
+      "steps": [
+        {
+          "type": "theory",
+          "title": "IHostedService / BackgroundService",
+          "content": "## API\n\n```csharp\npublic sealed class Worker(ILogger<Worker> log) : BackgroundService\n{\n    protected override async Task ExecuteAsync(CancellationToken stoppingToken)\n    {\n        while (!stoppingToken.IsCancellationRequested)\n        {\n            await Task.Delay(TimeSpan.FromSeconds(1), stoppingToken);\n            log.LogDebug(\"Tick\");\n        }\n    }\n}\n```\n\nGraceful shutdown через `stoppingToken`.\n\n## Подводные камни\n\n- Долгая синхронная работа в начале `ExecuteAsync` до первого `await` блокирует старт хоста (.NET 8).\n- Необработанное исключение в `ExecuteAsync` по умолчанию останавливает хост (`BackgroundServiceExceptionBehavior.StopHost`).\n- Игнорировать `stoppingToken`: остановка ждёт `ShutdownTimeout` (30 с) и обрывает работу посередине."
+        },
+        {
+          "type": "svg",
+          "title": "Host lifecycle",
+          "content": {
+            "caption": "Stopping token останавливает фон",
+            "description": "ExecuteAsync должен завершиться после cancel.",
+            "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 320 120\" width=\"100%\" role=\"img\" aria-label=\"Stopping token останавливает фон\"><rect id=\"c69-12-n0\" x=\"16\" y=\"36\" width=\"88\" height=\"48\" rx=\"6\" fill=\"#e3f2fd\" stroke=\"#1565c0\"/><text id=\"c69-12-t0\" x=\"60\" y=\"64\" text-anchor=\"middle\" font-size=\"9\" fill=\"#0d47a1\">Start</text><rect id=\"c69-12-n1\" x=\"116\" y=\"36\" width=\"88\" height=\"48\" rx=\"6\" fill=\"#e3f2fd\" stroke=\"#1565c0\"/><text id=\"c69-12-t1\" x=\"160\" y=\"64\" text-anchor=\"middle\" font-size=\"9\" fill=\"#0d47a1\">Loop</text><line id=\"c69-12-a1\" x1=\"104\" y1=\"60\" x2=\"116\" y2=\"60\" stroke=\"#37474f\"/><rect id=\"c69-12-n2\" x=\"216\" y=\"36\" width=\"88\" height=\"48\" rx=\"6\" fill=\"#e3f2fd\" stroke=\"#1565c0\"/><text id=\"c69-12-t2\" x=\"260\" y=\"64\" text-anchor=\"middle\" font-size=\"9\" fill=\"#0d47a1\">Stop</text><line id=\"c69-12-a2\" x1=\"204\" y1=\"60\" x2=\"216\" y2=\"60\" stroke=\"#37474f\"/></svg>"
+          }
+        },
+        {
+          "type": "theory",
+          "title": "Ошибки и дни Ozon",
+          "content": "## Ошибки\n\n- Блокирующий sync код в ExecuteAsync.\n- Игнор stoppingToken.\n\n## Дни Ozon\n\n**21** GracefulBackgroundWorker, **20** WebhookDispatcher, **24** Outbox."
+        },
+        {
+          "type": "quiz",
+          "title": "Quiz 1/4",
+          "content": {
+            "question": "Что сигнализирует `stoppingToken` в `ExecuteAsync`?",
+            "options": [
+              "Начало graceful shutdown хоста",
+              "Таймаут текущего HTTP-запроса",
+              "Исключение в другом hosted service",
+              "Истечение `HostOptions.ShutdownTimeout`"
+            ],
+            "correctIndices": [
+              0
+            ]
+          }
+        },
+        {
+          "type": "quiz",
+          "title": "Quiz 2/4",
+          "content": {
+            "question": "Worker читает `Channel`. Что должна делать корректная остановка?",
+            "options": [
+              "Вызвать `Environment.Exit(0)`",
+              "Очистить канал и сразу вернуть управление",
+              "Завершить writer, прервать цикл по токену и дождаться его",
+              "Игнорировать токен — хост сам дождётся всех задач"
+            ],
+            "correctIndices": [
+              2
+            ]
+          }
+        },
+        {
+          "type": "quiz",
+          "title": "Quiz 3/4",
+          "content": {
+            "question": "Чем опасен долгий синхронный код в начале `ExecuteAsync` до первого `await`?",
+            "options": [
+              "Ничем: `ExecuteAsync` всегда стартует в отдельном потоке",
+              "Хост перезапустит сервис по таймауту",
+              "`stoppingToken` сразу станет отменённым",
+              "Блокирует `StartAsync` хоста и запуск остальных сервисов"
+            ],
+            "correctIndices": [
+              3
+            ]
+          }
+        },
+        {
+          "type": "quiz",
+          "title": "Quiz 4/4",
+          "content": {
+            "question": "Необработанное исключение в `ExecuteAsync` (.NET 8, настройки по умолчанию)…",
+            "options": [
+              "Молча игнорируется, сервис перестаёт работать",
+              "Логируется и останавливает хост",
+              "Сервис автоматически перезапускается",
+              "Всплывает из `host.Run()` без логирования"
+            ],
+            "correctIndices": [
+              1
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "title": "Атомарность и идемпотентность",
+      "steps": [
+        {
+          "type": "theory",
+          "title": "Транзакции и in-memory модели",
+          "content": "## API\n\n- Идempotency keys, compare-and-swap, state machines.\n- Outbox pattern — at-least-once delivery.\n\n```csharp\npublic bool TryReserve(string sku, int qty)\n{\n    lock (_sync)\n    {\n        if (_stock[sku] < qty) return false;\n        _stock[sku] -= qty;\n        return true;\n    }\n}\n```\n\n## Подводные камни\n\n- Публикация в брокер и commit в БД без outbox — при сбое между ними данные и события расходятся.\n- «Проверить остаток, потом списать» двумя запросами без блокировки или условного `UPDATE` → overselling.\n- Рассчитывать на exactly-once: брокеры дают at-least-once, consumer обязан быть идемпотентным."
+        },
+        {
+          "type": "svg",
+          "title": "State + outbox",
+          "content": {
+            "caption": "Согласованность между памятью и доставкой",
+            "description": "Идемпотентность защищает от повторов.",
+            "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 320 120\" width=\"100%\" role=\"img\" aria-label=\"Согласованность между памятью и доставкой\"><rect id=\"c69-13-n0\" x=\"16\" y=\"36\" width=\"88\" height=\"48\" rx=\"6\" fill=\"#e3f2fd\" stroke=\"#1565c0\"/><text id=\"c69-13-t0\" x=\"60\" y=\"64\" text-anchor=\"middle\" font-size=\"9\" fill=\"#0d47a1\">Tx</text><rect id=\"c69-13-n1\" x=\"116\" y=\"36\" width=\"88\" height=\"48\" rx=\"6\" fill=\"#e3f2fd\" stroke=\"#1565c0\"/><text id=\"c69-13-t1\" x=\"160\" y=\"64\" text-anchor=\"middle\" font-size=\"9\" fill=\"#0d47a1\">Row</text><line id=\"c69-13-a1\" x1=\"104\" y1=\"60\" x2=\"116\" y2=\"60\" stroke=\"#37474f\"/><rect id=\"c69-13-n2\" x=\"216\" y=\"36\" width=\"88\" height=\"48\" rx=\"6\" fill=\"#e3f2fd\" stroke=\"#1565c0\"/><text id=\"c69-13-t2\" x=\"260\" y=\"64\" text-anchor=\"middle\" font-size=\"9\" fill=\"#0d47a1\">Outbox</text><line id=\"c69-13-a2\" x1=\"204\" y1=\"60\" x2=\"216\" y2=\"60\" stroke=\"#37474f\"/></svg>"
+          }
+        },
+        {
+          "type": "theory",
+          "title": "Ошибки и дни Ozon",
+          "content": "## Ошибки\n\n- Double spend inventory.\n- Lost update без версионирования.\n\n## Дни Ozon\n\n**10** IdempotentConsumer, **11** InventoryReservation, **12** OrderStateMachine, **24** Outbox."
+        },
+        {
+          "type": "quiz",
+          "title": "Quiz 1/4",
+          "content": {
+            "question": "Какую проблему решает transactional outbox?",
+            "options": [
+              "Гарантирует exactly-once доставку без доработки consumer",
+              "Ускоряет публикацию за счёт батчей",
+              "Заменяет брокер сообщений таблицей в БД",
+              "Данные и событие фиксируются одной транзакцией"
+            ],
+            "correctIndices": [
+              3
+            ]
+          }
+        },
+        {
+          "type": "quiz",
+          "title": "Quiz 2/4",
+          "content": {
+            "question": "Идемпотентный consumer — это когда…",
+            "options": [
+              "Повторная обработка сообщения не меняет результат",
+              "Consumer обрабатывает сообщения строго по одному, без параллелизма",
+              "Брокер не доставляет дубликаты",
+              "Consumer подтверждает сообщение до обработки"
+            ],
+            "correctIndices": [
+              0
+            ]
+          }
+        },
+        {
+          "type": "quiz",
+          "title": "Quiz 3/4",
+          "content": {
+            "question": "Два запроса одновременно резервируют последний товар. Как избежать overselling?",
+            "options": [
+              "Сначала `SELECT qty`, затем `UPDATE`, если хватает",
+              "Условный `UPDATE … WHERE qty >= @n` и проверка числа строк",
+              "Кэшировать остаток в памяти каждого инстанса",
+              "Делать retry, если остаток ушёл в минус"
+            ],
+            "correctIndices": [
+              1
+            ]
+          }
+        },
+        {
+          "type": "quiz",
+          "title": "Quiz 4/4",
+          "content": {
+            "question": "`SELECT … FOR UPDATE SKIP LOCKED` в outbox-publisher нужен, чтобы…",
+            "options": [
+              "Читать строки вообще без блокировок",
+              "Гарантировать порядок публикации по всей таблице outbox",
+              "Воркеры брали разные строки, не блокируя друг друга",
+              "Удалять строки сразу после чтения"
+            ],
+            "correctIndices": [
+              2
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "title": "Тестирование конкурентного кода",
+      "steps": [
+        {
+          "type": "theory",
+          "title": "Тесты async и sync",
+          "content": "## API\n\n- `FakeTimeProvider`, `TaskCompletionSource` для synchronization points.\n- `Parallel.For` в stress-тестах (осторожно, flaky).\n\n```csharp\n[Fact]\npublic async Task Cancels_promptly()\n{\n    using var cts = new CancellationTokenSource(TimeSpan.FromMilliseconds(50));\n    await Assert.ThrowsAnyAsync<OperationCanceledException>(\n        () => sut.LongOperationAsync(cts.Token));\n}\n```\n\n## Подводные камни\n\n- `Thread.Sleep` / `Task.Delay`, чтобы «подождать, пока другой поток дойдёт», — нестабильные тесты; синхронизируйте через TCS-gate.\n- Тест гонки, прогнанный один раз, ничего не доказывает — нужны много итераций и параллельных задач.\n- Проверять приватные поля вместо наблюдаемого поведения (результат, число вызовов factory)."
+        },
+        {
+          "type": "svg",
+          "title": "Deterministic tests",
+          "content": {
+            "caption": "Fake time + TCS вместо Sleep",
+            "description": "Flaky tests — красный флаг на интервью.",
+            "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 320 120\" width=\"100%\" role=\"img\" aria-label=\"Fake time + TCS вместо Sleep\"><rect id=\"c69-14-n0\" x=\"16\" y=\"36\" width=\"88\" height=\"48\" rx=\"6\" fill=\"#e3f2fd\" stroke=\"#1565c0\"/><text id=\"c69-14-t0\" x=\"60\" y=\"64\" text-anchor=\"middle\" font-size=\"9\" fill=\"#0d47a1\">Fake time</text><rect id=\"c69-14-n1\" x=\"116\" y=\"36\" width=\"88\" height=\"48\" rx=\"6\" fill=\"#e3f2fd\" stroke=\"#1565c0\"/><text id=\"c69-14-t1\" x=\"160\" y=\"64\" text-anchor=\"middle\" font-size=\"9\" fill=\"#0d47a1\">Act</text><line id=\"c69-14-a1\" x1=\"104\" y1=\"60\" x2=\"116\" y2=\"60\" stroke=\"#37474f\"/><rect id=\"c69-14-n2\" x=\"216\" y=\"36\" width=\"88\" height=\"48\" rx=\"6\" fill=\"#e3f2fd\" stroke=\"#1565c0\"/><text id=\"c69-14-t2\" x=\"260\" y=\"64\" text-anchor=\"middle\" font-size=\"9\" fill=\"#0d47a1\">Assert</text><line id=\"c69-14-a2\" x1=\"204\" y1=\"60\" x2=\"216\" y2=\"60\" stroke=\"#37474f\"/></svg>"
+          }
+        },
+        {
+          "type": "theory",
+          "title": "Ошибки и дни Ozon",
+          "content": "## Ошибки\n\n- `Thread.Sleep` в unit-тестах.\n- Нет проверки cancel/timeout paths.\n\n## Дни Ozon\n\nРелевантно **всем 24 дням** — проговаривайте, как тестируете TTL, rate limit, outbox."
+        },
+        {
+          "type": "quiz",
+          "title": "Quiz 1/4",
+          "content": {
+            "question": "Как детерминированно тестировать rate limiter?",
+            "options": [
+              "`FakeTimeProvider.Advance` и проверка `TryAcquire`",
+              "`Thread.Sleep` на длину окна между проверками лимита",
+              "Запускать тест несколько раз и брать большинство",
+              "Отключить окно в тестовой конфигурации"
+            ],
+            "correctIndices": [
+              0
+            ]
+          }
+        },
+        {
+          "type": "quiz",
+          "title": "Quiz 2/4",
+          "content": {
+            "question": "Как гарантировать, что два вызова одновременно находятся внутри factory?",
+            "options": [
+              "`await Task.Delay(100)` внутри factory",
+              "Factory ждёт TCS-gate, тест открывает его после старта обоих",
+              "Запустить вызовы через `Task.Run` — они всегда параллельны",
+              "`Thread.Yield()` перед вторым вызовом"
+            ],
+            "correctIndices": [
+              1
+            ]
+          }
+        },
+        {
+          "type": "quiz",
+          "title": "Quiz 3/4",
+          "content": {
+            "question": "Главная причина нестабильных тестов конкурентного кода?",
+            "options": [
+              "Строгие `Assert.Equal`",
+              "Использование `FakeTimeProvider`",
+              "Реальные тайминги: `Sleep`, `Delay`, системные часы",
+              "Слишком много тестов в одном классе и общий статический стейт"
+            ],
+            "correctIndices": [
+              2
+            ]
+          }
+        },
+        {
+          "type": "quiz",
+          "title": "Quiz 4/4",
+          "content": {
+            "question": "Тест SingleFlight: два параллельных `RunAsync<int>` по одному ключу. Что проверить?",
+            "options": [
+              "Factory вызвана дважды, результаты равны",
+              "Второй вызов бросает `InvalidOperationException`",
+              "Второй вызов возвращает `default` до завершения первого",
+              "Factory вызвана один раз, оба получили один результат"
+            ],
+            "correctIndices": [
+              3
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

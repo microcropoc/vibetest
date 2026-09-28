@@ -1,0 +1,89 @@
+{
+  "schemaVersion": 1,
+  "title": "IAsyncEnumerable",
+  "steps": [
+    {
+      "type": "theory",
+      "title": "Async streams",
+      "content": "## API\n\n```csharp\npublic async IAsyncEnumerable<int> ReadPagesAsync([EnumeratorCancellation] CancellationToken ct)\n{\n    for (var page = 0; page < 10; page++)\n    {\n        await Task.Delay(10, ct);\n        yield return page;\n    }\n}\n```\n\n`await foreach` потребляет поток с отменой.\n\n## Подводные камни\n\n- Без `[EnumeratorCancellation]` токен из `WithCancellation(ct)` не попадёт в async-итератор.\n- Материализация `IAsyncEnumerable` в список уничтожает смысл потоковой обработки и раздувает память.\n- `yield return` внутри `try` с `catch` запрещён — обработку ошибок выносите вокруг `await foreach` или в отдельный метод."
+    },
+    {
+      "type": "svg",
+      "title": "Async iteration",
+      "content": {
+        "caption": "yield return + await",
+        "description": "Back-pressure через await в consumer.",
+        "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 320 120\" width=\"100%\" role=\"img\" aria-label=\"yield return + await\"><rect id=\"c69-10-n0\" x=\"16\" y=\"36\" width=\"88\" height=\"48\" rx=\"6\" fill=\"#e3f2fd\" stroke=\"#1565c0\"/><text id=\"c69-10-t0\" x=\"60\" y=\"64\" text-anchor=\"middle\" font-size=\"9\" fill=\"#0d47a1\">Stream 1</text><rect id=\"c69-10-n1\" x=\"116\" y=\"36\" width=\"88\" height=\"48\" rx=\"6\" fill=\"#e3f2fd\" stroke=\"#1565c0\"/><text id=\"c69-10-t1\" x=\"160\" y=\"64\" text-anchor=\"middle\" font-size=\"9\" fill=\"#0d47a1\">Merge</text><line id=\"c69-10-a1\" x1=\"104\" y1=\"60\" x2=\"116\" y2=\"60\" stroke=\"#37474f\"/><rect id=\"c69-10-n2\" x=\"216\" y=\"36\" width=\"88\" height=\"48\" rx=\"6\" fill=\"#e3f2fd\" stroke=\"#1565c0\"/><text id=\"c69-10-t2\" x=\"260\" y=\"64\" text-anchor=\"middle\" font-size=\"9\" fill=\"#0d47a1\">Consumer</text><line id=\"c69-10-a2\" x1=\"204\" y1=\"60\" x2=\"216\" y2=\"60\" stroke=\"#37474f\"/></svg>"
+      }
+    },
+    {
+      "type": "theory",
+      "title": "Ошибки и дни Ozon",
+      "content": "## Ошибки\n\n- Забыть `[EnumeratorCancellation]`.\n- Materialize entire stream в List.\n\n## Дни Ozon\n\n**14** SearchFanOut, **15** PagedMerge."
+    },
+    {
+      "type": "quiz",
+      "title": "Quiz 1/4",
+      "content": {
+        "question": "Что делает `[EnumeratorCancellation]` на параметре `ct` async-итератора?",
+        "options": [
+          "Связывает `ct` с токеном из `WithCancellation(...)` вызывающего",
+          "Автоматически ловит `OperationCanceledException` внутри итератора",
+          "Отменяет итератор после первого `yield return`",
+          "Делает параметр обязательным"
+        ],
+        "correctIndices": [
+          0
+        ]
+      }
+    },
+    {
+      "type": "quiz",
+      "title": "Quiz 2/4",
+      "content": {
+        "question": "Как слить k отсортированных асинхронных потоков, не загружая всё в память?",
+        "options": [
+          "Загрузить все потоки в списки и вызвать `OrderBy`",
+          "Брать по одному элементу из каждого потока по кругу",
+          "Min-heap по текущим головам потоков",
+          "Конкатенировать потоки и сортировать вставками"
+        ],
+        "correctIndices": [
+          2
+        ]
+      }
+    },
+    {
+      "type": "quiz",
+      "title": "Quiz 3/4",
+      "content": {
+        "question": "Когда `IAsyncEnumerable<T>` лучше, чем `Task<List<T>>`?",
+        "options": [
+          "Нужен произвольный доступ по индексу к загруженным элементам",
+          "Результат нужно перебрать дважды",
+          "Результат маленький и нужен целиком",
+          "Данные идут порциями и обрабатываются по мере прихода"
+        ],
+        "correctIndices": [
+          3
+        ]
+      }
+    },
+    {
+      "type": "quiz",
+      "title": "Quiz 4/4",
+      "content": {
+        "question": "Как отменить `await foreach` по чужому `IAsyncEnumerable`?",
+        "options": [
+          "`source.ConfigureAwait(false)`",
+          "`source.WithCancellation(ct)`",
+          "Бросить исключение из другого потока",
+          "Вызвать `DisposeAsync` у источника из другого потока"
+        ],
+        "correctIndices": [
+          1
+        ]
+      }
+    }
+  ]
+}

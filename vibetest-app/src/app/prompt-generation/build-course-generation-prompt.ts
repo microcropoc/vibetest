@@ -29,6 +29,7 @@ Markdown в текстовых полях шагов (как в theory; fenced b
 - Все строковые значения — корректный JSON: экранируй символы " и \\, управляющие символы; переносы строк внутри строк только как \\n (при необходимости \\r, \\t). Не вставляй буквальные переводы строк внутрь JSON-строк.
 - Особенно проверь экранирование в полях content (theory, practice description, quiz question, svg description/caption — обратные кавычки в Markdown), svg, starterCode, referenceSolution, setup, reset и в SQL/regex-текстах practice-шагов.
 - Запрещено: комментарии в JSON, trailing commas после последнего элемента, любой текст вне единственного \`\`\`json-блока.
+- В JSON нельзя писать литералы undefined, NaN, Infinity, -0, 123n. В javascript-шагах для tests[].args и calls[].args используй теги: {\"$js\": \"undefined\"}, {\"$js\": \"NaN\"}, {\"$js\": \"Infinity\"}, {\"$js\": \"-Infinity\"}, {\"$js\": \"-0\"}, {\"$js\": \"bigint\", \"value\": \"123\"}. Для функций без return (in-place) задавай resultMode: \"args\".
 
 Перед ответом (обязательно):
 - Убедись, что содержимое внутри \`\`\`json-блока успешно проходит JSON.parse.

@@ -95,6 +95,48 @@ describe('JavascriptContentWithTargetSchema', () => {
     ).toBe(true);
   });
 
+  it('accepts valid $js tags in test args', () => {
+    expect(
+      JavascriptContentWithTargetSchema.safeParse({
+        ...base,
+        functionName: 'fn',
+        tests: [{ args: [{ $js: 'undefined' }, { $js: 'bigint', value: '1' }] }],
+      }).success,
+    ).toBe(true);
+  });
+
+  it('rejects invalid $js tag in test args', () => {
+    const result = JavascriptContentWithTargetSchema.safeParse({
+      ...base,
+      functionName: 'fn',
+      tests: [{ args: [{ $js: 'unknown' }] }],
+    });
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.error.issues.map((i) => i.path)).toContainEqual(['tests', 0, 'args', 0]);
+    }
+  });
+
+  it('rejects invalid $js tag in calls args with full path', () => {
+    const result = JavascriptContentWithTargetSchema.safeParse({
+      ...base,
+      functionName: 'fn',
+      tests: [{ args: [], calls: [{ args: [[{ $js: 'bigint', value: 'x' }]] }] }],
+    });
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.error.issues.map((i) => i.path)).toContainEqual([
+        'tests',
+        0,
+        'calls',
+        0,
+        'args',
+        0,
+        0,
+      ]);
+    }
+  });
+
   it('accepts LRUCache construct', () => {
     expect(
       JavascriptContentWithTargetSchema.safeParse({

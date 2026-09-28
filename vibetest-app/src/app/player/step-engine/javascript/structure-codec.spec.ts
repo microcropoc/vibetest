@@ -65,6 +65,11 @@ describe('structure-codec prepareArgs', () => {
     expect(args[0]).toEqual([1, 2]);
   });
 
+  it('prepareArgs decodes $js undefined tag', () => {
+    const args = prepareArgs([{ $js: 'undefined' }], undefined);
+    expect(args[0]).toBe(undefined);
+  });
+
   it('serializeResult list', () => {
     expect(serializeResult(listFrom([3, 2, 1]), 'list')).toEqual([3, 2, 1]);
   });

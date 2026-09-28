@@ -51,6 +51,12 @@ describe('buildCourseGenerationPrompt', () => {
     expect(prompt).toContain('Regex-паттерны');
   });
 
+  it('requires $js tags for non-JSON values in javascript args', () => {
+    const prompt = buildCourseGenerationPrompt('Тест', schemaSnippet);
+    expect(prompt).toContain('"$js"');
+    expect(prompt).toContain('resultMode: "args"');
+  });
+
   it('uses placeholder when description is empty', () => {
     const prompt = buildCourseGenerationPrompt('   ', schemaSnippet);
 

@@ -1,10 +1,4 @@
-function isPlainObject(value: unknown): value is Record<string, unknown> {
-  if (typeof value !== 'object' || value === null || Array.isArray(value)) {
-    return false;
-  }
-  const proto = Object.getPrototypeOf(value);
-  return proto === null || proto === Object.prototype;
-}
+import { isPlainObject } from '../../../execution/is-plain-object';
 
 /** Stable key for sorting JSON-compatible values (objects with sorted keys). */
 function stableSortKey(value: unknown): string {

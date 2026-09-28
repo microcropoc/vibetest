@@ -195,11 +195,50 @@ describe('runJavascriptCaseComparison', () => {
     expect(result).toMatchObject({ pass: false, message: 'non-JSON result' });
   });
 
-  it('fails with non-JSON result when final value is bigint', async () => {
+  it('compares equal bigint return values via encoded tags', async () => {
     const code = 'const big = () => 1n;';
     const env = dualEnv(code, code, 'big');
     const result = await runJavascriptCaseComparison(env.invokeUser, env.invokeReference, [], undefined, env.opts());
-    expect(result).toMatchObject({ pass: false, message: 'non-JSON result' });
+    expect(result).toMatchObject({ pass: true });
+  });
+
+  it('fails when bigint return values differ', async () => {
+    const env = dualEnv('const big = () => 1n;', 'const big = () => 2n;', 'big');
+    const result = await runJavascriptCaseComparison(env.invokeUser, env.invokeReference, [], undefined, env.opts());
+    expect(result).toMatchObject({ pass: false, message: 'Return values do not match' });
+  });
+
+  it('passes args mode when arg is $js undefined tag', async () => {
+    const code = 'const id = (x) => x;';
+    const env = dualEnv(code, code, 'id');
+    const result = await runJavascriptCaseComparison(
+      env.invokeUser,
+      env.invokeReference,
+      [{ $js: 'undefined' }],
+      undefined,
+      env.opts({ resultMode: 'args' }),
+    );
+    expect(result).toMatchObject({ pass: true });
+  });
+
+  it('fails return mode when object has undefined key vs missing key', async () => {
+    const env = dualEnv(
+      'const obj = () => ({ a: undefined });',
+      'const obj = () => ({});',
+      'obj',
+    );
+    const result = await runJavascriptCaseComparison(env.invokeUser, env.invokeReference, [], undefined, env.opts());
+    expect(result).toMatchObject({ pass: false, message: 'Return values do not match' });
+  });
+
+  it('fails return mode when nested undefined differs from null', async () => {
+    const env = dualEnv(
+      'const wrap = () => [undefined];',
+      'const wrap = () => [null];',
+      'wrap',
+    );
+    const result = await runJavascriptCaseComparison(env.invokeUser, env.invokeReference, [], undefined, env.opts());
+    expect(result).toMatchObject({ pass: false, message: 'Return values do not match' });
   });
 
   it('supports method on function via Reflect.get semantics', async () => {
@@ -733,6 +772,35 @@ const later = () =>
       env.opts({ rejects: true }),
     );
     expect(result).toMatchObject({ pass: false, message: 'non-JSON result' });
+  });
+
+  it('passes rejects when both reasons contain the same nested special values', async () => {
+    const code = 'const f = () => Promise.reject({ missing: undefined, big: 5n, n: NaN });';
+    const env = dualEnv(code, code, 'f');
+    const result = await runJavascriptCaseComparison(
+      env.invokeUser,
+      env.invokeReference,
+      [],
+      undefined,
+      env.opts({ rejects: true }),
+    );
+    expect(result).toMatchObject({ pass: true });
+  });
+
+  it('fails rejects when nested undefined reason differs from null', async () => {
+    const env = dualEnv(
+      'const f = () => Promise.reject([undefined]);',
+      'const f = () => Promise.reject([null]);',
+      'f',
+    );
+    const result = await runJavascriptCaseComparison(
+      env.invokeUser,
+      env.invokeReference,
+      [],
+      undefined,
+      env.opts({ rejects: true }),
+    );
+    expect(result).toMatchObject({ pass: false, message: 'Reject reasons do not match' });
   });
 
   it('settled Promise plus fake timer and advanceMs in one case', async () => {

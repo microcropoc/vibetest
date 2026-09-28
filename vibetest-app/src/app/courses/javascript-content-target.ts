@@ -1,5 +1,6 @@
 import { z } from 'zod';
 
+import { findSpecialValueIssues } from '../execution/javascript-special-values';
 import {
   assertPracticeIdentifier,
   assertPracticeIdentifierSyntax,
@@ -37,7 +38,23 @@ export const JavascriptContentWithTargetSchema = JavascriptContentSchema.superRe
   }
 
   value.tests.forEach((testCase, testIndex) => {
+    findSpecialValueIssues(testCase.args).forEach((issue) => {
+      ctx.addIssue({
+        code: 'custom',
+        message: issue.message,
+        path: ['tests', testIndex, 'args', ...issue.path],
+      });
+    });
+
     testCase.calls?.forEach((call, callIndex) => {
+      findSpecialValueIssues(call.args).forEach((issue) => {
+        ctx.addIssue({
+          code: 'custom',
+          message: issue.message,
+          path: ['tests', testIndex, 'calls', callIndex, 'args', ...issue.path],
+        });
+      });
+
       if (call.method === undefined) {
         return;
       }

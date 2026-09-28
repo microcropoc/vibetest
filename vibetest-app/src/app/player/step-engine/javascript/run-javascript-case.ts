@@ -7,6 +7,7 @@ import type { JavascriptCallStep } from './apply-javascript-calls';
 import { compareSpyInvocations } from './compare-spy-invocations';
 import type { FakeTimerController } from '../../../execution/javascript-fake-timers';
 import type { PracticeGlobalBag } from '../../../execution/javascript-practice-global';
+import { encodeSpecialValues } from '../../../execution/javascript-special-values';
 import { isJsonCompatibleValue, jsonCompatibleEqual } from './json-value-equal';
 import { JavascriptCheckerError, runJavascriptChecker } from './run-javascript-checker';
 import { sortUnordered } from './sort-unordered';
@@ -67,13 +68,24 @@ function compareJsonValues(
   };
 }
 
+function toComparable(value: unknown, unordered: boolean): unknown {
+  return maybeUnordered(encodeSpecialValues(value), unordered);
+}
+
 function compareRejected(
   userReason: unknown,
   referenceReason: unknown,
 ): JavascriptCaseRunResult {
   const userValue = normalizeRejectReason(userReason);
   const referenceValue = normalizeRejectReason(referenceReason);
-  return compareJsonValues(userValue, referenceValue, 'Reject reasons do not match');
+  if (userValue === undefined || referenceValue === undefined) {
+    return fail('non-JSON result');
+  }
+  return compareJsonValues(
+    toComparable(userValue, false),
+    toComparable(referenceValue, false),
+    'Reject reasons do not match',
+  );
 }
 
 function failOnThrownSideOutcomes(
@@ -146,14 +158,14 @@ function compareFulfilledWithMode(
     const structureArgs = structure?.args;
 
     if (resultMode === 'return' || resultMode === 'both') {
-      const userSerialized = maybeUnordered(serializeResult(user.value, resultKind), unordered);
-      const referenceSerialized = maybeUnordered(
-        serializeResult(reference.value, resultKind),
-        unordered,
-      );
+      if (user.value === undefined || reference.value === undefined) {
+        return fail('non-JSON result');
+      }
+      const userSerialized = serializeResult(user.value, resultKind);
+      const referenceSerialized = serializeResult(reference.value, resultKind);
       const returnCompare = compareJsonValues(
-        userSerialized,
-        referenceSerialized,
+        toComparable(userSerialized, unordered),
+        toComparable(referenceSerialized, unordered),
         'Return values do not match',
       );
       if (!returnCompare.pass) {
@@ -165,14 +177,11 @@ function compareFulfilledWithMode(
     }
 
     if (resultMode === 'args' || resultMode === 'both') {
-      const userSerializedArgs = maybeUnordered(serializeArgs(userArgs, structureArgs), unordered);
-      const referenceSerializedArgs = maybeUnordered(
-        serializeArgs(referenceArgs, structureArgs),
-        unordered,
-      );
+      const userSerializedArgs = serializeArgs(userArgs, structureArgs);
+      const referenceSerializedArgs = serializeArgs(referenceArgs, structureArgs);
       const argsCompare = compareJsonValues(
-        userSerializedArgs,
-        referenceSerializedArgs,
+        toComparable(userSerializedArgs, unordered),
+        toComparable(referenceSerializedArgs, unordered),
         'Args values do not match',
       );
       if (!argsCompare.pass) {
@@ -187,8 +196,8 @@ function compareFulfilledWithMode(
       }
       return {
         pass: true,
-        userValue: maybeUnordered(serializeResult(user.value, resultKind), unordered),
-        referenceValue: maybeUnordered(serializeResult(reference.value, resultKind), unordered),
+        userValue: toComparable(serializeResult(user.value, resultKind), unordered),
+        referenceValue: toComparable(serializeResult(reference.value, resultKind), unordered),
       };
     }
 

@@ -1,3 +1,7 @@
+import {
+  decodeSpecialValues,
+  JavascriptSpecialValueError,
+} from '../../../execution/javascript-special-values';
 import type { JavascriptCallStep } from './apply-javascript-calls';
 
 /** Max nodes when serializing list/tree (cycle / runaway guard). */
@@ -193,7 +197,17 @@ export function prepareArgs(
   structureArgs: readonly StructureKind[] | undefined,
 ): unknown[] {
   const cloned: unknown[] = structuredClone([...rawArgs]);
-  return cloned.map((value, index) => materializeOne(value, kindAt(structureArgs, index)));
+  const decoded = cloned.map((value) => {
+    try {
+      return decodeSpecialValues(value);
+    } catch (error: unknown) {
+      if (error instanceof JavascriptSpecialValueError) {
+        throw new StructureCodecError(error.message);
+      }
+      throw error;
+    }
+  });
+  return decoded.map((value, index) => materializeOne(value, kindAt(structureArgs, index)));
 }
 
 export function serializeArgValue(value: unknown, kind: StructureKind): unknown {

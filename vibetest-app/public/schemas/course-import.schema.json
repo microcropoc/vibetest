@@ -152,7 +152,7 @@
     "javascriptContent": {
       "$comment": "Ровно одно из functionName | construct: в $defs нет oneOf (json-schema-to-zod ломает JavascriptContentSchema). Импорт VibeTest — JavascriptContentWithTargetSchema.superRefine. AJV по import-файлу без шага content не дублирует это правило на nested content. Зарезервированные слова — superRefine и compile. ВАЖНО: javascriptContent сам по себе не гарантирует XOR functionName|construct и не отклоняет reserved words для functionName/className (только pattern). Обязательный путь VibeTest — JavascriptContentWithTargetSchema (import и canonical course). Сырой AJV/редактор без superRefine — неполная валидация.",
       "type": "object",
-      "description": "JS-практика: код ученика и эталон выполняются в двух изолированных средах (dual-run); по умолчанию результаты сравниваются recursive JSON-compatible equal — plain objects/arrays, порядок ключей объектов не важен, примитивы через Object.is (NaN равен NaN, +0 ≠ -0), а undefined / function / symbol / bigint / не-plain объекты (Map, Set, Date, RegExp) считаются non-JSON result и приводят к fail. Опционально resultMode / structure / unordered меняют подготовку args и объект сравнения. Опциональный checker — escape hatch вместо equal. Ровно одно из functionName или construct (строго при импорте в приложении). Порядок на тест-кейс: reset → materialize args (structure) → вызов functionName(...args) или new construct.className(...args) → цепочка calls → await thenable → flushMicrotasks → advanceMs → expectInvocations → compare (checker или serialize+equal по resultMode). Sync throw до финала — fail кейса, resultMode/rejects на equal не применяются.",
+      "description": "JS-практика: код ученика и эталон выполняются в двух изолированных средах (dual-run); по умолчанию результаты сравниваются recursive JSON-compatible equal — plain objects/arrays, порядок ключей объектов не важен, примитивы через Object.is (NaN равен NaN, +0 ≠ -0), undefined / bigint / NaN / ±Infinity / -0 внутри массивов и объектов сравниваются через теги {\"$js\": ...} (ключ $js зарезервирован; отсутствующий ключ объекта ≠ ключ со значением undefined); верхнеуровневый undefined в return или reject reason, а также function / symbol / не-plain объекты (Map, Set, Date, RegExp) считаются non-JSON result и приводят к fail. Опционально resultMode / structure / unordered меняют подготовку args и объект сравнения. Опциональный checker — escape hatch вместо equal. Ровно одно из functionName или construct (строго при импорте в приложении). Порядок на тест-кейс: reset → materialize args (structure) → вызов functionName(...args) или new construct.className(...args) → цепочка calls → await thenable → flushMicrotasks → advanceMs → expectInvocations → compare (checker или serialize+equal по resultMode). Sync throw до финала — fail кейса, resultMode/rejects на equal не применяются.",
       "required": ["description", "starterCode", "referenceSolution", "setup", "timeoutMs", "tests"],
       "additionalProperties": false,
       "properties": {
@@ -257,7 +257,7 @@
               "args": {
                 "type": "array",
                 "maxItems": 20,
-                "description": "Аргументы первого вызова functionName(...args). Пустой массив — вызов без аргументов; иначе — JSON-совместимые значения."
+                "description": "Аргументы первого вызова functionName(...args). Пустой массив — вызов без аргументов. Иначе JSON-значения; undefined, NaN, ±Infinity, -0, BigInt — только объектами {\"$js\": ...} (см. SPEC); литералы undefined/NaN/123n в JSON запрещены. Ключ $js зарезервирован."
               },
               "calls": {
                 "type": "array",
@@ -272,7 +272,7 @@
                     "args": {
                       "type": "array",
                       "maxItems": 20,
-                      "description": "Аргументы вызова."
+                      "description": "Аргументы вызова; особые JS-значения — только тегами {\"$js\": ...}, как у tests[].args."
                     },
                     "method": {
                       "type": "string",

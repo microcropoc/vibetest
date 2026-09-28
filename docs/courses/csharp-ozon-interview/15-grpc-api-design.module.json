@@ -1,0 +1,89 @@
+{
+  "schemaVersion": 1,
+  "title": "gRPC и проектирование API",
+  "steps": [
+    {
+      "type": "theory",
+      "title": "Ключевые понятия",
+      "content": "## Как устроено\n\n- **gRPC** работает поверх HTTP/2 и использует protobuf: бинарный формат со схемой в `.proto` и кодогенерацией клиента и сервера. Режимы: unary, server streaming, client streaming, bidirectional.\n- **Совместимость protobuf** держится на **номерах полей**: имя в бинарный формат не попадает. Новые поля добавляют с новыми номерами, удалённые номера объявляют `reserved`, номер и тип поля не меняют. Неизвестные поля старый клиент пропускает.\n\n```proto\nmessage Product {\n  reserved 3;              // было price_old — номер больше не использовать\n  int64 id = 1;\n  string title = 2;\n  optional string brand = 4;\n}\n```\n\n- **Deadline** — общий бюджет времени вызова. Клиент задаёт его в `CallOptions`, он передаётся заголовком `grpc-timeout`; сервер видит `ServerCallContext.Deadline` и `CancellationToken`. По умолчанию deadline **не задан**.\n- **Балансировка**: HTTP/2 мультиплексирует запросы в одном долгом соединении, поэтому L4-балансировщику нужна замена — клиентская балансировка или L7-прокси.\n- **REST**: GET, PUT и DELETE идемпотентны по семантике, POST — нет (для него — заголовок `Idempotency-Key`). Версии — в URL или заголовке, пагинация — курсором.\n\n## Пример\n\n```csharp\nusing Grpc.Core;\n\npublic static class StockCalls\n{\n    // Внутри gRPC-метода: передаём оставшийся бюджет времени дальше по цепочке\n    public static async Task<string> GetStockAsync(\n        ServerCallContext context,\n        Func<DateTime, CancellationToken, Task<string>> callWarehouse)\n    {\n        if (context.Deadline < DateTime.UtcNow.AddMilliseconds(50))\n            throw new RpcException(new Status(StatusCode.DeadlineExceeded, \"Не хватает времени на вызов склада\"));\n\n        try\n        {\n            return await callWarehouse(context.Deadline, context.CancellationToken);\n        }\n        catch (KeyNotFoundException)\n        {\n            throw new RpcException(new Status(StatusCode.NotFound, \"SKU не найден\"));\n        }\n    }\n}\n```\n\n## Подводные камни\n\n- Отдать номер удалённого поля protobuf новому полю: старые клиенты прочитают новые данные как старое поле. Удалённые номера объявляйте `reserved`.\n- Не задавать deadline у gRPC-вызова: по умолчанию его нет, и зависший сервис удерживает запросы и соединения бесконечно.\n- gRPC за L4-балансировщиком (kube-proxy): одно долгое HTTP/2-соединение, и весь трафик клиента уходит на один под."
+    },
+    {
+      "type": "svg",
+      "title": "Распространение deadline",
+      "content": {
+        "caption": "Deadline — общий бюджет всей цепочки",
+        "description": "Каждый следующий вызов получает оставшееся время, а не свой полный таймаут.",
+        "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 360 73\" width=\"100%\" role=\"img\" aria-label=\"Deadline — общий бюджет всей цепочки\"><defs><marker id=\"c71-15-arrow\" viewBox=\"0 0 10 10\" refX=\"9\" refY=\"5\" markerWidth=\"6\" markerHeight=\"6\" orient=\"auto-start-reverse\"><path d=\"M0,0 L10,5 L0,10 z\" fill=\"#37474f\"/></marker></defs><rect id=\"c71-15-b00\" x=\"12.0\" y=\"12\" width=\"73.5\" height=\"49\" rx=\"6\" fill=\"#e3f2fd\" stroke=\"#1565c0\"/><text id=\"c71-15-b00-t\" text-anchor=\"middle\" font-size=\"9\" fill=\"#0d47a1\"><tspan x=\"48.8\" y=\"28.5\">Клиент:</tspan><tspan x=\"48.8\" y=\"39.5\">deadline 800</tspan><tspan x=\"48.8\" y=\"50.5\">мс</tspan></text><rect id=\"c71-15-b01\" x=\"99.5\" y=\"12\" width=\"73.5\" height=\"49\" rx=\"6\" fill=\"#e3f2fd\" stroke=\"#1565c0\"/><text id=\"c71-15-b01-t\" text-anchor=\"middle\" font-size=\"9\" fill=\"#0d47a1\"><tspan x=\"136.3\" y=\"28.5\">Gateway:</tspan><tspan x=\"136.3\" y=\"39.5\">осталось 750</tspan><tspan x=\"136.3\" y=\"50.5\">мс</tspan></text><rect id=\"c71-15-b02\" x=\"187.0\" y=\"12\" width=\"73.5\" height=\"49\" rx=\"6\" fill=\"#e3f2fd\" stroke=\"#1565c0\"/><text id=\"c71-15-b02-t\" text-anchor=\"middle\" font-size=\"9\" fill=\"#0d47a1\"><tspan x=\"223.8\" y=\"28.5\">Каталог:</tspan><tspan x=\"223.8\" y=\"39.5\">осталось 600</tspan><tspan x=\"223.8\" y=\"50.5\">мс</tspan></text><rect id=\"c71-15-b03\" x=\"274.5\" y=\"12\" width=\"73.5\" height=\"49\" rx=\"6\" fill=\"#e3f2fd\" stroke=\"#1565c0\"/><text id=\"c71-15-b03-t\" text-anchor=\"middle\" font-size=\"9\" fill=\"#0d47a1\"><tspan x=\"311.3\" y=\"28.5\">Склад:</tspan><tspan x=\"311.3\" y=\"39.5\">осталось 450</tspan><tspan x=\"311.3\" y=\"50.5\">мс</tspan></text><line id=\"c71-15-l0\" x1=\"85.5\" y1=\"36.5\" x2=\"99.5\" y2=\"36.5\" stroke=\"#37474f\" stroke-width=\"1.2\" marker-end=\"url(#c71-15-arrow)\"/><line id=\"c71-15-l1\" x1=\"173.0\" y1=\"36.5\" x2=\"187.0\" y2=\"36.5\" stroke=\"#37474f\" stroke-width=\"1.2\" marker-end=\"url(#c71-15-arrow)\"/><line id=\"c71-15-l2\" x1=\"260.5\" y1=\"36.5\" x2=\"274.5\" y2=\"36.5\" stroke=\"#37474f\" stroke-width=\"1.2\" marker-end=\"url(#c71-15-arrow)\"/></svg>"
+      }
+    },
+    {
+      "type": "theory",
+      "title": "Вопросы с собеседования",
+      "content": "## Вопросы с собеседования\n\n### 1. Когда выбирать gRPC, а когда REST?\n\n**Ответ.** gRPC — для взаимодействия сервисов внутри контура: строгий контракт, кодогенерация, компактный бинарный формат, streaming и HTTP/2. REST с JSON — для публичных API и браузеров: проще отлаживать, работает HTTP-кэширование, клиенту не нужна кодогенерация.\n\n**Уточнение интервьюера:** «Как вызвать gRPC из браузера?» — через gRPC-Web или JSON transcoding в ASP.NET Core.\n\n### 2. Как сохранить обратную совместимость protobuf?\n\n**Ответ.** Бинарный формат опирается на номера полей. Можно добавлять поля с новыми номерами и удалять поля, объявляя их номера `reserved`; нельзя менять номер или несовместимо менять тип. Отсутствующее поле читается значением по умолчанию, поэтому без `optional` 0 и «не задано» неразличимы.\n\n**Уточнение интервьюера:** «Можно ли переименовать поле?» — для бинарного формата да, имя не передаётся; но JSON-представление и JSON transcoding сломаются.\n\n### 3. Как работают deadline и отмена в gRPC?\n\n**Ответ.** Клиент задаёт абсолютный deadline, он уходит заголовком `grpc-timeout`. На сервере доступен `context.Deadline`, а `context.CancellationToken` срабатывает при истечении или отмене клиентом. Deadline распространяют в нижестоящие вызовы, уменьшая бюджет, чтобы вся цепочка укладывалась в исходный SLA.\n\n**Уточнение интервьюера:** «Чем deadline лучше таймаута на каждом шаге?» — таймауты на шагах складываются, а deadline ограничивает весь запрос целиком.\n\n### 4. Почему gRPC плохо балансируется за kube-proxy?\n\n**Ответ.** kube-proxy балансирует на уровне TCP-соединений, а HTTP/2 гонит все запросы клиента по одному долгому соединению. В итоге клиент привязан к одному поду, а новые поды после масштабирования трафика не получают. Решения — клиентская балансировка (headless service и round_robin в `Grpc.Net.Client`) или L7-прокси вроде Envoy.\n\n**Уточнение интервьюера:** «Что ещё помогает без service mesh?» — ограничить время жизни соединения на сервере, чтобы клиенты периодически переподключались.\n\n### 5. Как сделать неидемпотентную операцию безопасной для повторов?\n\n**Ответ.** Клиент генерирует ключ идемпотентности и передаёт его в заголовке. Сервер атомарно сохраняет ключ вместе с результатом операции, а при повторе с тем же ключом возвращает сохранённый результат, не выполняя операцию снова. Ключи хранят ограниченное время.\n\n**Уточнение интервьюера:** «Что ответить, если повтор пришёл, пока первый запрос ещё выполняется?» — 409 Conflict (или ждать завершения первого), но не выполнять операцию второй раз."
+    },
+    {
+      "type": "quiz",
+      "title": "Quiz 1/4",
+      "content": {
+        "question": "Поле `price = 3` удалили из proto-схемы. Как поступить с номером 3?",
+        "options": [
+          "Отдать номер 3 новому полю того же типа",
+          "Объявить reserved 3",
+          "Перенумеровать оставшиеся поля по порядку",
+          "Ничего: номера важны только для JSON"
+        ],
+        "correctIndices": [
+          1
+        ]
+      }
+    },
+    {
+      "type": "quiz",
+      "title": "Quiz 2/4",
+      "content": {
+        "question": "Клиент вызвал gRPC-сервис без deadline, сервис завис. Что будет?",
+        "options": [
+          "Вызов прервётся через 30 секунд по умолчанию gRPC",
+          "HTTP/2 сам закроет поток через минуту бездействия",
+          "Вызов может висеть бесконечно: deadline не задан",
+          "Сервер вернёт DeadlineExceeded после таймаута Kestrel"
+        ],
+        "correctIndices": [
+          2
+        ]
+      }
+    },
+    {
+      "type": "quiz",
+      "title": "Quiz 3/4",
+      "content": {
+        "question": "Почему gRPC-трафик за kube-proxy концентрируется на одном поде?",
+        "options": [
+          "protobuf не поддерживает балансировку на уровне сообщений",
+          "kube-proxy вообще не умеет балансировать TCP",
+          "gRPC-клиент навсегда запоминает IP первого пода",
+          "HTTP/2 гонит все запросы по одному долгому соединению"
+        ],
+        "correctIndices": [
+          3
+        ]
+      }
+    },
+    {
+      "type": "quiz",
+      "title": "Quiz 4/4",
+      "content": {
+        "question": "Какой HTTP-метод не идемпотентен по спецификации?",
+        "options": [
+          "POST",
+          "PUT",
+          "DELETE",
+          "GET"
+        ],
+        "correctIndices": [
+          0
+        ]
+      }
+    }
+  ]
+}

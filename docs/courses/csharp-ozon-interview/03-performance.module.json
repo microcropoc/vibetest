@@ -1,0 +1,89 @@
+{
+  "schemaVersion": 1,
+  "title": "Производительность: Span, пулы и аллокации",
+  "steps": [
+    {
+      "type": "theory",
+      "title": "Ключевые понятия",
+      "content": "## Как устроено\n\n- `Span<T>` / `ReadOnlySpan<T>` — «окно» над непрерывной памятью: массивом, строкой, `stackalloc`-буфером или неуправляемой памятью. Срез не копирует данные и не аллоцирует. Это `ref struct`: его нельзя хранить в поле класса, захватывать в лямбду или держать через `await`.\n- `Memory<T>` / `ReadOnlyMemory<T>` — обычная структура с тем же смыслом: её можно хранить и передавать в async-методы, а `.Span` получать на время синхронной работы.\n- `stackalloc` — буфер на стеке, только для небольших размеров (стек потока — около 1 МБ).\n- `ArrayPool<T>.Shared` — пул массивов: `Rent` возвращает массив **не меньше** запрошенного и с неочищенными данными, `Return` отдаёт его обратно.\n- `ValueTask<T>` — избегает аллокации `Task`, когда метод часто завершается синхронно.\n- Измерять — **BenchmarkDotNet** с `[MemoryDiagnoser]`, в проде — `dotnet-counters` и `dotnet-trace`.\n\n## Пример\n\n```csharp\nusing System.Buffers;\n\npublic static class HotPath\n{\n    // \"ORD-000123\" -> 123 без Substring\n    public static bool TryParseOrderId(ReadOnlySpan<char> text, out int id)\n    {\n        id = 0;\n        return text.StartsWith(\"ORD-\") && int.TryParse(text[4..], out id);\n    }\n\n    // Одна аллокация — итоговая строка\n    public static string CacheKey(int shopId, int sku)\n    {\n        Span<char> buffer = stackalloc char[24];\n        shopId.TryFormat(buffer, out var written);\n        buffer[written++] = ':';\n        sku.TryFormat(buffer[written..], out var skuLength);\n        return new string(buffer[..(written + skuLength)]);\n    }\n\n    // Через await проходит Memory<byte>, а не Span<byte>\n    public static async Task<long> CountBytesAsync(Stream stream, CancellationToken ct)\n    {\n        var buffer = ArrayPool<byte>.Shared.Rent(81_920);\n        try\n        {\n            long total = 0;\n            int read;\n            while ((read = await stream.ReadAsync(buffer.AsMemory(), ct)) > 0)\n                total += read;\n            return total;\n        }\n        finally\n        {\n            ArrayPool<byte>.Shared.Return(buffer);\n        }\n    }\n}\n```\n\n## Подводные камни\n\n- Использовать арендованный массив после `Return` или отдать его наружу: пул выдаст тот же массив другому запросу, и данные перемешаются.\n- `stackalloc` с размером из входных данных: большое значение переполнит стек, а `StackOverflowException` не перехватывается и роняет процесс. Ограничивайте размер и переходите на `ArrayPool`.\n- Дважды ждать один `ValueTask` или читать `.Result` до завершения: если за ним стоит переиспользуемый `IValueTaskSource`, можно получить чужой результат."
+    },
+    {
+      "type": "svg",
+      "title": "Span и Memory над разной памятью",
+      "content": {
+        "caption": "Откуда Span и Memory берут память",
+        "description": "Span работает над любой непрерывной памятью, но только синхронно; Memory можно передать через await.",
+        "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 360 168\" width=\"100%\" role=\"img\" aria-label=\"Откуда Span и Memory берут память\"><defs><marker id=\"c71-03-arrow\" viewBox=\"0 0 10 10\" refX=\"9\" refY=\"5\" markerWidth=\"6\" markerHeight=\"6\" orient=\"auto-start-reverse\"><path d=\"M0,0 L10,5 L0,10 z\" fill=\"#37474f\"/></marker></defs><rect id=\"c71-03-b00\" x=\"12.0\" y=\"12\" width=\"102.7\" height=\"38\" rx=\"6\" fill=\"#e3f2fd\" stroke=\"#1565c0\"/><text id=\"c71-03-b00-t\" text-anchor=\"middle\" font-size=\"9\" fill=\"#0d47a1\"><tspan x=\"63.3\" y=\"34.0\">Массив или строка</tspan></text><rect id=\"c71-03-b01\" x=\"128.7\" y=\"12\" width=\"102.7\" height=\"38\" rx=\"6\" fill=\"#e3f2fd\" stroke=\"#1565c0\"/><text id=\"c71-03-b01-t\" text-anchor=\"middle\" font-size=\"9\" fill=\"#0d47a1\"><tspan x=\"180.0\" y=\"34.0\">stackalloc-буфер</tspan></text><rect id=\"c71-03-b02\" x=\"245.3\" y=\"12\" width=\"102.7\" height=\"38\" rx=\"6\" fill=\"#e3f2fd\" stroke=\"#1565c0\"/><text id=\"c71-03-b02-t\" text-anchor=\"middle\" font-size=\"9\" fill=\"#0d47a1\"><tspan x=\"296.7\" y=\"28.5\">Неуправляемая</tspan><tspan x=\"296.7\" y=\"39.5\">память</tspan></text><rect id=\"c71-03-b10\" x=\"52.0\" y=\"76\" width=\"256.0\" height=\"27\" rx=\"6\" fill=\"#fff3e0\" stroke=\"#ef6c00\"/><text id=\"c71-03-b10-t\" text-anchor=\"middle\" font-size=\"9\" fill=\"#e65100\"><tspan x=\"180.0\" y=\"92.5\">Span&lt;T&gt;: синхронный код, без аллокаций</tspan></text><rect id=\"c71-03-b20\" x=\"92.0\" y=\"129\" width=\"176.0\" height=\"27\" rx=\"6\" fill=\"#e8f5e9\" stroke=\"#2e7d32\"/><text id=\"c71-03-b20-t\" text-anchor=\"middle\" font-size=\"9\" fill=\"#1b5e20\"><tspan x=\"180.0\" y=\"145.5\">Memory&lt;T&gt;: хранение и async</tspan></text><line id=\"c71-03-l0\" x1=\"63.3\" y1=\"50.0\" x2=\"180.0\" y2=\"76.0\" stroke=\"#37474f\" stroke-width=\"1.2\" marker-end=\"url(#c71-03-arrow)\"/><line id=\"c71-03-l1\" x1=\"180.0\" y1=\"50.0\" x2=\"180.0\" y2=\"76.0\" stroke=\"#37474f\" stroke-width=\"1.2\" marker-end=\"url(#c71-03-arrow)\"/><line id=\"c71-03-l2\" x1=\"296.7\" y1=\"50.0\" x2=\"180.0\" y2=\"76.0\" stroke=\"#37474f\" stroke-width=\"1.2\" marker-end=\"url(#c71-03-arrow)\"/><line id=\"c71-03-l3\" x1=\"180.0\" y1=\"103.0\" x2=\"180.0\" y2=\"129.0\" stroke=\"#37474f\" stroke-width=\"1.2\" marker-end=\"url(#c71-03-arrow)\"/></svg>"
+      }
+    },
+    {
+      "type": "theory",
+      "title": "Вопросы с собеседования",
+      "content": "## Вопросы с собеседования\n\n### 1. Чем `Span<T>` отличается от `Memory<T>`?\n\n**Ответ.** `Span<T>` — `ref struct`: он может жить только на стеке, поэтому его нельзя положить в поле класса, захватить в лямбду, использовать в итераторе или держать через `await`. `Memory<T>` — обычная структура, её можно хранить где угодно и получать из неё `Span` на время синхронной работы. Правило для API: синхронные методы принимают `ReadOnlySpan<T>`, асинхронные — `ReadOnlyMemory<T>`.\n\n**Уточнение интервьюера:** «Почему Span нельзя держать через await?» — при приостановке локальные переменные переносятся в поля state machine в куче, а `ref struct` не может оказаться в куче.\n\n### 2. Когда оправдан `ValueTask`?\n\n**Ответ.** Когда метод часто завершается синхронно: значение из кэша, данные из уже заполненного буфера. Тогда `ValueTask` не аллоцирует `Task`. Ограничения: ждать один раз, не блокироваться на `.Result` до завершения, для `WhenAll` сначала вызвать `AsTask()`. По умолчанию возвращают `Task`.\n\n**Уточнение интервьюера:** «Что такое `IValueTaskSource`?» — переиспользуемый источник результата (сокеты, каналы); после первого `await` объект возвращается в пул, поэтому повторный `await` небезопасен.\n\n### 3. Как найти и подтвердить проблему с аллокациями?\n\n**Ответ.** В проде — `dotnet-counters` (скорость аллокаций, доля времени в GC, число сборок по поколениям) и `dotnet-trace` или профилировщик, чтобы найти горячие места. Для конкретного метода — микробенчмарк BenchmarkDotNet с `[MemoryDiagnoser]` до и после изменения. Оптимизируют только подтверждённый горячий путь.\n\n**Уточнение интервьюера:** «Почему не мерить `Stopwatch` в цикле?» — мешают многоуровневая JIT-компиляция, прогрев и шум GC; BenchmarkDotNet делает прогрев, повторы и статистику.\n\n### 4. Как правильно работать с `ArrayPool`?\n\n**Ответ.** `Rent` возвращает массив не меньше запрошенного размера, часто больше, и с данными предыдущего пользователя — поэтому нужно работать с явной длиной. Массив обязательно возвращают в `finally` и больше не используют. Для секретов — `Return(buffer, clearArray: true)`.\n\n**Уточнение интервьюера:** «Чем `ArrayPool.Shared` отличается от `ArrayPool.Create()`?» — Shared общий на процесс и потокобезопасный, с кэшем на поток; `Create` создаёт отдельный пул со своими лимитами размера и числа массивов.\n\n### 5. Где в C# возникают скрытые аллокации?\n\n**Ответ.** Замыкания (display class и делегат), boxing, LINQ (итераторы и делегаты), `params`-массивы, конкатенация строк в цикле, async-методы, которые приостанавливаются (state machine переезжает в кучу). На горячем пути их заменяют: `static`-лямбды с передачей состояния, `Span`, `StringBuilder`, заранее созданные буферы.\n\n**Уточнение интервьюера:** «Как избавиться от аллокации лямбды, захватывающей переменную?» — использовать перегрузку с параметром состояния (`TState`) и `static`-лямбду, тогда display class не нужен."
+    },
+    {
+      "type": "quiz",
+      "title": "Quiz 1/4",
+      "content": {
+        "question": "Почему локальную `Span<byte>` нельзя использовать после `await`?",
+        "options": [
+          "Span теряет данные при смене потока после await",
+          "await копирует Span, и после продолжения копия указывает на старый массив",
+          "Span поддерживает только синхронные потоки ввода-вывода",
+          "Span — ref struct и не может попасть в поля state machine в куче"
+        ],
+        "correctIndices": [
+          3
+        ]
+      }
+    },
+    {
+      "type": "quiz",
+      "title": "Quiz 2/4",
+      "content": {
+        "question": "Что вернёт `ArrayPool<byte>.Shared.Rent(1000)`?",
+        "options": [
+          "Массив ровно из 1000 обнулённых байт",
+          "Span длиной 1000 над общим буфером пула",
+          "Массив длиной не меньше 1000, возможно с чужими данными",
+          "null, если свободного массива нужного размера нет"
+        ],
+        "correctIndices": [
+          2
+        ]
+      }
+    },
+    {
+      "type": "quiz",
+      "title": "Quiz 3/4",
+      "content": {
+        "question": "Когда `ValueTask<T>` вместо `Task<T>` оправдан?",
+        "options": [
+          "Метод часто завершается синхронно, например из кэша",
+          "Всегда: ValueTask быстрее, потому что это struct",
+          "Когда результат нужно ожидать из нескольких мест",
+          "Когда метод всегда выполняет сетевой запрос"
+        ],
+        "correctIndices": [
+          0
+        ]
+      }
+    },
+    {
+      "type": "quiz",
+      "title": "Quiz 4/4",
+      "content": {
+        "question": "Чем опасен `stackalloc byte[length]`, если `length` пришёл из запроса?",
+        "options": [
+          "Буфер освободится только при следующей сборке Gen2",
+          "Большое значение переполнит стек и уронит процесс",
+          "Буфер станет общим для всех потоков процесса",
+          "Компилятор запрещает stackalloc с переменной длиной"
+        ],
+        "correctIndices": [
+          1
+        ]
+      }
+    }
+  ]
+}

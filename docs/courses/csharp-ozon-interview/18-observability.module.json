@@ -1,0 +1,89 @@
+{
+  "schemaVersion": 1,
+  "title": "Observability: логи, метрики, трассы",
+  "steps": [
+    {
+      "type": "theory",
+      "title": "Ключевые понятия",
+      "content": "## Как устроено\n\n- Три сигнала: **метрики** — дешёвые агрегаты для алертов и дашбордов; **трассы** — путь одного запроса через сервисы; **логи** — детали конкретного события. Связывает их **TraceId**.\n- **Структурное логирование**: шаблон `\"Order {OrderId} placed\"` сохраняет `OrderId` отдельным полем для поиска и агрегации. Интерполяция `$\"...\"` превращает всё в строку.\n- `[LoggerMessage]` — source generator: метод с проверкой уровня, без boxing и разбора шаблона на каждый вызов.\n- **Метрики** в .NET 8: `System.Diagnostics.Metrics` (`Meter`, `Counter`, `Histogram`, `ObservableGauge`), экспорт через OpenTelemetry (Prometheus, OTLP). ASP.NET Core 8 публикует встроенные метрики, например `http.server.request.duration`.\n- Каждая уникальная комбинация меток — отдельный временной ряд, поэтому метки должны иметь **низкую кардинальность**.\n- **Трассировка**: `Activity` — это span OpenTelemetry, `ActivitySource` создаёт спаны. ASP.NET Core и `HttpClient` передают заголовок W3C `traceparent` автоматически, через Kafka — только вручную.\n\n## Пример\n\n```csharp\nusing System.Diagnostics;\nusing System.Diagnostics.Metrics;\nusing Microsoft.Extensions.Logging;\n\npublic static partial class OrderLog\n{\n    [LoggerMessage(EventId = 1001, Level = LogLevel.Information, Message = \"Order {OrderId} placed for {Amount}\")]\n    public static partial void OrderPlaced(ILogger logger, long orderId, decimal amount);\n}\n\npublic sealed class OrderTelemetry : IDisposable\n{\n    public static readonly ActivitySource Source = new(\"Shop.Orders\");\n\n    private readonly Meter _meter = new(\"Shop.Orders\");\n    private readonly Counter<long> _placed;\n    private readonly Histogram<double> _duration;\n\n    public OrderTelemetry()\n    {\n        _placed = _meter.CreateCounter<long>(\"orders.placed\");\n        _duration = _meter.CreateHistogram<double>(\"orders.place.duration\", unit: \"ms\");\n    }\n\n    public void Record(string paymentMethod, double elapsedMs)\n    {\n        // Метка с низкой кардинальностью: способ оплаты, а не userId\n        _placed.Add(1, new KeyValuePair<string, object?>(\"payment\", paymentMethod));\n        _duration.Record(elapsedMs);\n    }\n\n    public void Dispose() => _meter.Dispose();\n}\n```\n\nСпан вокруг операции: `using var activity = OrderTelemetry.Source.StartActivity(\"PlaceOrder\");`.\n\n## Подводные камни\n\n- Интерполяция в логах (`$\"Order {id}\"`) вместо шаблона: структурные поля теряются, а строка собирается даже при выключенном уровне логирования.\n- Метка метрики с высокой кардинальностью (userId, orderId, полный URL): число временных рядов в Prometheus взрывается вместе с памятью и стоимостью.\n- Не передавать контекст трассы через Kafka: без `traceparent` в заголовках сообщения трасса обрывается на брокере, и путь заказа не собрать."
+    },
+    {
+      "type": "svg",
+      "title": "Три сигнала observability",
+      "content": {
+        "caption": "Метрики, трассы и логи связаны через TraceId",
+        "description": "Метрики показывают что и когда, трассы — где, логи — почему.",
+        "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 360 115\" width=\"100%\" role=\"img\" aria-label=\"Метрики, трассы и логи связаны через TraceId\"><defs><marker id=\"c71-18-arrow\" viewBox=\"0 0 10 10\" refX=\"9\" refY=\"5\" markerWidth=\"6\" markerHeight=\"6\" orient=\"auto-start-reverse\"><path d=\"M0,0 L10,5 L0,10 z\" fill=\"#37474f\"/></marker></defs><rect id=\"c71-18-b00\" x=\"12.0\" y=\"12\" width=\"102.7\" height=\"38\" rx=\"6\" fill=\"#e3f2fd\" stroke=\"#1565c0\"/><text id=\"c71-18-b00-t\" text-anchor=\"middle\" font-size=\"9\" fill=\"#0d47a1\"><tspan x=\"63.3\" y=\"28.5\">Метрики: что и</tspan><tspan x=\"63.3\" y=\"39.5\">когда</tspan></text><rect id=\"c71-18-b01\" x=\"128.7\" y=\"12\" width=\"102.7\" height=\"38\" rx=\"6\" fill=\"#e3f2fd\" stroke=\"#1565c0\"/><text id=\"c71-18-b01-t\" text-anchor=\"middle\" font-size=\"9\" fill=\"#0d47a1\"><tspan x=\"180.0\" y=\"28.5\">Трассы: где</tspan><tspan x=\"180.0\" y=\"39.5\">тратится время</tspan></text><rect id=\"c71-18-b02\" x=\"245.3\" y=\"12\" width=\"102.7\" height=\"38\" rx=\"6\" fill=\"#e3f2fd\" stroke=\"#1565c0\"/><text id=\"c71-18-b02-t\" text-anchor=\"middle\" font-size=\"9\" fill=\"#0d47a1\"><tspan x=\"296.7\" y=\"34.0\">Логи: почему</tspan></text><rect id=\"c71-18-b10\" x=\"82.0\" y=\"76\" width=\"196.0\" height=\"27\" rx=\"6\" fill=\"#fff3e0\" stroke=\"#ef6c00\"/><text id=\"c71-18-b10-t\" text-anchor=\"middle\" font-size=\"9\" fill=\"#e65100\"><tspan x=\"180.0\" y=\"92.5\">TraceId связывает все три сигнала</tspan></text><line id=\"c71-18-l0\" x1=\"114.7\" y1=\"31.0\" x2=\"128.7\" y2=\"31.0\" stroke=\"#37474f\" stroke-width=\"1.2\" marker-end=\"url(#c71-18-arrow)\"/><line id=\"c71-18-l1\" x1=\"231.3\" y1=\"31.0\" x2=\"245.3\" y2=\"31.0\" stroke=\"#37474f\" stroke-width=\"1.2\" marker-end=\"url(#c71-18-arrow)\"/><line id=\"c71-18-l2\" x1=\"63.3\" y1=\"50.0\" x2=\"180.0\" y2=\"76.0\" stroke=\"#37474f\" stroke-width=\"1.2\" marker-end=\"url(#c71-18-arrow)\"/><line id=\"c71-18-l3\" x1=\"180.0\" y1=\"50.0\" x2=\"180.0\" y2=\"76.0\" stroke=\"#37474f\" stroke-width=\"1.2\" marker-end=\"url(#c71-18-arrow)\"/><line id=\"c71-18-l4\" x1=\"296.7\" y1=\"50.0\" x2=\"180.0\" y2=\"76.0\" stroke=\"#37474f\" stroke-width=\"1.2\" marker-end=\"url(#c71-18-arrow)\"/></svg>"
+      }
+    },
+    {
+      "type": "theory",
+      "title": "Вопросы с собеседования",
+      "content": "## Вопросы с собеседования\n\n### 1. Зачем нужны логи, метрики и трассы по отдельности?\n\n**Ответ.** Метрики — дешёвые агрегаты для алертов и дашбордов: RPS, доля ошибок, перцентили латентности. Трассы показывают путь одного запроса через сервисы и где тратится время. Логи дают детали конкретного события; через TraceId можно перейти от медленной трассы к её логам.\n\n**Уточнение интервьюера:** «С чего начинать расследование роста p99?» — с метрик (какой endpoint и с какого момента), затем трассы медленных запросов, затем их логи.\n\n### 2. Что даёт структурное логирование и `LoggerMessage`?\n\n**Ответ.** Шаблон с именованными плейсхолдерами сохраняет свойства отдельно (`OrderId = 42`), поэтому по ним можно фильтровать и строить агрегаты. Source generator `[LoggerMessage]` генерирует метод с проверкой `IsEnabled`, без boxing аргументов и без разбора шаблона при каждом вызове.\n\n**Уточнение интервьюера:** «Как добавить контекст ко всем логам запроса?» — `logger.BeginScope` со свойствами; TraceId попадает в логи автоматически при включённых scopes.\n\n### 3. Как устроены метрики в .NET 8?\n\n**Ответ.** `System.Diagnostics.Metrics` предоставляет `Meter`, `Counter`, `Histogram` и наблюдаемые инструменты; OpenTelemetry экспортирует их в Prometheus или OTLP. ASP.NET Core 8 уже публикует метрики HTTP-сервера и Kestrel. Для сервисов удобен RED-метод: rate, errors, duration.\n\n**Уточнение интервьюера:** «Почему для латентности гистограмма, а не среднее?» — среднее скрывает хвосты; перцентили считают по бакетам гистограммы.\n\n### 4. Как работает распределённая трассировка в .NET?\n\n**Ответ.** `Activity` соответствует span в OpenTelemetry, `ActivitySource` создаёт спаны. ASP.NET Core и `HttpClient` сами создают спаны и передают заголовок W3C `traceparent`. Для брокеров контекст передают вручную: записывают `traceparent` в заголовки сообщения и восстанавливают родительский контекст у consumer.\n\n**Уточнение интервьюера:** «Как ограничить объём трасс?» — sampling: head-based (решение на входе, например 10%) или tail-based в коллекторе, который сохраняет медленные и ошибочные трассы.\n\n### 5. Почему важна кардинальность меток?\n\n**Ответ.** Каждая уникальная комбинация значений меток — отдельный временной ряд. Метка с userId создаёт миллионы рядов, и хранилище метрик перегружается по памяти и стоимости. Данные с высокой кардинальностью пишут в логи и трассы, а в метки — только ограниченные наборы значений.\n\n**Уточнение интервьюера:** «Как смотреть ошибки по конкретному продавцу без метки sellerId?» — через поле sellerId в логах и запросы в системе логов, либо через exemplars, связывающие точку метрики с трассой."
+    },
+    {
+      "type": "quiz",
+      "title": "Quiz 1/4",
+      "content": {
+        "question": "Чем `logger.LogInformation($\"Order {id} placed\")` хуже шаблона `\"Order {OrderId} placed\", id`?",
+        "options": [
+          "Теряется поле OrderId, а строка собирается всегда",
+          "Интерполированная строка не попадёт в лог уровня Information",
+          "Шаблон пишется асинхронно, а интерполяция блокирует поток",
+          "Консольный провайдер не поддерживает интерполированные строки"
+        ],
+        "correctIndices": [
+          0
+        ]
+      }
+    },
+    {
+      "type": "quiz",
+      "title": "Quiz 2/4",
+      "content": {
+        "question": "Какую метку не стоит добавлять к счётчику HTTP-запросов?",
+        "options": [
+          "HTTP-метод",
+          "Код ответа",
+          "Шаблон маршрута",
+          "userId"
+        ],
+        "correctIndices": [
+          3
+        ]
+      }
+    },
+    {
+      "type": "quiz",
+      "title": "Quiz 3/4",
+      "content": {
+        "question": "Почему трасса обрывается на consumer-е Kafka?",
+        "options": [
+          "Kafka удаляет заголовки при репликации",
+          "Activity не работает в фоновых сервисах",
+          "traceparent не записан в заголовки сообщения",
+          "Consumer использует другой формат TraceId"
+        ],
+        "correctIndices": [
+          2
+        ]
+      }
+    },
+    {
+      "type": "quiz",
+      "title": "Quiz 4/4",
+      "content": {
+        "question": "Что лучше использовать для алерта по латентности?",
+        "options": [
+          "Среднее время ответа за минуту",
+          "p99 из гистограммы длительности",
+          "Максимальное время ответа за сутки",
+          "Число запросов в секунду"
+        ],
+        "correctIndices": [
+          1
+        ]
+      }
+    }
+  ]
+}

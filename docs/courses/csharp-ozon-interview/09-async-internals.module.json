@@ -1,0 +1,89 @@
+{
+  "schemaVersion": 1,
+  "title": "async/await изнутри",
+  "steps": [
+    {
+      "type": "theory",
+      "title": "Ключевые понятия",
+      "content": "## Как устроено\n\n- Компилятор превращает async-метод в **state machine**: структуру с полями для локальных переменных и номером состояния, а также builder (`AsyncTaskMethodBuilder`).\n- `MoveNext` выполняет код до ближайшего `await`. Если ожидаемая задача уже завершена, выполнение продолжается **синхронно**. Иначе регистрируется продолжение, а state machine при первой приостановке переносится в кучу.\n- `await` захватывает текущий `SynchronizationContext` (UI, старый ASP.NET) и продолжает в нём. В ASP.NET Core контекста нет. `ConfigureAwait(false)` отказывается от захвата контекста.\n- `ExecutionContext` (значения `AsyncLocal<T>`, `Activity.Current`) течёт через `await` всегда, независимо от `ConfigureAwait`. Изменения в вызванном методе не возвращаются вызывающему.\n- **Sync-over-async** (`.Result`, `.Wait()`): deadlock в однопоточном контексте, голодание пула потоков в ASP.NET Core.\n- Примитивы координации — `SemaphoreSlim`, `Channel`, `TaskCompletionSource`, отмена — разобраны в курсе **«C#: примитивы асинхронности и конкурентности»**, здесь их не повторяем.\n\n## Пример\n\n```csharp\nusing System.Collections.Concurrent;\nusing System.Globalization;\n\npublic static class RequestContext\n{\n    private static readonly AsyncLocal<string?> Current = new();\n\n    public static string? CorrelationId\n    {\n        get => Current.Value;\n        set => Current.Value = value;\n    }\n}\n\npublic sealed class PriceService(HttpClient http)\n{\n    private readonly ConcurrentDictionary<string, decimal> _cache = new();\n\n    // Попадание в кэш завершается синхронно — без аллокации Task\n    public ValueTask<decimal> GetPriceAsync(string sku, CancellationToken ct) =>\n        _cache.TryGetValue(sku, out var cached)\n            ? ValueTask.FromResult(cached)\n            : new ValueTask<decimal>(LoadAsync(sku, ct));\n\n    private async Task<decimal> LoadAsync(string sku, CancellationToken ct)\n    {\n        var text = await http.GetStringAsync($\"/prices/{sku}\", ct).ConfigureAwait(false);\n        var price = decimal.Parse(text, CultureInfo.InvariantCulture);\n        _cache[sku] = price;\n        return price;\n    }\n}\n```\n\n## Подводные камни\n\n- `.Result` или `.Wait()` на незавершённой задаче в однопоточном контексте (WinForms, WPF, классический ASP.NET) — deadlock; в ASP.NET Core — голодание пула потоков под нагрузкой.\n- Ожидать, что значение `AsyncLocal`, изменённое внутри вызванного async-метода, будет видно вызывающему после `await`: контекст течёт только вниз по цепочке.\n- `async void`-метод вне обработчиков событий: исключение нельзя перехватить снаружи, оно уходит в контекст синхронизации или роняет процесс."
+    },
+    {
+      "type": "svg",
+      "title": "State machine и продолжение",
+      "content": {
+        "caption": "Что происходит на await",
+        "description": "Незавершённая задача: регистрация продолжения и возврат; после завершения MoveNext вызывается снова.",
+        "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 360 148\" width=\"100%\" role=\"img\" aria-label=\"Что происходит на await\"><defs><marker id=\"c71-09-arrow\" viewBox=\"0 0 10 10\" refX=\"9\" refY=\"5\" markerWidth=\"6\" markerHeight=\"6\" orient=\"auto-start-reverse\"><path d=\"M0,0 L10,5 L0,10 z\" fill=\"#37474f\"/></marker></defs><rect id=\"c71-09-b00\" x=\"12.0\" y=\"12\" width=\"102.7\" height=\"60\" rx=\"6\" fill=\"#e3f2fd\" stroke=\"#1565c0\"/><text id=\"c71-09-b00-t\" text-anchor=\"middle\" font-size=\"9\" fill=\"#0d47a1\"><tspan x=\"63.3\" y=\"39.5\">MoveNext(): код до</tspan><tspan x=\"63.3\" y=\"50.5\">await</tspan></text><rect id=\"c71-09-b01\" x=\"128.7\" y=\"12\" width=\"102.7\" height=\"60\" rx=\"6\" fill=\"#e3f2fd\" stroke=\"#1565c0\"/><text id=\"c71-09-b01-t\" text-anchor=\"middle\" font-size=\"9\" fill=\"#0d47a1\"><tspan x=\"180.0\" y=\"28.5\">Задача не</tspan><tspan x=\"180.0\" y=\"39.5\">завершена:</tspan><tspan x=\"180.0\" y=\"50.5\">регистрируем</tspan><tspan x=\"180.0\" y=\"61.5\">продолжение</tspan></text><rect id=\"c71-09-b02\" x=\"245.3\" y=\"12\" width=\"102.7\" height=\"60\" rx=\"6\" fill=\"#e3f2fd\" stroke=\"#1565c0\"/><text id=\"c71-09-b02-t\" text-anchor=\"middle\" font-size=\"9\" fill=\"#0d47a1\"><tspan x=\"296.7\" y=\"39.5\">Возврат управления</tspan><tspan x=\"296.7\" y=\"50.5\">вызывающему</tspan></text><rect id=\"c71-09-b10\" x=\"12.0\" y=\"98\" width=\"102.7\" height=\"38\" rx=\"6\" fill=\"#fff3e0\" stroke=\"#ef6c00\"/><text id=\"c71-09-b10-t\" text-anchor=\"middle\" font-size=\"9\" fill=\"#e65100\"><tspan x=\"63.3\" y=\"120.0\">Задача завершилась</tspan></text><rect id=\"c71-09-b11\" x=\"128.7\" y=\"98\" width=\"102.7\" height=\"38\" rx=\"6\" fill=\"#fff3e0\" stroke=\"#ef6c00\"/><text id=\"c71-09-b11-t\" text-anchor=\"middle\" font-size=\"9\" fill=\"#e65100\"><tspan x=\"180.0\" y=\"114.5\">Продолжение в пуле</tspan><tspan x=\"180.0\" y=\"125.5\">или контексте</tspan></text><rect id=\"c71-09-b12\" x=\"245.3\" y=\"98\" width=\"102.7\" height=\"38\" rx=\"6\" fill=\"#fff3e0\" stroke=\"#ef6c00\"/><text id=\"c71-09-b12-t\" text-anchor=\"middle\" font-size=\"9\" fill=\"#e65100\"><tspan x=\"296.7\" y=\"114.5\">MoveNext(): код</tspan><tspan x=\"296.7\" y=\"125.5\">после await</tspan></text><line id=\"c71-09-l0\" x1=\"114.7\" y1=\"42.0\" x2=\"128.7\" y2=\"42.0\" stroke=\"#37474f\" stroke-width=\"1.2\" marker-end=\"url(#c71-09-arrow)\"/><line id=\"c71-09-l1\" x1=\"231.3\" y1=\"42.0\" x2=\"245.3\" y2=\"42.0\" stroke=\"#37474f\" stroke-width=\"1.2\" marker-end=\"url(#c71-09-arrow)\"/><line id=\"c71-09-l2\" x1=\"180.0\" y1=\"72.0\" x2=\"63.3\" y2=\"98.0\" stroke=\"#37474f\" stroke-width=\"1.2\" marker-end=\"url(#c71-09-arrow)\"/><line id=\"c71-09-l3\" x1=\"114.7\" y1=\"117.0\" x2=\"128.7\" y2=\"117.0\" stroke=\"#37474f\" stroke-width=\"1.2\" marker-end=\"url(#c71-09-arrow)\"/><line id=\"c71-09-l4\" x1=\"231.3\" y1=\"117.0\" x2=\"245.3\" y2=\"117.0\" stroke=\"#37474f\" stroke-width=\"1.2\" marker-end=\"url(#c71-09-arrow)\"/></svg>"
+      }
+    },
+    {
+      "type": "theory",
+      "title": "Вопросы с собеседования",
+      "content": "## Вопросы с собеседования\n\n### 1. Во что компилируется async-метод?\n\n**Ответ.** В структуру-state machine с полями для локальных переменных и номером состояния и в builder, который создаёт возвращаемую задачу. `MoveNext` выполняет код до `await`; если задача не завершена, регистрирует себя продолжением и возвращает управление. При первой приостановке state machine переносится в кучу, чтобы пережить выход из метода.\n\n**Уточнение интервьюера:** «Что если ожидаемая задача уже завершена?» — `IsCompleted` возвращает true, выполнение идёт дальше синхронно, без аллокаций и без смены потока.\n\n### 2. Что делают `SynchronizationContext` и `ConfigureAwait(false)`?\n\n**Ответ.** `await` запоминает текущий `SynchronizationContext` и отправляет продолжение в него; в UI это единственный поток интерфейса. В ASP.NET Core контекста нет, поэтому продолжение идёт в пул потоков. `ConfigureAwait(false)` ставят в библиотеках, потому что их могут вызвать из UI-кода.\n\n**Уточнение интервьюера:** «Сохраняется ли ExecutionContext с `ConfigureAwait(false)`?» — да: `ConfigureAwait` влияет только на `SynchronizationContext`, значения `AsyncLocal` текут всегда.\n\n### 3. Почему `.Result` приводит к deadlock?\n\n**Ответ.** Вызывающий поток блокируется в ожидании задачи, а продолжение этой задачи должно выполниться в том же однопоточном контексте, который занят ожиданием. В ASP.NET Core контекста нет и deadlock не возникает, но каждый заблокированный поток выпадает из пула. Под нагрузкой пул добавляет потоки медленно, очередь растёт, латентность взлетает — это thread pool starvation.\n\n**Уточнение интервьюера:** «Как диагностировать starvation?» — `dotnet-counters`: растёт длина очереди пула (ThreadPool Queue Length) и число потоков, а CPU при этом не загружен.\n\n### 4. Как работают `ExecutionContext` и `AsyncLocal`?\n\n**Ответ.** `ExecutionContext` захватывается при `await`, `Task.Run` и запуске таймеров и восстанавливается в продолжении. В нём живут `AsyncLocal<T>`, `Activity.Current` и культура. Контекст неизменяем: изменение в дочернем async-методе создаёт новую копию, которая не возвращается родителю.\n\n**Уточнение интервьюера:** «Как не протащить контекст запроса в долгоживущую фоновую задачу?» — запустить её внутри `ExecutionContext.SuppressFlow()`.\n\n### 5. Когда `Task`, `ValueTask` и `async void`, и что ещё нужно знать для лайвкодинга?\n\n**Ответ.** `Task` — выбор по умолчанию; `ValueTask` — когда метод часто завершается синхронно; `async void` — только обработчики событий. Координация параллельной работы (`SemaphoreSlim`, `Channel`, `TaskCompletionSource`, отмена с таймаутом) разобрана в курсе «C#: примитивы асинхронности и конкурентности», а применение — в задачах курса «Лайвкодинг в Ozon на C#».\n\n**Уточнение интервьюера:** «Зачем `TaskCompletionSource` с `RunContinuationsAsynchronously`?» — иначе продолжения выполнятся синхронно в потоке, который вызвал `SetResult`, возможно под его блокировкой."
+    },
+    {
+      "type": "quiz",
+      "title": "Quiz 1/4",
+      "content": {
+        "question": "Ожидаемая задача уже завершена к моменту `await`. Что происходит?",
+        "options": [
+          "Продолжение всё равно ставится в очередь пула потоков",
+          "Метод продолжается синхронно в том же потоке",
+          "State machine переносится в кучу перед продолжением",
+          "Выполнение переходит в захваченный SynchronizationContext"
+        ],
+        "correctIndices": [
+          1
+        ]
+      }
+    },
+    {
+      "type": "quiz",
+      "title": "Quiz 2/4",
+      "content": {
+        "question": "Что сохраняется через `await ...ConfigureAwait(false)`?",
+        "options": [
+          "SynchronizationContext вызывающего кода",
+          "Поток, на котором метод начал выполняться",
+          "ExecutionContext со значениями AsyncLocal",
+          "Ничего: контекст полностью сбрасывается"
+        ],
+        "correctIndices": [
+          2
+        ]
+      }
+    },
+    {
+      "type": "quiz",
+      "title": "Quiz 3/4",
+      "content": {
+        "question": "Контроллер ASP.NET Core вызывает `service.GetAsync().Result`. Чем это грозит под нагрузкой?",
+        "options": [
+          "Гарантированным deadlock на первом же запросе",
+          "Потерей HttpContext после завершения задачи",
+          "Исключением InvalidOperationException от Kestrel",
+          "Голоданием пула потоков и ростом латентности"
+        ],
+        "correctIndices": [
+          3
+        ]
+      }
+    },
+    {
+      "type": "quiz",
+      "title": "Quiz 4/4",
+      "content": {
+        "question": "Метод A ставит `AsyncLocal.Value = 1` и вызывает `await B()`, где B ставит `Value = 2`. Что увидит A после `await`?",
+        "options": [
+          "1",
+          "2: AsyncLocal общий для всей цепочки вызовов",
+          "null: контекст сбрасывается после await",
+          "Зависит от потока, на котором продолжился A"
+        ],
+        "correctIndices": [
+          0
+        ]
+      }
+    }
+  ]
+}

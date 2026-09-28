@@ -1,0 +1,89 @@
+{
+  "schemaVersion": 1,
+  "title": "Generics: ограничения, вариантность, generic math",
+  "steps": [
+    {
+      "type": "theory",
+      "title": "Ключевые понятия",
+      "content": "## Как устроено\n\n- Generics в CLR **реифицированы**: тип-аргумент известен в рантайме (`typeof(T)`, `new T()`). Для каждого value-типа JIT создаёт отдельный машинный код без boxing, для всех reference-типов — один общий.\n- **Ограничения**: `class`, `struct`, `notnull`, `unmanaged`, `new()`, базовый класс, интерфейс. Они разрешают компилятору операции над `T`.\n- **Вариантность** — только у интерфейсов и делегатов и только для reference-типов: `out T` (ковариантность, `IEnumerable<out T>`) и `in T` (контравариантность, `IComparer<in T>`).\n- **Массивы ковариантны небезопасно**: `object[] a = new string[1]; a[0] = 1;` компилируется и падает с `ArrayTypeMismatchException`.\n- **Static abstract members** (C# 11) позволяют требовать статические члены и операторы; на них построен **generic math**: `INumber<T>`, `T.Zero`, `+`.\n- Статические поля generic-типа — **свои для каждого закрытого типа** (`Cache<int>` и `Cache<string>` не делят поле).\n\n## Пример\n\n```csharp\nusing System.Numerics;\n\npublic interface IReadRepository<out T> where T : class\n{\n    T? Find(long id);\n    IReadOnlyList<T> List();\n}\n\npublic static class Stats\n{\n    public static T Sum<T>(IEnumerable<T> values) where T : INumber<T>\n    {\n        var total = T.Zero;\n        foreach (var value in values) total += value;\n        return total;\n    }\n}\n\npublic static class TypeCache<T>\n{\n    // Своё значение для каждого T: TypeCache<Order>.Name и TypeCache<Sku>.Name разные\n    public static readonly string Name = typeof(T).Name;\n}\n```\n\n## Подводные камни\n\n- Полагаться на ковариантность массивов: `object[]`, указывающий на `string[]`, падает при записи числа только в рантайме.\n- Считать статическое поле generic-класса общим: «глобальный» кэш в `Registry<T>` на самом деле разделён по каждому `T`.\n- Принимать параметр как интерфейс (`IComparable value`) вместо `T value where T : IComparable<T>`: для struct это boxing на каждый вызов."
+    },
+    {
+      "type": "svg",
+      "title": "Ковариантность и контравариантность",
+      "content": {
+        "caption": "Куда разрешено присваивание",
+        "description": "out T — к более общему типу, in T — к более конкретному.",
+        "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 360 168\" width=\"100%\" role=\"img\" aria-label=\"Куда разрешено присваивание\"><defs><marker id=\"c71-04-arrow\" viewBox=\"0 0 10 10\" refX=\"9\" refY=\"5\" markerWidth=\"6\" markerHeight=\"6\" orient=\"auto-start-reverse\"><path d=\"M0,0 L10,5 L0,10 z\" fill=\"#37474f\"/></marker></defs><rect id=\"c71-04-b00\" x=\"12.0\" y=\"12\" width=\"161.0\" height=\"27\" rx=\"6\" fill=\"#e3f2fd\" stroke=\"#1565c0\"/><text id=\"c71-04-b00-t\" text-anchor=\"middle\" font-size=\"9\" fill=\"#0d47a1\"><tspan x=\"92.5\" y=\"28.5\">IEnumerable&lt;string&gt;</tspan></text><rect id=\"c71-04-b01\" x=\"187.0\" y=\"12\" width=\"161.0\" height=\"27\" rx=\"6\" fill=\"#e3f2fd\" stroke=\"#1565c0\"/><text id=\"c71-04-b01-t\" text-anchor=\"middle\" font-size=\"9\" fill=\"#0d47a1\"><tspan x=\"267.5\" y=\"28.5\">IEnumerable&lt;object&gt; (out T)</tspan></text><rect id=\"c71-04-b10\" x=\"12.0\" y=\"65\" width=\"161.0\" height=\"27\" rx=\"6\" fill=\"#fff3e0\" stroke=\"#ef6c00\"/><text id=\"c71-04-b10-t\" text-anchor=\"middle\" font-size=\"9\" fill=\"#e65100\"><tspan x=\"92.5\" y=\"81.5\">IComparer&lt;object&gt;</tspan></text><rect id=\"c71-04-b11\" x=\"187.0\" y=\"65\" width=\"161.0\" height=\"27\" rx=\"6\" fill=\"#fff3e0\" stroke=\"#ef6c00\"/><text id=\"c71-04-b11-t\" text-anchor=\"middle\" font-size=\"9\" fill=\"#e65100\"><tspan x=\"267.5\" y=\"81.5\">IComparer&lt;string&gt; (in T)</tspan></text><rect id=\"c71-04-b20\" x=\"12.0\" y=\"118\" width=\"161.0\" height=\"38\" rx=\"6\" fill=\"#e8f5e9\" stroke=\"#2e7d32\"/><text id=\"c71-04-b20-t\" text-anchor=\"middle\" font-size=\"9\" fill=\"#1b5e20\"><tspan x=\"92.5\" y=\"140.0\">List&lt;string&gt;</tspan></text><rect id=\"c71-04-b21\" x=\"187.0\" y=\"118\" width=\"161.0\" height=\"38\" rx=\"6\" fill=\"#e8f5e9\" stroke=\"#2e7d32\"/><text id=\"c71-04-b21-t\" text-anchor=\"middle\" font-size=\"9\" fill=\"#1b5e20\"><tspan x=\"267.5\" y=\"134.5\">List&lt;object&gt;: нельзя, есть</tspan><tspan x=\"267.5\" y=\"145.5\">Add(T)</tspan></text><line id=\"c71-04-l0\" x1=\"173.0\" y1=\"25.5\" x2=\"187.0\" y2=\"25.5\" stroke=\"#37474f\" stroke-width=\"1.2\" marker-end=\"url(#c71-04-arrow)\"/><line id=\"c71-04-l1\" x1=\"173.0\" y1=\"78.5\" x2=\"187.0\" y2=\"78.5\" stroke=\"#37474f\" stroke-width=\"1.2\" marker-end=\"url(#c71-04-arrow)\"/></svg>"
+      }
+    },
+    {
+      "type": "theory",
+      "title": "Вопросы с собеседования",
+      "content": "## Вопросы с собеседования\n\n### 1. Чем generics в C# отличаются от Java?\n\n**Ответ.** В CLR generics реифицированы: информация о `T` есть в рантайме, работают `typeof(T)`, `new T()` и отдельные статические поля на каждый тип. Для value-типов JIT генерирует специализированный код, поэтому `List<int>` хранит числа без упаковки. В Java действует type erasure: в рантайме остаётся `List<Object>` и боксинг примитивов.\n\n**Уточнение интервьюера:** «Сколько экземпляров кода для `List<int>`, `List<long>`, `List<string>`, `List<Order>`?» — по одному для `int` и `long` и один общий для всех ссылочных типов.\n\n### 2. Объясните ковариантность и контравариантность\n\n**Ответ.** `out T` означает, что тип только отдаёт `T` наружу, поэтому `IEnumerable<string>` можно использовать как `IEnumerable<object>`. `in T` — тип только принимает `T`, поэтому `IComparer<object>` подходит там, где нужен `IComparer<string>`. Вариантность есть только у интерфейсов и делегатов и работает только для ссылочных типов-аргументов.\n\n**Уточнение интервьюера:** «Почему `IList<T>` не ковариантен?» — у него есть `Add(T)`: через `IList<object>` можно было бы положить число в список строк.\n\n### 3. Зачем нужны ограничения generic-параметров?\n\n**Ответ.** Они сообщают компилятору, что можно делать с `T`: вызывать методы интерфейса, создавать `new T()`, сравнивать с null, работать с памятью (`unmanaged`). Ограничение интерфейсом позволяет вызывать методы на struct без boxing через `constrained.` вызов. `notnull` полезен для ключей словарей.\n\n**Уточнение интервьюера:** «Можно ли ограничить `T` набором конкретных типов, например int или decimal?» — нет, но generic math (`INumber<T>`) закрывает главный сценарий — обобщённую арифметику.\n\n### 4. Что такое static abstract members и generic math?\n\n**Ответ.** С C# 11 интерфейс может требовать статические члены и операторы. На этом построены `INumber<T>`, `IParsable<T>` и другие: метод `Sum<T>` пишется один раз для `int`, `decimal` и `double`. В бизнес-коде это встречается редко, чаще в библиотеках, парсерах и собственных value object.\n\n**Уточнение интервьюера:** «Как вызвать статический метод `T`?» — напрямую `T.Parse(...)` или `T.Zero` внутри метода с ограничением на интерфейс со static abstract членом.\n\n### 5. Как ведут себя `default(T)` и проверки `typeof(T)` внутри generic-метода?\n\n**Ответ.** `default(T)` — null для ссылочных типов и «нули» для struct. Сравнение `typeof(T) == typeof(int)` для value-типов JIT вычисляет при компиляции и выбрасывает лишние ветки, поэтому такой приём используют в высокопроизводительном коде. Для ссылочных типов код общий, и проверка выполняется в рантайме.\n\n**Уточнение интервьюера:** «Что вернёт `default` для `T?` без ограничений, если `T` — `int`?» — 0: для неограниченного `T` запись `T?` не превращает его в `Nullable<int>`."
+    },
+    {
+      "type": "quiz",
+      "title": "Quiz 1/4",
+      "content": {
+        "question": "Сколько вариантов машинного кода JIT создаст для `List<int>`, `List<long>` и `List<string>`?",
+        "options": [
+          "Один общий для всех, как type erasure в Java",
+          "Три: для int, для long и один общий для ссылочных типов",
+          "Два: один для value-типов и один для ссылочных",
+          "Столько, сколько раз каждый тип встречается в коде"
+        ],
+        "correctIndices": [
+          1
+        ]
+      }
+    },
+    {
+      "type": "quiz",
+      "title": "Quiz 2/4",
+      "content": {
+        "question": "Почему `IList<T>` не объявлен ковариантным (`out T`)?",
+        "options": [
+          "Ковариантность разрешена только для делегатов",
+          "Ковариантность ломает JIT-специализацию для value-типов",
+          "В нём есть методы, принимающие T, например Add(T)",
+          "Интерфейс, унаследованный от другого, не может иметь out T"
+        ],
+        "correctIndices": [
+          2
+        ]
+      }
+    },
+    {
+      "type": "quiz",
+      "title": "Quiz 3/4",
+      "content": {
+        "question": "Что даёт ограничение `where T : INumber<T>` в методе `Sum<T>`?",
+        "options": [
+          "Автоматическое приведение T к decimal перед сложением",
+          "Ограничение T только встроенными типами int и double",
+          "Упаковку T в object для вызова оператора сложения",
+          "Доступ к T.Zero и оператору + через static abstract члены"
+        ],
+        "correctIndices": [
+          3
+        ]
+      }
+    },
+    {
+      "type": "quiz",
+      "title": "Quiz 4/4",
+      "content": {
+        "question": "В `Registry<T>` объявлено `static readonly List<T> Items`. Сколько списков в процессе?",
+        "options": [
+          "По одному на каждый закрытый тип Registry<X>",
+          "Один общий на все T",
+          "Один для value-типов и один для ссылочных",
+          "По одному на каждый поток, использующий Registry"
+        ],
+        "correctIndices": [
+          0
+        ]
+      }
+    }
+  ]
+}

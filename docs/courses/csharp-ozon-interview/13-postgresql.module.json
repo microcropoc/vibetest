@@ -1,0 +1,89 @@
+{
+  "schemaVersion": 1,
+  "title": "PostgreSQL для backend-разработчика",
+  "steps": [
+    {
+      "type": "theory",
+      "title": "Ключевые понятия",
+      "content": "## Как устроено\n\n- **B-tree** — индекс по умолчанию: равенство, диапазоны, сортировка. В составном индексе работает **левый префикс**: сначала колонки с равенством, затем с диапазоном или сортировкой.\n- **GIN** — для `jsonb`, массивов и полнотекстового поиска. **Частичный индекс** (`WHERE status = 'new'`) — если запросы всегда идут по подмножеству. `INCLUDE` делает индекс покрывающим.\n- `EXPLAIN (ANALYZE, BUFFERS)` показывает реальный план: тип сканирования, оценку и фактическое число строк, время и прочитанные страницы.\n- **MVCC**: `UPDATE` создаёт новую версию строки, старую помечает; транзакция видит версии по своему снимку. Читатели не блокируют писателей. Мёртвые версии убирает `VACUUM`.\n- **Изоляция**: Read Committed (по умолчанию) — снимок на каждый запрос; Repeatable Read — снимок на транзакцию; Serializable — SSI, при конфликте ошибка сериализации и повтор.\n- `SELECT ... FOR UPDATE SKIP LOCKED` — очередь задач: воркеры забирают разные строки, не ожидая друг друга.\n- **Keyset-пагинация** вместо `OFFSET`:\n\n```sql\nSELECT id, created_at, total\nFROM orders\nWHERE seller_id = @seller AND (created_at, id) < (@last_created, @last_id)\nORDER BY created_at DESC, id DESC\nLIMIT 50;\n```\n\n## Пример\n\n```csharp\nusing Npgsql;\n\npublic static class OutboxQueue\n{\n    // Несколько воркеров забирают разные строки: SKIP LOCKED пропускает занятые\n    private const string ClaimSql = \"\"\"\n        SELECT id, payload\n        FROM outbox\n        WHERE processed_at IS NULL\n        ORDER BY id\n        LIMIT @batch\n        FOR UPDATE SKIP LOCKED\n        \"\"\";\n\n    public static async Task<List<(long Id, string Payload)>> ClaimAsync(\n        NpgsqlConnection connection, NpgsqlTransaction transaction, int batch, CancellationToken ct)\n    {\n        await using var command = new NpgsqlCommand(ClaimSql, connection, transaction);\n        command.Parameters.AddWithValue(\"batch\", batch);\n\n        var rows = new List<(long Id, string Payload)>();\n        await using var reader = await command.ExecuteReaderAsync(ct);\n        while (await reader.ReadAsync(ct))\n            rows.Add((reader.GetInt64(0), reader.GetString(1)));\n        return rows;\n    }\n}\n```\n\n## Подводные камни\n\n- `OFFSET` на глубоких страницах: база читает и отбрасывает все предыдущие строки, и страница 10 000 выполняется секунды.\n- Составной индекс `(seller_id, created_at)` не помогает запросу только по `created_at`: работает левый префикс индекса.\n- Долго открытая транзакция (`idle in transaction`) держит старый снимок: `VACUUM` не может удалить мёртвые версии, таблицы и индексы распухают."
+    },
+    {
+      "type": "svg",
+      "title": "MVCC: версии строки",
+      "content": {
+        "caption": "UPDATE создаёт новую версию строки",
+        "description": "Старые снимки видят прежнюю версию, VACUUM удаляет её, когда она никому не нужна.",
+        "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 360 126\" width=\"100%\" role=\"img\" aria-label=\"UPDATE создаёт новую версию строки\"><defs><marker id=\"c71-13-arrow\" viewBox=\"0 0 10 10\" refX=\"9\" refY=\"5\" markerWidth=\"6\" markerHeight=\"6\" orient=\"auto-start-reverse\"><path d=\"M0,0 L10,5 L0,10 z\" fill=\"#37474f\"/></marker></defs><rect id=\"c71-13-b00\" x=\"12.0\" y=\"12\" width=\"102.7\" height=\"49\" rx=\"6\" fill=\"#e3f2fd\" stroke=\"#1565c0\"/><text id=\"c71-13-b00-t\" text-anchor=\"middle\" font-size=\"9\" fill=\"#0d47a1\"><tspan x=\"63.3\" y=\"39.5\">UPDATE qty = 9</tspan></text><rect id=\"c71-13-b01\" x=\"128.7\" y=\"12\" width=\"102.7\" height=\"49\" rx=\"6\" fill=\"#e3f2fd\" stroke=\"#1565c0\"/><text id=\"c71-13-b01-t\" text-anchor=\"middle\" font-size=\"9\" fill=\"#0d47a1\"><tspan x=\"180.0\" y=\"28.5\">Версия 1: qty = 10</tspan><tspan x=\"180.0\" y=\"39.5\">(помечена</tspan><tspan x=\"180.0\" y=\"50.5\">удалённой)</tspan></text><rect id=\"c71-13-b02\" x=\"245.3\" y=\"12\" width=\"102.7\" height=\"49\" rx=\"6\" fill=\"#e3f2fd\" stroke=\"#1565c0\"/><text id=\"c71-13-b02-t\" text-anchor=\"middle\" font-size=\"9\" fill=\"#0d47a1\"><tspan x=\"296.7\" y=\"39.5\">Версия 2: qty = 9</tspan></text><rect id=\"c71-13-b10\" x=\"12.0\" y=\"87\" width=\"161.0\" height=\"27\" rx=\"6\" fill=\"#fff3e0\" stroke=\"#ef6c00\"/><text id=\"c71-13-b10-t\" text-anchor=\"middle\" font-size=\"9\" fill=\"#e65100\"><tspan x=\"92.5\" y=\"103.5\">Старый снимок читает версию 1</tspan></text><rect id=\"c71-13-b11\" x=\"187.0\" y=\"87\" width=\"161.0\" height=\"27\" rx=\"6\" fill=\"#fff3e0\" stroke=\"#ef6c00\"/><text id=\"c71-13-b11-t\" text-anchor=\"middle\" font-size=\"9\" fill=\"#e65100\"><tspan x=\"267.5\" y=\"103.5\">VACUUM удаляет версию 1 позже</tspan></text><line id=\"c71-13-l0\" x1=\"114.7\" y1=\"36.5\" x2=\"128.7\" y2=\"36.5\" stroke=\"#37474f\" stroke-width=\"1.2\" marker-end=\"url(#c71-13-arrow)\"/><line id=\"c71-13-l1\" x1=\"231.3\" y1=\"36.5\" x2=\"245.3\" y2=\"36.5\" stroke=\"#37474f\" stroke-width=\"1.2\" marker-end=\"url(#c71-13-arrow)\"/><line id=\"c71-13-l2\" x1=\"180.0\" y1=\"61.0\" x2=\"92.5\" y2=\"87.0\" stroke=\"#37474f\" stroke-width=\"1.2\" marker-end=\"url(#c71-13-arrow)\"/><line id=\"c71-13-l3\" x1=\"180.0\" y1=\"61.0\" x2=\"267.5\" y2=\"87.0\" stroke=\"#37474f\" stroke-width=\"1.2\" marker-end=\"url(#c71-13-arrow)\"/></svg>"
+      }
+    },
+    {
+      "type": "theory",
+      "title": "Вопросы с собеседования",
+      "content": "## Вопросы с собеседования\n\n### 1. Как выбрать индекс под запрос?\n\n**Ответ.** B-tree подходит для равенства, диапазонов и `ORDER BY`; в составном индексе сначала колонки с равенством, затем с диапазоном или сортировкой. GIN — для `jsonb`, массивов и полнотекстового поиска. Частичный индекс уменьшает размер, если запрос всегда фильтрует одно подмножество, например `status = 'new'`.\n\n**Уточнение интервьюера:** «Что такое Index Only Scan?» — все нужные колонки есть в индексе (в том числе через `INCLUDE`), а страницы отмечены в visibility map, поэтому таблицу читать не нужно.\n\n### 2. Как читать `EXPLAIN ANALYZE`?\n\n**Ответ.** Искать узлы с наибольшим фактическим временем, сравнивать оценку строк с фактом (большое расхождение — устаревшая статистика, помогает `ANALYZE`), смотреть тип сканирования и число `loops` во вложенных циклах. `BUFFERS` показывает, сколько страниц прочитано из кэша и с диска.\n\n**Уточнение интервьюера:** «Почему выбран Seq Scan при наличии индекса?» — запрос возвращает большую долю таблицы, или статистика неверна и планировщик ошибается в оценке.\n\n### 3. Как работает MVCC?\n\n**Ответ.** У каждой версии строки есть `xmin` (кто создал) и `xmax` (кто удалил или заменил). `UPDATE` пишет новую версию и помечает старую; транзакция видит только версии, подходящие её снимку. Поэтому чтение не блокирует запись, а мёртвые версии убирает `VACUUM`.\n\n**Уточнение интервьюера:** «Чем опасна долгая транзакция?» — она держит старый снимок, `VACUUM` не удаляет версии, которые ей могут понадобиться, и растёт bloat.\n\n### 4. Какие уровни изоляции есть и что выбрать для списания остатка?\n\n**Ответ.** Read Committed (по умолчанию) берёт снимок на каждый запрос, поэтому схема «прочитал, посчитал, записал» теряет обновления. Repeatable Read даёт снимок на транзакцию и ошибку при конфликте записи, Serializable гарантирует сериализуемость ценой повторов. Для остатка проще всего атомарный `UPDATE stock SET qty = qty - @n WHERE sku = @sku AND qty >= @n` с проверкой числа изменённых строк.\n\n**Уточнение интервьюера:** «Что делать при ошибке сериализации?» — повторить транзакцию целиком, с ограничением числа попыток.\n\n### 5. Зачем `FOR UPDATE SKIP LOCKED` и чем keyset лучше `OFFSET`?\n\n**Ответ.** `FOR UPDATE` блокирует выбранные строки до конца транзакции, а `SKIP LOCKED` пропускает уже заблокированные, поэтому несколько воркеров разбирают очередь (outbox, задачи) без конкуренции за одни строки. Keyset-пагинация продолжает с последнего ключа (`WHERE (created_at, id) < (...)`) и идёт по индексу, так что время не растёт с номером страницы.\n\n**Уточнение интервьюера:** «Минус keyset?» — нельзя перейти сразу на произвольную страницу; подходит для лент и бесконечной прокрутки."
+    },
+    {
+      "type": "quiz",
+      "title": "Quiz 1/4",
+      "content": {
+        "question": "Есть индекс `(seller_id, created_at)`. Какой запрос использует его эффективно?",
+        "options": [
+          "WHERE created_at > now() - interval '1 day'",
+          "WHERE seller_id + 1 = 6",
+          "WHERE seller_id = 5 ORDER BY created_at DESC",
+          "ORDER BY created_at без фильтра по seller_id"
+        ],
+        "correctIndices": [
+          2
+        ]
+      }
+    },
+    {
+      "type": "quiz",
+      "title": "Quiz 2/4",
+      "content": {
+        "question": "Зачем очереди задач в таблице `FOR UPDATE SKIP LOCKED`?",
+        "options": [
+          "Воркеры забирают разные строки, не ожидая друг друга",
+          "Чтобы читать строки без снимка MVCC",
+          "Чтобы снять блокировки, взятые другими транзакциями",
+          "Чтобы гарантировать обработку строго по порядку id"
+        ],
+        "correctIndices": [
+          0
+        ]
+      }
+    },
+    {
+      "type": "quiz",
+      "title": "Quiz 3/4",
+      "content": {
+        "question": "Что мешает `VACUUM` удалить мёртвые версии строк?",
+        "options": [
+          "Большое число индексов на таблице",
+          "Уровень изоляции Read Committed у всех сессий",
+          "Включённый autovacuum",
+          "Долго открытая транзакция со старым снимком"
+        ],
+        "correctIndices": [
+          3
+        ]
+      }
+    },
+    {
+      "type": "quiz",
+      "title": "Quiz 4/4",
+      "content": {
+        "question": "Две транзакции на Read Committed прочитали остаток 10 и каждая записала `qty = 9` (вычислено в приложении). Итог?",
+        "options": [
+          "8: обе транзакции применились",
+          "9: одно списание потеряно",
+          "Ошибка сериализации во второй транзакции",
+          "Deadlock, одна из транзакций откатится"
+        ],
+        "correctIndices": [
+          1
+        ]
+      }
+    }
+  ]
+}

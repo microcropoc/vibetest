@@ -1,0 +1,5 @@
+{
+  "schemaVersion": 1,
+  "title": "C# для опытного разработчика: собеседование в Ozon",
+  "description": "Теоретическая подготовка middle+/senior в Ozon на C# и .NET 8: типы и память, производительность, generics, LINQ, async изнутри, ASP.NET Core, EF Core, PostgreSQL, Kafka, gRPC, микросервисы, кэш, observability, тесты и архитектура. Theory, SVG, разбор вопросов с собеседования и quiz. Лайвкодинг и примитивы конкурентности — в связанных курсах."
+}

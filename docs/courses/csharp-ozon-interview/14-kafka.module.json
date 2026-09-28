@@ -1,0 +1,89 @@
+{
+  "schemaVersion": 1,
+  "title": "Kafka: партиции, группы, гарантии доставки",
+  "steps": [
+    {
+      "type": "theory",
+      "title": "Ключевые понятия",
+      "content": "## Как устроено\n\n- Топик разбит на **партиции** — упорядоченные логи. Порядок гарантирован только **внутри партиции**; партиция выбирается по хешу **ключа** сообщения.\n- **Consumer group**: каждую партицию читает ровно один consumer группы. Параллелизм ограничен числом партиций; разные группы читают топик независимо.\n- **Offset** — позиция в партиции. Коммит после обработки — **at-least-once** (возможны дубли), до обработки — **at-most-once** (возможны потери).\n- **Rebalance** — перераспределение партиций при входе, выходе или «зависании» consumer'а (обработка дольше `max.poll.interval.ms`). Протокол cooperative-sticky переносит только часть партиций.\n- **Producer**: `acks=all` и `enable.idempotence=true` защищают от потерь и дублей при повторах продюсера.\n- Exactly-once в Kafka — транзакции для цепочки «прочитал из Kafka → записал в Kafka». С внешней БД — at-least-once и **идемпотентный** обработчик.\n- Confluent.Kafka: `Consume` блокирующий, цикл чтения работает в отдельном потоке или `BackgroundService`.\n\n## Пример\n\n```csharp\nusing Confluent.Kafka;\n\npublic sealed class OrderEventsConsumer\n{\n    private readonly ConsumerConfig _config = new()\n    {\n        BootstrapServers = \"kafka:9092\",\n        GroupId = \"order-projection\",\n        EnableAutoCommit = false,\n        AutoOffsetReset = AutoOffsetReset.Earliest,\n        PartitionAssignmentStrategy = PartitionAssignmentStrategy.CooperativeSticky,\n    };\n\n    // handle должен быть идемпотентным: после падения до Commit сообщение придёт снова\n    public void Run(Action<string, string> handle, CancellationToken ct)\n    {\n        using var consumer = new ConsumerBuilder<string, string>(_config).Build();\n        consumer.Subscribe(\"order-events\");\n        try\n        {\n            while (!ct.IsCancellationRequested)\n            {\n                var result = consumer.Consume(ct);\n                handle(result.Message.Key, result.Message.Value);\n                consumer.Commit(result);\n            }\n        }\n        catch (OperationCanceledException) when (ct.IsCancellationRequested)\n        {\n            // штатная остановка\n        }\n        finally\n        {\n            consumer.Close();\n        }\n    }\n}\n```\n\nСинхронный `Commit` на каждое сообщение прост, но медленный; под нагрузкой коммитят пачками или через `StoreOffset` с периодическим автокоммитом сохранённых offset.\n\n## Подводные камни\n\n- Автокоммит (по умолчанию включён) коммитит offset по таймеру независимо от обработки: при падении сообщения теряются или обрабатываются повторно.\n- Случайный или пустой ключ для событий одного заказа: события попадают в разные партиции, и порядок «создан → оплачен» нарушается.\n- Обработка сообщения дольше `max.poll.interval.ms`: consumer исключается из группы, начинается rebalance, и сообщение повторно обрабатывает другой экземпляр."
+    },
+    {
+      "type": "svg",
+      "title": "Партиции и consumer group",
+      "content": {
+        "caption": "Ключ выбирает партицию, партицию читает один consumer группы",
+        "description": "Три партиции распределены между двумя consumer одной группы.",
+        "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 360 157\" width=\"100%\" role=\"img\" aria-label=\"Ключ выбирает партицию, партицию читает один consumer группы\"><defs><marker id=\"c71-14-arrow\" viewBox=\"0 0 10 10\" refX=\"9\" refY=\"5\" markerWidth=\"6\" markerHeight=\"6\" orient=\"auto-start-reverse\"><path d=\"M0,0 L10,5 L0,10 z\" fill=\"#37474f\"/></marker></defs><rect id=\"c71-14-b00\" x=\"112.0\" y=\"12\" width=\"136.0\" height=\"27\" rx=\"6\" fill=\"#e3f2fd\" stroke=\"#1565c0\"/><text id=\"c71-14-b00-t\" text-anchor=\"middle\" font-size=\"9\" fill=\"#0d47a1\"><tspan x=\"180.0\" y=\"28.5\">Producer: key = orderId</tspan></text><rect id=\"c71-14-b10\" x=\"12.0\" y=\"65\" width=\"102.7\" height=\"27\" rx=\"6\" fill=\"#fff3e0\" stroke=\"#ef6c00\"/><text id=\"c71-14-b10-t\" text-anchor=\"middle\" font-size=\"9\" fill=\"#e65100\"><tspan x=\"63.3\" y=\"81.5\">Партиция 0</tspan></text><rect id=\"c71-14-b11\" x=\"128.7\" y=\"65\" width=\"102.7\" height=\"27\" rx=\"6\" fill=\"#fff3e0\" stroke=\"#ef6c00\"/><text id=\"c71-14-b11-t\" text-anchor=\"middle\" font-size=\"9\" fill=\"#e65100\"><tspan x=\"180.0\" y=\"81.5\">Партиция 1</tspan></text><rect id=\"c71-14-b12\" x=\"245.3\" y=\"65\" width=\"102.7\" height=\"27\" rx=\"6\" fill=\"#fff3e0\" stroke=\"#ef6c00\"/><text id=\"c71-14-b12-t\" text-anchor=\"middle\" font-size=\"9\" fill=\"#e65100\"><tspan x=\"296.7\" y=\"81.5\">Партиция 2</tspan></text><rect id=\"c71-14-b20\" x=\"52.0\" y=\"118\" width=\"121.0\" height=\"27\" rx=\"6\" fill=\"#e8f5e9\" stroke=\"#2e7d32\"/><text id=\"c71-14-b20-t\" text-anchor=\"middle\" font-size=\"9\" fill=\"#1b5e20\"><tspan x=\"112.5\" y=\"134.5\">Consumer A</tspan></text><rect id=\"c71-14-b21\" x=\"187.0\" y=\"118\" width=\"121.0\" height=\"27\" rx=\"6\" fill=\"#e8f5e9\" stroke=\"#2e7d32\"/><text id=\"c71-14-b21-t\" text-anchor=\"middle\" font-size=\"9\" fill=\"#1b5e20\"><tspan x=\"247.5\" y=\"134.5\">Consumer B</tspan></text><line id=\"c71-14-l0\" x1=\"180.0\" y1=\"39.0\" x2=\"63.3\" y2=\"65.0\" stroke=\"#37474f\" stroke-width=\"1.2\" marker-end=\"url(#c71-14-arrow)\"/><line id=\"c71-14-l1\" x1=\"180.0\" y1=\"39.0\" x2=\"180.0\" y2=\"65.0\" stroke=\"#37474f\" stroke-width=\"1.2\" marker-end=\"url(#c71-14-arrow)\"/><line id=\"c71-14-l2\" x1=\"180.0\" y1=\"39.0\" x2=\"296.7\" y2=\"65.0\" stroke=\"#37474f\" stroke-width=\"1.2\" marker-end=\"url(#c71-14-arrow)\"/><line id=\"c71-14-l3\" x1=\"63.3\" y1=\"92.0\" x2=\"112.5\" y2=\"118.0\" stroke=\"#37474f\" stroke-width=\"1.2\" marker-end=\"url(#c71-14-arrow)\"/><line id=\"c71-14-l4\" x1=\"180.0\" y1=\"92.0\" x2=\"112.5\" y2=\"118.0\" stroke=\"#37474f\" stroke-width=\"1.2\" marker-end=\"url(#c71-14-arrow)\"/><line id=\"c71-14-l5\" x1=\"296.7\" y1=\"92.0\" x2=\"247.5\" y2=\"118.0\" stroke=\"#37474f\" stroke-width=\"1.2\" marker-end=\"url(#c71-14-arrow)\"/></svg>"
+      }
+    },
+    {
+      "type": "theory",
+      "title": "Вопросы с собеседования",
+      "content": "## Вопросы с собеседования\n\n### 1. Как Kafka гарантирует порядок сообщений?\n\n**Ответ.** Только внутри партиции. Партиция выбирается по хешу ключа, поэтому события одной сущности пишут с её id в качестве ключа. Если увеличить число партиций, распределение ключей изменится и порядок на переходе может нарушиться.\n\n**Уточнение интервьюера:** «Может ли продюсер сам переставить сообщения?» — при повторах без идемпотентности и нескольких запросах «в полёте» — да; `enable.idempotence=true` это исключает.\n\n### 2. Как масштабируется чтение через consumer group?\n\n**Ответ.** Каждая партиция назначается ровно одному consumer группы, поэтому максимальный параллелизм равен числу партиций. Лишние consumer простаивают, а разные группы читают один и тот же топик независимо, каждая со своими offset.\n\n**Уточнение интервьюера:** «12 партиций и 20 подов — что будет?» — 8 подов не получат партиций; число партиций закладывают с запасом заранее.\n\n### 3. Чем отличаются at-least-once, at-most-once и exactly-once?\n\n**Ответ.** Коммит offset после обработки даёт at-least-once: после падения сообщение придёт снова. Коммит до обработки — at-most-once: сообщение может потеряться. Exactly-once в Kafka обеспечивают транзакции для цепочки «Kafka → обработка → Kafka»; с внешней БД используют at-least-once и идемпотентный обработчик.\n\n**Уточнение интервьюера:** «Как сделать обработчик идемпотентным?» — записывать id обработанных сообщений в той же транзакции, что и изменения, или делать upsert по бизнес-ключу.\n\n### 4. Что такое rebalance и почему он случается слишком часто?\n\n**Ответ.** Это перераспределение партиций при подключении или отключении consumer, изменении подписки или «зависании» consumer. Классический протокол останавливает чтение во всей группе, cooperative-sticky переносит только часть партиций. Перед отзывом партиций нужно закоммитить обработанное.\n\n**Уточнение интервьюера:** «Причины частых rebalance?» — обработка дольше `max.poll.interval.ms`, долгие паузы GC, частые деплои без static membership.\n\n### 5. Как надёжно опубликовать событие после изменения в БД?\n\n**Ответ.** Атомарно записать в БД и отправить в Kafka нельзя. Паттерн outbox пишет событие в таблицу в той же транзакции, а отдельный процесс публикует его и помечает отправленным. Публикация может повториться, поэтому consumer идемпотентен. Реализацию разбирает день «Outbox» в курсе «Лайвкодинг в Ozon на C#».\n\n**Уточнение интервьюера:** «Как публиковать outbox из нескольких экземпляров?» — забирать строки через `FOR UPDATE SKIP LOCKED` (модуль про PostgreSQL) или использовать CDC, например Debezium."
+    },
+    {
+      "type": "quiz",
+      "title": "Quiz 1/4",
+      "content": {
+        "question": "В топике 6 партиций, в consumer group 8 экземпляров. Сколько из них получат сообщения?",
+        "options": [
+          "8: партиции поделятся между всеми по сообщениям",
+          "8: каждый экземпляр получит все сообщения топика",
+          "1: остальные — горячий резерв лидера группы",
+          "6"
+        ],
+        "correctIndices": [
+          3
+        ]
+      }
+    },
+    {
+      "type": "quiz",
+      "title": "Quiz 2/4",
+      "content": {
+        "question": "Как сохранить порядок событий одного заказа?",
+        "options": [
+          "Использовать id заказа как ключ сообщения",
+          "Включить автокоммит offset",
+          "Создать отдельную consumer group на каждый тип события",
+          "Отправлять события с acks=0, чтобы не было задержек"
+        ],
+        "correctIndices": [
+          0
+        ]
+      }
+    },
+    {
+      "type": "quiz",
+      "title": "Quiz 3/4",
+      "content": {
+        "question": "Offset коммитится после обработки. Consumer упал после обработки, но до коммита. Что будет?",
+        "options": [
+          "Сообщение потеряется безвозвратно",
+          "Сообщение обработается повторно",
+          "Kafka откатит изменения, сделанные обработчиком",
+          "Партиция заблокируется до ручного вмешательства"
+        ],
+        "correctIndices": [
+          1
+        ]
+      }
+    },
+    {
+      "type": "quiz",
+      "title": "Quiz 4/4",
+      "content": {
+        "question": "Обработка сообщения заняла больше `max.poll.interval.ms`. Последствие?",
+        "options": [
+          "Kafka удаляет сообщение из партиции",
+          "Offset автоматически коммитится по таймауту",
+          "Consumer исключается из группы, начинается rebalance",
+          "Брокер переносит сообщение в dead letter queue"
+        ],
+        "correctIndices": [
+          2
+        ]
+      }
+    }
+  ]
+}

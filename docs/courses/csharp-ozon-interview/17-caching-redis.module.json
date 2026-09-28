@@ -1,0 +1,89 @@
+{
+  "schemaVersion": 1,
+  "title": "Кэширование и Redis",
+  "steps": [
+    {
+      "type": "theory",
+      "title": "Ключевые понятия",
+      "content": "## Как устроено\n\n- **Cache-aside**: читаем кэш, при промахе загружаем из БД и кладём в кэш с TTL. При изменении — сначала коммит в БД, затем **удаление** ключа.\n- **Cache stampede**: истёк популярный ключ, и тысячи запросов одновременно идут в БД. Решения: одна загрузка на ключ (single-flight), разброс TTL (jitter), фоновое обновление до истечения, выдача устаревшего значения на время обновления.\n- `IMemoryCache` — в памяти процесса: быстро и без сериализации, но у каждого пода своя копия.\n- `IDistributedCache` (Redis) — общий для всех подов, но с сетью и сериализацией.\n- **HybridCache** — NuGet-пакет `Microsoft.Extensions.Caching.Hybrid`. Он вышел вместе с .NET 9, но работает и на `net8.0` (а также на .NET Standard 2.0). Объединяет L1 (память) и L2 (`IDistributedCache`), защищает от stampede внутри процесса и поддерживает инвалидацию по тегам.\n- **Redis** выполняет команды последовательно в одном потоке: операции атомарны, но долгая команда (`KEYS`, большой `LRANGE`) задерживает всех. Поведение при нехватке памяти задаёт `maxmemory-policy`.\n\n## Пример\n\n```csharp\nusing System.Text.Json;\nusing Microsoft.Extensions.Caching.Distributed;\nusing Microsoft.Extensions.Caching.Hybrid;\n\npublic sealed record ProductCard(long Id, string Title, decimal Price);\n\npublic interface IProductStore\n{\n    Task<ProductCard> LoadAsync(long id, CancellationToken ct);\n}\n\npublic sealed class ProductCache(IDistributedCache redis, HybridCache hybrid, IProductStore store)\n{\n    // Cache-aside вручную: промах → БД → запись с TTL и случайным разбросом\n    public async Task<ProductCard> GetAsync(long id, CancellationToken ct)\n    {\n        var key = $\"product:{id}\";\n        var cached = await redis.GetAsync(key, ct);\n        if (cached is not null)\n            return JsonSerializer.Deserialize<ProductCard>(cached)!;\n\n        var card = await store.LoadAsync(id, ct);\n        var ttl = TimeSpan.FromMinutes(10) + TimeSpan.FromSeconds(Random.Shared.Next(0, 60));\n        await redis.SetAsync(key, JsonSerializer.SerializeToUtf8Bytes(card),\n            new DistributedCacheEntryOptions { AbsoluteExpirationRelativeToNow = ttl }, ct);\n        return card;\n    }\n\n    // HybridCache: L1 + L2 и одна загрузка на ключ при одновременных промахах\n    public ValueTask<ProductCard> GetHybridAsync(long id, CancellationToken ct) =>\n        hybrid.GetOrCreateAsync(\n            $\"product:{id}\",\n            async token => await store.LoadAsync(id, token),\n            cancellationToken: ct);\n}\n```\n\n## Подводные камни\n\n- Одинаковый TTL у ключей, загруженных одновременно (прогрев после деплоя): они истекают разом, и БД получает всплеск запросов. Добавляйте случайный разброс.\n- Удалять ключ до коммита транзакции: параллельный запрос успевает прочитать старые данные из БД и снова положить их в кэш.\n- `IMemoryCache` в нескольких подах как общий кэш: после изменения данных каждый под отдаёт свою устаревшую копию до истечения TTL."
+    },
+    {
+      "type": "svg",
+      "title": "Уровни кэша",
+      "content": {
+        "caption": "Путь запроса через L1, L2 и БД",
+        "description": "При промахе на всех уровнях данные загружаются один раз и записываются в L2 и L1.",
+        "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 360 115\" width=\"100%\" role=\"img\" aria-label=\"Путь запроса через L1, L2 и БД\"><defs><marker id=\"c71-17-arrow\" viewBox=\"0 0 10 10\" refX=\"9\" refY=\"5\" markerWidth=\"6\" markerHeight=\"6\" orient=\"auto-start-reverse\"><path d=\"M0,0 L10,5 L0,10 z\" fill=\"#37474f\"/></marker></defs><rect id=\"c71-17-b00\" x=\"12.0\" y=\"12\" width=\"73.5\" height=\"38\" rx=\"6\" fill=\"#e3f2fd\" stroke=\"#1565c0\"/><text id=\"c71-17-b00-t\" text-anchor=\"middle\" font-size=\"9\" fill=\"#0d47a1\"><tspan x=\"48.8\" y=\"34.0\">Запрос</tspan></text><rect id=\"c71-17-b01\" x=\"99.5\" y=\"12\" width=\"73.5\" height=\"38\" rx=\"6\" fill=\"#e3f2fd\" stroke=\"#1565c0\"/><text id=\"c71-17-b01-t\" text-anchor=\"middle\" font-size=\"9\" fill=\"#0d47a1\"><tspan x=\"136.3\" y=\"28.5\">L1: память</tspan><tspan x=\"136.3\" y=\"39.5\">пода</tspan></text><rect id=\"c71-17-b02\" x=\"187.0\" y=\"12\" width=\"73.5\" height=\"38\" rx=\"6\" fill=\"#e3f2fd\" stroke=\"#1565c0\"/><text id=\"c71-17-b02-t\" text-anchor=\"middle\" font-size=\"9\" fill=\"#0d47a1\"><tspan x=\"223.8\" y=\"34.0\">L2: Redis</tspan></text><rect id=\"c71-17-b03\" x=\"274.5\" y=\"12\" width=\"73.5\" height=\"38\" rx=\"6\" fill=\"#e3f2fd\" stroke=\"#1565c0\"/><text id=\"c71-17-b03-t\" text-anchor=\"middle\" font-size=\"9\" fill=\"#0d47a1\"><tspan x=\"311.3\" y=\"34.0\">База данных</tspan></text><rect id=\"c71-17-b10\" x=\"52.0\" y=\"76\" width=\"256.0\" height=\"27\" rx=\"6\" fill=\"#fff3e0\" stroke=\"#ef6c00\"/><text id=\"c71-17-b10-t\" text-anchor=\"middle\" font-size=\"9\" fill=\"#e65100\"><tspan x=\"180.0\" y=\"92.5\">Промах: одна загрузка на ключ, запись в L2 и L1</tspan></text><line id=\"c71-17-l0\" x1=\"85.5\" y1=\"31.0\" x2=\"99.5\" y2=\"31.0\" stroke=\"#37474f\" stroke-width=\"1.2\" marker-end=\"url(#c71-17-arrow)\"/><line id=\"c71-17-l1\" x1=\"173.0\" y1=\"31.0\" x2=\"187.0\" y2=\"31.0\" stroke=\"#37474f\" stroke-width=\"1.2\" marker-end=\"url(#c71-17-arrow)\"/><line id=\"c71-17-l2\" x1=\"260.5\" y1=\"31.0\" x2=\"274.5\" y2=\"31.0\" stroke=\"#37474f\" stroke-width=\"1.2\" marker-end=\"url(#c71-17-arrow)\"/><line id=\"c71-17-l3\" x1=\"311.3\" y1=\"50.0\" x2=\"180.0\" y2=\"76.0\" stroke=\"#37474f\" stroke-width=\"1.2\" marker-end=\"url(#c71-17-arrow)\"/></svg>"
+      }
+    },
+    {
+      "type": "theory",
+      "title": "Вопросы с собеседования",
+      "content": "## Вопросы с собеседования\n\n### 1. Как работает cache-aside и в каком порядке обновлять данные?\n\n**Ответ.** При чтении — кэш, при промахе — БД и запись в кэш с TTL. При изменении сначала коммит в БД, затем удаление ключа, чтобы следующий промах загрузил свежие данные. Окно гонки всё равно остаётся, поэтому TTL служит страховкой.\n\n**Уточнение интервьюера:** «Почему удалять ключ, а не записывать новое значение?» — два параллельных обновления могут записать значения в кэш в обратном порядке, и в кэше останется старое.\n\n### 2. Что такое cache stampede и как его предотвратить?\n\n**Ответ.** Когда популярный ключ истекает, все запросы одновременно промахиваются и идут в БД. Защита: одна загрузка на ключ (внутри процесса — single-flight, в кластере — распределённая блокировка), разброс TTL, фоновое обновление до истечения или выдача устаревшего значения, пока идёт обновление.\n\n**Уточнение интервьюера:** «Что даёт HybridCache?» — параллельные промахи по одному ключу внутри процесса ждут одну загрузку; между подами защиты нет, её дают разброс TTL и L2.\n\n### 3. Чем отличаются `IMemoryCache`, `IDistributedCache` и HybridCache?\n\n**Ответ.** `IMemoryCache` живёт в процессе: самый быстрый, без сериализации, но у каждого пода своя копия. `IDistributedCache` (Redis) общий, но добавляет сеть и сериализацию. HybridCache — пакет `Microsoft.Extensions.Caching.Hybrid`, который вышел вместе с .NET 9 и работает на net8.0: он объединяет L1 и L2, защищает от stampede и поддерживает теги.\n\n**Уточнение интервьюера:** «Какая проблема у L1 при изменении данных?» — другие поды держат устаревшую локальную копию до её TTL; нужен короткий локальный TTL или шина инвалидации.\n\n### 4. Почему Redis быстрый и где у него узкие места?\n\n**Ответ.** Данные в памяти, команды выполняются последовательно в одном потоке, поэтому каждая команда атомарна и не требует блокировок. Узкие места: долгие команды (`KEYS`, большие выборки) блокируют всех, горячий ключ перегружает один шард, большие значения нагружают сеть.\n\n**Уточнение интервьюера:** «Что будет при заполнении памяти?» — зависит от `maxmemory-policy`: `noeviction` вернёт ошибки записи, `allkeys-lru` вытеснит давно не использованные ключи.\n\n### 5. Что кэшировать и как понять, что кэш работает?\n\n**Ответ.** Кэшируют дорогие и часто читаемые данные с допустимой устарелостью: карточки товаров, справочники. Остатки и цены — только с явным требованием к свежести и коротким TTL. Метрики: доля попаданий, латентность кэша, размер, число вытеснений.\n\n**Уточнение интервьюера:** «Что делать, если Redis недоступен?» — короткий таймаут на операции кэша и деградация к БД с защитой (circuit breaker, лимит параллельных загрузок), а не падение запроса."
+    },
+    {
+      "type": "quiz",
+      "title": "Quiz 1/4",
+      "content": {
+        "question": "Товар изменён в БД. Что сделать с кэшем при cache-aside?",
+        "options": [
+          "До коммита записать в кэш новое значение",
+          "Ничего: TTL в 10 минут всё исправит",
+          "После коммита удалить ключ",
+          "Очистить весь кэш командой FLUSHALL"
+        ],
+        "correctIndices": [
+          2
+        ]
+      }
+    },
+    {
+      "type": "quiz",
+      "title": "Quiz 2/4",
+      "content": {
+        "question": "10 000 запросов одновременно промахнулись по одному ключу. Как не перегрузить БД?",
+        "options": [
+          "Увеличить пул соединений к БД до 10 000",
+          "Одна загрузка на ключ, остальные ждут её результат",
+          "Увеличить TTL всех ключей до суток",
+          "Каждому запросу записать результат в кэш отдельно"
+        ],
+        "correctIndices": [
+          1
+        ]
+      }
+    },
+    {
+      "type": "quiz",
+      "title": "Quiz 3/4",
+      "content": {
+        "question": "Что такое HybridCache для проекта на .NET 8?",
+        "options": [
+          "NuGet-пакет с L1 и L2, который работает и на net8.0",
+          "Встроенный класс .NET 8 для работы с Redis",
+          "Часть рантайма, доступная только начиная с .NET 9",
+          "Режим IMemoryCache с сохранением записей на диск"
+        ],
+        "correctIndices": [
+          0
+        ]
+      }
+    },
+    {
+      "type": "quiz",
+      "title": "Quiz 4/4",
+      "content": {
+        "question": "10 подов кэшируют цены в `IMemoryCache` на 5 минут. Цена изменилась. Что увидят пользователи?",
+        "options": [
+          "Все поды сразу получат новую цену",
+          "Первый под, узнавший о цене, обновит кэш остальных",
+          "IMemoryCache бросит исключение об устаревших данных",
+          "До 5 минут разные поды отдают разные цены"
+        ],
+        "correctIndices": [
+          3
+        ]
+      }
+    }
+  ]
+}

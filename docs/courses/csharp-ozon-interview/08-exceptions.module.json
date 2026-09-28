@@ -1,0 +1,89 @@
+{
+  "schemaVersion": 1,
+  "title": "Исключения и обработка ошибок",
+  "steps": [
+    {
+      "type": "theory",
+      "title": "Ключевые понятия",
+      "content": "## Как устроено\n\n- `throw;` перебрасывает текущее исключение с **исходной** трассой стека, `throw ex;` начинает трассу заново с текущей строки.\n- `ExceptionDispatchInfo.Capture(ex).Throw()` перебрасывает сохранённое исключение в другом месте без потери стека — так работает `await`.\n- **Фильтры** `catch (X ex) when (условие)` вычисляются **до раскрутки стека**: при `false` поиск обработчика продолжается выше, а стек остаётся нетронутым для дампа.\n- Выброс исключения дорогой: сбор трассы, поиск обработчика, раскрутка с выполнением `finally`. Для ожидаемых бизнес-ошибок используют результат-тип или `TryXxx`.\n- `.Wait()` и `.Result` оборачивают ошибки в `AggregateException`; `await` бросает первое исключение.\n- В ASP.NET Core 8 глобальная обработка — `UseExceptionHandler` и `IExceptionHandler` с ответом ProblemDetails.\n- `OperationCanceledException` при отменённом токене — не ошибка, её не логируют как сбой.\n\n## Пример\n\n```csharp\nusing System.Net;\nusing Microsoft.Extensions.Logging;\n\npublic abstract record PlaceOrderResult\n{\n    public sealed record Success(long OrderId) : PlaceOrderResult;\n    public sealed record OutOfStock(string Sku) : PlaceOrderResult;\n}\n\npublic sealed class OrderStatusClient(HttpClient http, ILogger<OrderStatusClient> log)\n{\n    public async Task<string?> TryGetStatusAsync(long orderId, CancellationToken ct)\n    {\n        try\n        {\n            return await http.GetStringAsync($\"/orders/{orderId}/status\", ct);\n        }\n        catch (HttpRequestException ex) when (ex.StatusCode == HttpStatusCode.NotFound)\n        {\n            log.LogWarning(\"Order {OrderId} not found\", orderId);\n            return null;\n        }\n    }\n}\n```\n\n## Подводные камни\n\n- `throw ex;` вместо `throw;`: трасса обрезается до текущего метода, и по логам не видно, где на самом деле упало.\n- Исключения для ожидаемых ситуаций на горячем пути (нет товара, неверный промокод): под нагрузкой стоимость выброса заметна в CPU и латентности.\n- `catch (Exception)` без фильтра перехватывает и `OperationCanceledException`: отменённый запрос логируется как ошибка или продолжает работу."
+    },
+    {
+      "type": "svg",
+      "title": "Обработка исключения",
+      "content": {
+        "caption": "Два прохода обработки исключения",
+        "description": "Сначала поиск обработчика с вычислением фильтров, затем раскрутка стека с finally.",
+        "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 360 126\" width=\"100%\" role=\"img\" aria-label=\"Два прохода обработки исключения\"><defs><marker id=\"c71-08-arrow\" viewBox=\"0 0 10 10\" refX=\"9\" refY=\"5\" markerWidth=\"6\" markerHeight=\"6\" orient=\"auto-start-reverse\"><path d=\"M0,0 L10,5 L0,10 z\" fill=\"#37474f\"/></marker></defs><rect id=\"c71-08-b00\" x=\"12.0\" y=\"12\" width=\"102.7\" height=\"38\" rx=\"6\" fill=\"#e3f2fd\" stroke=\"#1565c0\"/><text id=\"c71-08-b00-t\" text-anchor=\"middle\" font-size=\"9\" fill=\"#0d47a1\"><tspan x=\"63.3\" y=\"34.0\">throw</tspan></text><rect id=\"c71-08-b01\" x=\"128.7\" y=\"12\" width=\"102.7\" height=\"38\" rx=\"6\" fill=\"#e3f2fd\" stroke=\"#1565c0\"/><text id=\"c71-08-b01-t\" text-anchor=\"middle\" font-size=\"9\" fill=\"#0d47a1\"><tspan x=\"180.0\" y=\"28.5\">Поиск catch и</tspan><tspan x=\"180.0\" y=\"39.5\">вычисление when</tspan></text><rect id=\"c71-08-b02\" x=\"245.3\" y=\"12\" width=\"102.7\" height=\"38\" rx=\"6\" fill=\"#e3f2fd\" stroke=\"#1565c0\"/><text id=\"c71-08-b02-t\" text-anchor=\"middle\" font-size=\"9\" fill=\"#0d47a1\"><tspan x=\"296.7\" y=\"28.5\">Раскрутка стека и</tspan><tspan x=\"296.7\" y=\"39.5\">finally</tspan></text><rect id=\"c71-08-b10\" x=\"122.0\" y=\"76\" width=\"116.0\" height=\"38\" rx=\"6\" fill=\"#fff3e0\" stroke=\"#ef6c00\"/><text id=\"c71-08-b10-t\" text-anchor=\"middle\" font-size=\"9\" fill=\"#e65100\"><tspan x=\"180.0\" y=\"92.5\">Выполнение найденного</tspan><tspan x=\"180.0\" y=\"103.5\">catch</tspan></text><line id=\"c71-08-l0\" x1=\"114.7\" y1=\"31.0\" x2=\"128.7\" y2=\"31.0\" stroke=\"#37474f\" stroke-width=\"1.2\" marker-end=\"url(#c71-08-arrow)\"/><line id=\"c71-08-l1\" x1=\"231.3\" y1=\"31.0\" x2=\"245.3\" y2=\"31.0\" stroke=\"#37474f\" stroke-width=\"1.2\" marker-end=\"url(#c71-08-arrow)\"/><line id=\"c71-08-l2\" x1=\"296.7\" y1=\"50.0\" x2=\"180.0\" y2=\"76.0\" stroke=\"#37474f\" stroke-width=\"1.2\" marker-end=\"url(#c71-08-arrow)\"/></svg>"
+      }
+    },
+    {
+      "type": "theory",
+      "title": "Вопросы с собеседования",
+      "content": "## Вопросы с собеседования\n\n### 1. Чем `throw;` отличается от `throw ex;`?\n\n**Ответ.** `throw;` перебрасывает текущее исключение и сохраняет исходную трассу стека. `throw ex;` перезаписывает трассу, и она начинается с этой строки, поэтому место настоящей ошибки теряется. Если нужно добавить контекст — бросают новое исключение с исходным во `InnerException`.\n\n**Уточнение интервьюера:** «Как перебросить исключение из другого места с сохранением стека?» — `ExceptionDispatchInfo.Capture(ex).Throw()`, так делает `await` при повторном выбросе ошибки задачи.\n\n### 2. Зачем нужны фильтры исключений?\n\n**Ответ.** Условие `when` вычисляется до раскрутки стека. Если оно ложно, исключение идёт дальше, как будто этого `catch` нет, и стек остаётся целым для отладчика и дампа. Фильтры позволяют ловить исключение по свойству (коду HTTP-ответа, коду ошибки БД), не перехватывая остальные.\n\n**Уточнение интервьюера:** «Как залогировать исключение, не перехватывая его?» — `catch (Exception ex) when (Log(ex))`, где `Log` возвращает `false`.\n\n### 3. Почему исключения дорогие и чем их заменить?\n\n**Ответ.** Выброс собирает трассу стека, выполняет двухпроходный поиск обработчика и раскрутку с `finally`. Даже после оптимизаций в новых версиях .NET это на порядки дороже обычного возврата. Для ожидаемых исходов — результат-тип (иерархия `record`), паттерн `TryXxx` или код ошибки в ответе.\n\n**Уточнение интервьюера:** «Где граница между исключением и результатом?» — исключение для нарушения контракта и непредвиденных сбоев, результат — для штатных бизнес-исходов, которые вызывающий обязан обработать.\n\n### 4. Как ведут себя исключения в `Task.WhenAll`?\n\n**Ответ.** `await Task.WhenAll(a, b)` бросает только первое исключение, хотя упасть могли обе задачи. Все ошибки лежат в `Exception.InnerExceptions` задачи, которую вернул `WhenAll`. `.Wait()` и `.Result` бросают `AggregateException` со всеми ошибками сразу.\n\n**Уточнение интервьюера:** «Как получить все ошибки?» — сохранить задачу `WhenAll` в переменную и после `catch` прочитать её свойство `Exception`.\n\n### 5. Как устроить глобальную обработку ошибок в ASP.NET Core?\n\n**Ответ.** `UseExceptionHandler` первым в конвейере и реализация `IExceptionHandler` (.NET 8): она логирует ошибку с TraceId и возвращает ProblemDetails с понятным кодом, не раскрывая стек клиенту. Доменные ошибки маппятся в 4xx, непредвиденные — в 500.\n\n**Уточнение интервьюера:** «Что будет с необработанным исключением в `BackgroundService`?» — начиная с .NET 6 по умолчанию хост останавливается (`BackgroundServiceExceptionBehavior.StopHost`)."
+    },
+    {
+      "type": "quiz",
+      "title": "Quiz 1/4",
+      "content": {
+        "question": "Чем `throw;` отличается от `throw ex;` в блоке `catch`?",
+        "options": [
+          "throw; сохраняет исходную трассу стека",
+          "throw ex; добавляет исходное исключение в InnerException",
+          "throw; работает только для исключений из текущего метода",
+          "Ничем: компилятор генерирует одинаковый IL"
+        ],
+        "correctIndices": [
+          0
+        ]
+      }
+    },
+    {
+      "type": "quiz",
+      "title": "Quiz 2/4",
+      "content": {
+        "question": "Условие в `catch (...) when (cond)` вернуло `false`. Что происходит?",
+        "options": [
+          "Исключение подавляется, выполнение идёт после try",
+          "Блок catch выполняется, но в конце исключение перебрасывается",
+          "Из фильтра бросается новое InvalidOperationException",
+          "Поиск обработчика продолжается выше, стек ещё не раскручен"
+        ],
+        "correctIndices": [
+          3
+        ]
+      }
+    },
+    {
+      "type": "quiz",
+      "title": "Quiz 3/4",
+      "content": {
+        "question": "Упали обе задачи в `await Task.WhenAll(a, b)`. Что получит `catch`?",
+        "options": [
+          "AggregateException с обоими внутренними исключениями сразу",
+          "Последнее исключение, первое теряется",
+          "Одно из исключений; все — в Exception задачи WhenAll",
+          "Ничего: WhenAll подавляет ошибки и возвращает null"
+        ],
+        "correctIndices": [
+          2
+        ]
+      }
+    },
+    {
+      "type": "quiz",
+      "title": "Quiz 4/4",
+      "content": {
+        "question": "Как лучше вернуть ожидаемую ошибку «товара нет в наличии» из горячего метода?",
+        "options": [
+          "Собственное исключение OutOfStockException",
+          "Результат-тип, например record OutOfStock",
+          "null и запись причины в лог",
+          "Код ошибки в статическом поле LastError"
+        ],
+        "correctIndices": [
+          1
+        ]
+      }
+    }
+  ]
+}

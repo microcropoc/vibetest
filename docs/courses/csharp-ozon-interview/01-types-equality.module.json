@@ -1,0 +1,89 @@
+{
+  "schemaVersion": 1,
+  "title": "Типы, равенство и pattern matching",
+  "steps": [
+    {
+      "type": "theory",
+      "title": "Ключевые понятия",
+      "content": "## Как устроено\n\n- **Value types** (`struct`, `enum`, числовые типы) хранят данные прямо в переменной или поле и **копируются** при присваивании и передаче в метод.\n- **Reference types** (`class`, `string`, массивы, делегаты) — переменная хранит **ссылку** на объект в управляемой куче; при присваивании копируется ссылка.\n- **Boxing** — копирование значения value type в новый объект в куче при приведении к `object` или интерфейсу. Это аллокация, а изменение упакованной копии не меняет исходное значение.\n- `record class` — ссылочный тип со сгенерированными `Equals`, `GetHashCode`, `==`, `ToString` и `with` по значениям свойств. `record struct` — то же для value type, `readonly record struct` — неизменяемый вариант.\n- **Nullable reference types (NRT)** — только анализ компилятора: `string?` и `string` в рантайме один и тот же тип, проверок нет.\n- **Pattern matching**: `switch`-выражения, шаблоны свойств (`{ Amount: 0 }`), типов, отношений (`> 100`) и списков (`[first, ..]`, C# 11).\n\n## Пример\n\n```csharp\npublic readonly record struct Money(decimal Amount, string Currency);\n\npublic sealed class Sku : IEquatable<Sku>\n{\n    public Sku(string code) => Code = code.ToUpperInvariant();\n\n    public string Code { get; }\n\n    public bool Equals(Sku? other) => other is not null && Code == other.Code;\n    public override bool Equals(object? obj) => Equals(obj as Sku);\n    public override int GetHashCode() => Code.GetHashCode(StringComparison.Ordinal);\n}\n\npublic static class Pricing\n{\n    public static string Describe(object? value) => value switch\n    {\n        Money { Amount: 0 } => \"бесплатно\",\n        Money m => $\"{m.Amount} {m.Currency}\",\n        int n => $\"число {n}\", // int пришёл упакованным в object\n        null => \"нет значения\",\n        _ => \"неизвестно\",\n    };\n}\n```\n\n## Подводные камни\n\n- Переопределить `Equals` без `GetHashCode`: равные объекты получают разные хеши и «теряются» в `Dictionary` и `HashSet`.\n- Изменить поле, участвующее в `GetHashCode`, у объекта, который уже лежит ключом в словаре: он остаётся в старом бакете и больше не находится.\n- Вызвать метод у не-`readonly` struct через `readonly`-поле или `in`-параметр: компилятор делает скрытую защитную копию, и изменения внутри метода теряются."
+    },
+    {
+      "type": "svg",
+      "title": "Копирование при присваивании",
+      "content": {
+        "caption": "Что копируется при присваивании",
+        "description": "Value type копирует данные, reference type — ссылку, boxing создаёт новый объект в куче.",
+        "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 360 157\" width=\"100%\" role=\"img\" aria-label=\"Что копируется при присваивании\"><defs><marker id=\"c71-01-arrow\" viewBox=\"0 0 10 10\" refX=\"9\" refY=\"5\" markerWidth=\"6\" markerHeight=\"6\" orient=\"auto-start-reverse\"><path d=\"M0,0 L10,5 L0,10 z\" fill=\"#37474f\"/></marker></defs><rect id=\"c71-01-b00\" x=\"12.0\" y=\"12\" width=\"161.0\" height=\"27\" rx=\"6\" fill=\"#e3f2fd\" stroke=\"#1565c0\"/><text id=\"c71-01-b00-t\" text-anchor=\"middle\" font-size=\"9\" fill=\"#0d47a1\"><tspan x=\"92.5\" y=\"28.5\">var b = a (struct)</tspan></text><rect id=\"c71-01-b01\" x=\"187.0\" y=\"12\" width=\"161.0\" height=\"27\" rx=\"6\" fill=\"#e3f2fd\" stroke=\"#1565c0\"/><text id=\"c71-01-b01-t\" text-anchor=\"middle\" font-size=\"9\" fill=\"#0d47a1\"><tspan x=\"267.5\" y=\"28.5\">Две независимые копии данных</tspan></text><rect id=\"c71-01-b10\" x=\"12.0\" y=\"65\" width=\"161.0\" height=\"27\" rx=\"6\" fill=\"#fff3e0\" stroke=\"#ef6c00\"/><text id=\"c71-01-b10-t\" text-anchor=\"middle\" font-size=\"9\" fill=\"#e65100\"><tspan x=\"92.5\" y=\"81.5\">var b = a (class)</tspan></text><rect id=\"c71-01-b11\" x=\"187.0\" y=\"65\" width=\"161.0\" height=\"27\" rx=\"6\" fill=\"#fff3e0\" stroke=\"#ef6c00\"/><text id=\"c71-01-b11-t\" text-anchor=\"middle\" font-size=\"9\" fill=\"#e65100\"><tspan x=\"267.5\" y=\"81.5\">Две ссылки на один объект</tspan></text><rect id=\"c71-01-b20\" x=\"12.0\" y=\"118\" width=\"161.0\" height=\"27\" rx=\"6\" fill=\"#e8f5e9\" stroke=\"#2e7d32\"/><text id=\"c71-01-b20-t\" text-anchor=\"middle\" font-size=\"9\" fill=\"#1b5e20\"><tspan x=\"92.5\" y=\"134.5\">object o = 42</tspan></text><rect id=\"c71-01-b21\" x=\"187.0\" y=\"118\" width=\"161.0\" height=\"27\" rx=\"6\" fill=\"#e8f5e9\" stroke=\"#2e7d32\"/><text id=\"c71-01-b21-t\" text-anchor=\"middle\" font-size=\"9\" fill=\"#1b5e20\"><tspan x=\"267.5\" y=\"134.5\">Новый объект-упаковка в куче</tspan></text><line id=\"c71-01-l0\" x1=\"173.0\" y1=\"25.5\" x2=\"187.0\" y2=\"25.5\" stroke=\"#37474f\" stroke-width=\"1.2\" marker-end=\"url(#c71-01-arrow)\"/><line id=\"c71-01-l1\" x1=\"173.0\" y1=\"78.5\" x2=\"187.0\" y2=\"78.5\" stroke=\"#37474f\" stroke-width=\"1.2\" marker-end=\"url(#c71-01-arrow)\"/><line id=\"c71-01-l2\" x1=\"173.0\" y1=\"131.5\" x2=\"187.0\" y2=\"131.5\" stroke=\"#37474f\" stroke-width=\"1.2\" marker-end=\"url(#c71-01-arrow)\"/></svg>"
+      }
+    },
+    {
+      "type": "theory",
+      "title": "Вопросы с собеседования",
+      "content": "## Вопросы с собеседования\n\n### 1. Где хранится значение value type?\n\n**Ответ.** Не обязательно на стеке. Локальная переменная обычно живёт на стеке или в регистрах, поле класса — внутри объекта в куче, элемент массива — в массиве в куче, а переменная, захваченная лямбдой или используемая после `await`, — в поле сгенерированного класса. Главное отличие value type — семантика копирования, а не место хранения.\n\n**Уточнение интервьюера:** «Где окажется `int`, захваченный лямбдой?» — в поле display class, который компилятор создаёт в куче.\n\n### 2. Что такое boxing и где он возникает неявно?\n\n**Ответ.** Boxing — копирование значения в новый объект в куче. Неявно он происходит при приведении struct к `object` или интерфейсу, при вызове непереопределённых `ToString`/`Equals`/`GetHashCode` у struct, при `GetType()`, в необобщённых коллекциях вроде `ArrayList` и при передаче value type в параметр `object`. Под нагрузкой это лишние аллокации и работа GC.\n\n**Уточнение интервьюера:** «Как найти boxing в горячем пути?» — профилировщик аллокаций, `dotnet-counters` (скорость аллокаций) и инструкция `box` в IL.\n\n### 3. Когда выбрать `record`, `class` или `struct`?\n\n**Ответ.** `record class` подходит для DTO, команд и событий: равенство по значению и `with` из коробки. `record struct` или `readonly struct` — для маленьких неизменяемых значений (деньги, координаты), чтобы избежать аллокаций. Обычный `class` — для сущностей с идентичностью и инвариантами, где равенство определяется Id, а не всеми полями.\n\n**Уточнение интервьюера:** «Что не так с `record Order(List<Line> Lines)`?» — сгенерированный `Equals` сравнивает ссылку на список, а не содержимое, и список можно изменить снаружи.\n\n### 4. Какой контракт у `Equals` и `GetHashCode`?\n\n**Ответ.** Равные объекты обязаны возвращать одинаковый хеш; обратное не требуется, коллизии допустимы. `Equals` должен быть рефлексивным, симметричным и транзитивным, а хеш не должен меняться, пока объект лежит в хеш-коллекции. Поэтому в хеш включают только неизменяемые поля.\n\n**Уточнение интервьюера:** «Почему симметрия ломается при наследовании?» — базовый класс считает наследника равным себе, а наследник с дополнительным полем — нет; `record` решает это через `EqualityContract`.\n\n### 5. Что на самом деле гарантируют nullable reference types?\n\n**Ответ.** Ничего в рантайме: это аннотации и предупреждения компилятора. `null!` подавляет предупреждение, а данные из JSON, рефлексии или внешнего API могут содержать null вопреки аннотациям. Поэтому на границах сервиса проверки остаются явными, например `ArgumentNullException.ThrowIfNull`.\n\n**Уточнение интервьюера:** «Чем `string?` отличается от `int?`?» — для ссылочного типа это атрибут над тем же типом, а `int?` — отдельный тип `Nullable<int>` с полями `HasValue` и `Value`."
+    },
+    {
+      "type": "quiz",
+      "title": "Quiz 1/4",
+      "content": {
+        "question": "`Money` объявлен как `readonly record struct`. Что сравнивает `a == b`?",
+        "options": [
+          "Ссылки на экземпляры в куче",
+          "Значения Amount и Currency",
+          "Только Amount, Currency игнорируется",
+          "Ничего: оператор == для struct не определён, ошибка компиляции"
+        ],
+        "correctIndices": [
+          1
+        ]
+      }
+    },
+    {
+      "type": "quiz",
+      "title": "Quiz 2/4",
+      "content": {
+        "question": "Класс переопределил `Equals`, но не `GetHashCode`. Что сломается?",
+        "options": [
+          "Сортировка списка через List.Sort",
+          "Сравнение двух объектов оператором ==",
+          "Сериализация объекта в System.Text.Json",
+          "Поиск равного объекта в HashSet и Dictionary"
+        ],
+        "correctIndices": [
+          3
+        ]
+      }
+    },
+    {
+      "type": "quiz",
+      "title": "Quiz 3/4",
+      "content": {
+        "question": "Где хранится поле типа `int` у экземпляра класса?",
+        "options": [
+          "В куче, внутри объекта класса",
+          "На стеке потока, создавшего объект",
+          "В отдельном объекте-упаковке в куче",
+          "В регистрах процессора до первого чтения"
+        ],
+        "correctIndices": [
+          0
+        ]
+      }
+    },
+    {
+      "type": "quiz",
+      "title": "Quiz 4/4",
+      "content": {
+        "question": "Что гарантирует аннотация `string?` при включённых NRT?",
+        "options": [
+          "Проверку на null при каждом присваивании в рантайме",
+          "Что поле будет инициализировано до конца конструктора",
+          "Только предупреждения компилятора",
+          "Что значение не попадёт в сериализованный JSON как null"
+        ],
+        "correctIndices": [
+          2
+        ]
+      }
+    }
+  ]
+}

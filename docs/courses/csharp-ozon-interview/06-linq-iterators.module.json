@@ -1,0 +1,89 @@
+{
+  "schemaVersion": 1,
+  "title": "LINQ и итераторы",
+  "steps": [
+    {
+      "type": "theory",
+      "title": "Ключевые понятия",
+      "content": "## Как устроено\n\n- Операторы LINQ to Objects (`Where`, `Select`, `Take`) **ленивые**: возвращают объект-итератор, а источник читается только при перечислении. Каждое перечисление выполняет цепочку заново.\n- **Немедленное выполнение**: `ToList`, `ToArray`, `ToDictionary`, агрегаты (`Count`, `Sum`, `Any`, `First`).\n- **Буферизующие операторы** (`OrderBy`, `GroupBy`, `Reverse`, `ToLookup`) читают весь источник до выдачи первого элемента.\n- `IEnumerable<T>` выполняет делегаты в памяти, `IQueryable<T>` хранит дерево выражений, которое провайдер транслирует (EF Core — в SQL). `AsEnumerable()` переключает остаток цепочки на выполнение в памяти.\n- `yield return` компилируется в класс-итератор со state machine: код метода не выполняется до первого `MoveNext()`, а `finally` срабатывает при `Dispose()` перечислителя.\n- В .NET 6+ есть готовый `Enumerable.Chunk`; ниже — как такой оператор устроен.\n\n## Пример\n\n```csharp\npublic static class Batching\n{\n    public static IEnumerable<T[]> Chunked<T>(IEnumerable<T> source, int size)\n    {\n        // Проверки выполняются сразу, а не при первом MoveNext\n        ArgumentNullException.ThrowIfNull(source);\n        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(size);\n        return Iterator(source, size);\n\n        static IEnumerable<T[]> Iterator(IEnumerable<T> source, int size)\n        {\n            var batch = new List<T>(size);\n            foreach (var item in source)\n            {\n                batch.Add(item);\n                if (batch.Count == size)\n                {\n                    yield return batch.ToArray();\n                    batch.Clear();\n                }\n            }\n            if (batch.Count > 0) yield return batch.ToArray();\n        }\n    }\n}\n```\n\n## Подводные камни\n\n- Вернуть из метода незавершённый запрос над `DbContext` или открытым файлом: перечисление после `Dispose` бросит исключение.\n- Перечислить `IEnumerable` дважды (`Any()`, затем `foreach`): источник выполнится дважды — два SQL-запроса или повторная генерация данных.\n- Проверять аргументы в самом методе с `yield`: исключение появится только при первом `MoveNext`, далеко от места вызова."
+    },
+    {
+      "type": "svg",
+      "title": "Ленивая цепочка итераторов",
+      "content": {
+        "caption": "foreach тянет элементы через цепочку",
+        "description": "Каждый MoveNext запрашивает следующий элемент у предыдущего оператора.",
+        "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 360 115\" width=\"100%\" role=\"img\" aria-label=\"foreach тянет элементы через цепочку\"><defs><marker id=\"c71-06-arrow\" viewBox=\"0 0 10 10\" refX=\"9\" refY=\"5\" markerWidth=\"6\" markerHeight=\"6\" orient=\"auto-start-reverse\"><path d=\"M0,0 L10,5 L0,10 z\" fill=\"#37474f\"/></marker></defs><rect id=\"c71-06-b00\" x=\"12.0\" y=\"12\" width=\"73.5\" height=\"27\" rx=\"6\" fill=\"#e3f2fd\" stroke=\"#1565c0\"/><text id=\"c71-06-b00-t\" text-anchor=\"middle\" font-size=\"9\" fill=\"#0d47a1\"><tspan x=\"48.8\" y=\"28.5\">Источник</tspan></text><rect id=\"c71-06-b01\" x=\"99.5\" y=\"12\" width=\"73.5\" height=\"27\" rx=\"6\" fill=\"#e3f2fd\" stroke=\"#1565c0\"/><text id=\"c71-06-b01-t\" text-anchor=\"middle\" font-size=\"9\" fill=\"#0d47a1\"><tspan x=\"136.3\" y=\"28.5\">Where</tspan></text><rect id=\"c71-06-b02\" x=\"187.0\" y=\"12\" width=\"73.5\" height=\"27\" rx=\"6\" fill=\"#e3f2fd\" stroke=\"#1565c0\"/><text id=\"c71-06-b02-t\" text-anchor=\"middle\" font-size=\"9\" fill=\"#0d47a1\"><tspan x=\"223.8\" y=\"28.5\">Select</tspan></text><rect id=\"c71-06-b03\" x=\"274.5\" y=\"12\" width=\"73.5\" height=\"27\" rx=\"6\" fill=\"#e3f2fd\" stroke=\"#1565c0\"/><text id=\"c71-06-b03-t\" text-anchor=\"middle\" font-size=\"9\" fill=\"#0d47a1\"><tspan x=\"311.3\" y=\"28.5\">foreach</tspan></text><rect id=\"c71-06-b10\" x=\"32.0\" y=\"65\" width=\"296.0\" height=\"38\" rx=\"6\" fill=\"#fff3e0\" stroke=\"#ef6c00\"/><text id=\"c71-06-b10-t\" text-anchor=\"middle\" font-size=\"9\" fill=\"#e65100\"><tspan x=\"180.0\" y=\"81.5\">MoveNext() идёт справа налево, элементы — слева</tspan><tspan x=\"180.0\" y=\"92.5\">направо, по одному</tspan></text><line id=\"c71-06-l0\" x1=\"85.5\" y1=\"25.5\" x2=\"99.5\" y2=\"25.5\" stroke=\"#37474f\" stroke-width=\"1.2\" marker-end=\"url(#c71-06-arrow)\"/><line id=\"c71-06-l1\" x1=\"173.0\" y1=\"25.5\" x2=\"187.0\" y2=\"25.5\" stroke=\"#37474f\" stroke-width=\"1.2\" marker-end=\"url(#c71-06-arrow)\"/><line id=\"c71-06-l2\" x1=\"260.5\" y1=\"25.5\" x2=\"274.5\" y2=\"25.5\" stroke=\"#37474f\" stroke-width=\"1.2\" marker-end=\"url(#c71-06-arrow)\"/><line id=\"c71-06-l3\" x1=\"311.3\" y1=\"39.0\" x2=\"180.0\" y2=\"65.0\" stroke=\"#37474f\" stroke-width=\"1.2\" marker-end=\"url(#c71-06-arrow)\"/></svg>"
+      }
+    },
+    {
+      "type": "theory",
+      "title": "Вопросы с собеседования",
+      "content": "## Вопросы с собеседования\n\n### 1. Что такое отложенное выполнение LINQ?\n\n**Ответ.** `Where` и `Select` не выполняют работу, а возвращают итератор, который помнит источник и делегат. Источник читается при перечислении, и каждое новое перечисление выполняет запрос заново, видя текущее состояние данных. Это экономит память при потоковой обработке, но требует следить за временем жизни источника.\n\n**Уточнение интервьюера:** «Какие операторы выполняются сразу?» — материализующие (`ToList`, `ToArray`, `ToDictionary`) и агрегаты (`Count`, `Sum`, `First`, `Any`).\n\n### 2. Чем `IEnumerable` отличается от `IQueryable`?\n\n**Ответ.** `IEnumerable` выполняет операторы в памяти через делегаты. `IQueryable` накапливает дерево выражений, а провайдер переводит его в запрос к источнику, например в SQL. Граница проходит по `AsEnumerable()` или материализации: всё после неё выполняется в приложении.\n\n**Уточнение интервьюера:** «Что будет, если вызвать в `Where` свой C#-метод?» — EF Core 3+ бросит исключение трансляции (если это не финальный `Select`), вместо того чтобы молча загрузить всё.\n\n### 3. Как устроен итератор с `yield return`?\n\n**Ответ.** Компилятор генерирует класс, реализующий `IEnumerable<T>` и `IEnumerator<T>`, с полем состояния и `Current`. `MoveNext` продолжает выполнение с места последнего `yield return`, а блоки `finally` выполняются при завершении или `Dispose`. До первого `MoveNext` код метода не выполняется вообще.\n\n**Уточнение интервьюера:** «Можно ли `yield return` внутри `try` с `catch`?» — нет, только внутри `try` с `finally`; для обработки ошибок оборачивают код вне `yield`.\n\n### 4. Какая сложность у типовых операторов?\n\n**Ответ.** `Where` и `Select` — O(n) и потоковые. `OrderBy` — O(n log n) с буферизацией всего источника; `GroupBy` и `ToLookup` тоже буферизуют. `Contains` на `List` — O(n), на `HashSet` — O(1) в среднем.\n\n**Уточнение интервьюера:** «Почему `Count()` на `List<T>` быстрый?» — LINQ проверяет `ICollection<T>` и берёт свойство `Count` без перечисления.\n\n### 5. Как избежать повторного перечисления?\n\n**Ответ.** Если нужно несколько проходов — материализовать один раз через `ToList`. В сигнатурах API принимать `IReadOnlyCollection<T>` или `IReadOnlyList<T>`, если методу нужен размер или повторный проход, — так контракт виден по типу.\n\n**Уточнение интервьюера:** «Чем плох `ToList` на всякий случай?» — лишняя память на больших потоках и потеря потоковой обработки; материализуют осознанно."
+    },
+    {
+      "type": "quiz",
+      "title": "Quiz 1/4",
+      "content": {
+        "question": "Создали `q = orders.Where(o => o.Total > 100)`, затем `orders.Add(big)` (Total = 500) и вызвали `q.Count()`. Учтётся ли `big`?",
+        "options": [
+          "Да: запрос выполнится при Count и увидит новый элемент",
+          "Нет: Where сохранил снимок коллекции при вызове",
+          "Нет: Count вернёт результат, закэшированный при создании q",
+          "Будет InvalidOperationException из-за изменения коллекции"
+        ],
+        "correctIndices": [
+          0
+        ]
+      }
+    },
+    {
+      "type": "quiz",
+      "title": "Quiz 2/4",
+      "content": {
+        "question": "Метод с `yield return` начинается с `ArgumentNullException.ThrowIfNull(source)`. Когда будет исключение при `source == null`?",
+        "options": [
+          "Сразу при вызове метода",
+          "Никогда: итератор вернёт пустую последовательность",
+          "При вызове Dispose у перечислителя",
+          "При первом MoveNext, а не при вызове метода"
+        ],
+        "correctIndices": [
+          3
+        ]
+      }
+    },
+    {
+      "type": "quiz",
+      "title": "Quiz 3/4",
+      "content": {
+        "question": "Где выполнится фильтр в `db.Orders.AsEnumerable().Where(o => o.Total > 100)`?",
+        "options": [
+          "В SQL: AsEnumerable лишь меняет тип переменной",
+          "В SQL, но загрузится только колонка Total",
+          "В памяти приложения после загрузки всех заказов",
+          "В памяти, но EF загрузит только первые 100 строк"
+        ],
+        "correctIndices": [
+          2
+        ]
+      }
+    },
+    {
+      "type": "quiz",
+      "title": "Quiz 4/4",
+      "content": {
+        "question": "Какой оператор читает всю последовательность до выдачи первого элемента?",
+        "options": [
+          "Where",
+          "OrderBy",
+          "Select",
+          "Take"
+        ],
+        "correctIndices": [
+          1
+        ]
+      }
+    }
+  ]
+}

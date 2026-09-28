@@ -1,0 +1,89 @@
+{
+  "schemaVersion": 1,
+  "title": "ASP.NET Core: конвейер, DI и конфигурация",
+  "steps": [
+    {
+      "type": "theory",
+      "title": "Ключевые понятия",
+      "content": "## Как устроено\n\n- `WebApplication` построен на generic host: конфигурация, логирование, DI-контейнер и Kestrel.\n- **Конвейер** — цепочка middleware: каждый получает `HttpContext` и `next`, может выполнить код до и после `next` или не вызывать его. Порядок регистрации — порядок на входе, на выходе — обратный. Обычно: обработчик исключений, HTTPS, routing, CORS, аутентификация, авторизация, rate limiting, endpoints.\n- **Время жизни**: Transient — новый экземпляр при каждом разрешении; Scoped — один на scope (HTTP-запрос); Singleton — один на приложение и обязан быть потокобезопасным.\n- **Captive dependency**: сервис с большим временем жизни удерживает зависимость с меньшим (scoped внутри singleton). В Development `ValidateScopes` ловит это при разрешении.\n- **Options**: `IOptions<T>` — singleton, читается один раз; `IOptionsSnapshot<T>` — scoped, пересчитывается на запрос; `IOptionsMonitor<T>` — singleton с актуальным `CurrentValue` и уведомлениями.\n- Minimal API и контроллеры; **endpoint filters** и MVC-фильтры работают после маршрутизации, middleware — для всех запросов.\n\n## Пример\n\n```csharp\nusing Microsoft.AspNetCore.Builder;\nusing Microsoft.AspNetCore.Http;\nusing Microsoft.Extensions.DependencyInjection;\nusing Microsoft.Extensions.Options;\n\npublic sealed class PricingOptions\n{\n    public decimal MaxDiscountPercent { get; set; } = 30;\n}\n\npublic interface IDiscountService\n{\n    decimal Apply(decimal price, decimal percent);\n}\n\npublic sealed class DiscountService(IOptionsMonitor<PricingOptions> options) : IDiscountService\n{\n    public decimal Apply(decimal price, decimal percent) =>\n        price * (1 - Math.Min(percent, options.CurrentValue.MaxDiscountPercent) / 100m);\n}\n\npublic static class PricingEndpoints\n{\n    public static void AddPricing(this WebApplicationBuilder builder)\n    {\n        builder.Services.Configure<PricingOptions>(builder.Configuration.GetSection(\"Pricing\"));\n        builder.Services.AddSingleton<IDiscountService, DiscountService>();\n    }\n\n    public static void MapPricing(this WebApplication app)\n    {\n        app.Use(async (context, next) =>\n        {\n            var started = TimeProvider.System.GetTimestamp();\n            // Заголовки можно менять только до начала отправки ответа\n            context.Response.OnStarting(() =>\n            {\n                var elapsed = TimeProvider.System.GetElapsedTime(started);\n                context.Response.Headers[\"X-Elapsed-Ms\"] = elapsed.TotalMilliseconds.ToString(\"F0\");\n                return Task.CompletedTask;\n            });\n            await next(context);\n        });\n\n        app.MapGet(\"/price/{value:decimal}\", (decimal value, decimal discount, IDiscountService svc) =>\n            Results.Ok(svc.Apply(value, discount)));\n    }\n}\n```\n\n## Подводные камни\n\n- Singleton принимает scoped-зависимость (`DbContext`) в конструкторе: один контекст на всё приложение, гонки между запросами и бесконечно растущий change tracker.\n- Менять заголовки ответа после `await next()`: ответ уже мог начать отправляться, и будет `InvalidOperationException`. Используйте `Response.OnStarting`.\n- `UseAuthorization` раньше `UseAuthentication`: политики проверяются для ещё не аутентифицированного пользователя, а при старте ошибки нет."
+    },
+    {
+      "type": "svg",
+      "title": "Конвейер middleware",
+      "content": {
+        "caption": "Запрос проходит middleware по порядку, ответ — в обратном",
+        "description": "Код до next выполняется на входе, код после next — на выходе в обратном порядке.",
+        "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 360 126\" width=\"100%\" role=\"img\" aria-label=\"Запрос проходит middleware по порядку, ответ — в обратном\"><defs><marker id=\"c71-10-arrow\" viewBox=\"0 0 10 10\" refX=\"9\" refY=\"5\" markerWidth=\"6\" markerHeight=\"6\" orient=\"auto-start-reverse\"><path d=\"M0,0 L10,5 L0,10 z\" fill=\"#37474f\"/></marker></defs><rect id=\"c71-10-b00\" x=\"12.0\" y=\"12\" width=\"56.0\" height=\"38\" rx=\"6\" fill=\"#e3f2fd\" stroke=\"#1565c0\"/><text id=\"c71-10-b00-t\" text-anchor=\"middle\" font-size=\"9\" fill=\"#0d47a1\"><tspan x=\"40.0\" y=\"28.5\">Exception</tspan><tspan x=\"40.0\" y=\"39.5\">handler</tspan></text><rect id=\"c71-10-b01\" x=\"82.0\" y=\"12\" width=\"56.0\" height=\"38\" rx=\"6\" fill=\"#e3f2fd\" stroke=\"#1565c0\"/><text id=\"c71-10-b01-t\" text-anchor=\"middle\" font-size=\"9\" fill=\"#0d47a1\"><tspan x=\"110.0\" y=\"34.0\">Routing</tspan></text><rect id=\"c71-10-b02\" x=\"152.0\" y=\"12\" width=\"56.0\" height=\"38\" rx=\"6\" fill=\"#e3f2fd\" stroke=\"#1565c0\"/><text id=\"c71-10-b02-t\" text-anchor=\"middle\" font-size=\"9\" fill=\"#0d47a1\"><tspan x=\"180.0\" y=\"34.0\">Authentication</tspan></text><rect id=\"c71-10-b03\" x=\"222.0\" y=\"12\" width=\"56.0\" height=\"38\" rx=\"6\" fill=\"#e3f2fd\" stroke=\"#1565c0\"/><text id=\"c71-10-b03-t\" text-anchor=\"middle\" font-size=\"9\" fill=\"#0d47a1\"><tspan x=\"250.0\" y=\"34.0\">Authorization</tspan></text><rect id=\"c71-10-b04\" x=\"292.0\" y=\"12\" width=\"56.0\" height=\"38\" rx=\"6\" fill=\"#e3f2fd\" stroke=\"#1565c0\"/><text id=\"c71-10-b04-t\" text-anchor=\"middle\" font-size=\"9\" fill=\"#0d47a1\"><tspan x=\"320.0\" y=\"34.0\">Endpoint</tspan></text><rect id=\"c71-10-b10\" x=\"42.0\" y=\"76\" width=\"276.0\" height=\"38\" rx=\"6\" fill=\"#fff3e0\" stroke=\"#ef6c00\"/><text id=\"c71-10-b10-t\" text-anchor=\"middle\" font-size=\"9\" fill=\"#e65100\"><tspan x=\"180.0\" y=\"92.5\">Ответ: Endpoint → Authorization → … → Exception</tspan><tspan x=\"180.0\" y=\"103.5\">handler</tspan></text><line id=\"c71-10-l0\" x1=\"68.0\" y1=\"31.0\" x2=\"82.0\" y2=\"31.0\" stroke=\"#37474f\" stroke-width=\"1.2\" marker-end=\"url(#c71-10-arrow)\"/><line id=\"c71-10-l1\" x1=\"138.0\" y1=\"31.0\" x2=\"152.0\" y2=\"31.0\" stroke=\"#37474f\" stroke-width=\"1.2\" marker-end=\"url(#c71-10-arrow)\"/><line id=\"c71-10-l2\" x1=\"208.0\" y1=\"31.0\" x2=\"222.0\" y2=\"31.0\" stroke=\"#37474f\" stroke-width=\"1.2\" marker-end=\"url(#c71-10-arrow)\"/><line id=\"c71-10-l3\" x1=\"278.0\" y1=\"31.0\" x2=\"292.0\" y2=\"31.0\" stroke=\"#37474f\" stroke-width=\"1.2\" marker-end=\"url(#c71-10-arrow)\"/><line id=\"c71-10-l4\" x1=\"320.0\" y1=\"50.0\" x2=\"180.0\" y2=\"76.0\" stroke=\"#37474f\" stroke-width=\"1.2\" marker-end=\"url(#c71-10-arrow)\"/></svg>"
+      }
+    },
+    {
+      "type": "theory",
+      "title": "Вопросы с собеседования",
+      "content": "## Вопросы с собеседования\n\n### 1. Как устроен конвейер middleware?\n\n**Ответ.** Middleware — делегат, который получает `HttpContext` и следующий делегат. Он может выполнить код до и после вызова `next` или завершить обработку сам (short-circuit), например вернуть 401. Порядок регистрации задаёт порядок на входе, а на выходе он обратный.\n\n**Уточнение интервьюера:** «Где регистрировать обработчик исключений?» — первым, чтобы он оборачивал весь остальной конвейер.\n\n### 2. Какие бывают времена жизни зависимостей?\n\n**Ответ.** Transient создаётся при каждом разрешении, Scoped — один на scope (в ASP.NET Core — на HTTP-запрос), Singleton — один на всё приложение. `DbContext` регистрируют как scoped. Singleton должен быть потокобезопасным, потому что его одновременно используют все запросы.\n\n**Уточнение интервьюера:** «Как использовать scoped-сервис в singleton или `BackgroundService`?» — внедрить `IServiceScopeFactory` и создавать scope на каждую единицу работы.\n\n### 3. Что такое captive dependency?\n\n**Ответ.** Сервис с большим временем жизни удерживает зависимость с меньшим: scoped внутри singleton живёт до конца приложения. Итог — общий `DbContext` для всех запросов, гонки и устаревшие данные. В Development `ValidateScopes` бросает исключение, если scoped-сервис разрешается из корневого провайдера.\n\n**Уточнение интервьюера:** «А transient `IDisposable`, разрешённый из корневого провайдера?» — контейнер хранит ссылку, чтобы вызвать `Dispose` при остановке, и объекты копятся — утечка.\n\n### 4. Чем отличаются `IOptions`, `IOptionsSnapshot` и `IOptionsMonitor`?\n\n**Ответ.** `IOptions<T>` — singleton, значение читается один раз при первом обращении. `IOptionsSnapshot<T>` — scoped, пересчитывается на каждый запрос и не может быть внедрён в singleton. `IOptionsMonitor<T>` — singleton с актуальным `CurrentValue` и подпиской `OnChange`.\n\n**Уточнение интервьюера:** «Как проверить конфигурацию при старте?» — `AddOptions<T>().Bind(...).ValidateDataAnnotations().ValidateOnStart()`.\n\n### 5. Minimal API или контроллеры, фильтр или middleware?\n\n**Ответ.** Minimal API — меньше накладных расходов и кода, группы `MapGroup` и endpoint filters; хорошо подходит для небольших сервисов. Контроллеры дают соглашения, model binding и развитую систему фильтров для крупных API. Middleware работает для всех запросов, фильтры — только для выбранных endpoint после маршрутизации.\n\n**Уточнение интервьюера:** «Где проверять заголовок идемпотентности?» — endpoint filter, если он нужен только части эндпоинтов; middleware — если всем."
+    },
+    {
+      "type": "quiz",
+      "title": "Quiz 1/4",
+      "content": {
+        "question": "Middleware зарегистрированы в порядке A, B, C. В каком порядке выполнится код после `await next()`?",
+        "options": [
+          "A, B, C",
+          "C, B, A",
+          "Только в C: остальные уже завершились",
+          "В произвольном порядке, зависит от потоков"
+        ],
+        "correctIndices": [
+          1
+        ]
+      }
+    },
+    {
+      "type": "quiz",
+      "title": "Quiz 2/4",
+      "content": {
+        "question": "Singleton принимает в конструкторе `AppDbContext` (scoped). Что будет в проде?",
+        "options": [
+          "Контейнер создаст новый DbContext на каждый вызов метода",
+          "DbContext станет singleton без побочных эффектов",
+          "Контейнер будет пересоздавать singleton в каждом запросе",
+          "Один DbContext на всё приложение: гонки и растущий трекер"
+        ],
+        "correctIndices": [
+          3
+        ]
+      }
+    },
+    {
+      "type": "quiz",
+      "title": "Quiz 3/4",
+      "content": {
+        "question": "Какой интерфейс options нельзя внедрять в singleton?",
+        "options": [
+          "IOptionsMonitor<T>",
+          "IOptions<T>",
+          "IOptionsSnapshot<T>",
+          "IConfiguration"
+        ],
+        "correctIndices": [
+          2
+        ]
+      }
+    },
+    {
+      "type": "quiz",
+      "title": "Quiz 4/4",
+      "content": {
+        "question": "Middleware меняет заголовок ответа после `await next(context)`. Что может случиться?",
+        "options": [
+          "InvalidOperationException: ответ уже начал отправляться",
+          "Заголовок уйдёт со следующим ответом этому клиенту",
+          "Kestrel молча отбросит весь ответ",
+          "Заголовок применится, но только для HTTP/2"
+        ],
+        "correctIndices": [
+          0
+        ]
+      }
+    }
+  ]
+}

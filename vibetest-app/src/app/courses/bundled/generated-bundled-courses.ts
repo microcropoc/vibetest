@@ -19,6 +19,11 @@ export const BUNDLED_COURSES: readonly BundledCourseEntry[] = [
     "title": "C#: примитивы асинхронности и конкурентности"
   },
   {
+    "courseId": "18307376-bbf5-434c-ac8d-459c10adb278",
+    "file": "csharp-ozon-interview.json",
+    "title": "C# для опытного разработчика: собеседование в Ozon"
+  },
+  {
     "courseId": "6bc56204-d1ae-41ec-bee1-e5bf082486de",
     "file": "javascript-for-csharp.json",
     "title": "JavaScript для C#-разработчика"

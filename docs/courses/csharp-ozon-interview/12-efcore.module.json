@@ -1,0 +1,89 @@
+{
+  "schemaVersion": 1,
+  "title": "EF Core: отслеживание, запросы, конкуренция",
+  "steps": [
+    {
+      "type": "theory",
+      "title": "Ключевые понятия",
+      "content": "## Как устроено\n\n- `DbContext` — unit of work, identity map и **change tracker**. Он короткоживущий: один на запрос или единицу работы.\n- Отслеживаемые сущности хранят снимок исходных значений; `SaveChanges` сравнивает их (`DetectChanges`) и отправляет `INSERT`/`UPDATE`/`DELETE` только для изменённого, в одной транзакции.\n- `AsNoTracking()` — чтение без регистрации в трекере: меньше памяти и быстрее материализация.\n- **N+1**: запрос на список и ещё по запросу на каждую строку (lazy loading, цикл). Лечится проекцией `Select` в DTO, `Include` или пакетной загрузкой; для нескольких коллекций — `AsSplitQuery`.\n- **Оптимистичная конкуренция**: concurrency token (`rowversion` в SQL Server, `xmin` в PostgreSQL через Npgsql) попадает в `WHERE` при `UPDATE`; 0 изменённых строк — `DbUpdateConcurrencyException`.\n- `ExecuteUpdate` / `ExecuteDelete` (EF Core 7+) — массовые операции одним SQL без загрузки сущностей.\n- Миграции применяют отдельным шагом деплоя: SQL-скрипт или migration bundle.\n\n## Пример\n\n```csharp\nusing Microsoft.EntityFrameworkCore;\n\npublic sealed class Order\n{\n    public long Id { get; set; }\n    public string Status { get; set; } = \"New\";\n    public DateTime CreatedAt { get; set; }\n    public List<OrderLine> Lines { get; set; } = new();\n    public uint Version { get; set; } // с Npgsql отображается на системную колонку xmin\n}\n\npublic sealed class OrderLine\n{\n    public long Id { get; set; }\n    public string Sku { get; set; } = \"\";\n    public int Quantity { get; set; }\n}\n\npublic sealed record OrderSummary(long Id, string Status, int Items);\n\npublic sealed class ShopDb(DbContextOptions<ShopDb> options) : DbContext(options)\n{\n    public DbSet<Order> Orders => Set<Order>();\n\n    protected override void OnModelCreating(ModelBuilder model) =>\n        model.Entity<Order>().Property(o => o.Version).IsRowVersion();\n}\n\npublic static class OrderQueries\n{\n    // Один SQL: без загрузки строк заказа и без отслеживания\n    public static Task<List<OrderSummary>> RecentAsync(ShopDb db, CancellationToken ct) =>\n        db.Orders\n            .AsNoTracking()\n            .OrderByDescending(o => o.Id)\n            .Take(50)\n            .Select(o => new OrderSummary(o.Id, o.Status, o.Lines.Sum(l => l.Quantity)))\n            .ToListAsync(ct);\n\n    // Массовое обновление без загрузки сущностей\n    public static Task<int> CancelStaleAsync(ShopDb db, DateTime olderThan, CancellationToken ct) =>\n        db.Orders\n            .Where(o => o.Status == \"New\" && o.CreatedAt < olderThan)\n            .ExecuteUpdateAsync(s => s.SetProperty(o => o.Status, \"Cancelled\"), ct);\n}\n```\n\n## Подводные камни\n\n- Долгоживущий `DbContext` (singleton или один на всю фоновую пачку): трекер растёт, `SaveChanges` замедляется, а данные в контексте устаревают.\n- Обращение к навигационному свойству в цикле: с lazy loading это N+1 запросов, без него — тихо пустая коллекция.\n- `Include` нескольких коллекций в одном запросе: JOIN перемножает строки (картезианский взрыв). Используйте проекцию или `AsSplitQuery`."
+    },
+    {
+      "type": "svg",
+      "title": "Change tracker и SaveChanges",
+      "content": {
+        "caption": "Как SaveChanges находит изменения",
+        "description": "Трекер хранит снимок исходных значений и сравнивает его с текущими.",
+        "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 360 126\" width=\"100%\" role=\"img\" aria-label=\"Как SaveChanges находит изменения\"><defs><marker id=\"c71-12-arrow\" viewBox=\"0 0 10 10\" refX=\"9\" refY=\"5\" markerWidth=\"6\" markerHeight=\"6\" orient=\"auto-start-reverse\"><path d=\"M0,0 L10,5 L0,10 z\" fill=\"#37474f\"/></marker></defs><rect id=\"c71-12-b00\" x=\"12.0\" y=\"12\" width=\"102.7\" height=\"38\" rx=\"6\" fill=\"#e3f2fd\" stroke=\"#1565c0\"/><text id=\"c71-12-b00-t\" text-anchor=\"middle\" font-size=\"9\" fill=\"#0d47a1\"><tspan x=\"63.3\" y=\"28.5\">Запрос с</tspan><tspan x=\"63.3\" y=\"39.5\">отслеживанием</tspan></text><rect id=\"c71-12-b01\" x=\"128.7\" y=\"12\" width=\"102.7\" height=\"38\" rx=\"6\" fill=\"#e3f2fd\" stroke=\"#1565c0\"/><text id=\"c71-12-b01-t\" text-anchor=\"middle\" font-size=\"9\" fill=\"#0d47a1\"><tspan x=\"180.0\" y=\"28.5\">Change tracker:</tspan><tspan x=\"180.0\" y=\"39.5\">снимок значений</tspan></text><rect id=\"c71-12-b02\" x=\"245.3\" y=\"12\" width=\"102.7\" height=\"38\" rx=\"6\" fill=\"#e3f2fd\" stroke=\"#1565c0\"/><text id=\"c71-12-b02-t\" text-anchor=\"middle\" font-size=\"9\" fill=\"#0d47a1\"><tspan x=\"296.7\" y=\"34.0\">SaveChanges</tspan></text><rect id=\"c71-12-b10\" x=\"12.0\" y=\"76\" width=\"102.7\" height=\"38\" rx=\"6\" fill=\"#fff3e0\" stroke=\"#ef6c00\"/><text id=\"c71-12-b10-t\" text-anchor=\"middle\" font-size=\"9\" fill=\"#e65100\"><tspan x=\"63.3\" y=\"98.0\">Код меняет свойства</tspan></text><rect id=\"c71-12-b11\" x=\"128.7\" y=\"76\" width=\"102.7\" height=\"38\" rx=\"6\" fill=\"#fff3e0\" stroke=\"#ef6c00\"/><text id=\"c71-12-b11-t\" text-anchor=\"middle\" font-size=\"9\" fill=\"#e65100\"><tspan x=\"180.0\" y=\"92.5\">DetectChanges:</tspan><tspan x=\"180.0\" y=\"103.5\">сравнение</tspan></text><rect id=\"c71-12-b12\" x=\"245.3\" y=\"76\" width=\"102.7\" height=\"38\" rx=\"6\" fill=\"#fff3e0\" stroke=\"#ef6c00\"/><text id=\"c71-12-b12-t\" text-anchor=\"middle\" font-size=\"9\" fill=\"#e65100\"><tspan x=\"296.7\" y=\"92.5\">UPDATE только</tspan><tspan x=\"296.7\" y=\"103.5\">изменённых колонок</tspan></text><line id=\"c71-12-l0\" x1=\"114.7\" y1=\"31.0\" x2=\"128.7\" y2=\"31.0\" stroke=\"#37474f\" stroke-width=\"1.2\" marker-end=\"url(#c71-12-arrow)\"/><line id=\"c71-12-l1\" x1=\"231.3\" y1=\"31.0\" x2=\"245.3\" y2=\"31.0\" stroke=\"#37474f\" stroke-width=\"1.2\" marker-end=\"url(#c71-12-arrow)\"/><line id=\"c71-12-l2\" x1=\"114.7\" y1=\"95.0\" x2=\"128.7\" y2=\"95.0\" stroke=\"#37474f\" stroke-width=\"1.2\" marker-end=\"url(#c71-12-arrow)\"/><line id=\"c71-12-l3\" x1=\"296.7\" y1=\"50.0\" x2=\"180.0\" y2=\"76.0\" stroke=\"#37474f\" stroke-width=\"1.2\" marker-end=\"url(#c71-12-arrow)\"/><line id=\"c71-12-l4\" x1=\"231.3\" y1=\"95.0\" x2=\"245.3\" y2=\"95.0\" stroke=\"#37474f\" stroke-width=\"1.2\" marker-end=\"url(#c71-12-arrow)\"/></svg>"
+      }
+    },
+    {
+      "type": "theory",
+      "title": "Вопросы с собеседования",
+      "content": "## Вопросы с собеседования\n\n### 1. Что делает change tracker?\n\n**Ответ.** Для каждой отслеживаемой сущности он хранит снимок исходных значений и состояние (Added, Modified, Deleted). При `SaveChanges` сравнивает текущие значения со снимком и генерирует SQL только для изменённого, в одной транзакции. Identity map гарантирует, что одна строка в рамках контекста — это один объект.\n\n**Уточнение интервьюера:** «Когда использовать `AsNoTracking`?» — для чтения, после которого сущности не меняются: меньше памяти и быстрее запросы.\n\n### 2. Как найти и устранить N+1?\n\n**Ответ.** Признак — много одинаковых запросов в логе EF Core или в трассе на один HTTP-запрос. Решения: проекция `Select` в DTO (один SQL с JOIN или подзапросом), `Include` для загрузки графа, пакетная загрузка по списку Id. Lazy loading в веб-сервисах обычно отключают, чтобы N+1 не появлялся незаметно.\n\n**Уточнение интервьюера:** «Чем плох `Include` двух коллекций?» — JOIN перемножает строки; `AsSplitQuery` делает отдельные запросы, но данные читаются не из одного снимка.\n\n### 3. Как работает оптимистичная конкуренция?\n\n**Ответ.** Concurrency token (`rowversion` в SQL Server, `xmin` в PostgreSQL) добавляется в `WHERE` при `UPDATE`. Если строку изменили после чтения, обновится 0 строк, и EF Core бросит `DbUpdateConcurrencyException`. Дальше можно перечитать данные и повторить, смержить изменения или вернуть клиенту 409.\n\n**Уточнение интервьюера:** «Когда нужна пессимистичная блокировка?» — для горячей строки с частыми конфликтами (остаток товара): `SELECT ... FOR UPDATE` или атомарный `UPDATE` с условием.\n\n### 4. Как применять миграции в продакшене?\n\n**Ответ.** Генерировать идемпотентный SQL-скрипт или migration bundle и выполнять отдельным шагом деплоя. `Database.Migrate()` при старте каждого пода приводит к гонкам и долгим блокировкам. Изменения схемы делают обратно совместимыми, чтобы старая и новая версии приложения работали одновременно.\n\n**Уточнение интервьюера:** «Как переименовать колонку без простоя?» — expand/contract: добавить новую, писать в обе, перенести данные, переключить чтение, затем удалить старую.\n\n### 5. EF Core или Dapper?\n\n**Ответ.** EF Core даёт модель, отслеживание изменений, миграции и LINQ — удобно для записи и бизнес-логики. Dapper — тонкий маппер для ручного SQL с полным контролем запроса, удобен для сложных отчётов и горячих чтений. Их часто сочетают, а `FromSql` и `ExecuteUpdate` закрывают часть задач без Dapper.\n\n**Уточнение интервьюера:** «Чем `ExecuteUpdate` отличается от загрузки и `SaveChanges`?» — это один SQL без загрузки сущностей; он обходит трекер, поэтому уже загруженные объекты об изменении не узнают."
+    },
+    {
+      "type": "quiz",
+      "title": "Quiz 1/4",
+      "content": {
+        "question": "Что делает `AsNoTracking()`?",
+        "options": [
+          "Отключает кэширование плана запроса на сервере",
+          "Читает данные без блокировок, как NOLOCK",
+          "Загружает сущности без регистрации в change tracker",
+          "Запрещает изменять загруженные объекты в памяти процесса"
+        ],
+        "correctIndices": [
+          2
+        ]
+      }
+    },
+    {
+      "type": "quiz",
+      "title": "Quiz 2/4",
+      "content": {
+        "question": "`SaveChanges` с concurrency token обновил 0 строк. Что произойдёт?",
+        "options": [
+          "EF повторит UPDATE без условия на токен",
+          "DbUpdateConcurrencyException",
+          "EF тихо вставит новую строку вместо обновления",
+          "Транзакция будет ждать снятия блокировки"
+        ],
+        "correctIndices": [
+          1
+        ]
+      }
+    },
+    {
+      "type": "quiz",
+      "title": "Quiz 3/4",
+      "content": {
+        "question": "Как получить заказы с суммарным количеством позиций одним SQL без загрузки строк заказа?",
+        "options": [
+          "Проекцией Select в DTO с Lines.Sum(...)",
+          "Include(o => o.Lines) и подсчётом в памяти",
+          "Lazy loading с обращением к Lines в цикле",
+          "AsSplitQuery с Include для каждой коллекции"
+        ],
+        "correctIndices": [
+          0
+        ]
+      }
+    },
+    {
+      "type": "quiz",
+      "title": "Quiz 4/4",
+      "content": {
+        "question": "Где лучше применять миграции EF Core при деплое в Kubernetes?",
+        "options": [
+          "Вызовом Database.Migrate() при старте каждого пода",
+          "Через EnsureCreated в продакшене",
+          "В middleware при первом входящем запросе",
+          "Отдельным шагом: SQL-скрипт или migration bundle"
+        ],
+        "correctIndices": [
+          3
+        ]
+      }
+    }
+  ]
+}

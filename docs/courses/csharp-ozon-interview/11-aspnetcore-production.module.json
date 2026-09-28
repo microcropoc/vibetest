@@ -1,0 +1,89 @@
+{
+  "schemaVersion": 1,
+  "title": "ASP.NET Core в продакшене: HTTP-клиенты, устойчивость, остановка",
+  "steps": [
+    {
+      "type": "theory",
+      "title": "Ключевые понятия",
+      "content": "## Как устроено\n\n- `new HttpClient()` на каждый запрос не переиспользует соединения: сокеты копятся в TIME_WAIT. Статический клиент без ограничения жизни соединений не видит смену DNS.\n- `IHttpClientFactory` управляет пулом `HttpMessageHandler` и пересоздаёт их (по умолчанию раз в 2 минуты), даёт typed-клиенты и цепочку `DelegatingHandler`.\n- **Устойчивость**: пакет `Microsoft.Extensions.Http.Resilience` (на базе Polly v8). `AddStandardResilienceHandler()` добавляет rate limiter, общий таймаут, retry с экспоненциальной задержкой и jitter, circuit breaker и таймаут попытки.\n- **Health checks**: liveness — процесс жив; readiness — готов принимать трафик.\n- **Graceful shutdown**: после SIGTERM срабатывает `ApplicationStopping`, Kestrel перестаёт принимать новые соединения и дожидается текущих запросов, `BackgroundService` получают отмену — всё в пределах `HostOptions.ShutdownTimeout` (в .NET 8 по умолчанию 30 секунд).\n- **Rate limiting middleware** (.NET 7+): fixed window, sliding window, token bucket, concurrency; лимиты по ключу (пользователь, IP).\n\n## Пример\n\n```csharp\nusing System.Threading.RateLimiting;\nusing Microsoft.AspNetCore.Builder;\nusing Microsoft.AspNetCore.Http;\nusing Microsoft.AspNetCore.RateLimiting;\nusing Microsoft.Extensions.DependencyInjection;\nusing Microsoft.Extensions.Hosting;\n\npublic sealed class StockClient(HttpClient http)\n{\n    public Task<string> GetStockAsync(string sku, CancellationToken ct) =>\n        http.GetStringAsync($\"/stock/{Uri.EscapeDataString(sku)}\", ct);\n}\n\npublic static class ProductionSetup\n{\n    public static void AddProduction(this WebApplicationBuilder builder)\n    {\n        builder.Services.AddHttpClient<StockClient>(c => c.BaseAddress = new Uri(\"http://stock-service\"))\n            .AddStandardResilienceHandler();\n\n        builder.Services.AddHealthChecks();\n        builder.Services.AddRateLimiter(o =>\n        {\n            o.RejectionStatusCode = StatusCodes.Status429TooManyRequests;\n            o.AddFixedWindowLimiter(\"public\", limiter =>\n            {\n                limiter.PermitLimit = 100;\n                limiter.Window = TimeSpan.FromSeconds(1);\n                limiter.QueueLimit = 0;\n            });\n        });\n        builder.Services.Configure<HostOptions>(o => o.ShutdownTimeout = TimeSpan.FromSeconds(25));\n    }\n\n    public static void MapProduction(this WebApplication app)\n    {\n        app.UseRateLimiter();\n        app.MapHealthChecks(\"/health/ready\");\n        app.MapGet(\"/stock/{sku}\", (string sku, StockClient client, CancellationToken ct) =>\n            client.GetStockAsync(sku, ct)).RequireRateLimiting(\"public\");\n    }\n}\n```\n\n## Подводные камни\n\n- `new HttpClient()` на каждый запрос: сокеты копятся в TIME_WAIT, и под нагрузкой появляются `SocketException`. Статический клиент без `PooledConnectionLifetime` не подхватывает смену DNS.\n- Retry без общего таймаута и jitter: при сбое зависимости сервис умножает нагрузку на неё (retry storm), а запрос пользователя висит дольше SLA.\n- Проверка зависимостей (БД, Redis) в liveness-пробе: при падении БД Kubernetes перезапускает все поды, хотя они живы и восстановились бы сами."
+    },
+    {
+      "type": "svg",
+      "title": "Стандартный resilience-конвейер",
+      "content": {
+        "caption": "Порядок стратегий в AddStandardResilienceHandler",
+        "description": "Внешние стратегии оборачивают внутренние: общий таймаут ограничивает все попытки retry.",
+        "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 360 126\" width=\"100%\" role=\"img\" aria-label=\"Порядок стратегий в AddStandardResilienceHandler\"><defs><marker id=\"c71-11-arrow\" viewBox=\"0 0 10 10\" refX=\"9\" refY=\"5\" markerWidth=\"6\" markerHeight=\"6\" orient=\"auto-start-reverse\"><path d=\"M0,0 L10,5 L0,10 z\" fill=\"#37474f\"/></marker></defs><rect id=\"c71-11-b00\" x=\"12.0\" y=\"12\" width=\"56.0\" height=\"38\" rx=\"6\" fill=\"#e3f2fd\" stroke=\"#1565c0\"/><text id=\"c71-11-b00-t\" text-anchor=\"middle\" font-size=\"9\" fill=\"#0d47a1\"><tspan x=\"40.0\" y=\"28.5\">Rate</tspan><tspan x=\"40.0\" y=\"39.5\">limiter</tspan></text><rect id=\"c71-11-b01\" x=\"82.0\" y=\"12\" width=\"56.0\" height=\"38\" rx=\"6\" fill=\"#e3f2fd\" stroke=\"#1565c0\"/><text id=\"c71-11-b01-t\" text-anchor=\"middle\" font-size=\"9\" fill=\"#0d47a1\"><tspan x=\"110.0\" y=\"28.5\">Общий</tspan><tspan x=\"110.0\" y=\"39.5\">таймаут</tspan></text><rect id=\"c71-11-b02\" x=\"152.0\" y=\"12\" width=\"56.0\" height=\"38\" rx=\"6\" fill=\"#e3f2fd\" stroke=\"#1565c0\"/><text id=\"c71-11-b02-t\" text-anchor=\"middle\" font-size=\"9\" fill=\"#0d47a1\"><tspan x=\"180.0\" y=\"28.5\">Retry +</tspan><tspan x=\"180.0\" y=\"39.5\">jitter</tspan></text><rect id=\"c71-11-b03\" x=\"222.0\" y=\"12\" width=\"56.0\" height=\"38\" rx=\"6\" fill=\"#e3f2fd\" stroke=\"#1565c0\"/><text id=\"c71-11-b03-t\" text-anchor=\"middle\" font-size=\"9\" fill=\"#0d47a1\"><tspan x=\"250.0\" y=\"28.5\">Circuit</tspan><tspan x=\"250.0\" y=\"39.5\">breaker</tspan></text><rect id=\"c71-11-b04\" x=\"292.0\" y=\"12\" width=\"56.0\" height=\"38\" rx=\"6\" fill=\"#e3f2fd\" stroke=\"#1565c0\"/><text id=\"c71-11-b04-t\" text-anchor=\"middle\" font-size=\"9\" fill=\"#0d47a1\"><tspan x=\"320.0\" y=\"28.5\">Таймаут</tspan><tspan x=\"320.0\" y=\"39.5\">попытки</tspan></text><rect id=\"c71-11-b10\" x=\"122.0\" y=\"76\" width=\"116.0\" height=\"38\" rx=\"6\" fill=\"#fff3e0\" stroke=\"#ef6c00\"/><text id=\"c71-11-b10-t\" text-anchor=\"middle\" font-size=\"9\" fill=\"#e65100\"><tspan x=\"180.0\" y=\"92.5\">HTTP-запрос к</tspan><tspan x=\"180.0\" y=\"103.5\">stock-service</tspan></text><line id=\"c71-11-l0\" x1=\"68.0\" y1=\"31.0\" x2=\"82.0\" y2=\"31.0\" stroke=\"#37474f\" stroke-width=\"1.2\" marker-end=\"url(#c71-11-arrow)\"/><line id=\"c71-11-l1\" x1=\"138.0\" y1=\"31.0\" x2=\"152.0\" y2=\"31.0\" stroke=\"#37474f\" stroke-width=\"1.2\" marker-end=\"url(#c71-11-arrow)\"/><line id=\"c71-11-l2\" x1=\"208.0\" y1=\"31.0\" x2=\"222.0\" y2=\"31.0\" stroke=\"#37474f\" stroke-width=\"1.2\" marker-end=\"url(#c71-11-arrow)\"/><line id=\"c71-11-l3\" x1=\"278.0\" y1=\"31.0\" x2=\"292.0\" y2=\"31.0\" stroke=\"#37474f\" stroke-width=\"1.2\" marker-end=\"url(#c71-11-arrow)\"/><line id=\"c71-11-l4\" x1=\"320.0\" y1=\"50.0\" x2=\"180.0\" y2=\"76.0\" stroke=\"#37474f\" stroke-width=\"1.2\" marker-end=\"url(#c71-11-arrow)\"/></svg>"
+      }
+    },
+    {
+      "type": "theory",
+      "title": "Вопросы с собеседования",
+      "content": "## Вопросы с собеседования\n\n### 1. Зачем нужен `IHttpClientFactory`?\n\n**Ответ.** Фабрика держит пул `HttpMessageHandler`, переиспользует соединения и периодически пересоздаёт обработчики, чтобы подхватывать изменения DNS. Кроме того, она даёт именованные и typed-клиенты с общей конфигурацией и цепочкой `DelegatingHandler` для логирования, авторизации и устойчивости.\n\n**Уточнение интервьюера:** «Как обойтись без фабрики?» — один долгоживущий `HttpClient` с `SocketsHttpHandler` и заданным `PooledConnectionLifetime`.\n\n### 2. Что входит в стандартный resilience-конвейер и что можно повторять?\n\n**Ответ.** `AddStandardResilienceHandler` добавляет по порядку rate limiter, общий таймаут запроса, retry с экспоненциальной задержкой и jitter, circuit breaker и таймаут одной попытки. Повторять безопасно идемпотентные запросы: GET, PUT, DELETE и POST с ключом идемпотентности. Обычный POST при повторе может создать дубль.\n\n**Уточнение интервьюера:** «Зачем jitter?» — без случайного разброса все клиенты повторяют запросы синхронно и добивают восстанавливающийся сервис волнами.\n\n### 3. Чем liveness отличается от readiness?\n\n**Ответ.** Liveness отвечает на вопрос «процесс жив и не завис?» и не проверяет внешние зависимости; при провале Kubernetes перезапускает контейнер. Readiness — «готов ли под принимать трафик?»: прогрев, соединение с БД. При провале под выводится из балансировки, но не перезапускается.\n\n**Уточнение интервьюера:** «Что возвращать в readiness во время остановки?» — Unhealthy сразу после SIGTERM, чтобы балансировщик перестал присылать новые запросы.\n\n### 4. Как работает graceful shutdown в .NET 8?\n\n**Ответ.** SIGTERM запускает `ApplicationStopping`: Kestrel перестаёт принимать новые соединения и ждёт завершения текущих запросов, `BackgroundService` получают отмену `stoppingToken`. Всё это ограничено `HostOptions.ShutdownTimeout`, в .NET 8 по умолчанию 30 секунд. `terminationGracePeriodSeconds` в Kubernetes должен быть больше этого значения.\n\n**Уточнение интервьюера:** «Зачем preStop-хук с паузой?» — чтобы под успел исчезнуть из endpoints балансировщика до того, как приложение перестанет принимать запросы.\n\n### 5. Как устроен rate limiting в ASP.NET Core?\n\n**Ответ.** Встроенный middleware (.NET 7+) поддерживает fixed window, sliding window, token bucket и concurrency limiter, в том числе с партиционированием по ключу — пользователю или IP. По умолчанию отказ возвращает 503, поэтому явно ставят 429 и заголовок `Retry-After`. Лимиты применяются глобально или на конкретные endpoint.\n\n**Уточнение интервьюера:** «Почему лимит в памяти пода не глобальный?» — при N подах фактический лимит в N раз больше; для глобального лимита нужен Redis или ограничение на шлюзе."
+    },
+    {
+      "type": "quiz",
+      "title": "Quiz 1/4",
+      "content": {
+        "question": "Почему `new HttpClient()` в каждом запросе опасен под нагрузкой?",
+        "options": [
+          "HttpClient не потокобезопасен, и ответы перемешаются",
+          "Каждый экземпляр держит отдельный поток на ожидание ответа",
+          "Без фабрики HttpClient игнорирует CancellationToken",
+          "Соединения не переиспользуются, сокеты копятся в TIME_WAIT"
+        ],
+        "correctIndices": [
+          3
+        ]
+      }
+    },
+    {
+      "type": "quiz",
+      "title": "Quiz 2/4",
+      "content": {
+        "question": "Какой POST-запрос безопасно повторять после таймаута?",
+        "options": [
+          "С ключом идемпотентности, проверяемым сервером",
+          "Любой, если таймаут клиента меньше одной секунды",
+          "Любой, если включён circuit breaker",
+          "Только отправленный по HTTP/2"
+        ],
+        "correctIndices": [
+          0
+        ]
+      }
+    },
+    {
+      "type": "quiz",
+      "title": "Quiz 3/4",
+      "content": {
+        "question": "БД недоступна. Что должна вернуть liveness-проба?",
+        "options": [
+          "Unhealthy, чтобы Kubernetes перезапустил под",
+          "Degraded, чтобы под перезапустился позже",
+          "Healthy",
+          "Ошибку 500, чтобы сработал алерт"
+        ],
+        "correctIndices": [
+          2
+        ]
+      }
+    },
+    {
+      "type": "quiz",
+      "title": "Quiz 4/4",
+      "content": {
+        "question": "Что делает приложение на .NET 8 после SIGTERM?",
+        "options": [
+          "Сразу завершает процесс, прерывая текущие запросы",
+          "Перестаёт принимать запросы и ждёт текущие до ShutdownTimeout",
+          "Ждёт завершения всех запросов без ограничения по времени",
+          "Перезапускает Kestrel и продолжает работу"
+        ],
+        "correctIndices": [
+          1
+        ]
+      }
+    }
+  ]
+}

@@ -1,0 +1,89 @@
+{
+  "schemaVersion": 1,
+  "title": "Тестирование backend-сервисов",
+  "steps": [
+    {
+      "type": "theory",
+      "title": "Ключевые понятия",
+      "content": "## Как устроено\n\n- **Уровни**: unit-тесты для доменной логики (быстрые, без инфраструктуры), интеграционные для API и работы с БД, контрактные для межсервисных договорённостей, немного e2e для критических сценариев.\n- **xUnit** создаёт новый экземпляр тестового класса на каждый тест; `[Fact]`, `[Theory]` с `[InlineData]`, общий контекст — `IClassFixture` и `IAsyncLifetime`.\n- `WebApplicationFactory<TEntryPoint>` поднимает приложение в памяти через `TestServer`; `ConfigureTestServices` заменяет зависимости.\n- **Testcontainers** запускает настоящие PostgreSQL, Kafka и Redis в Docker на время тестов.\n- `TimeProvider` (.NET 8) и `FakeTimeProvider` из `Microsoft.Extensions.TimeProvider.Testing` управляют временем: TTL, retry и таймауты проверяются без ожидания.\n- **Моки** — для внешних границ (HTTP-партнёр, брокер, часы), а не для собственной доменной логики.\n\n## Пример\n\n```csharp\nusing Microsoft.Extensions.Time.Testing;\nusing Xunit;\n\npublic sealed class PromoCode(TimeProvider time, DateTimeOffset expiresAt)\n{\n    public bool IsActive() => time.GetUtcNow() < expiresAt;\n}\n\npublic sealed class PromoCodeTests\n{\n    [Fact]\n    public void Expires_exactly_at_deadline()\n    {\n        var time = new FakeTimeProvider(new DateTimeOffset(2026, 9, 28, 12, 0, 0, TimeSpan.Zero));\n        var promo = new PromoCode(time, time.GetUtcNow().AddHours(1));\n\n        Assert.True(promo.IsActive());\n\n        time.Advance(TimeSpan.FromHours(1));\n\n        Assert.False(promo.IsActive());\n    }\n\n    [Theory]\n    [InlineData(59, true)]\n    [InlineData(61, false)]\n    public void Activity_depends_on_elapsed_minutes(int minutes, bool expected)\n    {\n        var time = new FakeTimeProvider();\n        var promo = new PromoCode(time, time.GetUtcNow().AddHours(1));\n\n        time.Advance(TimeSpan.FromMinutes(minutes));\n\n        Assert.Equal(expected, promo.IsActive());\n    }\n}\n```\n\n## Подводные камни\n\n- `DateTime.UtcNow` и `Task.Delay` прямо в бизнес-коде: тест на TTL или retry либо ждёт реальное время, либо становится нестабильным. Внедряйте `TimeProvider`.\n- Интеграционные тесты на EF Core InMemory вместо реальной БД: не проверяются транзакции, ограничения, SQL-трансляция и особенности PostgreSQL.\n- Моки на всё, включая собственные доменные классы: тесты повторяют реализацию, ломаются при любом рефакторинге и не ловят реальных ошибок."
+    },
+    {
+      "type": "svg",
+      "title": "Пирамида тестов",
+      "content": {
+        "caption": "Сколько тестов на каком уровне",
+        "description": "Много быстрых unit-тестов, меньше интеграционных и совсем немного e2e.",
+        "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 360 179\" width=\"100%\" role=\"img\" aria-label=\"Сколько тестов на каком уровне\"><defs><marker id=\"c71-19-arrow\" viewBox=\"0 0 10 10\" refX=\"9\" refY=\"5\" markerWidth=\"6\" markerHeight=\"6\" orient=\"auto-start-reverse\"><path d=\"M0,0 L10,5 L0,10 z\" fill=\"#37474f\"/></marker></defs><rect id=\"c71-19-b00\" x=\"112.0\" y=\"12\" width=\"136.0\" height=\"38\" rx=\"6\" fill=\"#e3f2fd\" stroke=\"#1565c0\"/><text id=\"c71-19-b00-t\" text-anchor=\"middle\" font-size=\"9\" fill=\"#0d47a1\"><tspan x=\"180.0\" y=\"28.5\">e2e: несколько</tspan><tspan x=\"180.0\" y=\"39.5\">критических сценариев</tspan></text><rect id=\"c71-19-b10\" x=\"62.0\" y=\"76\" width=\"236.0\" height=\"38\" rx=\"6\" fill=\"#fff3e0\" stroke=\"#ef6c00\"/><text id=\"c71-19-b10-t\" text-anchor=\"middle\" font-size=\"9\" fill=\"#e65100\"><tspan x=\"180.0\" y=\"92.5\">Интеграционные и контрактные: API, БД в</tspan><tspan x=\"180.0\" y=\"103.5\">Testcontainers</tspan></text><rect id=\"c71-19-b20\" x=\"12.0\" y=\"140\" width=\"336.0\" height=\"27\" rx=\"6\" fill=\"#e8f5e9\" stroke=\"#2e7d32\"/><text id=\"c71-19-b20-t\" text-anchor=\"middle\" font-size=\"9\" fill=\"#1b5e20\"><tspan x=\"180.0\" y=\"156.5\">Unit: доменная логика и инварианты — основная масса</tspan></text></svg>"
+      }
+    },
+    {
+      "type": "theory",
+      "title": "Вопросы с собеседования",
+      "content": "## Вопросы с собеседования\n\n### 1. Что тестировать на каком уровне?\n\n**Ответ.** Доменную логику и инварианты — unit-тестами без инфраструктуры. API, сериализацию, DI и SQL — интеграционными тестами с `WebApplicationFactory` и реальной БД в контейнере. Межсервисные договорённости — контрактными тестами, а e2e оставляют для нескольких критических сценариев.\n\n**Уточнение интервьюера:** «Как понять, что тестов достаточно?» — не по покрытию строк, а по тому, ловят ли тесты регрессии в критичных сценариях; помогает mutation testing.\n\n### 2. Как работает `WebApplicationFactory`?\n\n**Ответ.** Фабрика запускает приложение в памяти через `TestServer`, и `HttpClient` ходит в него без сети. Через `ConfigureTestServices` заменяют зависимости — внешние HTTP-клиенты на заглушки, строку подключения на тестовую БД. Тест проверяет реальный конвейер: middleware, маршрутизацию, сериализацию.\n\n**Уточнение интервьюера:** «Как сделать `Program` доступным для тестов при minimal hosting?» — добавить `public partial class Program {}` или `InternalsVisibleTo`.\n\n### 3. Testcontainers или InMemory-провайдер?\n\n**Ответ.** Testcontainers поднимает настоящие PostgreSQL, Kafka и Redis в Docker, поэтому проверяются миграции, индексы, транзакции и SQL. EF InMemory и SQLite ведут себя иначе: другие типы, нет части ограничений и транзакций. Цена контейнеров — время старта, её снижают общим контейнером на коллекцию тестов и очисткой данных между тестами.\n\n**Уточнение интервьюера:** «Как изолировать тесты при общей БД?» — откат транзакции после каждого теста, уникальные данные на тест или очистка таблиц (например, библиотекой Respawn).\n\n### 4. Как тестировать код, зависящий от времени и конкурентности?\n\n**Ответ.** Внедрять `TimeProvider`, а в тестах использовать `FakeTimeProvider`: `Advance` сдвигает время, срабатывают таймеры и `CancellationTokenSource` с таймаутом. `Thread.Sleep` и `Task.Delay` в тестах не используют. Для конкурентного кода — стресс-тест со множеством параллельных задач и проверкой инварианта.\n\n**Уточнение интервьюера:** «Где посмотреть приёмы для конкурентного кода?» — в курсе «C#: примитивы асинхронности и конкурентности», модуль о тестировании конкурентности.\n\n### 5. Когда уместны моки?\n\n**Ответ.** На внешних границах, где реальная зависимость медленная, платная или недетерминированная: HTTP-API партнёра, брокер, часы, генератор случайных чисел. Для собственных value object и доменной логики моки вредны. Лучше проверять результат и состояние, а не то, что «метод вызван с такими аргументами».\n\n**Уточнение интервьюера:** «Чем fake отличается от mock и stub?» — stub возвращает заготовленные данные, mock проверяет взаимодействие, fake — упрощённая рабочая реализация, например репозиторий в памяти."
+    },
+    {
+      "type": "quiz",
+      "title": "Quiz 1/4",
+      "content": {
+        "question": "Как протестировать истечение промокода через час без ожидания?",
+        "options": [
+          "Внедрить TimeProvider и сдвинуть FakeTimeProvider на час",
+          "Thread.Sleep на час в ночном прогоне тестов",
+          "Замокать статическое свойство DateTime.UtcNow через Moq",
+          "Поставить срок истечения в прошлое через рефлексию"
+        ],
+        "correctIndices": [
+          0
+        ]
+      }
+    },
+    {
+      "type": "quiz",
+      "title": "Quiz 2/4",
+      "content": {
+        "question": "Почему EF Core InMemory плохо подходит для интеграционных тестов с PostgreSQL?",
+        "options": [
+          "Он работает медленнее контейнера с PostgreSQL",
+          "Он не поддерживает асинхронные методы EF Core вроде ToListAsync",
+          "Он не проверяет SQL-трансляцию, ограничения и транзакции",
+          "Он требует Docker на машине разработчика"
+        ],
+        "correctIndices": [
+          2
+        ]
+      }
+    },
+    {
+      "type": "quiz",
+      "title": "Quiz 3/4",
+      "content": {
+        "question": "Что делает `ConfigureTestServices` в `WebApplicationFactory`?",
+        "options": [
+          "Запускает тесты параллельно в отдельных процессах",
+          "Поднимает Docker-контейнеры с зависимостями",
+          "Генерирует моки для всех зарегистрированных интерфейсов",
+          "Заменяет регистрации DI после конфигурации приложения"
+        ],
+        "correctIndices": [
+          3
+        ]
+      }
+    },
+    {
+      "type": "quiz",
+      "title": "Quiz 4/4",
+      "content": {
+        "question": "В каком случае мок оправдан?",
+        "options": [
+          "Для доменного класса Order, чтобы изолировать тест",
+          "Для HTTP-API партнёра",
+          "Для value object Money, чтобы не создавать экземпляры",
+          "Для любого класса, чтобы тест считался unit"
+        ],
+        "correctIndices": [
+          1
+        ]
+      }
+    }
+  ]
+}

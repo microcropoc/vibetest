@@ -1,0 +1,89 @@
+{
+  "schemaVersion": 1,
+  "title": "Коллекции изнутри",
+  "steps": [
+    {
+      "type": "theory",
+      "title": "Ключевые понятия",
+      "content": "## Как устроено\n\n- `List<T>` — массив плюс счётчик. При нехватке места ёмкость удваивается с копированием: `Add` амортизированно O(1), `Insert`/`RemoveAt` в начале — O(n).\n- `Dictionary<TKey, TValue>` — массив бакетов и массив записей (`hashCode`, `next`, ключ, значение). Бакет выбирается по хешу, коллизии связаны цепочкой через `next`. Поиск O(1) в среднем и O(n) при плохом хеше. При заполнении — увеличение примерно вдвое (до простого числа) и перераспределение.\n- `HashSet<T>` устроен так же, но без значений. `SortedDictionary` — красно-чёрное дерево, O(log n); `SortedList` — два отсортированных массива: поиск O(log n), вставка O(n), меньше памяти.\n- `ImmutableDictionary` и другие immutable-коллекции — деревья со структурным разделением: «изменение» возвращает новую коллекцию за O(log n).\n- `FrozenDictionary` / `FrozenSet` (.NET 8) — неизменяемые, оптимизированы под быстрое чтение, дорогие при создании.\n- Обычные коллекции безопасны только для **параллельного чтения без записи**.\n\n## Пример\n\n```csharp\nusing System.Collections.Frozen;\n\npublic sealed class CategoryCatalog\n{\n    private readonly FrozenDictionary<string, int> _idsByName;\n\n    public CategoryCatalog(IEnumerable<KeyValuePair<string, int>> source) =>\n        _idsByName = source.ToFrozenDictionary(StringComparer.OrdinalIgnoreCase);\n\n    public bool TryGetId(string name, out int id) => _idsByName.TryGetValue(name, out id);\n}\n\npublic static class Grouping\n{\n    public static Dictionary<int, List<string>> BySeller(IReadOnlyList<(int SellerId, string Sku)> items)\n    {\n        var result = new Dictionary<int, List<string>>(capacity: items.Count);\n        foreach (var (sellerId, sku) in items)\n        {\n            if (!result.TryGetValue(sellerId, out var skus))\n            {\n                skus = new List<string>();\n                result[sellerId] = skus;\n            }\n            skus.Add(sku);\n        }\n        return result;\n    }\n}\n```\n\n## Подводные камни\n\n- Параллельная запись в обычный `Dictionary` может повредить внутренние массивы: итогом бывают потерянные ключи и бесконечный цикл, а не только исключение.\n- Изменять коллекцию внутри `foreach` по ней: `InvalidOperationException`. Используйте `RemoveAll` или перебор копии.\n- Создавать `FrozenDictionary` на каждый запрос: построение дороже, чем у обычного словаря. Он нужен для редко меняющихся справочников."
+    },
+    {
+      "type": "svg",
+      "title": "Устройство Dictionary",
+      "content": {
+        "caption": "Поиск ключа в Dictionary",
+        "description": "Хеш выбирает бакет, дальше — проход по цепочке записей с проверкой Equals.",
+        "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 360 115\" width=\"100%\" role=\"img\" aria-label=\"Поиск ключа в Dictionary\"><defs><marker id=\"c71-07-arrow\" viewBox=\"0 0 10 10\" refX=\"9\" refY=\"5\" markerWidth=\"6\" markerHeight=\"6\" orient=\"auto-start-reverse\"><path d=\"M0,0 L10,5 L0,10 z\" fill=\"#37474f\"/></marker></defs><rect id=\"c71-07-b00\" x=\"12.0\" y=\"12\" width=\"102.7\" height=\"38\" rx=\"6\" fill=\"#e3f2fd\" stroke=\"#1565c0\"/><text id=\"c71-07-b00-t\" text-anchor=\"middle\" font-size=\"9\" fill=\"#0d47a1\"><tspan x=\"63.3\" y=\"28.5\">hash =</tspan><tspan x=\"63.3\" y=\"39.5\">key.GetHashCode()</tspan></text><rect id=\"c71-07-b01\" x=\"128.7\" y=\"12\" width=\"102.7\" height=\"38\" rx=\"6\" fill=\"#e3f2fd\" stroke=\"#1565c0\"/><text id=\"c71-07-b01-t\" text-anchor=\"middle\" font-size=\"9\" fill=\"#0d47a1\"><tspan x=\"180.0\" y=\"28.5\">index = hash %</tspan><tspan x=\"180.0\" y=\"39.5\">buckets</tspan></text><rect id=\"c71-07-b02\" x=\"245.3\" y=\"12\" width=\"102.7\" height=\"38\" rx=\"6\" fill=\"#e3f2fd\" stroke=\"#1565c0\"/><text id=\"c71-07-b02-t\" text-anchor=\"middle\" font-size=\"9\" fill=\"#0d47a1\"><tspan x=\"296.7\" y=\"34.0\">buckets[index]</tspan></text><rect id=\"c71-07-b10\" x=\"12.0\" y=\"76\" width=\"102.7\" height=\"27\" rx=\"6\" fill=\"#fff3e0\" stroke=\"#ef6c00\"/><text id=\"c71-07-b10-t\" text-anchor=\"middle\" font-size=\"9\" fill=\"#e65100\"><tspan x=\"63.3\" y=\"92.5\">entry A</tspan></text><rect id=\"c71-07-b11\" x=\"128.7\" y=\"76\" width=\"102.7\" height=\"27\" rx=\"6\" fill=\"#fff3e0\" stroke=\"#ef6c00\"/><text id=\"c71-07-b11-t\" text-anchor=\"middle\" font-size=\"9\" fill=\"#e65100\"><tspan x=\"180.0\" y=\"92.5\">entry B (next)</tspan></text><rect id=\"c71-07-b12\" x=\"245.3\" y=\"76\" width=\"102.7\" height=\"27\" rx=\"6\" fill=\"#fff3e0\" stroke=\"#ef6c00\"/><text id=\"c71-07-b12-t\" text-anchor=\"middle\" font-size=\"9\" fill=\"#e65100\"><tspan x=\"296.7\" y=\"92.5\">entry C (next)</tspan></text><line id=\"c71-07-l0\" x1=\"114.7\" y1=\"31.0\" x2=\"128.7\" y2=\"31.0\" stroke=\"#37474f\" stroke-width=\"1.2\" marker-end=\"url(#c71-07-arrow)\"/><line id=\"c71-07-l1\" x1=\"231.3\" y1=\"31.0\" x2=\"245.3\" y2=\"31.0\" stroke=\"#37474f\" stroke-width=\"1.2\" marker-end=\"url(#c71-07-arrow)\"/><line id=\"c71-07-l2\" x1=\"296.7\" y1=\"50.0\" x2=\"63.3\" y2=\"76.0\" stroke=\"#37474f\" stroke-width=\"1.2\" marker-end=\"url(#c71-07-arrow)\"/><line id=\"c71-07-l3\" x1=\"114.7\" y1=\"89.5\" x2=\"128.7\" y2=\"89.5\" stroke=\"#37474f\" stroke-width=\"1.2\" marker-end=\"url(#c71-07-arrow)\"/><line id=\"c71-07-l4\" x1=\"231.3\" y1=\"89.5\" x2=\"245.3\" y2=\"89.5\" stroke=\"#37474f\" stroke-width=\"1.2\" marker-end=\"url(#c71-07-arrow)\"/></svg>"
+      }
+    },
+    {
+      "type": "theory",
+      "title": "Вопросы с собеседования",
+      "content": "## Вопросы с собеседования\n\n### 1. Как устроен `Dictionary<TKey, TValue>`?\n\n**Ответ.** Внутри два массива: `buckets` хранит индекс первой записи цепочки, `entries` — записи с хешем, ссылкой `next`, ключом и значением. Индекс бакета — остаток от деления хеша на размер; при совпадении бакетов записи связываются в цепочку. Когда место заканчивается, массивы увеличиваются примерно вдвое, и все записи перераспределяются.\n\n**Уточнение интервьюера:** «Что будет, если `GetHashCode` всегда возвращает 1?» — все записи окажутся в одной цепочке, и поиск деградирует до O(n) со сравнением через `Equals`.\n\n### 2. Почему `Add` в `List<T>` амортизированно O(1), а `Insert(0)` — O(n)?\n\n**Ответ.** При нехватке ёмкости массив удваивается и копируется — это редкая O(n)-операция, которая в среднем даёт O(1) на добавление. `Insert(0)` и `RemoveAt(0)` каждый раз сдвигают все элементы. Если размер известен заранее, задают `capacity`.\n\n**Уточнение интервьюера:** «Почему большой `List` попадает в LOH?» — внутренний массив от 85 000 байт, и каждое удвоение создаёт новый большой массив.\n\n### 3. Когда `SortedDictionary`, `SortedList` или `Dictionary`?\n\n**Ответ.** `Dictionary` — без порядка, O(1) в среднем. `SortedDictionary` — дерево, упорядоченный обход и O(log n) на вставку и поиск. `SortedList` — отсортированные массивы: меньше памяти и быстрый доступ по индексу, но вставка O(n), поэтому подходит для редко меняющихся данных.\n\n**Уточнение интервьюера:** «Как держать top-N товаров по цене онлайн?» — `PriorityQueue` размера N или `SortedSet` с компаратором (цена, id).\n\n### 4. Чем отличаются `ReadOnlyCollection`, `ImmutableDictionary` и `FrozenDictionary`?\n\n**Ответ.** `ReadOnlyCollection` — только обёртка: исходный список можно изменить, и изменения будут видны. `ImmutableDictionary` неизменяем, а «изменения» дёшево создают новую версию за O(log n). `FrozenDictionary` (.NET 8) тоже неизменяем, но оптимизирован для максимально быстрого чтения ценой дорогого создания.\n\n**Уточнение интервьюера:** «Как обновлять справочник на FrozenDictionary без блокировок?» — построить новый словарь и атомарно заменить ссылку (`Volatile.Write` или `Interlocked.Exchange`).\n\n### 5. Какие коллекции потокобезопасны?\n\n**Ответ.** Обычные `List` и `Dictionary` выдерживают только параллельное чтение без записи. Для конкурентной записи — `ConcurrentDictionary`, `lock` вокруг обычной коллекции или неизменяемая коллекция с атомарной заменой ссылки. Выбор зависит от соотношения чтений и записей.\n\n**Уточнение интервьюера:** «Атомарен ли `GetOrAdd` с фабрикой?» — вставка атомарна, но фабрика может выполниться несколько раз; разбор — в курсе «C#: примитивы асинхронности и конкурентности», модуль о конкурентных коллекциях."
+    },
+    {
+      "type": "quiz",
+      "title": "Quiz 1/4",
+      "content": {
+        "question": "`GetHashCode` ключа всегда возвращает 42. Что будет с `Dictionary`?",
+        "options": [
+          "Dictionary бросит исключение при втором Add",
+          "Все ключи попадут в одну цепочку, поиск станет O(n)",
+          "Новые ключи будут перезаписывать старые",
+          "Dictionary перейдёт на сравнение через Equals без потери скорости"
+        ],
+        "correctIndices": [
+          1
+        ]
+      }
+    },
+    {
+      "type": "quiz",
+      "title": "Quiz 2/4",
+      "content": {
+        "question": "Почему `list.Insert(0, x)` в цикле на 100 000 элементов медленный?",
+        "options": [
+          "Каждая вставка удваивает ёмкость массива",
+          "Insert блокирует список для других потоков",
+          "Insert(0) пересчитывает хеши всех элементов",
+          "Каждая вставка сдвигает весь массив"
+        ],
+        "correctIndices": [
+          3
+        ]
+      }
+    },
+    {
+      "type": "quiz",
+      "title": "Quiz 3/4",
+      "content": {
+        "question": "Справочник категорий загружается при старте и не меняется. Лучший выбор в .NET 8?",
+        "options": [
+          "FrozenDictionary, созданный один раз",
+          "ImmutableDictionary, пересоздаваемый на каждый запрос",
+          "SortedDictionary для быстрого поиска по строке",
+          "ConcurrentDictionary с блокировкой на каждое чтение"
+        ],
+        "correctIndices": [
+          0
+        ]
+      }
+    },
+    {
+      "type": "quiz",
+      "title": "Quiz 4/4",
+      "content": {
+        "question": "Два потока одновременно делают `Add` в обычный `Dictionary`. Худший исход?",
+        "options": [
+          "Только InvalidOperationException, а данные словаря не пострадают",
+          "Второй поток подождёт внутреннюю блокировку",
+          "Порча внутреннего состояния: потеря ключей или зависание",
+          "Дубликат ключа тихо перезапишет значение"
+        ],
+        "correctIndices": [
+          2
+        ]
+      }
+    }
+  ]
+}

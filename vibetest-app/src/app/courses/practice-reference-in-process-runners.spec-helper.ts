@@ -18,7 +18,11 @@ import {
 } from '../player/step-engine/sqlite/sqlite-practice-runner';
 import type { SqliteStep } from '../player/step-engine/sqlite/sqlite-step-engine';
 
+import { practiceRunFailure, practiceRunSuccess } from '../player/step-engine/practice-run-result';
+
 import type { PracticeReferenceValidationDeps } from './validate-practice-references';
+
+const REFERENCE_SELF_CHECK_TIMINGS = { userMs: 0, referenceMs: 0 } as const;
 
 function resolveJavascriptTarget(step: JavascriptStep): JavascriptPracticeTarget {
   if (step.content.functionName !== undefined) {
@@ -45,6 +49,7 @@ export async function runJavascriptReferenceSelfCheck(
     referenceGlobal: referenceEnv.globalBag,
   });
 
+  const totalTests = step.content.tests.length;
   for (let i = 0; i < step.content.tests.length; i += 1) {
     const testCase = step.content.tests[i];
     userEnv.applyReset(step.content.reset ?? '');
@@ -68,14 +73,10 @@ export async function runJavascriptReferenceSelfCheck(
       },
     );
     if (!result.pass) {
-      return {
-        ok: false,
-        failedTestIndex: i,
-        message: result.message ?? 'Test case failed',
-      };
+      return practiceRunFailure(i, totalTests, result.message ?? 'Test case failed');
     }
   }
-  return { ok: true };
+  return practiceRunSuccess(totalTests, REFERENCE_SELF_CHECK_TIMINGS);
 }
 
 export async function runRegexReferenceSelfCheck(step: RegexStep): Promise<RegexPracticeResult> {
@@ -86,22 +87,19 @@ export async function runRegexReferenceSelfCheck(step: RegexStep): Promise<Regex
     userRe = new RegExp(pattern);
     referenceRe = new RegExp(pattern);
   } catch {
-    return { ok: false, failedTestIndex: 0, message: 'Invalid regular expression' };
+    return practiceRunFailure(0, step.content.tests.length, 'Invalid regular expression');
   }
 
+  const totalTests = step.content.tests.length;
   for (let i = 0; i < step.content.tests.length; i += 1) {
     const input = step.content.tests[i].input;
     const userResult = userRe.test(input);
     const referenceResult = referenceRe.test(input);
     if (userResult !== referenceResult) {
-      return {
-        ok: false,
-        failedTestIndex: i,
-        message: 'RegExp.test results do not match',
-      };
+      return practiceRunFailure(i, totalTests, 'RegExp.test results do not match');
     }
   }
-  return { ok: true };
+  return practiceRunSuccess(totalTests, REFERENCE_SELF_CHECK_TIMINGS);
 }
 
 let sqlModulePromise: Promise<SqlJsStatic> | undefined;
@@ -151,11 +149,12 @@ export async function runSqliteReferenceSelfCheck(
     SQL = await loadSqlModule();
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : 'Failed to load sql.js';
-    return { ok: false, failedTestIndex: 0, message };
+    return practiceRunFailure(0, content.tests.length, message);
   }
 
   const userDb = new SQL.Database();
   const referenceDb = new SQL.Database();
+  const totalTests = content.tests.length;
   try {
     runOptionalSql(userDb, content.setup);
     runOptionalSql(referenceDb, content.setup);
@@ -169,14 +168,10 @@ export async function runSqliteReferenceSelfCheck(
       const referenceRows = queryResultRows(referenceDb, query);
       const pass = compareSqliteResultRows(userRows, referenceRows, content.orderMatters);
       if (!pass) {
-        return {
-          ok: false,
-          failedTestIndex: i,
-          message: 'Query results do not match',
-        };
+        return practiceRunFailure(i, totalTests, 'Query results do not match');
       }
     }
-    return { ok: true };
+    return practiceRunSuccess(totalTests, REFERENCE_SELF_CHECK_TIMINGS);
   } finally {
     userDb.close();
     referenceDb.close();

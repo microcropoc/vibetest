@@ -84,12 +84,20 @@ class ScriptableMockWorker {
             id: req.id,
             pass: false,
             message: 'mock fail',
+            userMs: 0,
+            referenceMs: 0,
           },
         } as MessageEvent);
         return;
       }
       this.onmessage?.({
-        data: { type: 'javascriptCaseResult', id: req.id, pass: true },
+        data: {
+          type: 'javascriptCaseResult',
+          id: req.id,
+          pass: true,
+          userMs: 1.2,
+          referenceMs: 0.8,
+        },
       } as MessageEvent);
     }
   }
@@ -122,7 +130,12 @@ describe('runJavascriptPractice', () => {
       wrapper,
       createWorker: () => mock as unknown as Worker,
     });
-    expect(result).toEqual({ ok: true });
+    expect(result).toEqual({
+      ok: true,
+      totalTests: 2,
+      userMs: 2.4,
+      referenceMs: 1.6,
+    });
     expect(mock.terminated).toBe(true);
   });
 
@@ -250,6 +263,7 @@ describe('runJavascriptPractice', () => {
     expect(result).toEqual({
       ok: false,
       failedTestIndex: 0,
+      totalTests: 1,
       message: 'Class Missing is not defined',
     });
   });
@@ -262,6 +276,11 @@ describe('runJavascriptPractice', () => {
       wrapper,
       createWorker: () => mock as unknown as Worker,
     });
-    expect(result).toEqual({ ok: false, failedTestIndex: 1, message: 'mock fail' });
+    expect(result).toEqual({
+      ok: false,
+      failedTestIndex: 1,
+      totalTests: 2,
+      message: 'mock fail',
+    });
   });
 });

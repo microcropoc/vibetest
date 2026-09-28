@@ -44,9 +44,9 @@ function mockPracticeDeps(
   overrides?: Partial<PracticeReferenceValidationDeps>,
 ): PracticeReferenceValidationDeps {
   return {
-    runJavascriptStep: vi.fn().mockResolvedValue({ ok: true }),
-    runSqliteStep: vi.fn().mockResolvedValue({ ok: true }),
-    runRegexStep: vi.fn().mockResolvedValue({ ok: true }),
+    runJavascriptStep: vi.fn().mockResolvedValue({ ok: true, totalTests: 1, userMs: 0, referenceMs: 0 }),
+    runSqliteStep: vi.fn().mockResolvedValue({ ok: true, totalTests: 1, userMs: 0, referenceMs: 0 }),
+    runRegexStep: vi.fn().mockResolvedValue({ ok: true, totalTests: 1, userMs: 0, referenceMs: 0 }),
     ...overrides,
   };
 }

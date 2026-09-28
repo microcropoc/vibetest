@@ -4,7 +4,9 @@ import { CodeEditor } from '../code-editor/code-editor';
 import { MarkdownContentComponent } from '../markdown-content/markdown-content';
 import type { PracticeCodeEditorLanguage } from '../code-editor/practice-code-editor-language';
 import {
+  formatPracticeDurationMs,
   practiceStepShellLabels,
+  practiceTimingComparison,
   type PracticeFeedback,
   type PracticeStep,
 } from '../../practice-step-view';
@@ -40,6 +42,18 @@ export class PracticeStepShellComponent {
       case 'regex':
         return 'plain';
     }
+  });
+
+  protected readonly timingLabels = computed(() => {
+    const timing = this.feedback()?.timing;
+    if (timing === undefined) {
+      return null;
+    }
+    return {
+      user: formatPracticeDurationMs(timing.userMs),
+      reference: formatPracticeDurationMs(timing.referenceMs),
+      comparison: practiceTimingComparison(timing.userMs, timing.referenceMs),
+    };
   });
 
   protected onDraftChange(value: string): void {

@@ -73,9 +73,33 @@ describe('PracticeStepShellComponent', () => {
   it('shows error feedback', async () => {
     const fixture = TestBed.createComponent(PracticeStepShellComponent);
     fixture.componentRef.setInput('step', javascriptStep);
-    fixture.componentRef.setInput('feedback', { kind: 'error', message: 'Failed test' });
+    fixture.componentRef.setInput('feedback', {
+      kind: 'error',
+      message: 'Failed test',
+      tests: { passed: 0, total: 2 },
+    });
     await fixture.whenStable();
     expect(fixture.nativeElement.textContent).toContain('Failed test');
+    expect(fixture.nativeElement.textContent).toContain('Тесты: 0 из 2');
+    expect(fixture.nativeElement.querySelector('.practice-step-shell__timing')).toBeNull();
+  });
+
+  it('shows timing on success feedback', async () => {
+    const fixture = TestBed.createComponent(PracticeStepShellComponent);
+    fixture.componentRef.setInput('step', javascriptStep);
+    fixture.componentRef.setInput('feedback', {
+      kind: 'success',
+      message: 'Все проверки пройдены.',
+      tests: { passed: 1, total: 1 },
+      timing: { userMs: 2.5, referenceMs: 1.2 },
+    });
+    await fixture.whenStable();
+    const text = fixture.nativeElement.textContent as string;
+    expect(text).toContain('Тесты: 1 из 1');
+    expect(text).toContain('Ваше решение');
+    expect(text).toContain('2.5 мс');
+    expect(text).toContain('Эталон');
+    expect(text).toContain('1.2 мс');
   });
 
   it('renders practice description as markdown with fenced code', async () => {

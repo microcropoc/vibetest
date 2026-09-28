@@ -8,8 +8,7 @@ import { CourseRepository } from '../storage/course-repository';
 import { ProgressRepository } from '../storage/progress-repository';
 
 import {
-  practiceFailureMessage,
-  practiceSuccessMessage,
+  practiceFeedbackFromResult,
   type PracticeFeedback,
 } from './practice-step-view';
 import type { PlayerStepCommand } from './player-step-command';
@@ -205,14 +204,7 @@ export class PlayerOrchestratorService {
       const snapshot = applyPracticeResultToStep(step, saved, result);
       await this.persistStepSnapshot(step, snapshot);
 
-      if (result.ok) {
-        this.practiceFeedback.set({ kind: 'success', message: practiceSuccessMessage() });
-      } else {
-        this.practiceFeedback.set({
-          kind: 'error',
-          message: practiceFailureMessage(result),
-        });
-      }
+      this.practiceFeedback.set(practiceFeedbackFromResult(result));
     } finally {
       this.practiceRunning.set(false);
     }

@@ -41,12 +41,20 @@ class ScriptableMockWorker {
             id: req.id,
             pass: false,
             message: 'mock fail',
+            userMs: 0,
+            referenceMs: 0,
           },
         } as MessageEvent);
         return;
       }
       this.onmessage?.({
-        data: { type: 'sqliteCaseResult', id: req.id, pass: true },
+        data: {
+          type: 'sqliteCaseResult',
+          id: req.id,
+          pass: true,
+          userMs: 2,
+          referenceMs: 1,
+        },
       } as MessageEvent);
     }
   }
@@ -84,7 +92,7 @@ describe('runSqlitePractice', () => {
       createWorker: () => mock as unknown as Worker,
       wasmUrl: 'https://example.test/sql-wasm.wasm',
     });
-    expect(result).toEqual({ ok: true });
+    expect(result).toEqual({ ok: true, totalTests: 2, userMs: 4, referenceMs: 2 });
     expect(mock.terminated).toBe(true);
   });
 
@@ -97,6 +105,11 @@ describe('runSqlitePractice', () => {
       createWorker: () => mock as unknown as Worker,
       wasmUrl: 'https://example.test/sql-wasm.wasm',
     });
-    expect(result).toEqual({ ok: false, failedTestIndex: 1, message: 'mock fail' });
+    expect(result).toEqual({
+      ok: false,
+      failedTestIndex: 1,
+      totalTests: 2,
+      message: 'mock fail',
+    });
   });
 });

@@ -157,6 +157,8 @@ export const ExecutionResponseSchema = z.discriminatedUnion('type', [
       userValue: z.unknown().optional(),
       referenceValue: z.unknown().optional(),
       message: z.string().optional(),
+      userMs: z.number().min(0),
+      referenceMs: z.number().min(0),
     })
     .strict(),
   z
@@ -173,6 +175,8 @@ export const ExecutionResponseSchema = z.discriminatedUnion('type', [
       userRows: z.array(z.string()).optional(),
       referenceRows: z.array(z.string()).optional(),
       message: z.string().optional(),
+      userMs: z.number().min(0),
+      referenceMs: z.number().min(0),
     })
     .strict(),
   z
@@ -189,6 +193,8 @@ export const ExecutionResponseSchema = z.discriminatedUnion('type', [
       userResult: z.boolean().optional(),
       referenceResult: z.boolean().optional(),
       message: z.string().optional(),
+      userMs: z.number().min(0),
+      referenceMs: z.number().min(0),
     })
     .strict(),
   z

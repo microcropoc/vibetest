@@ -28,7 +28,11 @@ export type JavascriptCaseRunResult = {
   readonly userValue?: unknown;
   readonly referenceValue?: unknown;
   readonly message?: string;
+  readonly userMs: number;
+  readonly referenceMs: number;
 };
+
+type JavascriptCaseCompareResult = Omit<JavascriptCaseRunResult, 'userMs' | 'referenceMs'>;
 
 export type JavascriptCaseRunOptions = {
   readonly rejects?: boolean;
@@ -47,15 +51,19 @@ export type JavascriptCaseRunOptions = {
   readonly referenceGlobal: PracticeGlobalBag;
 };
 
-function fail(message: string): JavascriptCaseRunResult {
+function fail(message: string): JavascriptCaseCompareResult {
   return { pass: false, message };
+}
+
+function failBeforeSideChains(message: string): JavascriptCaseRunResult {
+  return { pass: false, message, userMs: 0, referenceMs: 0 };
 }
 
 function compareJsonValues(
   userValue: unknown,
   referenceValue: unknown,
   mismatchMessage: string,
-): JavascriptCaseRunResult {
+): JavascriptCaseCompareResult {
   if (!isJsonCompatibleValue(userValue) || !isJsonCompatibleValue(referenceValue)) {
     return fail('non-JSON result');
   }
@@ -75,7 +83,7 @@ function toComparable(value: unknown, unordered: boolean): unknown {
 function compareRejected(
   userReason: unknown,
   referenceReason: unknown,
-): JavascriptCaseRunResult {
+): JavascriptCaseCompareResult {
   const userValue = normalizeRejectReason(userReason);
   const referenceValue = normalizeRejectReason(referenceReason);
   if (userValue === undefined || referenceValue === undefined) {
@@ -91,7 +99,7 @@ function compareRejected(
 function failOnThrownSideOutcomes(
   user: JavascriptSideOutcome,
   reference: JavascriptSideOutcome,
-): JavascriptCaseRunResult | undefined {
+): JavascriptCaseCompareResult | undefined {
   if (user.kind === 'thrown') {
     return fail(user.message);
   }
@@ -101,7 +109,7 @@ function failOnThrownSideOutcomes(
   return undefined;
 }
 
-function applyTimerPhaseSync(options: JavascriptCaseRunOptions): JavascriptCaseRunResult | undefined {
+function applyTimerPhaseSync(options: JavascriptCaseRunOptions): JavascriptCaseCompareResult | undefined {
   const { advanceMs, userTimers, referenceTimers } = options;
   try {
     if (advanceMs !== undefined) {
@@ -115,6 +123,32 @@ function applyTimerPhaseSync(options: JavascriptCaseRunOptions): JavascriptCaseR
   return undefined;
 }
 
+type TimedSideOutcome = {
+  readonly outcome: JavascriptSideOutcome;
+  readonly ms: number;
+};
+
+function timeJavascriptSideChain(
+  invoke: (args: readonly unknown[]) => unknown,
+  args: readonly unknown[],
+  calls: readonly JavascriptCallStep[] | undefined,
+  deadlineMs: number | undefined,
+): TimedSideOutcome | Promise<TimedSideOutcome> {
+  const start = performance.now();
+  const run = runJavascriptSideChain(invoke, args, calls, deadlineMs);
+  if (run instanceof Promise) {
+    return run.then((outcome) => ({ outcome, ms: performance.now() - start }));
+  }
+  return { outcome: run, ms: performance.now() - start };
+}
+
+type ResolvedSideChains = {
+  readonly user: JavascriptSideOutcome;
+  readonly reference: JavascriptSideOutcome;
+  readonly userMs: number;
+  readonly referenceMs: number;
+};
+
 function resolveBothSideChains(
   invokeUser: (args: readonly unknown[]) => unknown,
   invokeReference: (args: readonly unknown[]) => unknown,
@@ -123,21 +157,45 @@ function resolveBothSideChains(
   userCalls: readonly JavascriptCallStep[] | undefined,
   referenceCalls: readonly JavascriptCallStep[] | undefined,
   deadlineMs: number | undefined,
-):
-  | [JavascriptSideOutcome, JavascriptSideOutcome]
-  | Promise<[JavascriptSideOutcome, JavascriptSideOutcome]> {
-  const userRun = runJavascriptSideChain(invokeUser, userArgs, userCalls, deadlineMs);
-  const referenceRun = runJavascriptSideChain(invokeReference, referenceArgs, referenceCalls, deadlineMs);
-  if (userRun instanceof Promise) {
-    if (referenceRun instanceof Promise) {
-      return Promise.all([userRun, referenceRun]);
+): ResolvedSideChains | Promise<ResolvedSideChains> {
+  function mergeTimed(
+    user: TimedSideOutcome,
+    reference: TimedSideOutcome,
+  ): ResolvedSideChains {
+    return {
+      user: user.outcome,
+      reference: reference.outcome,
+      userMs: user.ms,
+      referenceMs: reference.ms,
+    };
+  }
+
+  function afterUser(user: TimedSideOutcome): ResolvedSideChains | Promise<ResolvedSideChains> {
+    const referenceTimed = timeJavascriptSideChain(
+      invokeReference,
+      referenceArgs,
+      referenceCalls,
+      deadlineMs,
+    );
+    if (referenceTimed instanceof Promise) {
+      return referenceTimed.then((reference) => mergeTimed(user, reference));
     }
-    return userRun.then((user) => [user, referenceRun]);
+    return mergeTimed(user, referenceTimed);
   }
-  if (referenceRun instanceof Promise) {
-    return referenceRun.then((reference) => [userRun, reference]);
+
+  const userTimed = timeJavascriptSideChain(invokeUser, userArgs, userCalls, deadlineMs);
+  if (userTimed instanceof Promise) {
+    return userTimed.then(afterUser);
   }
-  return [userRun, referenceRun];
+  return afterUser(userTimed);
+}
+
+function withCaseTimings(
+  result: JavascriptCaseCompareResult,
+  userMs: number,
+  referenceMs: number,
+): JavascriptCaseRunResult {
+  return { ...result, userMs, referenceMs };
 }
 
 function maybeUnordered(value: unknown, unordered: boolean): unknown {
@@ -152,7 +210,7 @@ function compareFulfilledWithMode(
   resultMode: JavascriptResultMode,
   structure: JavascriptStructure | undefined,
   unordered: boolean,
-): JavascriptCaseRunResult {
+): JavascriptCaseCompareResult {
   try {
     const resultKind: StructureKind | undefined = structure?.result;
     const structureArgs = structure?.args;
@@ -217,7 +275,7 @@ async function compareWithChecker(
   userArgs: readonly unknown[],
   referenceArgs: readonly unknown[],
   checker: string,
-): Promise<JavascriptCaseRunResult> {
+): Promise<JavascriptCaseCompareResult> {
   try {
     const pass = await runJavascriptChecker(checker, {
       userResult: user.value,
@@ -250,7 +308,7 @@ async function mergeSideOutcomes(
   structure: JavascriptStructure | undefined,
   unordered: boolean,
   checker: string | undefined,
-): Promise<JavascriptCaseRunResult> {
+): Promise<JavascriptCaseCompareResult> {
   if (user.kind === 'thrown') {
     return fail(user.message);
   }
@@ -307,10 +365,10 @@ export async function runJavascriptCaseComparison(
     referenceCalls = prepareCalls(calls, structure?.args);
   } catch (error: unknown) {
     if (error instanceof StructureCodecError) {
-      return fail(error.message);
+      return failBeforeSideChains(error.message);
     }
     const message = error instanceof Error ? error.message : 'Materialize error';
-    return fail(message);
+    return failBeforeSideChains(message);
   }
 
   const sideOutcomes = resolveBothSideChains(
@@ -322,12 +380,12 @@ export async function runJavascriptCaseComparison(
     referenceCalls,
     deadlineMs,
   );
-  const [user, reference] =
-    sideOutcomes instanceof Promise ? await sideOutcomes : sideOutcomes;
+  const resolved = sideOutcomes instanceof Promise ? await sideOutcomes : sideOutcomes;
+  const { user, reference, userMs, referenceMs } = resolved;
 
   const thrownEarly = failOnThrownSideOutcomes(user, reference);
   if (thrownEarly) {
-    return thrownEarly;
+    return withCaseTimings(thrownEarly, userMs, referenceMs);
   }
 
   if (options.flushMicrotasks) {
@@ -336,17 +394,17 @@ export async function runJavascriptCaseComparison(
 
   const timerError = applyTimerPhaseSync(options);
   if (timerError) {
-    return timerError;
+    return withCaseTimings(timerError, userMs, referenceMs);
   }
 
   if (expectInvocations !== undefined && Object.keys(expectInvocations).length > 0) {
     const spyResult = compareSpyInvocations(options.userGlobal, options.referenceGlobal, expectInvocations);
     if (!spyResult.pass) {
-      return fail(spyResult.message);
+      return withCaseTimings(fail(spyResult.message), userMs, referenceMs);
     }
   }
 
-  return mergeSideOutcomes(
+  const merged = await mergeSideOutcomes(
     user,
     reference,
     rejects,
@@ -357,4 +415,5 @@ export async function runJavascriptCaseComparison(
     unordered,
     checker,
   );
+  return withCaseTimings(merged, userMs, referenceMs);
 }

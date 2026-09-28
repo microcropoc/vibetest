@@ -53,8 +53,12 @@ self.addEventListener('message', (event: MessageEvent<unknown>) => {
           break;
         }
         try {
+          const userStart = performance.now();
           const userResult = runtime.userPattern.test(request.input);
+          const userMs = performance.now() - userStart;
+          const referenceStart = performance.now();
           const referenceResult = runtime.referencePattern.test(request.input);
+          const referenceMs = performance.now() - referenceStart;
           const pass = regexTestMatch(userResult, referenceResult);
           self.postMessage({
             type: 'regexCaseResult',
@@ -63,6 +67,8 @@ self.addEventListener('message', (event: MessageEvent<unknown>) => {
             userResult,
             referenceResult,
             message: pass ? undefined : 'RegExp.test results do not match',
+            userMs,
+            referenceMs,
           });
         } catch (error: unknown) {
           const message = error instanceof Error ? error.message : 'Regex error';
@@ -71,6 +77,8 @@ self.addEventListener('message', (event: MessageEvent<unknown>) => {
             id: request.id,
             pass: false,
             message,
+            userMs: 0,
+            referenceMs: 0,
           });
         }
         break;

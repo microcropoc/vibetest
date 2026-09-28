@@ -81,11 +81,17 @@ describe('sqliteStepEngine', () => {
     });
     const engine = createSqliteStepEngine();
     let state = engine.createInitial(course.modules[0].steps[0], undefined);
-    state = applySqlitePracticeResult(state, { ok: true });
+    state = applySqlitePracticeResult(state, {
+      ok: true,
+      totalTests: 1,
+      userMs: 0,
+      referenceMs: 0,
+    });
     expect(state.status).toBe('completed');
     state = applySqlitePracticeResult(state, {
       ok: false,
       failedTestIndex: 0,
+      totalTests: 1,
       message: 'no',
     });
     expect(state.status).toBe('completed');

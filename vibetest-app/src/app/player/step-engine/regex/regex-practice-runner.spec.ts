@@ -52,12 +52,20 @@ class ScriptableMockWorker {
             id: req.id,
             pass: false,
             message: 'mock fail',
+            userMs: 0,
+            referenceMs: 0,
           },
         } as MessageEvent);
         return;
       }
       this.onmessage?.({
-        data: { type: 'regexCaseResult', id: req.id, pass: true },
+        data: {
+          type: 'regexCaseResult',
+          id: req.id,
+          pass: true,
+          userMs: 0.5,
+          referenceMs: 0.5,
+        },
       } as MessageEvent);
     }
   }
@@ -88,7 +96,7 @@ describe('runRegexPractice', () => {
       wrapper,
       createWorker: () => mock as unknown as Worker,
     });
-    expect(result).toEqual({ ok: true });
+    expect(result).toEqual({ ok: true, totalTests: 2, userMs: 1, referenceMs: 1 });
     expect(mock.terminated).toBe(true);
   });
 
@@ -100,7 +108,12 @@ describe('runRegexPractice', () => {
       wrapper,
       createWorker: () => mock as unknown as Worker,
     });
-    expect(result).toEqual({ ok: false, failedTestIndex: 0, message: 'mock fail' });
+    expect(result).toEqual({
+      ok: false,
+      failedTestIndex: 0,
+      totalTests: 2,
+      message: 'mock fail',
+    });
   });
 
   it('surfaces init errors for invalid patterns', async () => {
@@ -114,6 +127,7 @@ describe('runRegexPractice', () => {
     expect(result).toEqual({
       ok: false,
       failedTestIndex: 0,
+      totalTests: 2,
       message: 'Invalid regular expression',
     });
   });

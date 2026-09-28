@@ -59,6 +59,62 @@ function memoize(fn) {
 `;
 
 describe('runJavascriptCaseComparison', () => {
+  it('invokes reference only after user side chain settles', async () => {
+    const code = `
+const f = () => new Promise((resolve) => {
+  queueMicrotask(() => resolve(1));
+});
+`;
+    const env = dualEnv(code, code, 'f');
+    const callOrder: string[] = [];
+
+    const invokeUser = (args: readonly unknown[]): unknown => {
+      callOrder.push('user-start');
+      const outcome = env.invokeUser(args);
+      if (outcome instanceof Promise) {
+        return outcome.then((value) => {
+          callOrder.push('user-settled');
+          return value;
+        });
+      }
+      callOrder.push('user-settled');
+      return outcome;
+    };
+
+    const invokeReference = (args: readonly unknown[]): unknown => {
+      expect(callOrder.at(-1)).toBe('user-settled');
+      callOrder.push('reference-start');
+      return env.invokeReference(args);
+    };
+
+    const result = await runJavascriptCaseComparison(
+      invokeUser,
+      invokeReference,
+      [],
+      undefined,
+      env.opts(),
+    );
+    expect(result.pass).toBe(true);
+    expect(callOrder).toEqual(['user-start', 'user-settled', 'reference-start']);
+  });
+
+  it('includes non-negative userMs and referenceMs for sync runs', async () => {
+    const code = 'const add = (a, b) => a + b;';
+    const env = dualEnv(code, code, 'add');
+    const result = await runJavascriptCaseComparison(
+      env.invokeUser,
+      env.invokeReference,
+      [1, 2],
+      undefined,
+      env.opts(),
+    );
+    expect(result.pass).toBe(true);
+    expect(result.userMs).toEqual(expect.any(Number));
+    expect(result.referenceMs).toEqual(expect.any(Number));
+    expect(result.userMs).toBeGreaterThanOrEqual(0);
+    expect(result.referenceMs).toBeGreaterThanOrEqual(0);
+  });
+
   it('passes without calls (add regression)', async () => {
     const env = dualEnv(
       'const add = (a, b) => a + b;',

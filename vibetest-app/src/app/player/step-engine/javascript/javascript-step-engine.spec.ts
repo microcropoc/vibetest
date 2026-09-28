@@ -53,9 +53,19 @@ describe('javascriptStepEngine', () => {
   it('applyJavascriptPracticeResult marks success and failure', () => {
     const step = javascriptStepFromFixture();
     let state = engine.createInitial(step);
-    state = applyJavascriptPracticeResult(state, { ok: true });
+    state = applyJavascriptPracticeResult(state, {
+      ok: true,
+      totalTests: 1,
+      userMs: 0,
+      referenceMs: 0,
+    });
     expect(state.status).toBe('completed');
-    state = applyJavascriptPracticeResult(state, { ok: false, failedTestIndex: 0, message: 'x' });
+    state = applyJavascriptPracticeResult(state, {
+      ok: false,
+      failedTestIndex: 0,
+      totalTests: 1,
+      message: 'x',
+    });
     expect(state.lastCheckFailed).toBe(true);
   });
 

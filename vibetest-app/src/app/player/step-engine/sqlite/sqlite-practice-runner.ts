@@ -1,11 +1,15 @@
 import type { ExecutionWorkerWrapperService } from '../../../execution/execution-worker-wrapper.service';
 import type { WorkerFactory } from '../../../execution/worker-factory';
 
+import {
+  createPracticeTimingAccumulator,
+  practiceRunFailure,
+  practiceRunSuccess,
+  type PracticeRunResult,
+} from '../practice-run-result';
 import type { SqliteStep } from './sqlite-step-engine';
 
-export type SqlitePracticeResult =
-  | { readonly ok: true }
-  | { readonly ok: false; readonly failedTestIndex: number; readonly message: string };
+export type SqlitePracticeResult = PracticeRunResult;
 
 export interface SqlitePracticeRunnerDeps {
   readonly wrapper: ExecutionWorkerWrapperService;
@@ -34,9 +38,11 @@ export async function runSqlitePractice(
   deps: SqlitePracticeRunnerDeps,
 ): Promise<SqlitePracticeResult> {
   const { content } = step;
+  const totalTests = content.tests.length;
   const deadlineMs = Date.now() + content.timeoutMs;
   const worker = deps.createWorker();
   const wasmUrl = deps.wasmUrl;
+  const timing = createPracticeTimingAccumulator();
 
   try {
     const initId = nextMessageId(-1, 'init');
@@ -54,7 +60,7 @@ export async function runSqlitePractice(
       remainingMs(deadlineMs),
     );
     if (initResponse.type !== 'sqliteInited') {
-      return { ok: false, failedTestIndex: 0, message: 'Unexpected init response' };
+      return practiceRunFailure(0, totalTests, 'Unexpected init response');
     }
 
     for (let i = 0; i < content.tests.length; i += 1) {
@@ -73,21 +79,18 @@ export async function runSqlitePractice(
       );
 
       if (response.type === 'error') {
-        return { ok: false, failedTestIndex: i, message: response.message };
+        return practiceRunFailure(i, totalTests, response.message);
       }
       if (response.type !== 'sqliteCaseResult') {
-        return { ok: false, failedTestIndex: i, message: 'Unexpected case response' };
+        return practiceRunFailure(i, totalTests, 'Unexpected case response');
       }
+      timing.add({ userMs: response.userMs, referenceMs: response.referenceMs });
       if (!response.pass) {
-        return {
-          ok: false,
-          failedTestIndex: i,
-          message: response.message ?? 'Test case failed',
-        };
+        return practiceRunFailure(i, totalTests, response.message ?? 'Test case failed');
       }
     }
 
-    return { ok: true };
+    return practiceRunSuccess(totalTests, timing.totals());
   } finally {
     worker.terminate();
   }

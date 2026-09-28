@@ -1,11 +1,15 @@
 import type { ExecutionWorkerWrapperService } from '../../../execution/execution-worker-wrapper.service';
 import type { WorkerFactory } from '../../../execution/worker-factory';
 
+import {
+  createPracticeTimingAccumulator,
+  practiceRunFailure,
+  practiceRunSuccess,
+  type PracticeRunResult,
+} from '../practice-run-result';
 import type { JavascriptStep } from './javascript-step-engine';
 
-export type JavascriptPracticeResult =
-  | { readonly ok: true }
-  | { readonly ok: false; readonly failedTestIndex: number; readonly message: string };
+export type JavascriptPracticeResult = PracticeRunResult;
 
 export interface JavascriptPracticeRunnerDeps {
   readonly wrapper: ExecutionWorkerWrapperService;
@@ -33,8 +37,10 @@ export async function runJavascriptPractice(
   deps: JavascriptPracticeRunnerDeps,
 ): Promise<JavascriptPracticeResult> {
   const { content } = step;
+  const totalTests = content.tests.length;
   const deadlineMs = Date.now() + content.timeoutMs;
   const worker = deps.createWorker();
+  const timing = createPracticeTimingAccumulator();
 
   try {
     const initId = nextMessageId(-1, 'init');
@@ -54,10 +60,10 @@ export async function runJavascriptPractice(
       remainingMs(deadlineMs),
     );
     if (initResponse.type === 'error') {
-      return { ok: false, failedTestIndex: 0, message: initResponse.message };
+      return practiceRunFailure(0, totalTests, initResponse.message);
     }
     if (initResponse.type !== 'javascriptInited') {
-      return { ok: false, failedTestIndex: 0, message: 'Unexpected init response' };
+      return practiceRunFailure(0, totalTests, 'Unexpected init response');
     }
 
     for (let i = 0; i < content.tests.length; i += 1) {
@@ -110,21 +116,18 @@ export async function runJavascriptPractice(
       );
 
       if (response.type === 'error') {
-        return { ok: false, failedTestIndex: i, message: response.message };
+        return practiceRunFailure(i, totalTests, response.message);
       }
       if (response.type !== 'javascriptCaseResult') {
-        return { ok: false, failedTestIndex: i, message: 'Unexpected case response' };
+        return practiceRunFailure(i, totalTests, 'Unexpected case response');
       }
+      timing.add({ userMs: response.userMs, referenceMs: response.referenceMs });
       if (!response.pass) {
-        return {
-          ok: false,
-          failedTestIndex: i,
-          message: response.message ?? 'Test case failed',
-        };
+        return practiceRunFailure(i, totalTests, response.message ?? 'Test case failed');
       }
     }
 
-    return { ok: true };
+    return practiceRunSuccess(totalTests, timing.totals());
   } finally {
     worker.terminate();
   }

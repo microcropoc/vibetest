@@ -74,7 +74,12 @@ describe('regexStepEngine', () => {
     });
     const engine = createRegexStepEngine();
     let state = engine.createInitial(course.modules[0].steps[0], undefined);
-    state = applyRegexPracticeResult(state, { ok: true });
+    state = applyRegexPracticeResult(state, {
+      ok: true,
+      totalTests: 1,
+      userMs: 0,
+      referenceMs: 0,
+    });
     expect(state.status).toBe('completed');
   });
 });

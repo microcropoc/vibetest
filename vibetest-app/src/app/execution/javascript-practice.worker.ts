@@ -126,6 +126,8 @@ self.addEventListener('message', (event: MessageEvent<unknown>) => {
               userValue: result.userValue,
               referenceValue: result.referenceValue,
               message: result.message,
+              userMs: result.userMs,
+              referenceMs: result.referenceMs,
             });
           } catch (error: unknown) {
             const message = error instanceof Error ? error.message : 'Runtime error';
@@ -134,6 +136,8 @@ self.addEventListener('message', (event: MessageEvent<unknown>) => {
               id: request.id,
               pass: false,
               message,
+              userMs: 0,
+              referenceMs: 0,
             });
           } finally {
             caseInFlight = false;

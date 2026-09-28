@@ -41,6 +41,41 @@
   line-height: 1.45;
 }
 
+.practice-step-shell__result-message {
+  margin: 0;
+}
+
+.practice-step-shell__stats {
+  margin: 0.5rem 0 0;
+  font-size: 0.9375rem;
+}
+
+.practice-step-shell__timing {
+  margin: 0.5rem 0 0;
+  font-size: 0.9375rem;
+}
+
+.practice-step-shell__timing-row {
+  display: flex;
+  gap: 0.5rem;
+  margin: 0.15rem 0;
+}
+
+.practice-step-shell__timing-row dt {
+  margin: 0;
+  min-width: 8.5rem;
+  font-weight: 600;
+}
+
+.practice-step-shell__timing-row dd {
+  margin: 0;
+}
+
+.practice-step-shell__timing-compare {
+  margin: 0.35rem 0 0;
+  font-size: 0.875rem;
+}
+
 .practice-step-shell__result--success {
   background: var(--color-success-bg);
   color: var(--color-success-text);

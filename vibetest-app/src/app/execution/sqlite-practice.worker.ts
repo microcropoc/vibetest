@@ -91,8 +91,12 @@ async function handleMessage(event: MessageEvent<unknown>): Promise<void> {
           runOptionalSql(runtime.referenceDb, request.referenceReset);
           runOptionalSql(runtime.userDb, request.seed);
           runOptionalSql(runtime.referenceDb, request.seed);
+          const userStart = performance.now();
           const userRows = queryResultRows(runtime.userDb, runtime.userQuery);
+          const userMs = performance.now() - userStart;
+          const referenceStart = performance.now();
           const referenceRows = queryResultRows(runtime.referenceDb, runtime.referenceQuery);
+          const referenceMs = performance.now() - referenceStart;
           const pass = compareSqliteResultRows(userRows, referenceRows, runtime.orderMatters);
           self.postMessage({
             type: 'sqliteCaseResult',
@@ -101,6 +105,8 @@ async function handleMessage(event: MessageEvent<unknown>): Promise<void> {
             userRows: [...userRows],
             referenceRows: [...referenceRows],
             message: pass ? undefined : 'Query results do not match',
+            userMs,
+            referenceMs,
           });
         } catch (error: unknown) {
           const message = error instanceof Error ? error.message : 'SQL error';
@@ -109,6 +115,8 @@ async function handleMessage(event: MessageEvent<unknown>): Promise<void> {
             id: request.id,
             pass: false,
             message,
+            userMs: 0,
+            referenceMs: 0,
           });
         }
         break;

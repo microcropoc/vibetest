@@ -1,0 +1,96 @@
+{
+  "schemaVersion": 1,
+  "title": "Symbol и Proxy (основы)",
+  "steps": [
+    {
+      "type": "theory",
+      "title": "Symbol: уникальные ключи",
+      "content": "## Зачем Symbol\n\n**`Symbol(description)`** создаёт **уникальный** примитив — часто как **ключ свойства**, который не конфликтует с строковыми полями.\n\n```javascript\nconst id = Symbol('id');\nconst user = { name: 'Ann', [id]: 42 };\n```\n\n**`Symbol.for('app.id')`** — **глобальный реестр** (как shared ключ между модулями). **`Symbol.keyFor(sym)`** — обратно имя.\n\nВ C# нет прямого аналога; ближе **typed keys** / **`nameof`** + convention, но не runtime-uniqueness.\n\n**`Object.keys`** / **`JSON.stringify`** **не** перечисляют Symbol-свойства — «скрытые» от типичной сериализации поля."
+    },
+    {
+      "type": "svg",
+      "title": "Схема: Proxy перехватывает get",
+      "content": {
+        "caption": "target ← handler.get",
+        "description": "Proxy оборачивает объект; операции (get/set/has) можно перехватить в handler.",
+        "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 210 76\" width=\"100%\" role=\"img\" aria-label=\"Proxy get trap\"><defs><marker id=\"m14-arr\" markerWidth=\"6\" markerHeight=\"6\" refX=\"5\" refY=\"3\" orient=\"auto\"><path d=\"M0,0 L6,3 L0,6 Z\" fill=\"#555\"/></marker></defs><rect id=\"m14-client\" x=\"8\" y=\"24\" width=\"52\" height=\"28\" rx=\"4\" fill=\"#eceff1\" stroke=\"#607d8b\"/><text x=\"34\" y=\"42\" text-anchor=\"middle\" font-size=\"8\" fill=\"#37474f\">client</text><rect id=\"m14-proxy\" x=\"72\" y=\"14\" width=\"66\" height=\"48\" rx=\"6\" fill=\"#fff9c4\" stroke=\"#f9a825\" stroke-width=\"2\"/><text x=\"105\" y=\"34\" text-anchor=\"middle\" font-size=\"9\" font-weight=\"bold\" fill=\"#e65100\">Proxy</text><text x=\"105\" y=\"50\" text-anchor=\"middle\" font-size=\"7\" fill=\"#666\">get trap</text><line x1=\"60\" y1=\"38\" x2=\"72\" y2=\"38\" stroke=\"#555\" marker-end=\"url(#m14-arr)\"/><rect id=\"m14-target\" x=\"148\" y=\"24\" width=\"52\" height=\"28\" rx=\"4\" fill=\"#e8f5e9\" stroke=\"#2e7d32\"/><text x=\"174\" y=\"42\" text-anchor=\"middle\" font-size=\"8\" fill=\"#1b5e20\">target</text><line x1=\"138\" y1=\"38\" x2=\"148\" y2=\"38\" stroke=\"#555\" marker-end=\"url(#m14-arr)\"/></svg>"
+      }
+    },
+    {
+      "type": "theory",
+      "title": "Proxy: meta-programming",
+      "content": "## Базовый Proxy\n\n```javascript\nconst target = { x: 1 };\nconst p = new Proxy(target, {\n  get(t, prop) {\n    if (prop === 'x') return t.x * 10;\n    return t[prop];\n  },\n});\np.x; // 10\n```\n\n**`Reflect`** — зеркальные операции (`Reflect.get`, `Reflect.set`) для вызова default-поведения из trap.\n\nИспользуют для **validation**, **logging**, **virtual properties**, reactive frameworks (частично). Не путать с **COM Proxy** / **DispatchProxy** в .NET — идея «перехватчика» похожа, API другое.\n\n**Revocable**: **`Proxy.revocable`** — отключить прокси навсегда."
+    },
+    {
+      "type": "javascript",
+      "title": "Практика: registrySymbolsEqual",
+      "content": {
+        "description": "Реализуйте **`registrySymbolsEqual(name)`**: верните **`true`**, если **`Symbol.for(name) === Symbol.for(name)`** (два обращения к глобальному реестру для одного `name`).",
+        "starterCode": "function registrySymbolsEqual(name) {\n  return false;\n}",
+        "referenceSolution": "function registrySymbolsEqual(name) {\n  return Symbol.for(name) === Symbol.for(name);\n}",
+        "setup": "",
+        "reset": "",
+        "functionName": "registrySymbolsEqual",
+        "timeoutMs": 3000,
+        "tests": [
+          { "args": ["vibetest.demo"] },
+          { "args": ["app.config"] },
+          { "args": [""] }
+        ]
+      }
+    },
+    {
+      "type": "javascript",
+      "title": "Практика: tagWithSymbol",
+      "content": {
+        "description": "Реализуйте **`tagWithSymbol(obj, tagName, value)`**: создайте **`Symbol.for(tagName)`**, верните **новый объект** `{ ...obj, [sym]: value }` (spread + symbol key). **`readTag(obj, tagName)`** — прочитайте значение по **`Symbol.for(tagName)`** (если нет — `undefined`). Тесты вызывают **`demoTagRead`** из шаблона.",
+        "starterCode": "function tagWithSymbol(obj, tagName, value) {\n  return obj;\n}\nfunction readTag(obj, tagName) {\n  return undefined;\n}\nfunction demoTagRead() {\n  const o = tagWithSymbol({ id: 1 }, 'meta.kind', 'user');\n  return readTag(o, 'meta.kind');\n}",
+        "referenceSolution": "function tagWithSymbol(obj, tagName, value) {\n  const sym = Symbol.for(tagName);\n  return { ...obj, [sym]: value };\n}\nfunction readTag(obj, tagName) {\n  return obj[Symbol.for(tagName)];\n}\nfunction demoTagRead() {\n  const o = tagWithSymbol({ id: 1 }, 'meta.kind', 'user');\n  return readTag(o, 'meta.kind');\n}",
+        "setup": "",
+        "reset": "",
+        "functionName": "demoTagRead",
+        "timeoutMs": 4000,
+        "tests": [
+          { "args": [] },
+          { "args": [] }
+        ]
+      }
+    },
+    {
+      "type": "javascript",
+      "title": "Практика: doubleOnGetProxy",
+      "content": {
+        "description": "Реализуйте **`readDoubledX(obj)`**: оберните `obj` в **`Proxy`**, trap **`get`**: для свойства **`'x'`** верните **`target.x * 2`**, для остальных — **`Reflect.get`**. Верните **`proxy.x`** (число). **`demoDoubleProxy`** не меняйте.",
+        "starterCode": "function readDoubledX(obj) {\n  return obj.x;\n}\nfunction demoDoubleProxy() {\n  return readDoubledX({ x: 7, y: 1 });\n}",
+        "referenceSolution": "function readDoubledX(obj) {\n  const p = new Proxy(obj, {\n    get(target, prop, receiver) {\n      if (prop === 'x') return target.x * 2;\n      return Reflect.get(target, prop, receiver);\n    },\n  });\n  return p.x;\n}\nfunction demoDoubleProxy() {\n  return readDoubledX({ x: 7, y: 1 });\n}",
+        "setup": "",
+        "reset": "",
+        "functionName": "demoDoubleProxy",
+        "timeoutMs": 4000,
+        "tests": [
+          { "args": [] },
+          { "args": [] }
+        ]
+      }
+    },
+    {
+      "type": "theory",
+      "title": "Ограничения для C#-interop",
+      "content": "## Symbol и JSON\n\nПри обмене с backend / C# **Symbol-поля теряются** в JSON. Держите контракт на **string keys**.\n\n## Proxy и plain data\n\nProxy **не** является plain object — сравнение в тренажёре и `structuredClone` ведут себя иначе. В задачах возвращайте **примитивы/ plain JSON**, а Proxy держите внутри функции.\n\n**Well-known symbols**: `Symbol.iterator`, `Symbol.toStringTag` — hooks протоколов ES."
+    },
+    {
+      "type": "quiz",
+      "title": "Тест: Symbol и Proxy",
+      "content": {
+        "question": "Попадут ли Symbol-свойства объекта в результат `JSON.stringify(obj)`?",
+        "options": [
+          "Да, с ключом вида `Symbol(desc)`",
+          "Нет, они пропускаются",
+          "Да, но только `Symbol.for`",
+          "Да, если enumerable"
+        ],
+        "correctIndices": [1]
+      }
+    }
+  ]
+}

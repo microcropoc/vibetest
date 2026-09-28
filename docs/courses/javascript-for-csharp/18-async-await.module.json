@@ -1,0 +1,94 @@
+{
+  "schemaVersion": 1,
+  "title": "async/await и debounce",
+  "steps": [
+    {
+      "type": "theory",
+      "title": "async — Promise наружу",
+      "content": "## Синтаксис await\n\n**`async function`** всегда возвращает **Promise**. **`await`** приостанавливает только **текущую** async-функцию, не блокируя поток (в отличие от sync wait в UI).\n\n```javascript\nasync function load() {\n  const r = await fetch('/api');\n  return r.status;\n}\n```\n\n```csharp\nasync Task<int> Load() {\n  var r = await http.GetAsync(url);\n  return (int)r.StatusCode;\n}\n```\n\n**`await`** на non-Promise оборачивает в `Promise.resolve`. **`try/catch`** вокруг `await` ловит rejection — как try вокруг `await task` в C#."
+    },
+    {
+      "type": "svg",
+      "title": "Схема: debounce",
+      "content": {
+        "caption": "Повторные вызовы **сбрасывают** таймер",
+        "description": "Debounce: выполнить fn один раз после паузы wait с момента последнего вызова.",
+        "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 240 80\" width=\"100%\" role=\"img\" aria-label=\"Debounce таймер\"><defs><marker id=\"m18-arr\" markerWidth=\"7\" markerHeight=\"7\" refX=\"5\" refY=\"3.5\" orient=\"auto\"><path d=\"M0,0 L7,3.5 L0,7 Z\" fill=\"#37474f\"/></marker></defs><rect id=\"m18-calls\" x=\"8\" y=\"12\" width=\"120\" height=\"24\" rx=\"4\" fill=\"#ffebee\" stroke=\"#c62828\"/><text x=\"68\" y=\"28\" text-anchor=\"middle\" font-size=\"8\" fill=\"#b71c1c\">d() d() d()</text><rect id=\"m18-wait\" x=\"8\" y=\"44\" width=\"120\" height=\"24\" rx=\"4\" fill=\"#fff3e0\" stroke=\"#ef6c00\"/><text x=\"68\" y=\"60\" text-anchor=\"middle\" font-size=\"8\" fill=\"#e65100\">wait 50ms</text><line x1=\"128\" y1=\"56\" x2=\"148\" y2=\"56\" stroke=\"#37474f\" marker-end=\"url(#m18-arr)\"/><rect id=\"m18-fn\" x=\"148\" y=\"40\" width=\"84\" height=\"32\" rx=\"4\" fill=\"#e8f5e9\" stroke=\"#2e7d32\"/><text x=\"190\" y=\"60\" text-anchor=\"middle\" font-size=\"9\" fill=\"#1b5e20\">fn once</text></svg>"
+      }
+    },
+    {
+      "type": "theory",
+      "title": "Debounce и fake timers",
+      "content": "## Паттерн для поиска\n\n```javascript\nfunction debounce(fn, wait) {\n  let timerId;\n  return function debounced(...args) {\n    clearTimeout(timerId);\n    timerId = setTimeout(() => fn.apply(this, args), wait);\n  };\n}\n```\n\nВ C# UI — **`DispatcherTimer`**, **`Debouncer`** из библиотек; семантика та же.\n\nВ тренажёре проверка через **`registerSpy`**, **`advanceMs`** и серию вызовов до продвижения часов — как unit-тест с fake time.\n\n**`async debounce`** редко нужен: debounce синхронно планирует macro; fn может быть async внутри timeout."
+    },
+    {
+      "type": "quiz",
+      "title": "Проверка: async",
+      "content": {
+        "question": "Что вернёт выражение **`typeof (async () => 1)()`**?",
+        "options": [
+          "`\"number\"`",
+          "`\"object\"` (Promise)",
+          "`\"function\"`",
+          "`\"undefined\"`"
+        ],
+        "correctIndices": [1]
+      }
+    },
+    {
+      "type": "javascript",
+      "title": "Практика: asyncSum",
+      "content": {
+        "description": "Реализуйте **`async function asyncSum(a, b)`**:\n\n- **`await Promise.resolve()`** (microtask).\n- Верните **`a + b`**.\n\nЗакрепляет, что **`async`** возвращает Promise, а **`await`** на уже resolved Promise не ждёт macrotimer.",
+        "starterCode": "async function asyncSum(a, b) {\n  return 0;\n}",
+        "referenceSolution": "async function asyncSum(a, b) {\n  await Promise.resolve();\n  return a + b;\n}",
+        "setup": "",
+        "reset": "",
+        "functionName": "asyncSum",
+        "timeoutMs": 5000,
+        "tests": [
+          { "args": [2, 3] },
+          { "args": [0, 0] },
+          { "args": [-1, 1] },
+          { "args": [100, 250] }
+        ]
+      }
+    },
+    {
+      "type": "javascript",
+      "title": "Практика: runDebouncedSearch",
+      "content": {
+        "description": "Реализуйте **`debounce(fn, wait)`** и **`runDebouncedSearch()`**:\n\n- Spy **`search`** уже в `setup` как **`globalThis.__search`**.\n- **`runDebouncedSearch()`** создаёт **`debounce(globalThis.__search, 50)`**, трижды вызывает с `'a'`, `'b'`, `'c'`, синхронно возвращает **`'typing'`**.\n\nТесты: **`expectInvocations`** + **`advanceMs`**.",
+        "starterCode": "function debounce(fn, wait) {\n  return (...args) => fn(...args);\n}\n\nfunction runDebouncedSearch() {\n  return '';\n}",
+        "referenceSolution": "function debounce(fn, wait) {\n  let timerId;\n  return function debounced(...args) {\n    clearTimeout(timerId);\n    timerId = setTimeout(() => fn.apply(this, args), wait);\n  };\n}\n\nfunction runDebouncedSearch() {\n  const d = debounce(globalThis.__search, 50);\n  d('a');\n  d('b');\n  d('c');\n  return 'typing';\n}",
+        "setup": "globalThis.__search = registerSpy('search', (q) => q);",
+        "reset": "",
+        "functionName": "runDebouncedSearch",
+        "timeoutMs": 6000,
+        "tests": [
+          { "args": [], "expectInvocations": { "search": 0 }, "advanceMs": 40 },
+          { "args": [], "expectInvocations": { "search": 1 }, "advanceMs": 50 }
+        ]
+      }
+    },
+    {
+      "type": "theory",
+      "title": "async/await после debounce",
+      "content": "## Композиция\n\n```javascript\nconst debouncedSave = debounce(async (draft) => {\n  await api.save(draft);\n}, 300);\n```\n\nОшибки из async fn внутри timeout — **unhandled rejection**, если не `.catch` на результате fn.\n\n**Parallel:** `await Promise.all([a(), b()])` ≈ **`Task.WhenAll`**.\n\n**Sequential:**\n\n```javascript\nfor (const id of ids) {\n  await fetchOne(id);\n}\n```\n\nНе используйте **`forEach(async ...)`** и не ждите — classic bug."
+    },
+    {
+      "type": "quiz",
+      "title": "Итоговый тест модуля",
+      "content": {
+        "question": "После серии быстрых вызовов debounce( fn, 50 ) и **`advanceMs: 50`**, сколько раз должен вызваться **`fn`**?",
+        "options": [
+          "Столько же, сколько было вызовов debounced-функции",
+          "Ровно один раз (последний вызов «побеждает»)",
+          "Ноль — debounce только для sync fn",
+          "Два раза — первый и последний"
+        ],
+        "correctIndices": [1]
+      }
+    }
+  ]
+}

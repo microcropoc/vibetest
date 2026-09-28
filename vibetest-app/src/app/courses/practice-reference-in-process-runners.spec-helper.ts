@@ -36,10 +36,11 @@ function resolveJavascriptTarget(step: JavascriptStep): JavascriptPracticeTarget
 
 export async function runJavascriptReferenceSelfCheck(
   step: JavascriptStep,
+  userSolution: string = step.content.referenceSolution,
 ): Promise<JavascriptPracticeResult> {
   const reference = step.content.referenceSolution;
   const target = resolveJavascriptTarget(step);
-  const userEnv = compileJavascriptPracticeCallable(step.content.setup, reference, target);
+  const userEnv = compileJavascriptPracticeCallable(step.content.setup, userSolution, target);
   const referenceEnv = compileJavascriptPracticeCallable(step.content.setup, reference, target);
   const deadlineMs = Date.now() + step.content.timeoutMs;
   const opts = (): Parameters<typeof runJavascriptCaseComparison>[4] => ({
@@ -79,13 +80,16 @@ export async function runJavascriptReferenceSelfCheck(
   return practiceRunSuccess(totalTests, REFERENCE_SELF_CHECK_TIMINGS);
 }
 
-export async function runRegexReferenceSelfCheck(step: RegexStep): Promise<RegexPracticeResult> {
-  const pattern = step.content.referenceSolution;
+export async function runRegexReferenceSelfCheck(
+  step: RegexStep,
+  userPattern: string = step.content.referenceSolution,
+): Promise<RegexPracticeResult> {
+  const referencePattern = step.content.referenceSolution;
   let userRe: RegExp;
   let referenceRe: RegExp;
   try {
-    userRe = new RegExp(pattern);
-    referenceRe = new RegExp(pattern);
+    userRe = new RegExp(userPattern);
+    referenceRe = new RegExp(referencePattern);
   } catch {
     return practiceRunFailure(0, step.content.tests.length, 'Invalid regular expression');
   }

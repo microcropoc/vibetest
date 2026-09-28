@@ -1,0 +1,101 @@
+{
+  "schemaVersion": 1,
+  "title": "Ошибки и отклонения Promise",
+  "steps": [
+    {
+      "type": "theory",
+      "title": "throw, try/catch, Error",
+      "content": "## Исключения в JS\n\n**`throw value`** прерывает выполнение до ближайшего **`catch`**. Лучше **`throw new Error('message')`** — stack trace.\n\n```csharp\ntry { } catch (Exception ex) { }\nfinally { }\n```\n\n```javascript\ntry {\n  risky();\n} catch (err) {\n  console.error(err.message);\n} finally {\n  cleanup();\n}\n```\n\n**`Error`**, **`TypeError`**, **`RangeError`** — встроенные типы. В strict mode многие ошибки **раньше** становятся throw (например присвоение readonly).\n\nSync **throw** в async-функции **не** превращается автоматически в reject Promise (до первого await — может быть sync throw из вызова async fn)."
+    },
+    {
+      "type": "svg",
+      "title": "Схема: fulfill vs reject",
+      "content": {
+        "caption": "Promise settled: ok / err",
+        "description": "В тренажёре `rejects: true` сравнивает reason при отклонении Promise (не sync throw до финала).",
+        "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 220 72\" width=\"100%\" role=\"img\" aria-label=\"Promise fulfill и reject\"><defs><marker id=\"m15-arr\" markerWidth=\"6\" markerHeight=\"6\" refX=\"5\" refY=\"3\" orient=\"auto\"><path d=\"M0,0 L6,3 L0,6 Z\" fill=\"#455a64\"/></marker></defs><rect id=\"m15-fn\" x=\"12\" y=\"20\" width=\"56\" height=\"32\" rx=\"4\" fill=\"#e3f2fd\" stroke=\"#1565c0\"/><text x=\"40\" y=\"40\" text-anchor=\"middle\" font-size=\"8\" fill=\"#0d47a1\">async fn</text><line x1=\"68\" y1=\"36\" x2=\"88\" y2=\"36\" stroke=\"#455a64\" marker-end=\"url(#m15-arr)\"/><rect id=\"m15-ok\" x=\"88\" y=\"8\" width=\"56\" height=\"28\" rx=\"4\" fill=\"#e8f5e9\" stroke=\"#2e7d32\"/><text x=\"116\" y=\"26\" text-anchor=\"middle\" font-size=\"8\" fill=\"#1b5e20\">fulfill</text><rect id=\"m15-bad\" x=\"88\" y=\"44\" width=\"56\" height=\"28\" rx=\"4\" fill=\"#ffebee\" stroke=\"#c62828\"/><text x=\"116\" y=\"62\" text-anchor=\"middle\" font-size=\"8\" fill=\"#b71c1c\">reject</text><text id=\"m15-note\" x=\"168\" y=\"40\" font-size=\"7\" fill=\"#546e7a\">rejects:true</text></svg>"
+      }
+    },
+    {
+      "type": "theory",
+      "title": "Promise reject и тренажёр",
+      "content": "## Async и reject\n\n```javascript\nasync function load(id) {\n  if (id < 0) return Promise.reject('invalid id');\n  return id;\n}\n```\n\nВ **dual-run** при **`rejects: true`** обе среды должны **отклонить** Promise на финале; сравнивается **reason** (строка или `Error.message`).\n\n**Sync throw** из тела, вызванного как обычная функция, — **не** тот же путь, что reject (в v1 тренажёра).\n\n```csharp\nawait task; // Task faulted\n```\n\n```javascript\nawait promise; // rejection\n```\n\n**`throw` внутри async** после await — reject promise."
+    },
+    {
+      "type": "javascript",
+      "title": "Практика: classifyParsePositive",
+      "content": {
+        "description": "Реализуйте **`parsePositiveInt(text)`** (внутренняя логика): при невалидном вводе **`throw new Error('invalid')`** (не строка из цифр `/^\\d+$/` или **`'0'`**). Реализуйте **`classifyParsePositive(text)`**: при успехе верните **`{ ok: true, value }`**, при **`invalid`** — **`{ ok: false, message: 'invalid' }`** (перехватите throw). Тесты вызывают **`classifyParsePositive`**.",
+        "starterCode": "function parsePositiveInt(text) {\n  return Number(text);\n}\nfunction classifyParsePositive(text) {\n  return { ok: true, value: 0 };\n}",
+        "referenceSolution": "function parsePositiveInt(text) {\n  if (typeof text !== 'string' || !/^\\d+$/.test(text) || text === '0') {\n    throw new Error('invalid');\n  }\n  return Number(text);\n}\nfunction classifyParsePositive(text) {\n  try {\n    return { ok: true, value: parsePositiveInt(text) };\n  } catch (e) {\n    if (e instanceof Error && e.message === 'invalid') {\n      return { ok: false, message: 'invalid' };\n    }\n    throw e;\n  }\n}",
+        "setup": "",
+        "reset": "",
+        "functionName": "classifyParsePositive",
+        "timeoutMs": 4000,
+        "tests": [
+          { "args": ["42"] },
+          { "args": ["007"] },
+          { "args": ["0"] },
+          { "args": ["-1"] },
+          { "args": ["12a"] }
+        ]
+      }
+    },
+    {
+      "type": "javascript",
+      "title": "Практика: getMessageOrDefault",
+      "content": {
+        "description": "Реализуйте **`getMessageOrDefault(err, fallback)`**: если `err` — **`Error`**, верните **`err.message`**; иначе **`fallback`**. Не меняйте **`runGetMessageSuite(which)`** — она прогоняет три сценария для тестов.",
+        "starterCode": "function getMessageOrDefault(err, fallback) {\n  return fallback;\n}\nfunction runGetMessageSuite(which) {\n  if (which === 'error') return getMessageOrDefault(new Error('boom'), 'x');\n  if (which === 'plain') return getMessageOrDefault('plain', 'fallback');\n  return getMessageOrDefault(null, 'none');\n}",
+        "referenceSolution": "function getMessageOrDefault(err, fallback) {\n  if (err instanceof Error) return err.message;\n  return fallback;\n}\nfunction runGetMessageSuite(which) {\n  if (which === 'error') return getMessageOrDefault(new Error('boom'), 'x');\n  if (which === 'plain') return getMessageOrDefault('plain', 'fallback');\n  return getMessageOrDefault(null, 'none');\n}",
+        "setup": "",
+        "reset": "",
+        "functionName": "runGetMessageSuite",
+        "timeoutMs": 3000,
+        "tests": [
+          { "args": ["error"] },
+          { "args": ["plain"] },
+          { "args": ["null"] }
+        ]
+      }
+    },
+    {
+      "type": "javascript",
+      "title": "Практика: requirePositiveAsync",
+      "content": {
+        "description": "Реализуйте **`async function requirePositiveAsync(n)`**: если **`n < 0`**, верните **`Promise.reject('negative')`**; иначе **`n`**. Один тест ожидает **reject** (`rejects: true`).",
+        "starterCode": "async function requirePositiveAsync(n) {\n  return n;\n}",
+        "referenceSolution": "async function requirePositiveAsync(n) {\n  if (n < 0) return Promise.reject('negative');\n  return n;\n}",
+        "setup": "",
+        "reset": "",
+        "functionName": "requirePositiveAsync",
+        "timeoutMs": 4000,
+        "tests": [
+          { "args": [5] },
+          { "args": [0] },
+          { "args": [-3], "rejects": true },
+          { "args": [100] }
+        ]
+      }
+    },
+    {
+      "type": "theory",
+      "title": "Стиль обработки для C#-команд",
+      "content": "## Result vs throw\n\nВ C# часто **`Result<T>`** / nullable вместо exceptions для ожидаемых ошибок. В JS доминируют **throw** и **Promise rejection**; для API — явные коды ошибок в JSON.\n\n## Не глотать reject\n\n```javascript\nasync function run() {\n  try {\n    await step();\n  } catch (e) {\n    report(e);\n    throw e;\n  }\n}\n```\n\n**`finally`** полезен для release ресурсов (как **`using`** / **`try/finally`** в C#).\n\nНе используйте пустой **`catch {}`** — скрывает баги так же, как **`catch (Exception) { }`** без логики."
+    },
+    {
+      "type": "quiz",
+      "title": "Тест: ошибки",
+      "content": {
+        "question": "Что проверяет тест с **`rejects: true`** в JS-практике vibetest?",
+        "options": [
+          "Что функция синхронно бросает исключение",
+          "Что обе среды отклоняют Promise и reason совпадает",
+          "Что результат `undefined`",
+          "Что `console.error` был вызван"
+        ],
+        "correctIndices": [1]
+      }
+    }
+  ]
+}

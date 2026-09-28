@@ -1,0 +1,101 @@
+{
+  "schemaVersion": 1,
+  "title": "Итераторы и генераторы",
+  "steps": [
+    {
+      "type": "theory",
+      "title": "Итерируемое и for..of",
+      "content": "## Протокол iterable\n\nОбъект **iterable**, если у него есть **`Symbol.iterator`**, возвращающий iterator с методом **`next()`** (`{ value, done }`).\n\n**`for..of`**, spread **`[...x]`**, **`Array.from`** потребляют iterable.\n\n```csharp\nforeach (var x in list) { }\n```\n\n```javascript\nfor (const x of list) { }\n```\n\nМассивы iterable; **`Map`** iterable по парам **`[key, value]`**.\n\n## Генераторы\n\n**`function*`** возвращает объект-генератор (и iterable, и iterator):\n\n```javascript\nfunction* range(a, b) {\n  for (let i = a; i < b; i += 1) yield i;\n}\n```\n\n**`yield`** приостанавливает функцию; **`next()`** возобновляет. В C# ближе **`yield return`** в **`IEnumerable`** / **`IAsyncEnumerable`** (async generators — отдельная тема)."
+    },
+    {
+      "type": "svg",
+      "title": "Схема: generator и next()",
+      "content": {
+        "caption": "yield → pause → next()",
+        "description": "Каждый `yield` отдаёт значение наружу; состояние функции сохраняется в генераторе.",
+        "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 220 88\" width=\"100%\" role=\"img\" aria-label=\"Генератор и next\"><defs><marker id=\"m13-arr\" markerWidth=\"6\" markerHeight=\"6\" refX=\"5\" refY=\"3\" orient=\"auto\"><path d=\"M0,0 L6,3 L0,6 Z\" fill=\"#555\"/></marker></defs><rect id=\"m13-gen\" x=\"10\" y=\"12\" width=\"88\" height=\"64\" rx=\"6\" fill=\"#e3f2fd\" stroke=\"#1565c0\" stroke-width=\"2\"/><text x=\"54\" y=\"32\" text-anchor=\"middle\" font-size=\"9\" font-weight=\"bold\" fill=\"#0d47a1\">function*</text><text x=\"54\" y=\"48\" text-anchor=\"middle\" font-size=\"8\" fill=\"#555\">yield 1</text><text x=\"54\" y=\"62\" text-anchor=\"middle\" font-size=\"8\" fill=\"#555\">yield 2</text><line x1=\"98\" y1=\"44\" x2=\"118\" y2=\"44\" stroke=\"#555\" marker-end=\"url(#m13-arr)\"/><rect id=\"m13-iter\" x=\"118\" y=\"24\" width=\"92\" height=\"40\" rx=\"4\" fill=\"#fff9c4\" stroke=\"#f9a825\"/><text x=\"164\" y=\"42\" text-anchor=\"middle\" font-size=\"8\" fill=\"#e65100\">.next()</text><text x=\"164\" y=\"56\" text-anchor=\"middle\" font-size=\"7\" fill=\"#666\">value / done</text></svg>"
+      }
+    },
+    {
+      "type": "theory",
+      "title": "Materialize и ленивость",
+      "content": "## Ленивость vs LINQ\n\nГенератор **не** считает все значения заранее — как **`yield return`** в C#. Чтобы сравнить с массивом в тестах, часто **materialize**:\n\n```javascript\nfunction collectSquares(n) {\n  function* gen() {\n    for (let i = 1; i <= n; i += 1) yield i * i;\n  }\n  return [...gen()];\n}\n```\n\n**`return` в generator** завершает последовательность (`done: true`).\n\n**Делегирование**: **`yield* otherIterable`** — проксирует итерацию (как вложенный `foreach`)."
+    },
+    {
+      "type": "javascript",
+      "title": "Практика: rangeArray",
+      "content": {
+        "description": "Реализуйте **`rangeArray(from, toExclusive)`** через **`function*`** и spread: целые **`i`** от **`from`** (включительно) до **`toExclusive`** (исключительно). Верните **массив**.",
+        "starterCode": "function rangeArray(from, toExclusive) {\n  return [];\n}",
+        "referenceSolution": "function rangeArray(from, toExclusive) {\n  function* gen() {\n    for (let i = from; i < toExclusive; i += 1) yield i;\n  }\n  return [...gen()];\n}",
+        "setup": "",
+        "reset": "",
+        "functionName": "rangeArray",
+        "timeoutMs": 4000,
+        "tests": [
+          { "args": [0, 3] },
+          { "args": [2, 2] },
+          { "args": [-1, 2] },
+          { "args": [1, 5] }
+        ]
+      }
+    },
+    {
+      "type": "javascript",
+      "title": "Практика: takeSquares",
+      "content": {
+        "description": "Реализуйте **`takeSquares(count)`**: генератор **`function*`** выдаёт квадраты **`1, 4, 9, …`** для **`count`** первых натуральных чисел; верните массив из **`count`** элементов (materialize через **`for..of`** или spread).",
+        "starterCode": "function takeSquares(count) {\n  return [];\n}",
+        "referenceSolution": "function takeSquares(count) {\n  function* gen() {\n    for (let i = 1; i <= count; i += 1) yield i * i;\n  }\n  return [...gen()];\n}",
+        "setup": "",
+        "reset": "",
+        "functionName": "takeSquares",
+        "timeoutMs": 4000,
+        "tests": [
+          { "args": [0] },
+          { "args": [1] },
+          { "args": [4] },
+          { "args": [3] }
+        ]
+      }
+    },
+    {
+      "type": "javascript",
+      "title": "Практика: flattenWithYieldStar",
+      "content": {
+        "description": "Реализуйте **`flattenWithYieldStar(nested)`**: `nested` — массив массивов чисел. Используйте **`function*`** и **`yield*`** для обхода вложенных массивов; верните **плоский массив** чисел.",
+        "starterCode": "function flattenWithYieldStar(nested) {\n  return [];\n}",
+        "referenceSolution": "function flattenWithYieldStar(nested) {\n  function* walk() {\n    for (const part of nested) {\n      yield* part;\n    }\n  }\n  return [...walk()];\n}",
+        "setup": "",
+        "reset": "",
+        "functionName": "flattenWithYieldStar",
+        "timeoutMs": 4000,
+        "tests": [
+          { "args": [[[1, 2], [3]]] },
+          { "args": [[[], [1]]] },
+          { "args": [[]] },
+          { "args": [[[5], [6, 7]]] }
+        ]
+      }
+    },
+    {
+      "type": "theory",
+      "title": "C# IAsyncEnumerable и осторожность",
+      "content": "## Сравнение с C#\n\n| C# | JS |\n|----|-----|\n| `yield return` | `yield` |\n| `IEnumerable<T>` | iterable / generator |\n| `IAsyncEnumerable<T>` | async generator `async function*` |\n\nГенераторы **не** thread-safe «итераторы по коллекции» из нескольких потоков — в JS один поток, но **один generator** нельзя безопасно дергать из двух мест без дисциплины.\n\nНе используйте **`function*`** там, где нужен **`this`** методом объекта — обычный method generator привязан к объекту, но стрелки generator syntax не существует."
+    },
+    {
+      "type": "quiz",
+      "title": "Тест: генераторы",
+      "content": {
+        "question": "Что делает `yield*` внутри `function*`?",
+        "options": [
+          "Синхронно копирует массив в генератор",
+          "Делегирует итерацию другому iterable/generator",
+          "Превращает generator в Promise",
+          "Завершает generator без `done`"
+        ],
+        "correctIndices": [1]
+      }
+    }
+  ]
+}

@@ -1,0 +1,118 @@
+{
+  "schemaVersion": 1,
+  "title": "Ментальная модель: ECMAScript и среда",
+  "steps": [
+    {
+      "type": "theory",
+      "title": "Спецификация и хост",
+      "content": "## ECMAScript ≠ «JavaScript в браузере»\n\nВ C# вы привыкли к связке **язык + CLR + BCL + runtime (.NET)**. В JS картина слоистая:\n\n1. **ECMAScript** — язык: синтаксис, типы, `Object`, функции, модули ES.\n2. **Хост (runtime)** — то, что *даёт* окружение: браузер (DOM, `fetch`), Node.js (`fs`, `process`), Deno, embedded-движки.\n\nСпецификация **не** описывает DOM и не знает про файловую систему — это API хоста.\n\n```csharp\n// Аналогия: C# language spec vs .NET runtime + NuGet\n// string — язык; HttpClient — BCL/runtime\n```\n\n```javascript\n// Язык: let, class, Promise (как тип/конструктор в ES)\n// Хост: document.querySelector, setTimeout с реальными таймерами\n```\n\nПутаница «JS = браузер» мешает так же, как если бы C# отождествляли только с ASP.NET."
+    },
+    {
+      "type": "svg",
+      "title": "Слои: спецификация и хост",
+      "content": {
+        "caption": "**ECMAScript** — язык; **хост** — APIs и I/O",
+        "description": "Код ученика обычно исполняется в хосте (браузер, Node). Спецификация задаёт правила языка; хост добавляет объекты в глобальную область (`globalThis`).",
+        "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 320 140\" width=\"100%\" role=\"img\" aria-label=\"Слои ECMAScript и хоста\"><defs><marker id=\"m01-arrow\" markerWidth=\"8\" markerHeight=\"8\" refX=\"6\" refY=\"4\" orient=\"auto\"><path d=\"M0,0 L8,4 L0,8 Z\" fill=\"#37474f\"/></marker></defs><rect id=\"m01-host\" x=\"20\" y=\"8\" width=\"280\" height=\"124\" rx=\"8\" fill=\"#eceff1\" stroke=\"#546e7a\" stroke-width=\"2\"/><text x=\"160\" y=\"28\" text-anchor=\"middle\" font-size=\"12\" font-weight=\"bold\" fill=\"#263238\">Хост (browser / Node.js)</text><text x=\"160\" y=\"44\" text-anchor=\"middle\" font-size=\"9\" fill=\"#455a64\">DOM, fetch, timers, fs…</text><rect id=\"m01-es\" x=\"40\" y=\"58\" width=\"240\" height=\"58\" rx=\"6\" fill=\"#fff9c4\" stroke=\"#f9a825\" stroke-width=\"2\"/><text x=\"160\" y=\"78\" text-anchor=\"middle\" font-size=\"11\" font-weight=\"bold\" fill=\"#e65100\">ECMAScript</text><text x=\"160\" y=\"96\" text-anchor=\"middle\" font-size=\"9\" fill=\"#5d4037\">let, function, Promise, Map…</text><rect id=\"m01-code\" x=\"70\" y=\"108\" width=\"180\" height=\"22\" rx=\"4\" fill=\"#e3f2fd\" stroke=\"#1565c0\"/><text x=\"160\" y=\"123\" text-anchor=\"middle\" font-size=\"9\" fill=\"#0d47a1\">Ваш .js / .mjs</text><line x1=\"160\" y1=\"50\" x2=\"160\" y2=\"58\" stroke=\"#37474f\" marker-end=\"url(#m01-arrow)\"/></svg>"
+      }
+    },
+    {
+      "type": "theory",
+      "title": "Strict mode и однопоточность",
+      "content": "## `'use strict'`\n\n**Strict mode** — подмножество правил ES: запрет неявных globals, другой `this` в вызовах, запрет дубликатов параметров и т.д. Включение — директива `'use strict'` в начале файла или функции.\n\n```javascript\n'use strict';\nfunction f() {\n  // mistyped = 1; // ReferenceError, не silent global\n}\n```\n\nВ C# похожий дух дают nullable reference types и `checked`, но strict mode — **опциональный режим языка**, не отдельный компилятор.\n\n## Один поток vs CLR\n\nJS в одном агенте пользователя **однопоточен** для вашего кода: один call stack. CLR спокойно гоняет `Task`, thread pool, `Parallel.For`. В JS параллелизм — **Web Workers**, child processes (Node), WASM threads — это уже хост/инфра, не «ещё один поток в том же heap».\n\n```csharp\nawait Task.Run(() => Compute()); // другой поток пула\n```\n\n```javascript\n// Тот же heap — один поток; тяжёлое CPU — worker.postMessage\n```\n\nI/O асинхронен через event loop и очереди задач хоста — тема поздних модулей; сейчас важно не ждать «настоящих потоков» в обычном скрипте."
+    },
+    {
+      "type": "quiz",
+      "title": "Проверка: слои и потоки",
+      "content": {
+        "question": "Что из перечисленного относится к **ECMAScript**, а не только к хосту?",
+        "options": [
+          "`document.createElement`",
+          "Директива `'use strict'`",
+          "`setTimeout` как реализация таймера",
+          "Модуль `node:fs`"
+        ],
+        "correctIndices": [1]
+      }
+    },
+    {
+      "type": "javascript",
+      "title": "Практика: директива strict",
+      "content": {
+        "description": "Реализуйте **`isStrictDirective`**: на вход — одна строка (как в исходнике). Верните `true`, если после `trim()` это валидная prologue-директива `'use strict'` или `\"use strict\"` с необязательной `;` в конце.",
+        "starterCode": "function isStrictDirective(line) {\n  return false;\n}",
+        "referenceSolution": "function isStrictDirective(line) {\n  const t = line.trim();\n  return (\n    t === \"'use strict'\" ||\n    t === \"'use strict';\" ||\n    t === '\"use strict\"' ||\n    t === '\"use strict\";'\n  );\n}",
+        "setup": "",
+        "reset": "",
+        "functionName": "isStrictDirective",
+        "timeoutMs": 3000,
+        "tests": [
+          { "args": ["'use strict'"] },
+          { "args": ["  \"use strict\";  "] },
+          { "args": ["\"use strict\""] },
+          { "args": ["use strict"] },
+          { "args": ["'use strict'; // comment"] },
+          { "args": [""] }
+        ]
+      }
+    },
+    {
+      "type": "javascript",
+      "title": "Практика: только в хосте",
+      "content": {
+        "description": "Даны два массива строк — **`specApis`** (из ECMAScript) и **`hostApis`** (добавляет хост). Верните **новый массив** API, которые есть в `hostApis`, но **нет** в `specApis`. Порядок — как в `hostApis`. Без мутации входных массивов.",
+        "starterCode": "function hostOnlyApis(specApis, hostApis) {\n  return hostApis;\n}",
+        "referenceSolution": "function hostOnlyApis(specApis, hostApis) {\n  const spec = new Set(specApis);\n  return hostApis.filter((name) => !spec.has(name));\n}",
+        "setup": "",
+        "reset": "",
+        "functionName": "hostOnlyApis",
+        "timeoutMs": 3000,
+        "tests": [
+          {
+            "args": [
+              ["Object", "Array", "Promise"],
+              ["Object", "document", "fetch"]
+            ]
+          },
+          {
+            "args": [
+              ["Map", "Set"],
+              ["Map", "Set", "queueMicrotask"]
+            ]
+          },
+          {
+            "args": [
+              ["JSON"],
+              ["JSON"]
+            ]
+          },
+          {
+            "args": [
+              [],
+              ["console", "process"]
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "type": "theory",
+      "title": "Зачем это C#-разработчику",
+      "content": "## Отладка «не там»\n\nЕсли ошибка в DOM — это хост. Если в `===` или hoisting — ECMAScript. Под .NET вы отделяете **language** от **framework**; здесь — **ES** от **host API**.\n\n## Однопоточность и UI\n\nВ WPF/WinUI долгий CPU на UI-потоке блокирует интерфейс. В браузере тот же эффект сильнее: **нет** второго потока для того же DOM. Отсюда Workers и разбиение задач.\n\n```javascript\n// Плохо на main thread: while (heavy) {}\n// Лучше: worker или chunk + await scheduler\n```\n\nДальше в курсе — типы, сравнение, область видимости; фундамент «слои + один поток» остаётся опорой."
+    },
+    {
+      "type": "quiz",
+      "title": "Итоговый тест модуля",
+      "content": {
+        "question": "Как в типичном браузерном скрипте устроена параллельность с **общей кучей объектов**?",
+        "options": [
+          "Несколько OS-потоков делят один JS heap как в CLR",
+          "`Parallel.For` из стандартной библиотеки ES",
+          "Один поток выполняет JS; отдельные Workers — отдельные глобальные среды",
+          "Каждый `await` автоматически создаёт новый поток"
+        ],
+        "correctIndices": [2]
+      }
+    }
+  ]
+}

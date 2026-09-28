@@ -1,0 +1,118 @@
+{
+  "schemaVersion": 1,
+  "title": "Map, Set и коллекции",
+  "steps": [
+    {
+      "type": "theory",
+      "title": "Map и Set vs Dictionary и HashSet",
+      "content": "## Ключи и уникальность\n\n**`Map`** — пары ключ–значение с любыми ключами (включая объекты). **`Set`** — уникальные значения.\n\n```csharp\nvar d = new Dictionary<string, int>();\nvar s = new HashSet<int>();\n```\n\n```javascript\nconst m = new Map([['a', 1]]);\nconst s = new Set([1, 2, 2]);\n```\n\n**`Map`** сохраняет **порядок вставки** (как `Dictionary` в современном .NET). **`Object`** как словарь — legacy: ключи только string/Symbol, наследуемые поля, приведение ключей.\n\n**`WeakMap` / `WeakSet`** — слабые ссылки (GC); в курсе — базовые **`Map`/`Set`**."
+    },
+    {
+      "type": "svg",
+      "title": "Схема: Map и порядок LRU",
+      "content": {
+        "caption": "Map: insertion order → eviction",
+        "description": "Упрощённый LRU на `Map`: при `get` ключ «освежается» (delete + set), при переполнении удаляется первый ключ итератора.",
+        "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 240 80\" width=\"100%\" role=\"img\" aria-label=\"Map LRU порядок\"><defs><marker id=\"m12-arr\" markerWidth=\"6\" markerHeight=\"6\" refX=\"5\" refY=\"3\" orient=\"auto\"><path d=\"M0,0 L6,3 L0,6 Z\" fill=\"#37474f\"/></marker></defs><rect id=\"m12-map\" x=\"12\" y=\"14\" width=\"216\" height=\"52\" rx=\"6\" fill=\"#e8eaf6\" stroke=\"#3949ab\" stroke-width=\"2\"/><text x=\"120\" y=\"32\" text-anchor=\"middle\" font-size=\"9\" font-weight=\"bold\" fill=\"#283593\">Map</text><rect id=\"m12-k1\" x=\"24\" y=\"40\" width=\"36\" height=\"20\" rx=\"3\" fill=\"#ffcdd2\" stroke=\"#c62828\"/><text x=\"42\" y=\"54\" text-anchor=\"middle\" font-size=\"7\" fill=\"#b71c1c\">LRU</text><rect id=\"m12-k2\" x=\"68\" y=\"40\" width=\"36\" height=\"20\" rx=\"3\" fill=\"#fff9c4\" stroke=\"#f9a825\"/><text x=\"86\" y=\"54\" text-anchor=\"middle\" font-size=\"7\" fill=\"#e65100\">k2</text><rect id=\"m12-k3\" x=\"112\" y=\"40\" width=\"36\" height=\"20\" rx=\"3\" fill=\"#c8e6c9\" stroke=\"#2e7d32\"/><text x=\"130\" y=\"54\" text-anchor=\"middle\" font-size=\"7\" fill=\"#1b5e20\">MRU</text><line x1=\"156\" y1=\"50\" x2=\"188\" y2=\"50\" stroke=\"#37474f\" marker-end=\"url(#m12-arr)\"/><text x=\"200\" y=\"48\" font-size=\"7\" fill=\"#555\">get→move</text></svg>"
+      }
+    },
+    {
+      "type": "theory",
+      "title": "API Map/Set и LRU на Map",
+      "content": "## Частые операции\n\n```javascript\nm.set(k, v);\nm.get(k);\nm.has(k);\nm.delete(k);\nm.size;\n\nfor (const [k, v] of m) { /* ... */ }\n```\n\n**`Set`**: `add`, `has`, `delete`, spread **`[...s]`** для массива.\n\n## LRU cache\n\nКлассический приём: **`Map`** как очередь по порядку использования. **`get`**: если ключ есть — удалить и вставить снова (становится «свежим»). **`put`**: при переполнении — **`map.keys().next().value`** (самый старый).\n\nВ C# **`MemoryCache` / `IMemoryCache`** решают похожую задачу на уровне framework; здесь — компактная модель для понимания коллекций ES."
+    },
+    {
+      "type": "javascript",
+      "title": "Практика: distinctCount",
+      "content": {
+        "description": "Реализуйте **`distinctCount(values)`** — число **уникальных** элементов массива `values` (используйте **`Set`**).",
+        "starterCode": "function distinctCount(values) {\n  return 0;\n}",
+        "referenceSolution": "function distinctCount(values) {\n  return new Set(values).size;\n}",
+        "setup": "",
+        "reset": "",
+        "functionName": "distinctCount",
+        "timeoutMs": 3000,
+        "tests": [
+          { "args": [[1, 2, 2, 3]] },
+          { "args": [[]] },
+          { "args": [["x"]] },
+          { "args": [[0, -0, 0]] }
+        ]
+      }
+    },
+    {
+      "type": "javascript",
+      "title": "Практика: invertMap",
+      "content": {
+        "description": "Реализуйте **`invertMap(pairs)`**: на вход массив пар **`[key, value]`** (строки). Верните **новый `Map`**, где ключи — бывшие **значения**, значения — бывшие **ключи**. Если value дублируется, побеждает **последняя** пара в массиве.",
+        "starterCode": "function invertMap(pairs) {\n  return new Map();\n}",
+        "referenceSolution": "function invertMap(pairs) {\n  const out = new Map();\n  for (const [k, v] of pairs) {\n    out.set(v, k);\n  }\n  return out;\n}",
+        "setup": "",
+        "reset": "",
+        "functionName": "invertMap",
+        "timeoutMs": 4000,
+        "tests": [
+          {
+            "args": [[["a", "1"], ["b", "2"]]],
+            "calls": [{ "method": "get", "args": ["1"] }]
+          },
+          {
+            "args": [[["x", "y"], ["z", "y"]]],
+            "calls": [{ "method": "get", "args": ["y"] }]
+          }
+        ]
+      }
+    },
+    {
+      "type": "javascript",
+      "title": "Практика: MapLRU",
+      "content": {
+        "description": "Реализуйте класс **`MapLRU`**: `constructor(capacity)`, **`get(key)`** (нет ключа → `-1`; hit делает ключ «свежим»), **`put(key, value)`** (evict LRU при переполнении). Мутирующие методы возвращайте **`this`**. Используйте **`Map`**. Проверка через **`construct`** и **`calls`**.",
+        "starterCode": "class MapLRU {\n  constructor(capacity) {\n    this.capacity = capacity;\n  }\n  get(key) {\n    return -1;\n  }\n  put(key, value) {\n    return this;\n  }\n}",
+        "referenceSolution": "class MapLRU {\n  constructor(capacity) {\n    this.capacity = capacity;\n    this.map = new Map();\n  }\n  get(key) {\n    if (!this.map.has(key)) return -1;\n    const value = this.map.get(key);\n    this.map.delete(key);\n    this.map.set(key, value);\n    return value;\n  }\n  put(key, value) {\n    if (this.map.has(key)) this.map.delete(key);\n    this.map.set(key, value);\n    if (this.map.size > this.capacity) {\n      const oldest = this.map.keys().next().value;\n      this.map.delete(oldest);\n    }\n    return this;\n  }\n}",
+        "setup": "",
+        "reset": "",
+        "construct": { "className": "MapLRU" },
+        "timeoutMs": 5000,
+        "tests": [
+          {
+            "args": [2],
+            "calls": [
+              { "method": "put", "args": [1, 10] },
+              { "method": "put", "args": [2, 20] },
+              { "method": "get", "args": [1] }
+            ]
+          },
+          {
+            "args": [2],
+            "calls": [
+              { "method": "put", "args": [1, 1] },
+              { "method": "put", "args": [2, 2] },
+              { "method": "put", "args": [3, 3] },
+              { "method": "get", "args": [1] }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "type": "theory",
+      "title": "Interop с C# и JSON",
+      "content": "## Не-JSON типы\n\n**`Map`/`Set`** не сериализуются в JSON «из коробки» как объекты/массивы. Для API и хранения — **`Object.fromEntries(map)`**, **`[...set]`**, или plain objects.\n\n## Когда что выбирать\n\n- Частые lookup по string key → **`Record`** / plain object часто достаточно.\n- Ключ — объект, порядок важен, частые add/delete → **`Map`**.\n- Уникальность в потоке → **`Set`** (как **`Distinct()`** в LINQ).\n\n```csharp\nitems.Distinct().Count();\n```\n\n```javascript\ndistinctCount(items);\n```"
+    },
+    {
+      "type": "quiz",
+      "title": "Тест: Map и Set",
+      "content": {
+        "question": "Чем `new Map()` принципиально удобнее plain object для частых add/delete пар ключ–значение?",
+        "options": [
+          "Ключи только строки, как у JSON",
+          "Сохраняет порядок вставки и не смешивается с прототипом Object",
+          "Автоматически сортирует ключи по алфавиту",
+          "Хранит только числовые ключи"
+        ],
+        "correctIndices": [1]
+      }
+    }
+  ]
+}

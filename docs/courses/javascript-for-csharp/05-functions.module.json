@@ -1,0 +1,98 @@
+{
+  "schemaVersion": 1,
+  "title": "Функции: стрелки, параметры, HOF",
+  "steps": [
+    {
+      "type": "theory",
+      "title": "Объявления и стрелки",
+      "content": "## Function declaration vs expression\n\n```javascript\nfunction add(a, b) { return a + b; }\nconst add2 = function (a, b) { return a + b; };\nconst add3 = (a, b) => a + b;\n```\n\n**Стрелочные функции** не имеют собственного `this`, `arguments`, не конструируются через `new`. В C# аналог — **static lambda** / локальная функция без захвата `this`, но семантика `this` в JS шире (модули позже).\n\n```csharp\nFunc<int, int, int> add = (a, b) => a + b;\n```\n\n```javascript\nconst scale = (x, factor = 2) => x * factor;\n```"
+    },
+    {
+      "type": "svg",
+      "title": "HOF: функция как значение",
+      "content": {
+        "caption": "Функции — **first-class** (как `Func<>` / `delegate`)",
+        "description": "Higher-order function принимает или возвращает другую функцию — основа `map`/`filter` и композиции.",
+        "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 280 80\" width=\"100%\" role=\"img\" aria-label=\"Композиция функций\"><defs><marker id=\"m05-a\" markerWidth=\"7\" markerHeight=\"7\" refX=\"5\" refY=\"3.5\" orient=\"auto\"><path d=\"M0,0 L7,3.5 L0,7 Z\" fill=\"#37474f\"/></marker></defs><rect id=\"m05-x\" x=\"8\" y=\"26\" width=\"40\" height=\"28\" rx=\"4\" fill=\"#e3f2fd\" stroke=\"#1565c0\"/><text x=\"28\" y=\"44\" text-anchor=\"middle\" font-size=\"10\" fill=\"#0d47a1\">x</text><rect id=\"m05-g\" x=\"68\" y=\"18\" width=\"52\" height=\"44\" rx=\"4\" fill=\"#fff9c4\" stroke=\"#f9a825\"/><text x=\"94\" y=\"38\" text-anchor=\"middle\" font-size=\"9\" fill=\"#e65100\">g</text><text x=\"94\" y=\"52\" text-anchor=\"middle\" font-size=\"7\" fill=\"#666\">inner</text><rect id=\"m05-f\" x=\"140\" y=\"18\" width=\"52\" height=\"44\" rx=\"4\" fill=\"#fff9c4\" stroke=\"#f9a825\"/><text x=\"166\" y=\"38\" text-anchor=\"middle\" font-size=\"9\" fill=\"#e65100\">f</text><text x=\"166\" y=\"52\" text-anchor=\"middle\" font-size=\"7\" fill=\"#666\">outer</text><rect id=\"m05-out\" x=\"212\" y=\"26\" width=\"56\" height=\"28\" rx=\"4\" fill=\"#e8f5e9\" stroke=\"#2e7d32\"/><text x=\"240\" y=\"44\" text-anchor=\"middle\" font-size=\"10\" fill=\"#1b5e20\">f(g(x))</text><line x1=\"48\" y1=\"40\" x2=\"68\" y2=\"40\" stroke=\"#37474f\" marker-end=\"url(#m05-a)\"/><line x1=\"120\" y1=\"40\" x2=\"140\" y2=\"40\" stroke=\"#37474f\" marker-end=\"url(#m05-a)\"/><line x1=\"192\" y1=\"40\" x2=\"212\" y2=\"40\" stroke=\"#37474f\" marker-end=\"url(#m05-a)\"/></svg>"
+      }
+    },
+    {
+      "type": "theory",
+      "title": "default, rest, HOF vs delegate",
+      "content": "## Параметры по умолчанию и rest\n\n```javascript\nfunction greet(name = 'Guest', punctuation = '!') {\n  return `Hello, ${name}${punctuation}`;\n}\nfunction sumAll(...nums) {\n  return nums.reduce((a, b) => a + b, 0);\n}\n```\n\n**Rest** `...nums` — массив «оставшихся» аргументов. В C# — **`params`**, но rest всегда массив, не `ReadOnlySpan`.\n\n## HOF и delegates\n\n```csharp\nIEnumerable<int> q = items.Where(x => x > 0);\n```\n\n```javascript\nconst q = items.filter((x) => x > 0);\n```\n\n**Delegate** в C# — типизированная ссылка; в JS функция — объект без отдельного типа delegate: контракт — соглашение и TypeScript/JSDoc."
+    },
+    {
+      "type": "quiz",
+      "title": "Проверка: rest",
+      "content": {
+        "question": "Что вернёт `(function (...a) { return a.length; })(1, 2, 3)`?",
+        "options": [
+          "`1`",
+          "`3`",
+          "`undefined`",
+          "SyntaxError"
+        ],
+        "correctIndices": [1]
+      }
+    },
+    {
+      "type": "javascript",
+      "title": "Практика: greetWithDefault",
+      "content": {
+        "description": "Реализуйте **`greetWithDefault(name, greeting)`**:\n\n- `greeting` по умолчанию `'Hello'` (если аргумент **пропущен** или `undefined`).\n- Верните строку `` `${greeting}, ${name}!` ``.\n\nНе используйте оператор `??` — только проверки `=== undefined` / default parameters.",
+        "starterCode": "function greetWithDefault(name, greeting) {\n  return '';\n}",
+        "referenceSolution": "function greetWithDefault(name, greeting = 'Hello') {\n  return `${greeting}, ${name}!`;\n}",
+        "setup": "",
+        "reset": "",
+        "functionName": "greetWithDefault",
+        "timeoutMs": 3000,
+        "tests": [
+          { "args": ["Ann"] },
+          { "args": ["Ann", "Hi"] },
+          { "args": ["Bob", { "$js": "undefined" }] },
+          { "args": ["Eve", ""] },
+          { "args": ["X", "Hey"] }
+        ]
+      }
+    },
+    {
+      "type": "javascript",
+      "title": "Практика: makeAdder (HOF)",
+      "content": {
+        "description": "Реализуйте **`makeAdder(addend)`**: верните **функцию**, которая принимает число `x` и возвращает `x + addend` (как фабрика делегатов в C#).\n\nПроверка вызывает сначала `makeAdder(addend)`, затем возвращённую функцию с `x` (второй вызов в тесте).",
+        "starterCode": "function makeAdder(addend) {\n  return (x) => 0;\n}",
+        "referenceSolution": "function makeAdder(addend) {\n  return (x) => x + addend;\n}",
+        "setup": "",
+        "reset": "",
+        "functionName": "makeAdder",
+        "timeoutMs": 4000,
+        "tests": [
+          { "args": [2], "calls": [{ "args": [10] }] },
+          { "args": [0], "calls": [{ "args": [5] }] },
+          { "args": [-3], "calls": [{ "args": [3] }] },
+          { "args": [1.5], "calls": [{ "args": [2] }] },
+          { "args": [100], "calls": [{ "args": [-40] }] }
+        ]
+      }
+    },
+    {
+      "type": "theory",
+      "title": "Стиль для C#-команды",
+      "content": "## Когда стрелка, когда function\n\n- Callback короткий — стрелка.\n- Метод объекта / нужен `this` — обычный `function` (или class method).\n- Generators / `new.target` — не стрелка.\n\n## Именование HOF\n\nКак в LINQ: маленькие чистые функции + `map`/`filter`/`reduce` читаемее ручных циклов, когда нет hot path.\n\n```javascript\nconst byId = (id) => (item) => item.id === id;\nconst active = users.filter(byId(42));\n```\n\nTypeScript позже добавит типы «как delegate»; на runtime остаётся duck typing."
+    },
+    {
+      "type": "quiz",
+      "title": "Итоговый тест модуля",
+      "content": {
+        "question": "Чем стрелочная функция **принципиально** ограничена по сравнению с `function`?",
+        "options": [
+          "Не может возвращать значение",
+          "Не может быть передана как аргумент",
+          "Не имеет собственного `this` и не используется с `new`",
+          "Не поддерживает параметры по умолчанию"
+        ],
+        "correctIndices": [2]
+      }
+    }
+  ]
+}

@@ -1,0 +1,109 @@
+{
+  "schemaVersion": 1,
+  "title": "Строки и регулярные выражения",
+  "steps": [
+    {
+      "type": "theory",
+      "title": "Строки: immutable UTF-16",
+      "content": "## Не `System.String` один в один\n\nJS **string** — immutable последовательность UTF-16 code units. **`length`** — в code units, не в graphemes (эмодзи могут занимать 2 unit).\n\n```javascript\nconst s = '  hello   world  ';\ns.trim();\ns.includes('world');\ns.split(/\\s+/);\n`template ${1 + 1}`;\n```\n\nВ C# — **`ReadOnlySpan<char>`**, **`string`**, интерполяция `$\"\"`; regex — **`Regex`** класс, в JS — литерал **`/pattern/flags`** или **`new RegExp`**.\n\nПрактика regex в курсе: паттерн **строкой** (как `new RegExp(pattern)`), без обрамляющих `/`."
+    },
+    {
+      "type": "svg",
+      "title": "Схема: test vs match",
+      "content": {
+        "caption": "**.test** → boolean; **.match** → детали",
+        "description": "В шаге regex сравнивается только RegExp.test(input) с эталоном.",
+        "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 220 64\" width=\"100%\" role=\"img\" aria-label=\"RegExp test\"><rect id=\"m20-in\" x=\"8\" y=\"18\" width=\"80\" height=\"28\" rx=\"4\" fill=\"#e3f2fd\" stroke=\"#1565c0\"/><text x=\"48\" y=\"36\" text-anchor=\"middle\" font-size=\"8\" font-family=\"ui-monospace, monospace\" fill=\"#333\">input</text><rect id=\"m20-re\" x=\"108\" y=\"18\" width=\"48\" height=\"28\" rx=\"4\" fill=\"#fff9c4\" stroke=\"#f9a825\"/><text x=\"132\" y=\"36\" text-anchor=\"middle\" font-size=\"8\" fill=\"#e65100\">re</text><rect id=\"m20-out\" x=\"168\" y=\"18\" width=\"44\" height=\"28\" rx=\"4\" fill=\"#e8f5e9\" stroke=\"#2e7d32\"/><text x=\"190\" y=\"36\" text-anchor=\"middle\" font-size=\"9\" fill=\"#1b5e20\">bool</text><text x=\"110\" y=\"58\" font-size=\"7\" fill=\"#666\">.test(input)</text></svg>"
+      }
+    },
+    {
+      "type": "theory",
+      "title": "Regex для C#-команды",
+      "content": "## Экранирование и флаги\n\n| C# | JS |\n|----|-----|\n| `@\"\\d+\"` | `'\\\\d+'` в JSON курса |\n| `RegexOptions.IgnoreCase` | флаг `i` (в курсе — без флагов в поле паттерна) |\n| `^` `$` | те же якоря |\n\n```javascript\n/^[a-z0-9._%+-]+@[a-z0-9.-]+\\.[a-z]{2,}$/i.test(email);\n```\n\nУпрощённый email-паттерн — учебный, не RFC-complete.\n\n**Методы строк:** `replace`, `replaceAll`, `match`, `search` — regex или string."
+    },
+    {
+      "type": "quiz",
+      "title": "Проверка: якоря",
+      "content": {
+        "question": "Паттерн **`^\\\\d+$`** (как строка в RegExp) совпадёт с?",
+        "options": [
+          "`'12a'`",
+          "`'012'`",
+          "`' 12 '`",
+          "`'1.5'`"
+        ],
+        "correctIndices": [1]
+      }
+    },
+    {
+      "type": "javascript",
+      "title": "Практика: collapseWhitespace",
+      "content": {
+        "description": "Реализуйте **`collapseWhitespace(text)`**:\n\n- **`trim()`** по краям.\n- Внутренние пробельные серии (пробел, tab, newline) замените **одним пробелом**.\n\nПодсказка: **`split(/\\s+/)`** + **`join(' ')`** или **`replaceAll`**.",
+        "starterCode": "function collapseWhitespace(text) {\n  return text;\n}",
+        "referenceSolution": "function collapseWhitespace(text) {\n  return text.trim().split(/\\s+/).filter(Boolean).join(' ');\n}",
+        "setup": "",
+        "reset": "",
+        "functionName": "collapseWhitespace",
+        "timeoutMs": 4000,
+        "tests": [
+          { "args": ["  hello   world  "] },
+          { "args": ["one"] },
+          { "args": ["  a\\n\\tb  "] },
+          { "args": [""] }
+        ]
+      }
+    },
+    {
+      "type": "regex",
+      "title": "Практика: простой email",
+      "content": {
+        "description": "Напишите **паттерн** (строку для `RegExp`):\n\n- Локальная часть: буквы, цифры, `.`, `_`, `%`, `+`, `-` — один или более.\n- `@`\n- Домен: буквы, цифры, `.`, `-` — один или более.\n- `.` и TLD: **2–6** латинских букв.\n- Строка **целиком**: якоря **`^`** и **`$`**.\n\nРегистр **не** игнорируйте (без флага `i`): только `[a-z]` в шаблоне.",
+        "starterCode": "^.+@.+$",
+        "referenceSolution": "^[a-z0-9._%+-]+@[a-z0-9.-]+\\.[a-z]{2,6}$",
+        "timeoutMs": 3000,
+        "tests": [
+          { "input": "user@example.com" },
+          { "input": "a.b+c@sub.domain.co" },
+          { "input": "User@example.com" },
+          { "input": "bad@" },
+          { "input": "x@y.z" },
+          { "input": "plain" }
+        ]
+      }
+    },
+    {
+      "type": "javascript",
+      "title": "Практика: countWords",
+      "content": {
+        "description": "Реализуйте **`countWords(text)`** — число «слов» после **`trim`**: разбейте по **`/\\s+/`**, пустая строка → **`0`**.",
+        "starterCode": "function countWords(text) {\n  return 0;\n}",
+        "referenceSolution": "function countWords(text) {\n  const t = text.trim();\n  if (t.length === 0) return 0;\n  return t.split(/\\s+/).length;\n}",
+        "setup": "",
+        "reset": "",
+        "functionName": "countWords",
+        "timeoutMs": 4000,
+        "tests": [
+          { "args": ["one two three"] },
+          { "args": ["  hi  "] },
+          { "args": [""] },
+          { "args": ["single"] }
+        ]
+      }
+    },
+    {
+      "type": "quiz",
+      "title": "Итоговый тест модуля",
+      "content": {
+        "question": "Как в этом курсе проверяется regex-шаг?",
+        "options": [
+          "Полное совпадение match[0] с input",
+          "Одинаковый boolean `RegExp.test(input)` у ученика и эталона",
+          "Число capture groups",
+          "Сравнение через JSON.stringify паттерна"
+        ],
+        "correctIndices": [1]
+      }
+    }
+  ]
+}

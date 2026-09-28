@@ -1,0 +1,96 @@
+{
+  "schemaVersion": 1,
+  "title": "Область видимости и замыкания",
+  "steps": [
+    {
+      "type": "theory",
+      "title": "var, let, const",
+      "content": "## Три способа объявить binding\n\n| | `var` | `let` / `const` |\n|---|--------|------------------|\n| Область | function (legacy) | block |\n| Hoisting | да, init `undefined` | TDZ до строки |\n| Повтор | можно | нельзя в том же scope |\n\n```csharp\n// Ближе всего: let/const ≈ локальная переменная в блоке { }\n// var ≈ старый стиль без block scope\n```\n\n```javascript\nif (true) {\n  let x = 1;\n  const y = 2;\n}\n// x, y — ReferenceError\n```\n\n**`const`** запрещает **переприсвоение** binding, но объект по ссылке можно мутировать."
+    },
+    {
+      "type": "svg",
+      "title": "Блочная vs function scope",
+      "content": {
+        "caption": "`let`/`const` живут в **блоке** `{ }`",
+        "description": "`var` «просачивается» в функцию целиком — отсюда классический баг цикла с `var` и замыканием.",
+        "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 260 110\" width=\"100%\" role=\"img\" aria-label=\"Блок let и function var\"><rect id=\"m04-fn\" x=\"10\" y=\"8\" width=\"240\" height=\"94\" rx=\"6\" fill=\"#eceff1\" stroke=\"#607d8b\" stroke-width=\"2\"/><text x=\"130\" y=\"26\" text-anchor=\"middle\" font-size=\"10\" fill=\"#37474f\">function scope (var)</text><rect id=\"m04-block\" x=\"30\" y=\"38\" width=\"200\" height=\"52\" rx=\"4\" fill=\"#e8eaf6\" stroke=\"#3f51b5\" stroke-width=\"2\" stroke-dasharray=\"4 2\"/><text x=\"130\" y=\"56\" text-anchor=\"middle\" font-size=\"9\" fill=\"#283593\">block: let i</text><circle id=\"m04-i1\" cx=\"60\" cy=\"78\" r=\"10\" fill=\"#c5cae9\" stroke=\"#3949ab\"/><text x=\"60\" y=\"81\" text-anchor=\"middle\" font-size=\"8\" fill=\"#1a237e\">0</text><circle id=\"m04-i2\" cx=\"130\" cy=\"78\" r=\"10\" fill=\"#c5cae9\" stroke=\"#3949ab\"/><text x=\"130\" y=\"81\" text-anchor=\"middle\" font-size=\"8\" fill=\"#1a237e\">1</text><circle id=\"m04-i3\" cx=\"200\" cy=\"78\" r=\"10\" fill=\"#c5cae9\" stroke=\"#3949ab\"/><text x=\"200\" y=\"81\" text-anchor=\"middle\" font-size=\"8\" fill=\"#1a237e\">2</text></svg>"
+      }
+    },
+    {
+      "type": "theory",
+      "title": "Hoisting, TDZ, closure",
+      "content": "## Hoisting\n\nОбъявления «поднимаются» визуально: до строки `var x = 1` в той же функции `x` существует и равен **`undefined`**. **`let`/`const`** тоже hoisted, но до инициализации — **Temporal Dead Zone** (ReferenceError).\n\n```javascript\nconsole.log(a); // undefined\nvar a = 2;\n\nconsole.log(b); // ReferenceError (TDZ)\nlet b = 2;\n```\n\n## Замыкание\n\nФункция «помнит» lexical environment, где создана. В C# — захват переменных в лямбде; в JS то же, но **`var` в цикле** часто захватывает **один** binding.\n\n```javascript\nfor (var i = 0; i < 3; i++) {\n  setTimeout(() => console.log(i), 0); // 3,3,3\n}\nfor (let j = 0; j < 3; j++) {\n  setTimeout(() => console.log(j), 0); // 0,1,2\n}\n```"
+    },
+    {
+      "type": "quiz",
+      "title": "Проверка: TDZ",
+      "content": {
+        "question": "Что произойдёт при обращении к `let x` **до** строки объявения в том же блоке?",
+        "options": [
+          "Вернётся `undefined` как у `var`",
+          "ReferenceError (temporal dead zone)",
+          "SyntaxError на этапе парсинга всего файла",
+          "Вернётся `null`"
+        ],
+        "correctIndices": [1]
+      }
+    },
+    {
+      "type": "javascript",
+      "title": "Практика: let в цикле",
+      "content": {
+        "description": "Реализуйте **`collectLetIndices(n)`**: для целого `n >= 0` верните массив длины `n`, где элемент `k` — результат **немедленного** вызова функции, созданной в цикле `for (let i = 0; i < n; i += 1)` и возвращающей **`i`**. Используйте **`let`**, не `var`.",
+        "starterCode": "function collectLetIndices(n) {\n  return [];\n}",
+        "referenceSolution": "function collectLetIndices(n) {\n  const out = [];\n  for (let i = 0; i < n; i += 1) {\n    out.push((() => i)());\n  }\n  return out;\n}",
+        "setup": "",
+        "reset": "",
+        "functionName": "collectLetIndices",
+        "timeoutMs": 4000,
+        "tests": [
+          { "args": [0] },
+          { "args": [1] },
+          { "args": [3] },
+          { "args": [5] }
+        ]
+      }
+    },
+    {
+      "type": "javascript",
+      "title": "Практика: hoisting var",
+      "content": {
+        "description": "Реализуйте **`varHoistSnapshot()`**: выполните в **новой функции** (не загрязняйте глобальную область) типичный паттерн hoisting:\n\n1. Прочитать `typeof x` **до** объявления `var x = 5`.\n2. Вернуть массив `[typeofResult, xAfter]` после объявления.\n\nОжидается `['undefined', 5]`. Не используйте `let`/`const` для `x`.",
+        "starterCode": "function varHoistSnapshot() {\n  return ['object', 0];\n}",
+        "referenceSolution": "function varHoistSnapshot() {\n  return (function () {\n    const typeofResult = typeof x;\n    var x = 5;\n    return [typeofResult, x];\n  })();\n}",
+        "setup": "",
+        "reset": "",
+        "functionName": "varHoistSnapshot",
+        "timeoutMs": 3000,
+        "tests": [
+          { "args": [] },
+          { "args": [] },
+          { "args": [] },
+          { "args": [] }
+        ]
+      }
+    },
+    {
+      "type": "theory",
+      "title": "Перенос с C#",
+      "content": "## Захват в лямбдах\n\n```csharp\nfor (int i = 0; i < 3; i++) {\n  var copy = i;\n  tasks.Add(() => Console.WriteLine(copy));\n}\n```\n\nВ JS **`let` в заголовке `for`** даёт новый binding на итерацию — чаще не нужен ручной `copy`.\n\n## Модули ES\n\nФайлы `.mjs` / `type: module` — strict by default, top-level `let` не становится global property. Как namespace + internal locals в C#.\n\n```javascript\nexport function makeCounter() {\n  let n = 0;\n  return () => ++n;\n}\n```\n\nЗамыкание скрывает `n` — аналог private поля без класса."
+    },
+    {
+      "type": "quiz",
+      "title": "Итоговый тест модуля",
+      "content": {
+        "question": "Почему `for (var i = 0; i < 3; i++)` + `setTimeout(() => log(i))` часто печатает три раза **`3`**?",
+        "options": [
+          "`setTimeout` всегда асинхронно копирует значение `i`",
+          "Один binding `var i` на всю функцию; к моменту callback `i` уже 3",
+          "`let` запрещён внутри `for`",
+          "Строгий режим отключает замыкания"
+        ],
+        "correctIndices": [1]
+      }
+    }
+  ]
+}

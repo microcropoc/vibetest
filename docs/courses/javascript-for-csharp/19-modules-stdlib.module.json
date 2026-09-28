@@ -1,0 +1,96 @@
+{
+  "schemaVersion": 1,
+  "title": "JSON, Date и стандартная библиотека",
+  "steps": [
+    {
+      "type": "theory",
+      "title": "JSON в JS vs System.Text.Json",
+      "content": "## `JSON.parse` / `JSON.stringify`\n\nВстроенный **JSON** — часть ECMAScript (не DOM). В C# — **`System.Text.Json`**, **`JsonSerializer`**, атрибуты имён.\n\n```javascript\nconst obj = JSON.parse('{\"a\":1}');\nJSON.stringify({ a: 1, b: undefined }); // \"{\\\"a\\\":1}\" — undefined опускается\n```\n\n**Ловушки:**\n\n- Даты в JSON — **строки**, не `Date` (нужен reviver или ручной парс).\n- **`bigint`** по умолчанию не сериализуется.\n- Нет комментариев в JSON — в отличие от `appsettings` с комментариями в некоторых конфигах.\n\n```csharp\nvar dto = JsonSerializer.Deserialize<MyDto>(json);\n```"
+    },
+    {
+      "type": "svg",
+      "title": "Схема: JSON ↔ объект",
+      "content": {
+        "caption": "**parse** / **stringify** — только JSON-типы",
+        "description": "Результат parse — plain objects и arrays; Date и Map не восстанавливаются автоматически.",
+        "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 260 70\" width=\"100%\" role=\"img\" aria-label=\"JSON parse stringify\"><defs><marker id=\"m19-arr\" markerWidth=\"7\" markerHeight=\"7\" refX=\"5\" refY=\"3.5\" orient=\"auto\"><path d=\"M0,0 L7,3.5 L0,7 Z\" fill=\"#37474f\"/></marker></defs><rect id=\"m19-str\" x=\"8\" y=\"20\" width=\"72\" height=\"32\" rx=\"4\" fill=\"#fff9c4\" stroke=\"#f9a825\"/><text x=\"44\" y=\"40\" text-anchor=\"middle\" font-size=\"8\" font-family=\"ui-monospace, monospace\" fill=\"#333\">'{...}'</text><rect id=\"m19-obj\" x=\"180\" y=\"20\" width=\"72\" height=\"32\" rx=\"4\" fill=\"#e8f5e9\" stroke=\"#2e7d32\"/><text x=\"216\" y=\"40\" text-anchor=\"middle\" font-size=\"8\" fill=\"#1b5e20\">object</text><line x1=\"80\" y1=\"36\" x2=\"112\" y2=\"36\" stroke=\"#37474f\" marker-end=\"url(#m19-arr)\"/><text x=\"122\" y=\"32\" font-size=\"8\" fill=\"#1565c0\">parse</text><line x1=\"168\" y1=\"36\" x2=\"180\" y2=\"36\" stroke=\"#37474f\" marker-end=\"url(#m19-arr)\"/><line x1=\"252\" y1=\"36\" x2=\"220\" y2=\"36\" stroke=\"#37474f\" marker-end=\"url(#m19-arr)\"/><text x=\"122\" y=\"52\" font-size=\"8\" fill=\"#1565c0\">stringify</text></svg>"
+      }
+    },
+    {
+      "type": "theory",
+      "title": "Date и UTC",
+      "content": "## `Date` — миллисекунды с epoch\n\n```javascript\nconst d = new Date('2024-06-01T12:00:00.000Z');\nd.getTime(); // UTC ms\nd.toISOString(); // всегда UTC с Z\n```\n\nВ C# **`DateTimeOffset`** явнее про offset; **`DateTime`** Kind путает так же, как local vs UTC в JS.\n\n**`Date.parse`** / конструктор — разбор ISO; locale-строки зависят от реализации.\n\nДля API контрактов храните **ISO-8601 UTC** строки или число ms — как в JSON Web API на .NET.\n\n```javascript\nfunction formatUtcDateOnly(ms) {\n  return new Date(ms).toISOString().slice(0, 10);\n}\n```"
+    },
+    {
+      "type": "quiz",
+      "title": "Проверка: JSON",
+      "content": {
+        "question": "Что произойдёт при **`JSON.stringify({ x: undefined, y: 1 })`**?",
+        "options": [
+          "`\"{\\\"x\\\":null,\\\"y\\\":1}\"`",
+          "`\"{\\\"y\\\":1}\"` — ключ `x` опущен",
+          "SyntaxError",
+          "`undefined`"
+        ],
+        "correctIndices": [1]
+      }
+    },
+    {
+      "type": "javascript",
+      "title": "Практика: safeParseJson",
+      "content": {
+        "description": "Реализуйте **`safeParseJson(text)`**:\n\n- При успешном **`JSON.parse(text)`** верните **`{ ok: true, value }`**.\n- При ошибке — **`{ ok: false, error: 'invalid' }`** (строка фиксированная, без текста exception).\n\nНе бросайте исключения наружу.",
+        "starterCode": "function safeParseJson(text) {\n  return { ok: false, error: 'invalid' };\n}",
+        "referenceSolution": "function safeParseJson(text) {\n  try {\n    return { ok: true, value: JSON.parse(text) };\n  } catch {\n    return { ok: false, error: 'invalid' };\n  }\n}",
+        "setup": "",
+        "reset": "",
+        "functionName": "safeParseJson",
+        "timeoutMs": 4000,
+        "tests": [
+          { "args": ["{\"a\":1}"] },
+          { "args": ["[]"] },
+          { "args": ["not json"] },
+          { "args": ["{"] },
+          { "args": ["\"hello\""] }
+        ]
+      }
+    },
+    {
+      "type": "javascript",
+      "title": "Практика: formatUtcDateOnly",
+      "content": {
+        "description": "Реализуйте **`formatUtcDateOnly(utcMs)`**: для числа UTC-миллисекунд верните **`YYYY-MM-DD`** из **`toISOString()`** (первые 10 символов).\n\nПример: `Date.parse('2024-03-15T23:30:00.000Z')` → **`'2024-03-15'`**.",
+        "starterCode": "function formatUtcDateOnly(utcMs) {\n  return '';\n}",
+        "referenceSolution": "function formatUtcDateOnly(utcMs) {\n  return new Date(utcMs).toISOString().slice(0, 10);\n}",
+        "setup": "",
+        "reset": "",
+        "functionName": "formatUtcDateOnly",
+        "timeoutMs": 4000,
+        "tests": [
+          { "args": [1710504000000] },
+          { "args": [0] },
+          { "args": [946684800000] }
+        ]
+      }
+    },
+    {
+      "type": "theory",
+      "title": "Модули ES (кратко)",
+      "content": "## import / export\n\n```javascript\nexport function helper() {}\nimport { helper } from './helper.js';\n```\n\nВ C# — **projects + namespaces**; tree-shaking и dynamic `import()` — отдельная тема bundler'а.\n\n**Stdlib ES:** `Map`, `Set`, `Promise`, `Symbol`, `Intl` — не путать с Node **`node:fs`** (хост).\n\nДля конфигов в .NET часто **JSON** + **options pattern**; в фронте — тот же JSON + runtime parse + Zod/validation (в этом приложении — generated schemas)."
+    },
+    {
+      "type": "quiz",
+      "title": "Итоговый тест модуля",
+      "content": {
+        "question": "Как получить UTC ISO-строку из `Date`?",
+        "options": [
+          "`d.toString()`",
+          "`d.toLocaleDateString()`",
+          "`d.toISOString()`",
+          "`d.toJSON()` с локальным offset"
+        ],
+        "correctIndices": [2]
+      }
+    }
+  ]
+}

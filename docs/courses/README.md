@@ -1,21 +1,32 @@
 # Примеры курсов (JSON)
 
-Готовые файлы для вкладки **Импорт** в приложении. Формат — [course.schema.json](../schemas/course.schema.json).
+Флагманский курс для импорта в приложение. Формат — [course-import.schema.json](../schemas/course-import.schema.json).
 
 | Файл | Описание |
 |------|----------|
-| [english-basics.json](./english-basics.json) | Небольшой курс английского: 2 модуля, теория (markdown) и quiz |
-| [svg-graphics-basics.json](./svg-graphics-basics.json) | SVG-графика: 2 модуля, теория, шаги `svg` и quiz |
-| [javascript-basics.json](./javascript-basics.json) | JavaScript: 2 модуля, теория, `svg`, quiz и практика `javascript` |
-| [sqlite-basics.json](./sqlite-basics.json) | SQLite: 2 модуля, теория, `svg`, quiz и практика `sqlite` |
-| [regex-basics.json](./regex-basics.json) | Regex: 2 модуля, теория, `svg`, quiz и практика `regex` |
-| [algorithms-start.json](./algorithms-start.json) | Алгоритмы: Two Sum, Rotate (`resultMode`), list/tree, LRU (`construct`), Three Sum (`unordered`) |
+| [javascript-for-csharp.json](./javascript-for-csharp.json) | **JavaScript для C#-разработчика** — 20 модулей (theory, svg, javascript, regex, quiz) |
+
+## Исходники и сборка
+
+Модули лежат в [javascript-for-csharp/](./javascript-for-csharp/):
+
+- `course.json` — заголовок и описание курса
+- `NN-slug.module.json` — один модуль ([module-import.schema.json](../schemas/module-import.schema.json))
+
+Сборка собранного курса:
+
+```bash
+cd vibetest-app
+npm run build:courses
+```
+
+Перед коммитом убедитесь, что `javascript-for-csharp.json` совпадает с выводом сборки (проверяет `sample-courses.spec.ts`).
 
 ## Импорт
 
-1. Откройте `english-basics.json` в редакторе, скопируйте содержимое целиком (или **Взять из буфера** после копирования).
-2. В приложении: **Импорт** → вставьте JSON → при первом импорте оставьте включённым **Заменить все ID новыми UUID** → **Импортировать**.
+1. Откройте `javascript-for-csharp.json`, скопируйте целиком (или **Взять из буфера**).
+2. **Импорт** → вставьте JSON → при первом импорте включите **Заменить все ID новыми UUID** → **Импортировать**.
 
-Опционально включите **Проверка js/sql/regex шагов** — перед сохранением каждый practice-шаг прогоняется с `referenceSolution` (dual-run); при ошибке импорт не выполняется.
+Опционально: **Проверка js/sql/regex шагов** — dual-run эталона перед сохранением.
 
-При повторном импорте того же файла с выключенным флажком и тем же `courseId` потребуется подтверждение замены.
+Отдельный модуль можно добавить через **Импорт модуля** (файл `NN-slug.module.json`).

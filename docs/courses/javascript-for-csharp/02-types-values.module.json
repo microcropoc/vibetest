@@ -1,0 +1,101 @@
+{
+  "schemaVersion": 1,
+  "title": "Типы, значения и typeof",
+  "steps": [
+    {
+      "type": "theory",
+      "title": "Примитивы и ссылочная модель",
+      "content": "## Два семейства значений\n\nВ C# **value types** и **reference types** различимы на уровне языка (`struct` vs `class`). В JavaScript семантика **примитив vs объект**, а `typeof` — грубый зонд, не система типов.\n\n**Примитивы ES:** `undefined`, `null`, `boolean`, `number`, `bigint`, `string`, `symbol`.\n\n**Объекты:** `{}`, `[]`, функции, `Date`, … — ссылочная идентичность.\n\n```csharp\nint x = 3;      // value\nstring s = \"a\"; // immutable reference-like\nobject o = new();\n```\n\n```javascript\nconst n = 3;           // number primitive\nconst s = \"a\";         // string primitive\nconst o = { v: 1 };    // object reference\n```\n\n`null` в typeof — историческая ловушка: `typeof null === 'object'`."
+    },
+    {
+      "type": "svg",
+      "title": "typeof и null",
+      "content": {
+        "caption": "`typeof null` → **`object`** (legacy)",
+        "description": "Для учёта используйте явную проверку `value === null` или helper `classifyValue` из практики ниже.",
+        "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 280 100\" width=\"100%\" role=\"img\" aria-label=\"typeof и исключение null\"><rect id=\"m02-bg\" x=\"4\" y=\"4\" width=\"272\" height=\"92\" rx=\"6\" fill=\"#fafafa\" stroke=\"#bdbdbd\"/><text id=\"m02-title\" x=\"140\" y=\"22\" text-anchor=\"middle\" font-size=\"11\" fill=\"#212121\">typeof value</text><rect id=\"m02-null\" x=\"16\" y=\"34\" width=\"72\" height=\"28\" rx=\"4\" fill=\"#ffebee\" stroke=\"#c62828\"/><text x=\"52\" y=\"52\" text-anchor=\"middle\" font-size=\"9\" fill=\"#b71c1c\">null</text><text x=\"52\" y=\"68\" text-anchor=\"middle\" font-size=\"8\" fill=\"#666\">→ object</text><rect id=\"m02-undef\" x=\"104\" y=\"34\" width=\"72\" height=\"28\" rx=\"4\" fill=\"#e8eaf6\" stroke=\"#3949ab\"/><text x=\"140\" y=\"52\" text-anchor=\"middle\" font-size=\"9\" fill=\"#1a237e\">undefined</text><text x=\"140\" y=\"68\" text-anchor=\"middle\" font-size=\"8\" fill=\"#666\">→ undefined</text><rect id=\"m02-num\" x=\"192\" y=\"34\" width=\"72\" height=\"28\" rx=\"4\" fill=\"#e0f2f1\" stroke=\"#00695c\"/><text x=\"228\" y=\"52\" text-anchor=\"middle\" font-size=\"9\" fill=\"#004d40\">42n</text><text x=\"228\" y=\"68\" text-anchor=\"middle\" font-size=\"8\" fill=\"#666\">→ bigint</text></svg>"
+      }
+    },
+    {
+      "type": "theory",
+      "title": "undefined, NaN, −0, BigInt",
+      "content": "## `undefined` vs отсутствие\n\n`undefined` — значение «не задано». В C# ближе `default` / nullable без значения, но в JS **`undefined` — first-class**.\n\n## `NaN` и `-0`\n\n`NaN` — результат некорректной арифметики; **не равен сам себе** через `===`. Сравнивайте через `Number.isNaN` или `Object.is`.\n\n**`-0` и `+0`** равны через `==`/`===`, но `Object.is(-0, +0) === false` — как различие знаков нуля в IEEE-754.\n\n```csharp\ndouble.NaN != double.NaN; // true\n```\n\n```javascript\nObject.is(NaN, NaN); // true\nObject.is(-0, 0);   // false\n```\n\n## BigInt\n\n`123n` — отдельный примитив; **нельзя** смешивать с `number` без явного преобразования. Аналог `BigInteger`, но встроен в язык."
+    },
+    {
+      "type": "quiz",
+      "title": "Быстрая проверка",
+      "content": {
+        "question": "Чему равно `typeof null` в JavaScript?",
+        "options": [
+          "`\"null\"`",
+          "`\"object\"`",
+          "`\"undefined\"`",
+          "`\"number\"`"
+        ],
+        "correctIndices": [1]
+      }
+    },
+    {
+      "type": "javascript",
+      "title": "Практика: classifyValue",
+      "content": {
+        "description": "Реализуйте **`classifyValue`**: верните строку категории для **одного** аргумента:\n\n- `null` → `'null'` (не полагайтесь на `typeof null`)\n- иначе результат `typeof`, **кроме** что `bigint` остаётся `'bigint'`\n\nПример: `classifyValue(null)` → `'null'`, `classifyValue(undefined)` → `'undefined'`.",
+        "starterCode": "function classifyValue(value) {\n  return typeof value;\n}",
+        "referenceSolution": "function classifyValue(value) {\n  if (value === null) {\n    return 'null';\n  }\n  return typeof value;\n}",
+        "setup": "",
+        "reset": "",
+        "functionName": "classifyValue",
+        "timeoutMs": 3000,
+        "tests": [
+          { "args": [{ "$js": "undefined" }] },
+          { "args": [null] },
+          { "args": [true] },
+          { "args": ["text"] },
+          { "args": [{ "$js": "NaN" }] },
+          { "args": [{ "$js": "bigint", "value": "7" }] },
+          { "args": [{ "x": 1 }] }
+        ]
+      }
+    },
+    {
+      "type": "javascript",
+      "title": "Практика: sameNumericValue",
+      "content": {
+        "description": "Реализуйте **`sameNumericValue(a, b)`**: для двух значений верните `true`, если они **численно неразличимы** в смысле **`Object.is`** (учитывает `NaN` и различие `+0`/`-0`). Для не-чисел (если оба не number) — обычный `Object.is`.",
+        "starterCode": "function sameNumericValue(a, b) {\n  return a === b;\n}",
+        "referenceSolution": "function sameNumericValue(a, b) {\n  return Object.is(a, b);\n}",
+        "setup": "",
+        "reset": "",
+        "functionName": "sameNumericValue",
+        "timeoutMs": 3000,
+        "tests": [
+          { "args": [{ "$js": "NaN" }, { "$js": "NaN" }] },
+          { "args": [{ "$js": "-0" }, 0] },
+          { "args": [0, 0] },
+          { "args": [1, 1] },
+          { "args": [{ "$js": "undefined" }, { "$js": "undefined" }] },
+          { "args": [1, 2] }
+        ]
+      }
+    },
+    {
+      "type": "theory",
+      "title": "Сопоставление с C#",
+      "content": "## Что переносится «как есть»\n\n- `bool`, строки (immutable), числа с плавающей точкой — интуитивно близко.\n- `null` ближе к C# `null` для ссылок; **`undefined`** — отдельная история (не nullable value type).\n\n## Что ломает привычки\n\n- Нет `int`/`double` на уровне языка — один `number` (кроме `bigint`).\n- `typeof` не замена `is` / pattern matching.\n- `==` с приведением типов — в следующем модуле; для типов уже используйте **`===`** и **`Object.is`** для чисел.\n\n```csharp\nif (x is null) { }\n```\n\n```javascript\nif (x === null) { }\nif (x === undefined) { }\n```"
+    },
+    {
+      "type": "quiz",
+      "title": "Итоговый тест модуля",
+      "content": {
+        "question": "Как корректно проверить, что значение — именно **`NaN`**?",
+        "options": [
+          "`value === NaN`",
+          "`value == NaN`",
+          "`Number.isNaN(value)`",
+          "`typeof value === 'NaN'`"
+        ],
+        "correctIndices": [2]
+      }
+    }
+  ]
+}

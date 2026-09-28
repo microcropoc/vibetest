@@ -1,0 +1,92 @@
+{
+  "schemaVersion": 1,
+  "title": "Event loop и fake timers",
+  "steps": [
+    {
+      "type": "theory",
+      "title": "Стек, очереди задач",
+      "content": "## Один поток, много очередей\n\nВ C# **`async/await`** часто уходит в thread pool, но UI-поток остаётся отдельной моделью. В браузере и типичном Node **ваш JS-код на одном потоке**: один call stack.\n\n**Macrotask** (task): `setTimeout`, I/O callbacks хоста.\n\n**Microtask**: `Promise.then`, `queueMicrotask` — очередь **опустошается полностью** после каждого macrotask (упрощённо).\n\n```javascript\nconsole.log('sync');\nPromise.resolve().then(() => console.log('micro'));\nsetTimeout(() => console.log('macro'), 0);\nconsole.log('sync2');\n// sync, sync2, micro, macro\n```\n\nПонимание порядка критично для багов «данные ещё не обновились» и для тестов с таймерами."
+    },
+    {
+      "type": "svg",
+      "title": "Схема: micro перед следующим macro",
+      "content": {
+        "caption": "После sync-кода — **microtasks**, затем **macrotask**",
+        "description": "Event loop: выполнить sync → drain microtask queue → взять одну macrotask → снова microtasks.",
+        "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 280 100\" width=\"100%\" role=\"img\" aria-label=\"Event loop micro и macro\"><defs><marker id=\"m16-arr\" markerWidth=\"7\" markerHeight=\"7\" refX=\"5\" refY=\"3.5\" orient=\"auto\"><path d=\"M0,0 L7,3.5 L0,7 Z\" fill=\"#37474f\"/></marker></defs><rect id=\"m16-sync\" x=\"8\" y=\"30\" width=\"56\" height=\"36\" rx=\"4\" fill=\"#e3f2fd\" stroke=\"#1565c0\"/><text x=\"36\" y=\"52\" text-anchor=\"middle\" font-size=\"9\" fill=\"#0d47a1\">sync</text><rect id=\"m16-micro\" x=\"84\" y=\"22\" width=\"72\" height=\"52\" rx=\"4\" fill=\"#f3e5f5\" stroke=\"#7b1fa2\"/><text x=\"120\" y=\"44\" text-anchor=\"middle\" font-size=\"9\" fill=\"#4a148c\">microtasks</text><text x=\"120\" y=\"58\" text-anchor=\"middle\" font-size=\"7\" fill=\"#666\">Promise.then</text><rect id=\"m16-macro\" x=\"176\" y=\"30\" width=\"96\" height=\"36\" rx=\"4\" fill=\"#fff3e0\" stroke=\"#ef6c00\"/><text x=\"224\" y=\"52\" text-anchor=\"middle\" font-size=\"9\" fill=\"#e65100\">macrotask</text><line x1=\"64\" y1=\"48\" x2=\"84\" y2=\"48\" stroke=\"#37474f\" marker-end=\"url(#m16-arr)\"/><line x1=\"156\" y1=\"48\" x2=\"176\" y2=\"48\" stroke=\"#37474f\" marker-end=\"url(#m16-arr)\"/></svg>"
+      }
+    },
+    {
+      "type": "theory",
+      "title": "Fake timers в тренажёре",
+      "content": "## `setTimeout` без ожидания wall-clock\n\nВ практике курса **`setTimeout` / `clearTimeout`** — **fake timers**: время продвигает поле **`advanceMs`** в тесте, а не реальные миллисекунды.\n\nПорядок проверки кейса (упрощённо):\n\n1. Вызов вашей функции (в т.ч. `await` промиса, если вернули thenable).\n2. Опционально **`flushMicrotasks`** — один «тик» microtask queue после invoke.\n3. **`advanceMs`** — сдвинуть fake clock и выполнить due callbacks.\n4. **`expectInvocations`** — счётчики **`registerSpy`** из `setup`.\n\n```javascript\n// setup\nconst log = registerSpy('log', (x) => x);\n\n// тест: advanceMs: 0, expectInvocations: { log: 1 }\n```\n\nБез `advanceMs` промис, ждущий только `setTimeout`, может **не успеть** resolve до deadline шага — это ожидаемо."
+    },
+    {
+      "type": "quiz",
+      "title": "Проверка: порядок",
+      "content": {
+        "question": "В типичном браузерном event loop что выполнится **сразу после** синхронного кода (до следующего `setTimeout` callback)?",
+        "options": [
+          "Все отложенные macrotask подряд",
+          "Очередь microtask (например, `Promise.then`)",
+          "Новый HTTP-запрос",
+          "Перерисовка DOM всегда первой"
+        ],
+        "correctIndices": [1]
+      }
+    },
+    {
+      "type": "javascript",
+      "title": "Практика: macroMicroDemo",
+      "content": {
+        "description": "Реализуйте **`macroMicroDemo()`** (без аргументов):\n\n- Вызовите **`log('micro')`** в microtask (`Promise.resolve().then(...)` или `queueMicrotask`).\n- Запланируйте **`log('macro')`** через **`setTimeout(..., 0)`**.\n- Синхронно верните строку **`'scheduled'`**.\n\nSpy **`log`** уже в `setup`. Не меняйте `setup`.",
+        "starterCode": "function macroMicroDemo() {\n  return '';\n}",
+        "referenceSolution": "function macroMicroDemo() {\n  Promise.resolve().then(() => log('micro'));\n  setTimeout(() => log('macro'), 0);\n  return 'scheduled';\n}",
+        "setup": "const log = registerSpy('log', (x) => x);",
+        "reset": "",
+        "functionName": "macroMicroDemo",
+        "timeoutMs": 5000,
+        "tests": [
+          { "args": [], "expectInvocations": { "log": 1 }, "advanceMs": 0 },
+          { "args": [], "flushMicrotasks": true, "expectInvocations": { "log": 2 }, "advanceMs": 0 }
+        ]
+      }
+    },
+    {
+      "type": "javascript",
+      "title": "Практика: nestedTimerSpy",
+      "content": {
+        "description": "Реализуйте **`nestedTimerSpy()`**:\n\n- Запланируйте **`tick`** (spy из `setup`) через **вложенные** `setTimeout`: внешний **`50` ms**, внутренний ещё **`50` ms**.\n- Синхронно верните **`0`**.\n\nПроверка: **`advanceMs`** + **`expectInvocations`** для **`tick`** (как в тестах fake timers).",
+        "starterCode": "function nestedTimerSpy() {\n  return -1;\n}",
+        "referenceSolution": "function nestedTimerSpy() {\n  setTimeout(() => setTimeout(() => tick(), 50), 50);\n  return 0;\n}",
+        "setup": "const tick = registerSpy('tick', () => 1);",
+        "reset": "",
+        "functionName": "nestedTimerSpy",
+        "timeoutMs": 5000,
+        "tests": [
+          { "args": [], "expectInvocations": { "tick": 0 }, "advanceMs": 80 },
+          { "args": [], "expectInvocations": { "tick": 1 }, "advanceMs": 100 }
+        ]
+      }
+    },
+    {
+      "type": "theory",
+      "title": "Сопоставление с C#",
+      "content": "## TaskScheduler vs event loop\n\n**`Task.Run`** и thread pool — параллельность CLR. **JS Promise** — кооперативная модель на одном потоке: continuation часто microtask.\n\n**`SynchronizationContext`** в C# (UI) напоминает «вернуться на UI thread»; в JS «UI thread» и есть поток JS.\n\nДля тестов: **`Task.Delay`** ≈ `setTimeout` + fake clock; **`FakeTimeProvider`** (.NET 8+) — аналог fake timers.\n\n```csharp\nawait Task.Delay(100); // реальное или fake время в тестах\n```\n\n```javascript\nawait new Promise((r) => setTimeout(r, 100)); // в курсе — advanceMs\n```"
+    },
+    {
+      "type": "quiz",
+      "title": "Итоговый тест модуля",
+      "content": {
+        "question": "Зачем в тестах практики задают **`advanceMs`**?",
+        "options": [
+          "Ускорить реальный wall-clock в Worker",
+          "Продвинуть fake timers и выполнить due `setTimeout` callbacks",
+          "Автоматически вызвать все `Promise.then` без ограничений",
+          "Сбросить spy-счётчики"
+        ],
+        "correctIndices": [1]
+      }
+    }
+  ]
+}

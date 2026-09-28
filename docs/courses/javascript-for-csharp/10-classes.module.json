@@ -1,0 +1,145 @@
+{
+  "schemaVersion": 1,
+  "title": "Классы ES2015",
+  "steps": [
+    {
+      "type": "theory",
+      "title": "class и constructor",
+      "content": "## Синтаксис, знакомый C#-разработчику\n\n```javascript\nclass Account {\n  constructor(owner, balance = 0) {\n    this.owner = owner;\n    this.balance = balance;\n  }\n  deposit(amount) {\n    this.balance += amount;\n    return this;\n  }\n}\n```\n\n**`constructor`** — тело, выполняемое при **`new`**. Методы попадают на **`prototype`** (перечисляемые `false`).\n\n**`extends` / `super`** — наследование с вызовом конструктора базового класса.\n\nОтличия от C#: нет модификаторов `public/private` до `#поля`; **стрелки в полях класса** — own-свойство экземпляра; hoisting классов — TDZ до объявления."
+    },
+    {
+      "type": "svg",
+      "title": "Схема: class и экземпляр",
+      "content": {
+        "description": "`new Class()` создаёт объект, связанный с `Class.prototype`.",
+        "caption": "new → instance",
+        "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 200 76\" width=\"100%\" role=\"img\" aria-label=\"Класс и экземпляр\"><defs><marker id=\"m10-arr\" markerWidth=\"6\" markerHeight=\"6\" refX=\"5\" refY=\"3\" orient=\"auto\"><path d=\"M0,0 L6,3 L0,6 Z\" fill=\"#555\"/></marker></defs><rect x=\"12\" y=\"10\" width=\"76\" height=\"40\" rx=\"6\" fill=\"#e8eaf6\" stroke=\"#3949ab\" stroke-width=\"2\"/><text x=\"50\" y=\"28\" text-anchor=\"middle\" font-size=\"9\" font-weight=\"bold\" fill=\"#333\">Counter</text><text x=\"50\" y=\"42\" text-anchor=\"middle\" font-size=\"7\" fill=\"#666\">prototype</text><line x1=\"88\" y1=\"30\" x2=\"108\" y2=\"30\" stroke=\"#555\" marker-end=\"url(#m10-arr)\"/><text x=\"118\" y=\"26\" font-size=\"8\" fill=\"#333\">new</text><rect x=\"130\" y=\"14\" width=\"58\" height=\"32\" rx=\"4\" fill=\"#e8f5e9\" stroke=\"#2e7d32\"/><text x=\"159\" y=\"34\" text-anchor=\"middle\" font-size=\"8\" fill=\"#333\">instance</text><text x=\"50\" y=\"68\" text-anchor=\"middle\" font-size=\"7\" fill=\"#555\">methods on prototype</text></svg>"
+      }
+    },
+    {
+      "type": "theory",
+      "title": "Проверка через construct",
+      "content": "## Классы в тренажёре\n\nДля шагов с **`construct: { className }`** первый шаг теста — **`new ClassName(...args)`**, дальше — цепочка **`calls`** с **`method`** на возвращённом экземпляре.\n\nМутирующие методы (`push`, `put`) должны возвращать **`this`**, иначе цепочка оборвётся.\n\nПример — упрощённый **LRU** или **кольцевой буфер** фиксированной ёмкости: `put`/`get` или `push`/`toArray`."
+    },
+    {
+      "type": "javascript",
+      "title": "Практика: rectArea",
+      "content": {
+        "description": "Реализуйте **`rectArea(width, height)`** — объявите класс **`Rectangle`** с полями `width`, `height` и методом **`area()`**, верните площадь нового экземпляра.",
+        "starterCode": "function rectArea(width, height) {\n  class Rectangle {\n    constructor(w, h) {\n      this.width = w;\n      this.height = h;\n    }\n    area() {\n      return 0;\n    }\n  }\n  return new Rectangle(width, height).area();\n}",
+        "referenceSolution": "function rectArea(width, height) {\n  class Rectangle {\n    constructor(w, h) {\n      this.width = w;\n      this.height = h;\n    }\n    area() {\n      return this.width * this.height;\n    }\n  }\n  return new Rectangle(width, height).area();\n}",
+        "setup": "",
+        "reset": "",
+        "functionName": "rectArea",
+        "timeoutMs": 3000,
+        "tests": [
+          {
+            "args": [3, 4]
+          },
+          {
+            "args": [10, 2]
+          },
+          {
+            "args": [0, 5]
+          }
+        ]
+      }
+    },
+    {
+      "type": "javascript",
+      "title": "Практика: BankAccount",
+      "content": {
+        "description": "Реализуйте класс **`BankAccount`**: **`constructor(initial)`**, **`deposit(amount)`** (увеличивает баланс, возвращает `this`), **`balance()`** — текущий баланс. Тесты используют **`construct`** и **`calls`**.",
+        "starterCode": "class BankAccount {\n  constructor(initial) {\n    this._balance = 0;\n  }\n  deposit(amount) {\n    return this;\n  }\n  balance() {\n    return 0;\n  }\n}",
+        "referenceSolution": "class BankAccount {\n  constructor(initial) {\n    this._balance = initial;\n  }\n  deposit(amount) {\n    this._balance += amount;\n    return this;\n  }\n  balance() {\n    return this._balance;\n  }\n}",
+        "setup": "",
+        "reset": "",
+        "construct": {
+          "className": "BankAccount"
+        },
+        "timeoutMs": 4000,
+        "tests": [
+          {
+            "args": [100],
+            "calls": [
+              { "method": "deposit", "args": [50] },
+              { "method": "balance", "args": [] }
+            ]
+          },
+          {
+            "args": [0],
+            "calls": [
+              { "method": "deposit", "args": [10] },
+              { "method": "deposit", "args": [5] },
+              { "method": "balance", "args": [] }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "type": "javascript",
+      "title": "Практика: TinyLRU",
+      "content": {
+        "description": "Реализуйте **`TinyLRU`**: `constructor(capacity)`, **`get(key)`** (нет ключа → `-1`; при hit ключ становится «свежим»), **`put(key, value)`** (при переполнении удалите **least recently used**). Мутирующие методы возвращайте **`this`**. Проверка через **`construct`** и **`calls`** (упрощённый LRU, ёмкость 2).",
+        "starterCode": "class TinyLRU {\n  constructor(capacity) {\n    this.capacity = capacity;\n  }\n  get(key) {\n    return -1;\n  }\n  put(key, value) {\n    return this;\n  }\n}",
+        "referenceSolution": "class TinyLRU {\n  constructor(capacity) {\n    this.capacity = capacity;\n    this.map = new Map();\n  }\n  get(key) {\n    if (!this.map.has(key)) return -1;\n    const value = this.map.get(key);\n    this.map.delete(key);\n    this.map.set(key, value);\n    return value;\n  }\n  put(key, value) {\n    if (this.map.has(key)) this.map.delete(key);\n    this.map.set(key, value);\n    if (this.map.size > this.capacity) {\n      const oldest = this.map.keys().next().value;\n      this.map.delete(oldest);\n    }\n    return this;\n  }\n}",
+        "setup": "",
+        "reset": "",
+        "construct": {
+          "className": "TinyLRU"
+        },
+        "timeoutMs": 5000,
+        "tests": [
+          {
+            "args": [2],
+            "calls": [
+              { "method": "put", "args": [1, 10] },
+              { "method": "put", "args": [2, 20] },
+              { "method": "get", "args": [1] }
+            ]
+          },
+          {
+            "args": [2],
+            "calls": [
+              { "method": "put", "args": [1, 1] },
+              { "method": "put", "args": [2, 2] },
+              { "method": "put", "args": [3, 3] },
+              { "method": "get", "args": [1] }
+            ]
+          },
+          {
+            "args": [2],
+            "calls": [
+              { "method": "put", "args": [1, 1] },
+              { "method": "put", "args": [2, 2] },
+              { "method": "put", "args": [3, 3] },
+              { "method": "get", "args": [2] }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "type": "theory",
+      "title": "Статика и private fields",
+      "content": "## Дополнения ES\n\n**`static method()`** — на функции-конструкторе, не на экземпляре.\n\n**`#privateField`** — настоящие private (hard privacy), в отличие от `_convention`.\n\n**`instanceof`** проверяет цепочку **`prototype`**.\n\nДля interop с C# через WASM/JS interop часто экспортируют plain objects; классы JS — когда нужны методы на стороне клиента."
+    },
+    {
+      "type": "quiz",
+      "title": "Тест: классы",
+      "content": {
+        "question": "Где в типичном объявлении `class Foo { bar() {} }` хранится функция `bar` для экземпляров?",
+        "options": [
+          "На `Foo.prototype` (наследуется экземплярами)",
+          "Как own-свойство каждого экземпляра при `new`",
+          "В статическом блоке `Foo` только",
+          "В глобальной области видимости"
+        ],
+        "correctIndices": [
+          0
+        ]
+      }
+    }
+  ]
+}

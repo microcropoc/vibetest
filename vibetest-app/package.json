@@ -9,7 +9,8 @@
     "build": "ng build",
     "watch": "ng build --watch --configuration development",
     "test": "ng test",
-    "generate:zod": "tsx tools/generate-course-schema.mts"
+    "generate:zod": "tsx tools/generate-course-schema.mts",
+    "build:courses": "tsx tools/build-sample-courses.mts"
   },
   "private": true,
   "packageManager": "npm@11.19.0",

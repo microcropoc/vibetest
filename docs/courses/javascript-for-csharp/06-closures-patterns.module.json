@@ -1,0 +1,128 @@
+{
+  "schemaVersion": 1,
+  "title": "Замыкания и паттерны",
+  "steps": [
+    {
+      "type": "theory",
+      "title": "Lexical scope и замыкание",
+      "content": "## Замыкание (closure)\n\n**Замыкание** — функция, которая «помнит» переменные из **лексического** окружения, где была создана, даже после выхода из этой области.\n\nВ C# ближе всего **локальная функция** или лямбда, захватывающая переменную цикла/метода:\n\n```csharp\nint MakeCounter() {\n    var n = 0;\n    return () => ++n;\n}\n```\n\nВ JavaScript:\n\n```javascript\nfunction makeCounter() {\n  let n = 0;\n  return () => ++n;\n}\nconst c = makeCounter();\nc(); // 1\nc(); // 2\n```\n\nКлючевое отличие от «просто метода»: **ссылка на `n` жива**, пока жива возвращённая функция. Это основа **фабрик**, **мемоизации**, **once**, **debounce** и приватного состояния без `#private`.\n\nНа схеме ниже — цепочка: внешняя функция создаёт внутреннюю; внутренняя держит ссылку на `n`."
+    },
+    {
+      "type": "svg",
+      "title": "Схема: замыкание",
+      "content": {
+        "description": "Внутренняя функция сохраняет доступ к `n` во внешнем лексическом окружении.",
+        "caption": "makeCounter → closure → вызовы",
+        "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 220 90\" width=\"100%\" role=\"img\" aria-label=\"Замыкание: внешняя и внутренняя функция\"><defs><marker id=\"m06-arr\" markerWidth=\"6\" markerHeight=\"6\" refX=\"5\" refY=\"3\" orient=\"auto\"><path d=\"M0,0 L6,3 L0,6 Z\" fill=\"#555\"/></marker></defs><rect x=\"8\" y=\"10\" width=\"90\" height=\"70\" rx=\"6\" fill=\"#e3f2fd\" stroke=\"#1565c0\" stroke-width=\"2\"/><text x=\"53\" y=\"28\" text-anchor=\"middle\" font-size=\"9\" font-weight=\"bold\" fill=\"#333\">makeCounter</text><text x=\"53\" y=\"44\" text-anchor=\"middle\" font-size=\"8\" fill=\"#555\">let n = 0</text><rect x=\"28\" y=\"52\" width=\"50\" height=\"22\" rx=\"4\" fill=\"#fff\" stroke=\"#1565c0\"/><text x=\"53\" y=\"67\" text-anchor=\"middle\" font-size=\"7\" fill=\"#333\">() =&gt; ++n</text><line x1=\"98\" y1=\"45\" x2=\"118\" y2=\"45\" stroke=\"#555\" marker-end=\"url(#m06-arr)\"/><rect x=\"118\" y=\"22\" width=\"94\" height=\"46\" rx=\"6\" fill=\"#fff9c4\" stroke=\"#f9a825\" stroke-width=\"2\"/><text x=\"165\" y=\"40\" text-anchor=\"middle\" font-size=\"9\" fill=\"#333\">closure</text><text x=\"165\" y=\"56\" text-anchor=\"middle\" font-size=\"8\" fill=\"#666\">захват n</text><line x1=\"165\" y1=\"68\" x2=\"165\" y2=\"82\" stroke=\"#2e7d32\" stroke-width=\"2\" marker-end=\"url(#m06-arr)\"/><text x=\"165\" y=\"88\" text-anchor=\"middle\" font-size=\"8\" fill=\"#2e7d32\">c() c() → 1, 2</text></svg>"
+      }
+    },
+    {
+      "type": "theory",
+      "title": "Мемоизация и once",
+      "content": "## Кэширование вызовов\n\n**Memoize** оборачивает функцию и кэширует результат для одного и того же набора аргументов:\n\n```javascript\nfunction memoize(fn) {\n  const cache = new Map();\n  return (...args) => {\n    const key = JSON.stringify(args);\n    if (cache.has(key)) return cache.get(key);\n    const v = fn(...args);\n    cache.set(key, v);\n    return v;\n  };\n}\n```\n\n**Once** вызывает исходную функцию **ровно один раз**, дальше возвращает сохранённый результат (аргументы первого вызова важны, последующие — игнорируются в простейшей версии).\n\nВ тренажёре можно проверить, что «дорогая» функция вызвана нужное число раз, через **`registerSpy`** в `setup` и **`expectInvocations`** в тесте — как mock/spy в unit-тестах."
+    },
+    {
+      "type": "javascript",
+      "title": "Практика: makeCounter",
+      "content": {
+        "description": "Реализуйте **`makeCounter`**: без аргументов возвращает функцию-счётчик. Пока счётчик &lt; 3, каждый вызов возвращает **ту же функцию**; на третьем вызове верните число **`3`** (как в тестах с цепочкой `calls`).",
+        "starterCode": "function makeCounter() {\n  return () => 0;\n}",
+        "referenceSolution": "function makeCounter() {\n  let n = 0;\n  function step() {\n    n += 1;\n    return n < 3 ? step : n;\n  }\n  return step;\n}",
+        "setup": "",
+        "reset": "",
+        "functionName": "makeCounter",
+        "timeoutMs": 3000,
+        "tests": [
+          {
+            "args": [],
+            "calls": [
+              { "args": [] },
+              { "args": [] },
+              { "args": [] }
+            ]
+          },
+          {
+            "args": [],
+            "calls": [
+              { "args": [] },
+              { "args": [] },
+              { "args": [] }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "type": "javascript",
+      "title": "Практика: memoize",
+      "content": {
+        "description": "Реализуйте **`memoize(fn)`** — обёртку с кэшем по `JSON.stringify(args)`. Не меняйте **`runMemoDemo`**: она дважды вызывает мемоизированную функцию с одним аргументом; при верном кэше «дорогая» функция из `setup` выполнится один раз (см. тест с `expectInvocations`).",
+        "starterCode": "function memoize(fn) {\n  return (...args) => fn(...args);\n}\n\nfunction runMemoDemo() {\n  const m = memoize(globalThis.__expensive);\n  const a = m(3);\n  const b = m(3);\n  return b;\n}",
+        "referenceSolution": "function memoize(fn) {\n  const cache = new Map();\n  return (...args) => {\n    const key = JSON.stringify(args);\n    if (cache.has(key)) return cache.get(key);\n    const v = fn(...args);\n    cache.set(key, v);\n    return v;\n  };\n}\n\nfunction runMemoDemo() {\n  const m = memoize(globalThis.__expensive);\n  const a = m(3);\n  const b = m(3);\n  return b;\n}",
+        "setup": "globalThis.__expensive = registerSpy('expensive', (x) => x * 2);",
+        "reset": "",
+        "functionName": "runMemoDemo",
+        "timeoutMs": 4000,
+        "tests": [
+          {
+            "args": []
+          },
+          {
+            "args": [],
+            "expectInvocations": {
+              "expensive": 1
+            }
+          },
+          {
+            "args": []
+          }
+        ]
+      }
+    },
+    {
+      "type": "javascript",
+      "title": "Практика: once",
+      "content": {
+        "description": "Реализуйте **`once(fn)`** — обёртку, которая вызывает `fn` только при **первом** вызове и возвращает тот же результат при повторных. Используйте **`runOnceDemo`** как в шаблоне.",
+        "starterCode": "function once(fn) {\n  return (...args) => fn(...args);\n}\n\nfunction runOnceDemo() {\n  const o = once(globalThis.__sideEffect);\n  o(1);\n  return o(99);\n}",
+        "referenceSolution": "function once(fn) {\n  let done = false;\n  let saved;\n  return (...args) => {\n    if (!done) {\n      saved = fn(...args);\n      done = true;\n    }\n    return saved;\n  };\n}\n\nfunction runOnceDemo() {\n  const o = once(globalThis.__sideEffect);\n  o(1);\n  return o(99);\n}",
+        "setup": "globalThis.__sideEffect = registerSpy('sideEffect', (x) => x + 100);",
+        "reset": "",
+        "functionName": "runOnceDemo",
+        "timeoutMs": 4000,
+        "tests": [
+          {
+            "args": []
+          },
+          {
+            "args": [],
+            "expectInvocations": {
+              "sideEffect": 1
+            }
+          }
+        ]
+      }
+    },
+    {
+      "type": "theory",
+      "title": "Когда замыкания вредят",
+      "content": "## Память и циклы\n\nЗамыкание **удерживает** захваченные переменные. Длинные жизни (обработчики DOM, подписки) без `removeEventListener` / `dispose` — типичная утечка в SPA.\n\n**`var` в цикле** (legacy): все колбэки могут видеть одно и то же финальное значение. С **`let`** каждая итерация — своё биндинг (ближе к ожиданиям C# `foreach`).\n\n**Модули ES** и **IIFE** historically использовали замыкания для «приватных» полей до `#field` в классах.\n\nДальше — quiz по модулю."
+    },
+    {
+      "type": "quiz",
+      "title": "Тест: замыкания",
+      "content": {
+        "question": "Что вернёт следующий код?\n\n```javascript\nfunction outer() {\n  let x = 1;\n  return function inner() {\n    return x;\n  };\n}\nconst f = outer();\nx = 10;\nconsole.log(f());\n```\n\n(Предположим, `x` снаружи не объявлена — только внутри `outer`.)",
+        "options": [
+          "`1` — `inner` читает захваченный `x`",
+          "`10` — глобальная переменная перезаписала замыкание",
+          "`undefined`",
+          "ReferenceError при вызове `f()`"
+        ],
+        "correctIndices": [
+          0
+        ]
+      }
+    }
+  ]
+}

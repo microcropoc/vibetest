@@ -1,0 +1,96 @@
+{
+  "schemaVersion": 1,
+  "title": "Promise и цепочки",
+  "steps": [
+    {
+      "type": "theory",
+      "title": "Promise как future",
+      "content": "## Три состояния\n\n**Promise** — объект представления асинхронного результата: **pending → fulfilled / rejected**. Близко к **`Task<T>`** / **`ValueTask`**, но:\n\n- Нет отмены «из коробки» (до **`AbortSignal`** на API хоста).\n- Ошибки в `then` → rejected; «unhandled rejection» — событие хоста.\n\n```javascript\nconst p = fetch('/api'); // Promise<Response>\np.then((r) => r.json()).then(console.log).catch(console.error);\n```\n\n```csharp\nvar json = await http.GetStringAsync(url);\n```\n\n**`.then(onFulfilled, onRejected)`** возвращает **новый** Promise — композиция цепочкой, как `ContinueWith`, но fluent."
+    },
+    {
+      "type": "svg",
+      "title": "Схема: цепочка then",
+      "content": {
+        "caption": "Каждый **`.then`** — новый Promise",
+        "description": "Значение пробрасывается вниз; throw или rejected → catch.",
+        "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 260 72\" width=\"100%\" role=\"img\" aria-label=\"Цепочка Promise then\"><defs><marker id=\"m17-arr\" markerWidth=\"7\" markerHeight=\"7\" refX=\"5\" refY=\"3.5\" orient=\"auto\"><path d=\"M0,0 L7,3.5 L0,7 Z\" fill=\"#37474f\"/></marker></defs><rect id=\"m17-p0\" x=\"8\" y=\"22\" width=\"48\" height=\"28\" rx=\"4\" fill=\"#e8eaf6\" stroke=\"#3949ab\"/><text x=\"32\" y=\"40\" text-anchor=\"middle\" font-size=\"8\" fill=\"#1a237e\">P0</text><rect id=\"m17-t1\" x=\"68\" y=\"22\" width=\"48\" height=\"28\" rx=\"4\" fill=\"#fff9c4\" stroke=\"#f9a825\"/><text x=\"92\" y=\"40\" text-anchor=\"middle\" font-size=\"8\" fill=\"#e65100\">then</text><rect id=\"m17-p1\" x=\"128\" y=\"22\" width=\"48\" height=\"28\" rx=\"4\" fill=\"#e8eaf6\" stroke=\"#3949ab\"/><text x=\"152\" y=\"40\" text-anchor=\"middle\" font-size=\"8\" fill=\"#1a237e\">P1</text><rect id=\"m17-t2\" x=\"188\" y=\"22\" width=\"48\" height=\"28\" rx=\"4\" fill=\"#fff9c4\" stroke=\"#f9a825\"/><text x=\"212\" y=\"40\" text-anchor=\"middle\" font-size=\"8\" fill=\"#e65100\">then</text><line x1=\"56\" y1=\"36\" x2=\"68\" y2=\"36\" stroke=\"#37474f\" marker-end=\"url(#m17-arr)\"/><line x1=\"116\" y1=\"36\" x2=\"128\" y2=\"36\" stroke=\"#37474f\" marker-end=\"url(#m17-arr)\"/><line x1=\"176\" y1=\"36\" x2=\"188\" y2=\"36\" stroke=\"#37474f\" marker-end=\"url(#m17-arr)\"/></svg>"
+      }
+    },
+    {
+      "type": "theory",
+      "title": "all, race, catch",
+      "content": "## Статические методы\n\n```javascript\nPromise.all([p1, p2]);     // один reject → весь reject\nPromise.allSettled([...]); // массив { status, value|reason }\nPromise.race([...]);       // первый settle\n```\n\nВ C# ближе **`Task.WhenAll`**, **`Task.WhenAny`**, но типы строже.\n\n**`.catch(fn)`** = `.then(undefined, fn)`. **`.finally(fn)`** — как `try/finally` без изменения значения (кроме throw из finally).\n\n```javascript\nreturn Promise.resolve(n)\n  .then((x) => x + 1)\n  .then((x) => x * 2);\n```\n\nВ практике ниже — цепочки без `async` (чистые Promise), чтобы видеть thenable в тренажёре."
+    },
+    {
+      "type": "quiz",
+      "title": "Проверка: all",
+      "content": {
+        "question": "Что делает **`Promise.all([p1, p2])`**, если **`p1`** уже rejected?",
+        "options": [
+          "Ждёт только `p2`",
+          "Сразу rejected с причиной из `p1` (остальные не отменяются автоматически)",
+          "Возвращает `[undefined, value2]`",
+          "SyntaxError"
+        ],
+        "correctIndices": [1]
+      }
+    },
+    {
+      "type": "javascript",
+      "title": "Практика: chainTriple",
+      "content": {
+        "description": "Реализуйте **`chainTriple(start)`**: верните Promise, который:\n\n1. Начинается с **`Promise.resolve(start)`**.\n2. **`+ 1`**, затем **`* 2`**, затем **`- 3`** (три `.then` подряд).\n\nПример: `start = 5` → `((5+1)*2)-3` = **9**.",
+        "starterCode": "function chainTriple(start) {\n  return Promise.resolve(0);\n}",
+        "referenceSolution": "function chainTriple(start) {\n  return Promise.resolve(start)\n    .then((x) => x + 1)\n    .then((x) => x * 2)\n    .then((x) => x - 3);\n}",
+        "setup": "",
+        "reset": "",
+        "functionName": "chainTriple",
+        "timeoutMs": 5000,
+        "tests": [
+          { "args": [5] },
+          { "args": [0] },
+          { "args": [-2] },
+          { "args": [10] }
+        ]
+      }
+    },
+    {
+      "type": "javascript",
+      "title": "Практика: sumAllPromises",
+      "content": {
+        "description": "Реализуйте **`sumAllPromises(values)`**: `values` — массив чисел. Верните Promise суммы, используя **`Promise.all`** (оберните каждый элемент в `Promise.resolve(v)`) и **`reduce`** / цикл.\n\nПустой массив → **`0`**.",
+        "starterCode": "function sumAllPromises(values) {\n  return Promise.resolve(0);\n}",
+        "referenceSolution": "function sumAllPromises(values) {\n  return Promise.all(values.map((v) => Promise.resolve(v))).then((nums) =>\n    nums.reduce((a, b) => a + b, 0),\n  );\n}",
+        "setup": "",
+        "reset": "",
+        "functionName": "sumAllPromises",
+        "timeoutMs": 5000,
+        "tests": [
+          { "args": [[1, 2, 3]] },
+          { "args": [[]] },
+          { "args": [[10]] },
+          { "args": [[-1, 1, 2]] }
+        ]
+      }
+    },
+    {
+      "type": "theory",
+      "title": "Ошибки и C#",
+      "content": "## throw в then\n\n```javascript\nPromise.resolve()\n  .then(() => { throw new Error('x'); })\n  .catch((e) => e.message); // 'x'\n```\n\nВ C# **`await`** разворачивает exception; в Promise — **rejection reason** (любое значение).\n\n**Anti-pattern:** pyramid of `.then`; **`async/await`** — следующий модуль — синтаксический сахар над Promise.\n\nНе смешивайте забытый **`return`** внутри `then` (получите `undefined` в следующем звене) — частая ошибка после LINQ, где return неявный."
+    },
+    {
+      "type": "quiz",
+      "title": "Итоговый тест модуля",
+      "content": {
+        "question": "Что вернёт **`Promise.resolve(1).then((x) => x + 1).then((x) => x * 3)`** после settle?",
+        "options": [
+          "`1`",
+          "`2`",
+          "`6`",
+          "`Promise<6>` без await"
+        ],
+        "correctIndices": [2]
+      }
+    }
+  ]
+}

@@ -1,0 +1,109 @@
+{
+  "schemaVersion": 1,
+  "title": "Привязка this: call, apply, bind",
+  "steps": [
+    {
+      "type": "theory",
+      "title": "Что такое this в JS",
+      "content": "## `this` — не как `this` в C#\n\nВ C# **`this`** в методе экземпляра всегда указывает на текущий объект (кроме `static`).\n\nВ JavaScript **`this`** определяется **способом вызова**, а не местом объявления функции:\n\n| Вызов | `this` (упрощённо) |\n|--------|---------------------|\n| `obj.method()` | `obj` |\n| `fn()` | `undefined` (strict) или global |\n| `new Fn()` | новый объект |\n| `fn.call(ctx, …)` | `ctx` |\n\n**Стрелочные функции** не имеют своего `this` — берут из внешнего лексического окружения (как захват переменной).\n\nМетоды **`call`**, **`apply`**, **`bind`** — явная привязка контекста; аналог нет «из коробки» в C#, но похож на передачу `Action` с уже захваченным `this`."
+    },
+    {
+      "type": "svg",
+      "title": "Схема: call и bind",
+      "content": {
+        "description": "`call` сразу вызывает функцию с заданным `this`. `bind` возвращает новую функцию с зафиксированным `this`.",
+        "caption": "fn.call(ctx, a, b) vs fn.bind(ctx)",
+        "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 210 72\" width=\"100%\" role=\"img\" aria-label=\"call и bind\"><defs><marker id=\"m07-arr\" markerWidth=\"6\" markerHeight=\"6\" refX=\"5\" refY=\"3\" orient=\"auto\"><path d=\"M0,0 L6,3 L0,6 Z\" fill=\"#555\"/></marker></defs><rect x=\"6\" y=\"20\" width=\"44\" height=\"32\" rx=\"4\" fill=\"#e8eaf6\" stroke=\"#3949ab\"/><text x=\"28\" y=\"40\" text-anchor=\"middle\" font-size=\"8\" fill=\"#333\">fn</text><rect x=\"58\" y=\"12\" width=\"40\" height=\"24\" rx=\"4\" fill=\"#c5cae9\" stroke=\"#3949ab\"/><text x=\"78\" y=\"28\" text-anchor=\"middle\" font-size=\"8\" fill=\"#333\">ctx</text><line x1=\"50\" y1=\"36\" x2=\"58\" y2=\"24\" stroke=\"#555\" marker-end=\"url(#m07-arr)\"/><text x=\"108\" y=\"26\" font-size=\"9\" fill=\"#333\">.call(ctx,a,b)</text><line x1=\"108\" y1=\"32\" x2=\"168\" y2=\"32\" stroke=\"#2e7d32\" marker-end=\"url(#m07-arr)\"/><text x=\"188\" y=\"36\" font-size=\"9\" fill=\"#2e7d32\">результат</text><text x=\"108\" y=\"58\" font-size=\"9\" fill=\"#333\">.bind(ctx)</text><line x1=\"108\" y1=\"64\" x2=\"168\" y2=\"64\" stroke=\"#f9a825\" marker-end=\"url(#m07-arr)\"/><text x=\"188\" y=\"68\" font-size=\"8\" fill=\"#f57f17\">новая fn</text></svg>"
+      }
+    },
+    {
+      "type": "theory",
+      "title": "call, apply, bind",
+      "content": "## Три API одной семьи\n\n```javascript\nfunction greet(greeting, name) {\n  return `${greeting}, ${name} from ${this.label}`;\n}\nconst ctx = { label: 'team' };\n\ngreet.call(ctx, 'Hi', 'Ann');   // аргументы списком\ngreet.apply(ctx, ['Hi', 'Ann']); // аргументы массивом\nconst bound = greet.bind(ctx, 'Hi');\nbound('Bob'); // 'Hi, Bob from team'\n```\n\n**`bind`** также может **частично** применять аргументы (currying с фиксированным префиксом).\n\nВ практике ниже вы реализуете тонкие обёртки, делегирующие в нативные методы — чтобы закрепить контракт."
+    },
+    {
+      "type": "javascript",
+      "title": "Практика: invokeWithCall",
+      "content": {
+        "description": "Реализуйте **`invokeWithCall(fn, ctx, args)`** — вызов `fn` с `this === ctx` и аргументами из массива `args` (используйте **`Function.prototype.call`**). **`demoCall`** не меняйте.",
+        "starterCode": "function invokeWithCall(fn, ctx, args) {\n  return fn();\n}\n\nfunction demoCall() {\n  const ctx = { base: 10 };\n  function add(a, b) {\n    return this.base + a + b;\n  }\n  return invokeWithCall(add, ctx, [1, 2]);\n}",
+        "referenceSolution": "function invokeWithCall(fn, ctx, args) {\n  return fn.call(ctx, ...args);\n}\n\nfunction demoCall() {\n  const ctx = { base: 10 };\n  function add(a, b) {\n    return this.base + a + b;\n  }\n  return invokeWithCall(add, ctx, [1, 2]);\n}",
+        "setup": "",
+        "reset": "",
+        "functionName": "demoCall",
+        "timeoutMs": 3000,
+        "tests": [
+          {
+            "args": []
+          },
+          {
+            "args": []
+          }
+        ]
+      }
+    },
+    {
+      "type": "javascript",
+      "title": "Практика: invokeWithApply",
+      "content": {
+        "description": "Реализуйте **`invokeWithApply(fn, ctx, args)`** — то же, но через **`apply`**. **`demoApply`** не меняйте.",
+        "starterCode": "function invokeWithApply(fn, ctx, args) {\n  return fn.call(ctx);\n}\n\nfunction demoApply() {\n  const ctx = { tag: 'id:' };\n  function format(x) {\n    return this.tag + x;\n  }\n  return invokeWithApply(format, ctx, [42]);\n}",
+        "referenceSolution": "function invokeWithApply(fn, ctx, args) {\n  return fn.apply(ctx, args);\n}\n\nfunction demoApply() {\n  const ctx = { tag: 'id:' };\n  function format(x) {\n    return this.tag + x;\n  }\n  return invokeWithApply(format, ctx, [42]);\n}",
+        "setup": "",
+        "reset": "",
+        "functionName": "demoApply",
+        "timeoutMs": 3000,
+        "tests": [
+          {
+            "args": []
+          },
+          {
+            "args": []
+          }
+        ]
+      }
+    },
+    {
+      "type": "theory",
+      "title": "Потеря this",
+      "content": "## Отсоединённый метод\n\n```javascript\nconst user = {\n  name: 'Ann',\n  hello() { return `Hi, ${this.name}`; },\n};\nconst h = user.hello;\nh(); // strict: TypeError или this без name\n```\n\nКлассический фикс в React (до hooks): `this.onClick = this.onClick.bind(this)` в конструкторе.\n\n**`bind`** возвращает функцию с навсегда привязанным `this` (и опционально частью аргументов)."
+    },
+    {
+      "type": "javascript",
+      "title": "Практика: bindMethod",
+      "content": {
+        "description": "Реализуйте **`bindMethod(obj, methodName)`** — верните функцию, которая вызывает `obj[methodName]` с `this === obj` (через **`bind`**). **`demoBind`** не меняйте.",
+        "starterCode": "function bindMethod(obj, methodName) {\n  const fn = obj[methodName];\n  return () => fn();\n}\n\nfunction demoBind() {\n  const o = {\n    n: 5,\n    twice() {\n      return this.n * 2;\n    },\n  };\n  const t = bindMethod(o, 'twice');\n  return t();\n}",
+        "referenceSolution": "function bindMethod(obj, methodName) {\n  const fn = obj[methodName];\n  return fn.bind(obj);\n}\n\nfunction demoBind() {\n  const o = {\n    n: 5,\n    twice() {\n      return this.n * 2;\n    },\n  };\n  const t = bindMethod(o, 'twice');\n  return t();\n}",
+        "setup": "",
+        "reset": "",
+        "functionName": "demoBind",
+        "timeoutMs": 3000,
+        "tests": [
+          {
+            "args": []
+          },
+          {
+            "args": []
+          }
+        ]
+      }
+    },
+    {
+      "type": "quiz",
+      "title": "Тест: this",
+      "content": {
+        "question": "Чем `fn.apply(ctx, [1, 2])` отличается от `fn.call(ctx, 1, 2)`?",
+        "options": [
+          "Практически эквивалентны для этих аргументов; разница в форме передачи args",
+          "`apply` меняет `this` на глобальный объект",
+          "`call` не принимает `this`",
+          "`apply` работает только со стрелочными функциями"
+        ],
+        "correctIndices": [
+          0
+        ]
+      }
+    }
+  ]
+}

@@ -1,0 +1,100 @@
+{
+  "schemaVersion": 1,
+  "title": "Приведение типов и сравнение",
+  "steps": [
+    {
+      "type": "theory",
+      "title": "== vs ===",
+      "content": "## Два равенства\n\nВ C# **`==`** для большинства типов — сравнение значений (с перегрузками). В JavaScript:\n\n- **`===` / `!==`** — strict: без приведения типов (кроме особых чисел).\n- **`==` / `!=`** — abstract equality: **приведение** (строка ↔ число, `null`/`undefined`, объекты к примитивам).\n\n```csharp\n// 1 == \"1\" — compile error\n```\n\n```javascript\n1 == '1';   // true\n1 === '1';  // false\nnull == undefined; // true\nnull === undefined; // false\n```\n\nДля прикладного кода опытные команды почти всегда выбирают **`===`**, как явные типы в C#."
+    },
+    {
+      "type": "svg",
+      "title": "Цепочка abstract equality",
+      "content": {
+        "caption": "При `==` движок может **приводить** операнды",
+        "description": "Strict `===` сравнивает тип и значение без этой цепочки. `Object.is` дополнительно различает `NaN`/`NaN` и `+0`/`-0`.",
+        "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 300 90\" width=\"100%\" role=\"img\" aria-label=\"Сравнение strict и loose\"><defs><marker id=\"m03-arr\" markerWidth=\"7\" markerHeight=\"7\" refX=\"5\" refY=\"3.5\" orient=\"auto\"><path d=\"M0,0 L7,3.5 L0,7 Z\" fill=\"#455a64\"/></marker></defs><rect id=\"m03-a\" x=\"8\" y=\"28\" width=\"56\" height=\"34\" rx=\"4\" fill=\"#e3f2fd\" stroke=\"#1565c0\"/><text x=\"36\" y=\"50\" text-anchor=\"middle\" font-size=\"10\" fill=\"#0d47a1\">'5'</text><rect id=\"m03-b\" x=\"236\" y=\"28\" width=\"56\" height=\"34\" rx=\"4\" fill=\"#e8f5e9\" stroke=\"#2e7d32\"/><text x=\"264\" y=\"50\" text-anchor=\"middle\" font-size=\"10\" fill=\"#1b5e20\">5</text><rect id=\"m03-loose\" x=\"88\" y=\"12\" width=\"124\" height=\"28\" rx=\"4\" fill=\"#fff3e0\" stroke=\"#ef6c00\"/><text x=\"150\" y=\"30\" text-anchor=\"middle\" font-size=\"9\" fill=\"#e65100\">== coerce</text><rect id=\"m03-strict\" x=\"88\" y=\"50\" width=\"124\" height=\"28\" rx=\"4\" fill=\"#fce4ec\" stroke=\"#ad1457\"/><text x=\"150\" y=\"68\" text-anchor=\"middle\" font-size=\"9\" fill=\"#880e4f\">=== no coerce</text><line x1=\"64\" y1=\"45\" x2=\"88\" y2=\"26\" stroke=\"#455a64\" marker-end=\"url(#m03-arr)\"/><line x1=\"212\" y1=\"26\" x2=\"236\" y2=\"45\" stroke=\"#455a64\" marker-end=\"url(#m03-arr)\"/><line x1=\"64\" y1=\"45\" x2=\"88\" y2=\"64\" stroke=\"#455a64\" marker-end=\"url(#m03-arr)\"/><line x1=\"212\" y1=\"64\" x2=\"236\" y2=\"45\" stroke=\"#455a64\" marker-end=\"url(#m03-arr)\"/></svg>"
+      }
+    },
+    {
+      "type": "theory",
+      "title": "Object.is, ?? и ?.",
+      "content": "## `Object.is`\n\nКак `===`, но **`Object.is(NaN, NaN)`** → `true` и **`Object.is(-0, 0)`** → `false`. Близко к семантике `SameValue` в спецификации.\n\n## Nullish coalescing `??`\n\n`a ?? b` — если `a` **`null` или `undefined`**, вернуть `b`; иначе `a`. В отличие от `||`, **`0` и `''` не «пустые»**.\n\n```csharp\n// C#: a ?? b — только null\n// JS: ?? — null И undefined\n```\n\n```javascript\n0 || 10;  // 10\n0 ?? 10;  // 0\n```\n\n## Optional chaining `?.`\n\n`obj?.prop`, `fn?.()` — короткий безопасный доступ; если слева `null`/`undefined`, результат `undefined` без throw. Аналог `?.` в современном C#."
+    },
+    {
+      "type": "quiz",
+      "title": "Проверка: ?? и ||",
+      "content": {
+        "question": "Чему равно `0 ?? 42`?",
+        "options": [
+          "`42`",
+          "`0`",
+          "`undefined`",
+          "`null`"
+        ],
+        "correctIndices": [1]
+      }
+    },
+    {
+      "type": "javascript",
+      "title": "Практика: looseEqual",
+      "content": {
+        "description": "Реализуйте **`looseEqual(a, b)`**: верните результат **`a == b`** (abstract equality). Не используйте `===` вместо задания — нужна именно семантика `==`.",
+        "starterCode": "function looseEqual(a, b) {\n  return false;\n}",
+        "referenceSolution": "function looseEqual(a, b) {\n  return a == b;\n}",
+        "setup": "",
+        "reset": "",
+        "functionName": "looseEqual",
+        "timeoutMs": 3000,
+        "tests": [
+          { "args": [1, "1"] },
+          { "args": [null, { "$js": "undefined" }] },
+          { "args": [0, false] },
+          { "args": ["", false] },
+          { "args": [1, 2] },
+          { "args": [{ "$js": "NaN" }, { "$js": "NaN" }] }
+        ]
+      }
+    },
+    {
+      "type": "javascript",
+      "title": "Практика: coalesce",
+      "content": {
+        "description": "Реализуйте **`coalesce(a, b)`**: верните `a`, если `a` **не** `null` и **не** `undefined`; иначе верните `b`. Эквивалент `a ?? b` без использования оператора `??` в вашем коде.",
+        "starterCode": "function coalesce(a, b) {\n  return b;\n}",
+        "referenceSolution": "function coalesce(a, b) {\n  if (a === null || a === undefined) {\n    return b;\n  }\n  return a;\n}",
+        "setup": "",
+        "reset": "",
+        "functionName": "coalesce",
+        "timeoutMs": 3000,
+        "tests": [
+          { "args": [{ "$js": "undefined" }, 7] },
+          { "args": [null, 7] },
+          { "args": [0, 7] },
+          { "args": ["", 7] },
+          { "args": [false, 7] },
+          { "args": [3, 7] }
+        ]
+      }
+    },
+    {
+      "type": "theory",
+      "title": "Стиль кода",
+      "content": "## Рекомендации\n\n1. Сравнения — **`===`** / **`!==`**.\n2. Числа с `NaN` / `-0` — **`Object.is`** или `Number.isNaN`.\n3. Значения по умолчанию — **`??`**, не `||`, если `0`/`''` валидны.\n4. **`==`** знайте для чтения legacy и алгоритмов спецификации, не для нового кода.\n\n```javascript\nif (user.id === undefined) { /* ... */ }\nconst name = input ?? 'Guest';\nconst city = user?.address?.city;\n```\n\nВ C# nullable и `??` уже приучили к явности — перенесите привычку, расширив на **`undefined`**."
+    },
+    {
+      "type": "quiz",
+      "title": "Итоговый тест модуля",
+      "content": {
+        "question": "Когда `Object.is(a, b)` и `a === b` **различаются**?",
+        "options": [
+          "При `a` и `b` — разные строки",
+          "При `NaN` и `NaN`, или `-0` и `+0`",
+          "При двух разных пустых объектах `{}`",
+          "При `null` и `undefined`"
+        ],
+        "correctIndices": [1]
+      }
+    }
+  ]
+}

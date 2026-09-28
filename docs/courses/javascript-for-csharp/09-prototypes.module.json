@@ -1,0 +1,120 @@
+{
+  "schemaVersion": 1,
+  "title": "Прототипы и Object.create",
+  "steps": [
+    {
+      "type": "theory",
+      "title": "Прототипная модель",
+      "content": "## Не как классы CLR по умолчанию\n\nДо ES2015 «классы» в JS — **синтаксический сахар** над **прототипами**. Каждый объект имеет внутреннюю ссылку **`[[Prototype]]`** (доступ через `Object.getPrototypeOf`).\n\nПоиск свойства: сначала **own** на объекте, затем цепочка прототипов, пока не `null`.\n\n```javascript\nconst proto = { greet() { return `Hi, ${this.name}`; } };\nconst user = Object.create(proto);\nuser.name = 'Ann';\nuser.greet(); // Hi, Ann\n```\n\nВ C# ближе **наследование интерфейсов + явная реализация**, но здесь **делегирование** на уровне runtime без отдельного типа интерфейса."
+    },
+    {
+      "type": "svg",
+      "title": "Схема: цепочка прототипов",
+      "content": {
+        "description": "Объект `user` делегирует отсутствующие свойства объекту `proto`.",
+        "caption": "[[Prototype]] → proto",
+        "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 200 88\" width=\"100%\" role=\"img\" aria-label=\"Цепочка прототипов\"><defs><marker id=\"m09-arr\" markerWidth=\"6\" markerHeight=\"6\" refX=\"5\" refY=\"3\" orient=\"auto\"><path d=\"M0,0 L6,3 L0,6 Z\" fill=\"#555\"/></marker></defs><rect x=\"70\" y=\"8\" width=\"60\" height=\"32\" rx=\"4\" fill=\"#fff9c4\" stroke=\"#f9a825\" stroke-width=\"2\"/><text x=\"100\" y=\"24\" text-anchor=\"middle\" font-size=\"8\" font-weight=\"bold\" fill=\"#333\">user</text><text x=\"100\" y=\"36\" text-anchor=\"middle\" font-size=\"7\" fill=\"#666\">name</text><line x1=\"100\" y1=\"40\" x2=\"100\" y2=\"52\" stroke=\"#555\" marker-end=\"url(#m09-arr)\"/><text x=\"118\" y=\"48\" font-size=\"7\" fill=\"#555\">[[Prototype]]</text><rect x=\"70\" y=\"54\" width=\"60\" height=\"32\" rx=\"4\" fill=\"#e3f2fd\" stroke=\"#1565c0\" stroke-width=\"2\"/><text x=\"100\" y=\"70\" text-anchor=\"middle\" font-size=\"8\" font-weight=\"bold\" fill=\"#333\">proto</text><text x=\"100\" y=\"82\" text-anchor=\"middle\" font-size=\"7\" fill=\"#666\">greet()</text></svg>"
+      }
+    },
+    {
+      "type": "theory",
+      "title": "Object.create",
+      "content": "## Явное задание прототипа\n\n**`Object.create(proto)`** создаёт объект с `[[Prototype]] === proto`.\n\n```javascript\nconst methods = {\n  area() { return this.w * this.h; },\n};\nfunction createRect(w, h) {\n  const r = Object.create(methods);\n  r.w = w;\n  r.h = h;\n  return r;\n}\n```\n\n**`Object.getPrototypeOf` / `Object.setPrototypeOf`** — редко в прикладном коде; **`class extends`** компилируется в похожую связь.\n\n**`hasOwnProperty`** / **`Object.hasOwn(obj, key)`** — отличить own от унаследованного."
+    },
+    {
+      "type": "javascript",
+      "title": "Практика: createWithProto",
+      "content": {
+        "description": "Реализуйте **`createWithProto(proto, props)`** — создайте объект через **`Object.create(proto)`**, скопируйте поля из **`props`**. **`demoCreateWithProto`** не меняйте: она проверяет метод на прототипе (возвращаемое значение — JSON-строка).",
+        "starterCode": "function createWithProto(proto, props) {\n  return props;\n}\n\nfunction demoCreateWithProto() {\n  const proto = {\n    label() {\n      return `${this.name}!`;\n    },\n  };\n  const o = createWithProto(proto, { name: 'Ann' });\n  return o.label();\n}",
+        "referenceSolution": "function createWithProto(proto, props) {\n  const obj = Object.create(proto);\n  return Object.assign(obj, props);\n}\n\nfunction demoCreateWithProto() {\n  const proto = {\n    label() {\n      return `${this.name}!`;\n    },\n  };\n  const o = createWithProto(proto, { name: 'Ann' });\n  return o.label();\n}",
+        "setup": "",
+        "reset": "",
+        "functionName": "demoCreateWithProto",
+        "timeoutMs": 3000,
+        "tests": [
+          {
+            "args": []
+          },
+          {
+            "args": []
+          }
+        ]
+      }
+    },
+    {
+      "type": "javascript",
+      "title": "Практика: buildGreeter",
+      "content": {
+        "description": "Реализуйте **`buildGreeter(prefix)`** — верните функцию **`createPerson(name)`**, которая создаёт объект с **`Object.create`** от общего прототипа с методом **`hello()`**, возвращающим `` `${prefix}, ${this.name}` ``.",
+        "starterCode": "function buildGreeter(prefix) {\n  return function createPerson(name) {\n    return { name, hello() { return ''; } };\n  };\n}",
+        "referenceSolution": "function buildGreeter(prefix) {\n  const proto = {\n    hello() {\n      return `${prefix}, ${this.name}`;\n    },\n  };\n  return function createPerson(name) {\n    const person = Object.create(proto);\n    person.name = name;\n    return person;\n  };\n}",
+        "setup": "",
+        "reset": "",
+        "functionName": "buildGreeter",
+        "timeoutMs": 4000,
+        "tests": [
+          {
+            "args": ["Hi"],
+            "calls": [
+              { "args": ["Ann"] },
+              { "method": "hello", "args": [] }
+            ]
+          },
+          {
+            "args": ["Hello"],
+            "calls": [
+              { "args": ["Bob"] },
+              { "method": "hello", "args": [] }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "type": "javascript",
+      "title": "Практика: ownKeysCount",
+      "content": {
+        "description": "Реализуйте **`ownKeysCount(obj)`** — число **собственных** перечисляемых строковых ключей объекта (как `Object.keys(obj).length`; не считайте унаследованные).",
+        "starterCode": "function ownKeysCount(obj) {\n  return 0;\n}",
+        "referenceSolution": "function ownKeysCount(obj) {\n  return Object.keys(obj).length;\n}",
+        "setup": "",
+        "reset": "",
+        "functionName": "ownKeysCount",
+        "timeoutMs": 3000,
+        "tests": [
+          {
+            "args": [{ "a": 1, "b": 2 }]
+          },
+          {
+            "args": [{}]
+          },
+          {
+            "args": [{ "x": 0 }]
+          }
+        ]
+      }
+    },
+    {
+      "type": "theory",
+      "title": "Классы поверх прототипов",
+      "content": "## `class` — синтаксис\n\n```javascript\nclass Person {\n  constructor(name) { this.name = name; }\n  hello() { return `Hi, ${this.name}`; }\n}\n```\n\nМетоды **`Person.prototype`**. **`extends`** связывает прототипы конструкторов и добавляет **`super`**.\n\nПонимание **`Object.create`** помогает читать legacy-код и polyfill'ы до ES2015."
+    },
+    {
+      "type": "quiz",
+      "title": "Тест: прототипы",
+      "content": {
+        "question": "Что делает `Object.create(proto)`?",
+        "options": [
+          "Создаёт новый объект с `[[Prototype]]`, указывающим на `proto`",
+          "Глубоко клонирует `proto`",
+          "Добавляет все поля `proto` как own-свойства без прототипа",
+          "Вызывает конструктор `proto`"
+        ],
+        "correctIndices": [
+          0
+        ]
+      }
+    }
+  ]
+}

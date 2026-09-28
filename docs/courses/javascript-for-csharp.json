@@ -1,0 +1,3181 @@
+{
+  "schemaVersion": 1,
+  "title": "JavaScript для C#-разработчика",
+  "description": "Флагманский курс для опытного C#-разработчика: ментальная модель ECMAScript, типы, функции, асинхронность, коллекции и регулярные выражения. Акцент на отличиях от CLR и типичных ловушках. Шаги: теория (Markdown), SVG-схемы, практика JavaScript и quiz в конце каждого модуля.",
+  "modules": [
+    {
+      "title": "Ментальная модель: ECMAScript и среда",
+      "steps": [
+        {
+          "type": "theory",
+          "title": "Спецификация и хост",
+          "content": "## ECMAScript ≠ «JavaScript в браузере»\n\nВ C# вы привыкли к связке **язык + CLR + BCL + runtime (.NET)**. В JS картина слоистая:\n\n1. **ECMAScript** — язык: синтаксис, типы, `Object`, функции, модули ES.\n2. **Хост (runtime)** — то, что *даёт* окружение: браузер (DOM, `fetch`), Node.js (`fs`, `process`), Deno, embedded-движки.\n\nСпецификация **не** описывает DOM и не знает про файловую систему — это API хоста.\n\n```csharp\n// Аналогия: C# language spec vs .NET runtime + NuGet\n// string — язык; HttpClient — BCL/runtime\n```\n\n```javascript\n// Язык: let, class, Promise (как тип/конструктор в ES)\n// Хост: document.querySelector, setTimeout с реальными таймерами\n```\n\nПутаница «JS = браузер» мешает так же, как если бы C# отождествляли только с ASP.NET."
+        },
+        {
+          "type": "svg",
+          "title": "Слои: спецификация и хост",
+          "content": {
+            "caption": "**ECMAScript** — язык; **хост** — APIs и I/O",
+            "description": "Код ученика обычно исполняется в хосте (браузер, Node). Спецификация задаёт правила языка; хост добавляет объекты в глобальную область (`globalThis`).",
+            "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 320 140\" width=\"100%\" role=\"img\" aria-label=\"Слои ECMAScript и хоста\"><defs><marker id=\"m01-arrow\" markerWidth=\"8\" markerHeight=\"8\" refX=\"6\" refY=\"4\" orient=\"auto\"><path d=\"M0,0 L8,4 L0,8 Z\" fill=\"#37474f\"/></marker></defs><rect id=\"m01-host\" x=\"20\" y=\"8\" width=\"280\" height=\"124\" rx=\"8\" fill=\"#eceff1\" stroke=\"#546e7a\" stroke-width=\"2\"/><text x=\"160\" y=\"28\" text-anchor=\"middle\" font-size=\"12\" font-weight=\"bold\" fill=\"#263238\">Хост (browser / Node.js)</text><text x=\"160\" y=\"44\" text-anchor=\"middle\" font-size=\"9\" fill=\"#455a64\">DOM, fetch, timers, fs…</text><rect id=\"m01-es\" x=\"40\" y=\"58\" width=\"240\" height=\"58\" rx=\"6\" fill=\"#fff9c4\" stroke=\"#f9a825\" stroke-width=\"2\"/><text x=\"160\" y=\"78\" text-anchor=\"middle\" font-size=\"11\" font-weight=\"bold\" fill=\"#e65100\">ECMAScript</text><text x=\"160\" y=\"96\" text-anchor=\"middle\" font-size=\"9\" fill=\"#5d4037\">let, function, Promise, Map…</text><rect id=\"m01-code\" x=\"70\" y=\"108\" width=\"180\" height=\"22\" rx=\"4\" fill=\"#e3f2fd\" stroke=\"#1565c0\"/><text x=\"160\" y=\"123\" text-anchor=\"middle\" font-size=\"9\" fill=\"#0d47a1\">Ваш .js / .mjs</text><line x1=\"160\" y1=\"50\" x2=\"160\" y2=\"58\" stroke=\"#37474f\" marker-end=\"url(#m01-arrow)\"/></svg>"
+          }
+        },
+        {
+          "type": "theory",
+          "title": "Strict mode и однопоточность",
+          "content": "## `'use strict'`\n\n**Strict mode** — подмножество правил ES: запрет неявных globals, другой `this` в вызовах, запрет дубликатов параметров и т.д. Включение — директива `'use strict'` в начале файла или функции.\n\n```javascript\n'use strict';\nfunction f() {\n  // mistyped = 1; // ReferenceError, не silent global\n}\n```\n\nВ C# похожий дух дают nullable reference types и `checked`, но strict mode — **опциональный режим языка**, не отдельный компилятор.\n\n## Один поток vs CLR\n\nJS в одном агенте пользователя **однопоточен** для вашего кода: один call stack. CLR спокойно гоняет `Task`, thread pool, `Parallel.For`. В JS параллелизм — **Web Workers**, child processes (Node), WASM threads — это уже хост/инфра, не «ещё один поток в том же heap».\n\n```csharp\nawait Task.Run(() => Compute()); // другой поток пула\n```\n\n```javascript\n// Тот же heap — один поток; тяжёлое CPU — worker.postMessage\n```\n\nI/O асинхронен через event loop и очереди задач хоста — тема поздних модулей; сейчас важно не ждать «настоящих потоков» в обычном скрипте."
+        },
+        {
+          "type": "quiz",
+          "title": "Проверка: слои и потоки",
+          "content": {
+            "question": "Что из перечисленного относится к **ECMAScript**, а не только к хосту?",
+            "options": [
+              "`document.createElement`",
+              "Директива `'use strict'`",
+              "`setTimeout` как реализация таймера",
+              "Модуль `node:fs`"
+            ],
+            "correctIndices": [
+              1
+            ]
+          }
+        },
+        {
+          "type": "javascript",
+          "title": "Практика: директива strict",
+          "content": {
+            "description": "Реализуйте **`isStrictDirective`**: на вход — одна строка (как в исходнике). Верните `true`, если после `trim()` это валидная prologue-директива `'use strict'` или `\"use strict\"` с необязательной `;` в конце.",
+            "starterCode": "function isStrictDirective(line) {\n  return false;\n}",
+            "referenceSolution": "function isStrictDirective(line) {\n  const t = line.trim();\n  return (\n    t === \"'use strict'\" ||\n    t === \"'use strict';\" ||\n    t === '\"use strict\"' ||\n    t === '\"use strict\";'\n  );\n}",
+            "setup": "",
+            "reset": "",
+            "functionName": "isStrictDirective",
+            "timeoutMs": 3000,
+            "tests": [
+              {
+                "args": [
+                  "'use strict'"
+                ]
+              },
+              {
+                "args": [
+                  "  \"use strict\";  "
+                ]
+              },
+              {
+                "args": [
+                  "\"use strict\""
+                ]
+              },
+              {
+                "args": [
+                  "use strict"
+                ]
+              },
+              {
+                "args": [
+                  "'use strict'; // comment"
+                ]
+              },
+              {
+                "args": [
+                  ""
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "type": "javascript",
+          "title": "Практика: только в хосте",
+          "content": {
+            "description": "Даны два массива строк — **`specApis`** (из ECMAScript) и **`hostApis`** (добавляет хост). Верните **новый массив** API, которые есть в `hostApis`, но **нет** в `specApis`. Порядок — как в `hostApis`. Без мутации входных массивов.",
+            "starterCode": "function hostOnlyApis(specApis, hostApis) {\n  return hostApis;\n}",
+            "referenceSolution": "function hostOnlyApis(specApis, hostApis) {\n  const spec = new Set(specApis);\n  return hostApis.filter((name) => !spec.has(name));\n}",
+            "setup": "",
+            "reset": "",
+            "functionName": "hostOnlyApis",
+            "timeoutMs": 3000,
+            "tests": [
+              {
+                "args": [
+                  [
+                    "Object",
+                    "Array",
+                    "Promise"
+                  ],
+                  [
+                    "Object",
+                    "document",
+                    "fetch"
+                  ]
+                ]
+              },
+              {
+                "args": [
+                  [
+                    "Map",
+                    "Set"
+                  ],
+                  [
+                    "Map",
+                    "Set",
+                    "queueMicrotask"
+                  ]
+                ]
+              },
+              {
+                "args": [
+                  [
+                    "JSON"
+                  ],
+                  [
+                    "JSON"
+                  ]
+                ]
+              },
+              {
+                "args": [
+                  [],
+                  [
+                    "console",
+                    "process"
+                  ]
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "type": "theory",
+          "title": "Зачем это C#-разработчику",
+          "content": "## Отладка «не там»\n\nЕсли ошибка в DOM — это хост. Если в `===` или hoisting — ECMAScript. Под .NET вы отделяете **language** от **framework**; здесь — **ES** от **host API**.\n\n## Однопоточность и UI\n\nВ WPF/WinUI долгий CPU на UI-потоке блокирует интерфейс. В браузере тот же эффект сильнее: **нет** второго потока для того же DOM. Отсюда Workers и разбиение задач.\n\n```javascript\n// Плохо на main thread: while (heavy) {}\n// Лучше: worker или chunk + await scheduler\n```\n\nДальше в курсе — типы, сравнение, область видимости; фундамент «слои + один поток» остаётся опорой."
+        },
+        {
+          "type": "quiz",
+          "title": "Итоговый тест модуля",
+          "content": {
+            "question": "Как в типичном браузерном скрипте устроена параллельность с **общей кучей объектов**?",
+            "options": [
+              "Несколько OS-потоков делят один JS heap как в CLR",
+              "`Parallel.For` из стандартной библиотеки ES",
+              "Один поток выполняет JS; отдельные Workers — отдельные глобальные среды",
+              "Каждый `await` автоматически создаёт новый поток"
+            ],
+            "correctIndices": [
+              2
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "title": "Типы, значения и typeof",
+      "steps": [
+        {
+          "type": "theory",
+          "title": "Примитивы и ссылочная модель",
+          "content": "## Два семейства значений\n\nВ C# **value types** и **reference types** различимы на уровне языка (`struct` vs `class`). В JavaScript семантика **примитив vs объект**, а `typeof` — грубый зонд, не система типов.\n\n**Примитивы ES:** `undefined`, `null`, `boolean`, `number`, `bigint`, `string`, `symbol`.\n\n**Объекты:** `{}`, `[]`, функции, `Date`, … — ссылочная идентичность.\n\n```csharp\nint x = 3;      // value\nstring s = \"a\"; // immutable reference-like\nobject o = new();\n```\n\n```javascript\nconst n = 3;           // number primitive\nconst s = \"a\";         // string primitive\nconst o = { v: 1 };    // object reference\n```\n\n`null` в typeof — историческая ловушка: `typeof null === 'object'`."
+        },
+        {
+          "type": "svg",
+          "title": "typeof и null",
+          "content": {
+            "caption": "`typeof null` → **`object`** (legacy)",
+            "description": "Для учёта используйте явную проверку `value === null` или helper `classifyValue` из практики ниже.",
+            "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 280 100\" width=\"100%\" role=\"img\" aria-label=\"typeof и исключение null\"><rect id=\"m02-bg\" x=\"4\" y=\"4\" width=\"272\" height=\"92\" rx=\"6\" fill=\"#fafafa\" stroke=\"#bdbdbd\"/><text id=\"m02-title\" x=\"140\" y=\"22\" text-anchor=\"middle\" font-size=\"11\" fill=\"#212121\">typeof value</text><rect id=\"m02-null\" x=\"16\" y=\"34\" width=\"72\" height=\"28\" rx=\"4\" fill=\"#ffebee\" stroke=\"#c62828\"/><text x=\"52\" y=\"52\" text-anchor=\"middle\" font-size=\"9\" fill=\"#b71c1c\">null</text><text x=\"52\" y=\"68\" text-anchor=\"middle\" font-size=\"8\" fill=\"#666\">→ object</text><rect id=\"m02-undef\" x=\"104\" y=\"34\" width=\"72\" height=\"28\" rx=\"4\" fill=\"#e8eaf6\" stroke=\"#3949ab\"/><text x=\"140\" y=\"52\" text-anchor=\"middle\" font-size=\"9\" fill=\"#1a237e\">undefined</text><text x=\"140\" y=\"68\" text-anchor=\"middle\" font-size=\"8\" fill=\"#666\">→ undefined</text><rect id=\"m02-num\" x=\"192\" y=\"34\" width=\"72\" height=\"28\" rx=\"4\" fill=\"#e0f2f1\" stroke=\"#00695c\"/><text x=\"228\" y=\"52\" text-anchor=\"middle\" font-size=\"9\" fill=\"#004d40\">42n</text><text x=\"228\" y=\"68\" text-anchor=\"middle\" font-size=\"8\" fill=\"#666\">→ bigint</text></svg>"
+          }
+        },
+        {
+          "type": "theory",
+          "title": "undefined, NaN, −0, BigInt",
+          "content": "## `undefined` vs отсутствие\n\n`undefined` — значение «не задано». В C# ближе `default` / nullable без значения, но в JS **`undefined` — first-class**.\n\n## `NaN` и `-0`\n\n`NaN` — результат некорректной арифметики; **не равен сам себе** через `===`. Сравнивайте через `Number.isNaN` или `Object.is`.\n\n**`-0` и `+0`** равны через `==`/`===`, но `Object.is(-0, +0) === false` — как различие знаков нуля в IEEE-754.\n\n```csharp\ndouble.NaN != double.NaN; // true\n```\n\n```javascript\nObject.is(NaN, NaN); // true\nObject.is(-0, 0);   // false\n```\n\n## BigInt\n\n`123n` — отдельный примитив; **нельзя** смешивать с `number` без явного преобразования. Аналог `BigInteger`, но встроен в язык."
+        },
+        {
+          "type": "quiz",
+          "title": "Быстрая проверка",
+          "content": {
+            "question": "Чему равно `typeof null` в JavaScript?",
+            "options": [
+              "`\"null\"`",
+              "`\"object\"`",
+              "`\"undefined\"`",
+              "`\"number\"`"
+            ],
+            "correctIndices": [
+              1
+            ]
+          }
+        },
+        {
+          "type": "javascript",
+          "title": "Практика: classifyValue",
+          "content": {
+            "description": "Реализуйте **`classifyValue`**: верните строку категории для **одного** аргумента:\n\n- `null` → `'null'` (не полагайтесь на `typeof null`)\n- иначе результат `typeof`, **кроме** что `bigint` остаётся `'bigint'`\n\nПример: `classifyValue(null)` → `'null'`, `classifyValue(undefined)` → `'undefined'`.",
+            "starterCode": "function classifyValue(value) {\n  return typeof value;\n}",
+            "referenceSolution": "function classifyValue(value) {\n  if (value === null) {\n    return 'null';\n  }\n  return typeof value;\n}",
+            "setup": "",
+            "reset": "",
+            "functionName": "classifyValue",
+            "timeoutMs": 3000,
+            "tests": [
+              {
+                "args": [
+                  {
+                    "$js": "undefined"
+                  }
+                ]
+              },
+              {
+                "args": [
+                  null
+                ]
+              },
+              {
+                "args": [
+                  true
+                ]
+              },
+              {
+                "args": [
+                  "text"
+                ]
+              },
+              {
+                "args": [
+                  {
+                    "$js": "NaN"
+                  }
+                ]
+              },
+              {
+                "args": [
+                  {
+                    "$js": "bigint",
+                    "value": "7"
+                  }
+                ]
+              },
+              {
+                "args": [
+                  {
+                    "x": 1
+                  }
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "type": "javascript",
+          "title": "Практика: sameNumericValue",
+          "content": {
+            "description": "Реализуйте **`sameNumericValue(a, b)`**: для двух значений верните `true`, если они **численно неразличимы** в смысле **`Object.is`** (учитывает `NaN` и различие `+0`/`-0`). Для не-чисел (если оба не number) — обычный `Object.is`.",
+            "starterCode": "function sameNumericValue(a, b) {\n  return a === b;\n}",
+            "referenceSolution": "function sameNumericValue(a, b) {\n  return Object.is(a, b);\n}",
+            "setup": "",
+            "reset": "",
+            "functionName": "sameNumericValue",
+            "timeoutMs": 3000,
+            "tests": [
+              {
+                "args": [
+                  {
+                    "$js": "NaN"
+                  },
+                  {
+                    "$js": "NaN"
+                  }
+                ]
+              },
+              {
+                "args": [
+                  {
+                    "$js": "-0"
+                  },
+                  0
+                ]
+              },
+              {
+                "args": [
+                  0,
+                  0
+                ]
+              },
+              {
+                "args": [
+                  1,
+                  1
+                ]
+              },
+              {
+                "args": [
+                  {
+                    "$js": "undefined"
+                  },
+                  {
+                    "$js": "undefined"
+                  }
+                ]
+              },
+              {
+                "args": [
+                  1,
+                  2
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "type": "theory",
+          "title": "Сопоставление с C#",
+          "content": "## Что переносится «как есть»\n\n- `bool`, строки (immutable), числа с плавающей точкой — интуитивно близко.\n- `null` ближе к C# `null` для ссылок; **`undefined`** — отдельная история (не nullable value type).\n\n## Что ломает привычки\n\n- Нет `int`/`double` на уровне языка — один `number` (кроме `bigint`).\n- `typeof` не замена `is` / pattern matching.\n- `==` с приведением типов — в следующем модуле; для типов уже используйте **`===`** и **`Object.is`** для чисел.\n\n```csharp\nif (x is null) { }\n```\n\n```javascript\nif (x === null) { }\nif (x === undefined) { }\n```"
+        },
+        {
+          "type": "quiz",
+          "title": "Итоговый тест модуля",
+          "content": {
+            "question": "Как корректно проверить, что значение — именно **`NaN`**?",
+            "options": [
+              "`value === NaN`",
+              "`value == NaN`",
+              "`Number.isNaN(value)`",
+              "`typeof value === 'NaN'`"
+            ],
+            "correctIndices": [
+              2
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "title": "Приведение типов и сравнение",
+      "steps": [
+        {
+          "type": "theory",
+          "title": "== vs ===",
+          "content": "## Два равенства\n\nВ C# **`==`** для большинства типов — сравнение значений (с перегрузками). В JavaScript:\n\n- **`===` / `!==`** — strict: без приведения типов (кроме особых чисел).\n- **`==` / `!=`** — abstract equality: **приведение** (строка ↔ число, `null`/`undefined`, объекты к примитивам).\n\n```csharp\n// 1 == \"1\" — compile error\n```\n\n```javascript\n1 == '1';   // true\n1 === '1';  // false\nnull == undefined; // true\nnull === undefined; // false\n```\n\nДля прикладного кода опытные команды почти всегда выбирают **`===`**, как явные типы в C#."
+        },
+        {
+          "type": "svg",
+          "title": "Цепочка abstract equality",
+          "content": {
+            "caption": "При `==` движок может **приводить** операнды",
+            "description": "Strict `===` сравнивает тип и значение без этой цепочки. `Object.is` дополнительно различает `NaN`/`NaN` и `+0`/`-0`.",
+            "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 300 90\" width=\"100%\" role=\"img\" aria-label=\"Сравнение strict и loose\"><defs><marker id=\"m03-arr\" markerWidth=\"7\" markerHeight=\"7\" refX=\"5\" refY=\"3.5\" orient=\"auto\"><path d=\"M0,0 L7,3.5 L0,7 Z\" fill=\"#455a64\"/></marker></defs><rect id=\"m03-a\" x=\"8\" y=\"28\" width=\"56\" height=\"34\" rx=\"4\" fill=\"#e3f2fd\" stroke=\"#1565c0\"/><text x=\"36\" y=\"50\" text-anchor=\"middle\" font-size=\"10\" fill=\"#0d47a1\">'5'</text><rect id=\"m03-b\" x=\"236\" y=\"28\" width=\"56\" height=\"34\" rx=\"4\" fill=\"#e8f5e9\" stroke=\"#2e7d32\"/><text x=\"264\" y=\"50\" text-anchor=\"middle\" font-size=\"10\" fill=\"#1b5e20\">5</text><rect id=\"m03-loose\" x=\"88\" y=\"12\" width=\"124\" height=\"28\" rx=\"4\" fill=\"#fff3e0\" stroke=\"#ef6c00\"/><text x=\"150\" y=\"30\" text-anchor=\"middle\" font-size=\"9\" fill=\"#e65100\">== coerce</text><rect id=\"m03-strict\" x=\"88\" y=\"50\" width=\"124\" height=\"28\" rx=\"4\" fill=\"#fce4ec\" stroke=\"#ad1457\"/><text x=\"150\" y=\"68\" text-anchor=\"middle\" font-size=\"9\" fill=\"#880e4f\">=== no coerce</text><line x1=\"64\" y1=\"45\" x2=\"88\" y2=\"26\" stroke=\"#455a64\" marker-end=\"url(#m03-arr)\"/><line x1=\"212\" y1=\"26\" x2=\"236\" y2=\"45\" stroke=\"#455a64\" marker-end=\"url(#m03-arr)\"/><line x1=\"64\" y1=\"45\" x2=\"88\" y2=\"64\" stroke=\"#455a64\" marker-end=\"url(#m03-arr)\"/><line x1=\"212\" y1=\"64\" x2=\"236\" y2=\"45\" stroke=\"#455a64\" marker-end=\"url(#m03-arr)\"/></svg>"
+          }
+        },
+        {
+          "type": "theory",
+          "title": "Object.is, ?? и ?.",
+          "content": "## `Object.is`\n\nКак `===`, но **`Object.is(NaN, NaN)`** → `true` и **`Object.is(-0, 0)`** → `false`. Близко к семантике `SameValue` в спецификации.\n\n## Nullish coalescing `??`\n\n`a ?? b` — если `a` **`null` или `undefined`**, вернуть `b`; иначе `a`. В отличие от `||`, **`0` и `''` не «пустые»**.\n\n```csharp\n// C#: a ?? b — только null\n// JS: ?? — null И undefined\n```\n\n```javascript\n0 || 10;  // 10\n0 ?? 10;  // 0\n```\n\n## Optional chaining `?.`\n\n`obj?.prop`, `fn?.()` — короткий безопасный доступ; если слева `null`/`undefined`, результат `undefined` без throw. Аналог `?.` в современном C#."
+        },
+        {
+          "type": "quiz",
+          "title": "Проверка: ?? и ||",
+          "content": {
+            "question": "Чему равно `0 ?? 42`?",
+            "options": [
+              "`42`",
+              "`0`",
+              "`undefined`",
+              "`null`"
+            ],
+            "correctIndices": [
+              1
+            ]
+          }
+        },
+        {
+          "type": "javascript",
+          "title": "Практика: looseEqual",
+          "content": {
+            "description": "Реализуйте **`looseEqual(a, b)`**: верните результат **`a == b`** (abstract equality). Не используйте `===` вместо задания — нужна именно семантика `==`.",
+            "starterCode": "function looseEqual(a, b) {\n  return false;\n}",
+            "referenceSolution": "function looseEqual(a, b) {\n  return a == b;\n}",
+            "setup": "",
+            "reset": "",
+            "functionName": "looseEqual",
+            "timeoutMs": 3000,
+            "tests": [
+              {
+                "args": [
+                  1,
+                  "1"
+                ]
+              },
+              {
+                "args": [
+                  null,
+                  {
+                    "$js": "undefined"
+                  }
+                ]
+              },
+              {
+                "args": [
+                  0,
+                  false
+                ]
+              },
+              {
+                "args": [
+                  "",
+                  false
+                ]
+              },
+              {
+                "args": [
+                  1,
+                  2
+                ]
+              },
+              {
+                "args": [
+                  {
+                    "$js": "NaN"
+                  },
+                  {
+                    "$js": "NaN"
+                  }
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "type": "javascript",
+          "title": "Практика: coalesce",
+          "content": {
+            "description": "Реализуйте **`coalesce(a, b)`**: верните `a`, если `a` **не** `null` и **не** `undefined`; иначе верните `b`. Эквивалент `a ?? b` без использования оператора `??` в вашем коде.",
+            "starterCode": "function coalesce(a, b) {\n  return b;\n}",
+            "referenceSolution": "function coalesce(a, b) {\n  if (a === null || a === undefined) {\n    return b;\n  }\n  return a;\n}",
+            "setup": "",
+            "reset": "",
+            "functionName": "coalesce",
+            "timeoutMs": 3000,
+            "tests": [
+              {
+                "args": [
+                  {
+                    "$js": "undefined"
+                  },
+                  7
+                ]
+              },
+              {
+                "args": [
+                  null,
+                  7
+                ]
+              },
+              {
+                "args": [
+                  0,
+                  7
+                ]
+              },
+              {
+                "args": [
+                  "",
+                  7
+                ]
+              },
+              {
+                "args": [
+                  false,
+                  7
+                ]
+              },
+              {
+                "args": [
+                  3,
+                  7
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "type": "theory",
+          "title": "Стиль кода",
+          "content": "## Рекомендации\n\n1. Сравнения — **`===`** / **`!==`**.\n2. Числа с `NaN` / `-0` — **`Object.is`** или `Number.isNaN`.\n3. Значения по умолчанию — **`??`**, не `||`, если `0`/`''` валидны.\n4. **`==`** знайте для чтения legacy и алгоритмов спецификации, не для нового кода.\n\n```javascript\nif (user.id === undefined) { /* ... */ }\nconst name = input ?? 'Guest';\nconst city = user?.address?.city;\n```\n\nВ C# nullable и `??` уже приучили к явности — перенесите привычку, расширив на **`undefined`**."
+        },
+        {
+          "type": "quiz",
+          "title": "Итоговый тест модуля",
+          "content": {
+            "question": "Когда `Object.is(a, b)` и `a === b` **различаются**?",
+            "options": [
+              "При `a` и `b` — разные строки",
+              "При `NaN` и `NaN`, или `-0` и `+0`",
+              "При двух разных пустых объектах `{}`",
+              "При `null` и `undefined`"
+            ],
+            "correctIndices": [
+              1
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "title": "Область видимости и замыкания",
+      "steps": [
+        {
+          "type": "theory",
+          "title": "var, let, const",
+          "content": "## Три способа объявить binding\n\n| | `var` | `let` / `const` |\n|---|--------|------------------|\n| Область | function (legacy) | block |\n| Hoisting | да, init `undefined` | TDZ до строки |\n| Повтор | можно | нельзя в том же scope |\n\n```csharp\n// Ближе всего: let/const ≈ локальная переменная в блоке { }\n// var ≈ старый стиль без block scope\n```\n\n```javascript\nif (true) {\n  let x = 1;\n  const y = 2;\n}\n// x, y — ReferenceError\n```\n\n**`const`** запрещает **переприсвоение** binding, но объект по ссылке можно мутировать."
+        },
+        {
+          "type": "svg",
+          "title": "Блочная vs function scope",
+          "content": {
+            "caption": "`let`/`const` живут в **блоке** `{ }`",
+            "description": "`var` «просачивается» в функцию целиком — отсюда классический баг цикла с `var` и замыканием.",
+            "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 260 110\" width=\"100%\" role=\"img\" aria-label=\"Блок let и function var\"><rect id=\"m04-fn\" x=\"10\" y=\"8\" width=\"240\" height=\"94\" rx=\"6\" fill=\"#eceff1\" stroke=\"#607d8b\" stroke-width=\"2\"/><text x=\"130\" y=\"26\" text-anchor=\"middle\" font-size=\"10\" fill=\"#37474f\">function scope (var)</text><rect id=\"m04-block\" x=\"30\" y=\"38\" width=\"200\" height=\"52\" rx=\"4\" fill=\"#e8eaf6\" stroke=\"#3f51b5\" stroke-width=\"2\" stroke-dasharray=\"4 2\"/><text x=\"130\" y=\"56\" text-anchor=\"middle\" font-size=\"9\" fill=\"#283593\">block: let i</text><circle id=\"m04-i1\" cx=\"60\" cy=\"78\" r=\"10\" fill=\"#c5cae9\" stroke=\"#3949ab\"/><text x=\"60\" y=\"81\" text-anchor=\"middle\" font-size=\"8\" fill=\"#1a237e\">0</text><circle id=\"m04-i2\" cx=\"130\" cy=\"78\" r=\"10\" fill=\"#c5cae9\" stroke=\"#3949ab\"/><text x=\"130\" y=\"81\" text-anchor=\"middle\" font-size=\"8\" fill=\"#1a237e\">1</text><circle id=\"m04-i3\" cx=\"200\" cy=\"78\" r=\"10\" fill=\"#c5cae9\" stroke=\"#3949ab\"/><text x=\"200\" y=\"81\" text-anchor=\"middle\" font-size=\"8\" fill=\"#1a237e\">2</text></svg>"
+          }
+        },
+        {
+          "type": "theory",
+          "title": "Hoisting, TDZ, closure",
+          "content": "## Hoisting\n\nОбъявления «поднимаются» визуально: до строки `var x = 1` в той же функции `x` существует и равен **`undefined`**. **`let`/`const`** тоже hoisted, но до инициализации — **Temporal Dead Zone** (ReferenceError).\n\n```javascript\nconsole.log(a); // undefined\nvar a = 2;\n\nconsole.log(b); // ReferenceError (TDZ)\nlet b = 2;\n```\n\n## Замыкание\n\nФункция «помнит» lexical environment, где создана. В C# — захват переменных в лямбде; в JS то же, но **`var` в цикле** часто захватывает **один** binding.\n\n```javascript\nfor (var i = 0; i < 3; i++) {\n  setTimeout(() => console.log(i), 0); // 3,3,3\n}\nfor (let j = 0; j < 3; j++) {\n  setTimeout(() => console.log(j), 0); // 0,1,2\n}\n```"
+        },
+        {
+          "type": "quiz",
+          "title": "Проверка: TDZ",
+          "content": {
+            "question": "Что произойдёт при обращении к `let x` **до** строки объявения в том же блоке?",
+            "options": [
+              "Вернётся `undefined` как у `var`",
+              "ReferenceError (temporal dead zone)",
+              "SyntaxError на этапе парсинга всего файла",
+              "Вернётся `null`"
+            ],
+            "correctIndices": [
+              1
+            ]
+          }
+        },
+        {
+          "type": "javascript",
+          "title": "Практика: let в цикле",
+          "content": {
+            "description": "Реализуйте **`collectLetIndices(n)`**: для целого `n >= 0` верните массив длины `n`, где элемент `k` — результат **немедленного** вызова функции, созданной в цикле `for (let i = 0; i < n; i += 1)` и возвращающей **`i`**. Используйте **`let`**, не `var`.",
+            "starterCode": "function collectLetIndices(n) {\n  return [];\n}",
+            "referenceSolution": "function collectLetIndices(n) {\n  const out = [];\n  for (let i = 0; i < n; i += 1) {\n    out.push((() => i)());\n  }\n  return out;\n}",
+            "setup": "",
+            "reset": "",
+            "functionName": "collectLetIndices",
+            "timeoutMs": 4000,
+            "tests": [
+              {
+                "args": [
+                  0
+                ]
+              },
+              {
+                "args": [
+                  1
+                ]
+              },
+              {
+                "args": [
+                  3
+                ]
+              },
+              {
+                "args": [
+                  5
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "type": "javascript",
+          "title": "Практика: hoisting var",
+          "content": {
+            "description": "Реализуйте **`varHoistSnapshot()`**: выполните в **новой функции** (не загрязняйте глобальную область) типичный паттерн hoisting:\n\n1. Прочитать `typeof x` **до** объявления `var x = 5`.\n2. Вернуть массив `[typeofResult, xAfter]` после объявления.\n\nОжидается `['undefined', 5]`. Не используйте `let`/`const` для `x`.",
+            "starterCode": "function varHoistSnapshot() {\n  return ['object', 0];\n}",
+            "referenceSolution": "function varHoistSnapshot() {\n  return (function () {\n    const typeofResult = typeof x;\n    var x = 5;\n    return [typeofResult, x];\n  })();\n}",
+            "setup": "",
+            "reset": "",
+            "functionName": "varHoistSnapshot",
+            "timeoutMs": 3000,
+            "tests": [
+              {
+                "args": []
+              },
+              {
+                "args": []
+              },
+              {
+                "args": []
+              },
+              {
+                "args": []
+              }
+            ]
+          }
+        },
+        {
+          "type": "theory",
+          "title": "Перенос с C#",
+          "content": "## Захват в лямбдах\n\n```csharp\nfor (int i = 0; i < 3; i++) {\n  var copy = i;\n  tasks.Add(() => Console.WriteLine(copy));\n}\n```\n\nВ JS **`let` в заголовке `for`** даёт новый binding на итерацию — чаще не нужен ручной `copy`.\n\n## Модули ES\n\nФайлы `.mjs` / `type: module` — strict by default, top-level `let` не становится global property. Как namespace + internal locals в C#.\n\n```javascript\nexport function makeCounter() {\n  let n = 0;\n  return () => ++n;\n}\n```\n\nЗамыкание скрывает `n` — аналог private поля без класса."
+        },
+        {
+          "type": "quiz",
+          "title": "Итоговый тест модуля",
+          "content": {
+            "question": "Почему `for (var i = 0; i < 3; i++)` + `setTimeout(() => log(i))` часто печатает три раза **`3`**?",
+            "options": [
+              "`setTimeout` всегда асинхронно копирует значение `i`",
+              "Один binding `var i` на всю функцию; к моменту callback `i` уже 3",
+              "`let` запрещён внутри `for`",
+              "Строгий режим отключает замыкания"
+            ],
+            "correctIndices": [
+              1
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "title": "Функции: стрелки, параметры, HOF",
+      "steps": [
+        {
+          "type": "theory",
+          "title": "Объявления и стрелки",
+          "content": "## Function declaration vs expression\n\n```javascript\nfunction add(a, b) { return a + b; }\nconst add2 = function (a, b) { return a + b; };\nconst add3 = (a, b) => a + b;\n```\n\n**Стрелочные функции** не имеют собственного `this`, `arguments`, не конструируются через `new`. В C# аналог — **static lambda** / локальная функция без захвата `this`, но семантика `this` в JS шире (модули позже).\n\n```csharp\nFunc<int, int, int> add = (a, b) => a + b;\n```\n\n```javascript\nconst scale = (x, factor = 2) => x * factor;\n```"
+        },
+        {
+          "type": "svg",
+          "title": "HOF: функция как значение",
+          "content": {
+            "caption": "Функции — **first-class** (как `Func<>` / `delegate`)",
+            "description": "Higher-order function принимает или возвращает другую функцию — основа `map`/`filter` и композиции.",
+            "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 280 80\" width=\"100%\" role=\"img\" aria-label=\"Композиция функций\"><defs><marker id=\"m05-a\" markerWidth=\"7\" markerHeight=\"7\" refX=\"5\" refY=\"3.5\" orient=\"auto\"><path d=\"M0,0 L7,3.5 L0,7 Z\" fill=\"#37474f\"/></marker></defs><rect id=\"m05-x\" x=\"8\" y=\"26\" width=\"40\" height=\"28\" rx=\"4\" fill=\"#e3f2fd\" stroke=\"#1565c0\"/><text x=\"28\" y=\"44\" text-anchor=\"middle\" font-size=\"10\" fill=\"#0d47a1\">x</text><rect id=\"m05-g\" x=\"68\" y=\"18\" width=\"52\" height=\"44\" rx=\"4\" fill=\"#fff9c4\" stroke=\"#f9a825\"/><text x=\"94\" y=\"38\" text-anchor=\"middle\" font-size=\"9\" fill=\"#e65100\">g</text><text x=\"94\" y=\"52\" text-anchor=\"middle\" font-size=\"7\" fill=\"#666\">inner</text><rect id=\"m05-f\" x=\"140\" y=\"18\" width=\"52\" height=\"44\" rx=\"4\" fill=\"#fff9c4\" stroke=\"#f9a825\"/><text x=\"166\" y=\"38\" text-anchor=\"middle\" font-size=\"9\" fill=\"#e65100\">f</text><text x=\"166\" y=\"52\" text-anchor=\"middle\" font-size=\"7\" fill=\"#666\">outer</text><rect id=\"m05-out\" x=\"212\" y=\"26\" width=\"56\" height=\"28\" rx=\"4\" fill=\"#e8f5e9\" stroke=\"#2e7d32\"/><text x=\"240\" y=\"44\" text-anchor=\"middle\" font-size=\"10\" fill=\"#1b5e20\">f(g(x))</text><line x1=\"48\" y1=\"40\" x2=\"68\" y2=\"40\" stroke=\"#37474f\" marker-end=\"url(#m05-a)\"/><line x1=\"120\" y1=\"40\" x2=\"140\" y2=\"40\" stroke=\"#37474f\" marker-end=\"url(#m05-a)\"/><line x1=\"192\" y1=\"40\" x2=\"212\" y2=\"40\" stroke=\"#37474f\" marker-end=\"url(#m05-a)\"/></svg>"
+          }
+        },
+        {
+          "type": "theory",
+          "title": "default, rest, HOF vs delegate",
+          "content": "## Параметры по умолчанию и rest\n\n```javascript\nfunction greet(name = 'Guest', punctuation = '!') {\n  return `Hello, ${name}${punctuation}`;\n}\nfunction sumAll(...nums) {\n  return nums.reduce((a, b) => a + b, 0);\n}\n```\n\n**Rest** `...nums` — массив «оставшихся» аргументов. В C# — **`params`**, но rest всегда массив, не `ReadOnlySpan`.\n\n## HOF и delegates\n\n```csharp\nIEnumerable<int> q = items.Where(x => x > 0);\n```\n\n```javascript\nconst q = items.filter((x) => x > 0);\n```\n\n**Delegate** в C# — типизированная ссылка; в JS функция — объект без отдельного типа delegate: контракт — соглашение и TypeScript/JSDoc."
+        },
+        {
+          "type": "quiz",
+          "title": "Проверка: rest",
+          "content": {
+            "question": "Что вернёт `(function (...a) { return a.length; })(1, 2, 3)`?",
+            "options": [
+              "`1`",
+              "`3`",
+              "`undefined`",
+              "SyntaxError"
+            ],
+            "correctIndices": [
+              1
+            ]
+          }
+        },
+        {
+          "type": "javascript",
+          "title": "Практика: greetWithDefault",
+          "content": {
+            "description": "Реализуйте **`greetWithDefault(name, greeting)`**:\n\n- `greeting` по умолчанию `'Hello'` (если аргумент **пропущен** или `undefined`).\n- Верните строку `` `${greeting}, ${name}!` ``.\n\nНе используйте оператор `??` — только проверки `=== undefined` / default parameters.",
+            "starterCode": "function greetWithDefault(name, greeting) {\n  return '';\n}",
+            "referenceSolution": "function greetWithDefault(name, greeting = 'Hello') {\n  return `${greeting}, ${name}!`;\n}",
+            "setup": "",
+            "reset": "",
+            "functionName": "greetWithDefault",
+            "timeoutMs": 3000,
+            "tests": [
+              {
+                "args": [
+                  "Ann"
+                ]
+              },
+              {
+                "args": [
+                  "Ann",
+                  "Hi"
+                ]
+              },
+              {
+                "args": [
+                  "Bob",
+                  {
+                    "$js": "undefined"
+                  }
+                ]
+              },
+              {
+                "args": [
+                  "Eve",
+                  ""
+                ]
+              },
+              {
+                "args": [
+                  "X",
+                  "Hey"
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "type": "javascript",
+          "title": "Практика: makeAdder (HOF)",
+          "content": {
+            "description": "Реализуйте **`makeAdder(addend)`**: верните **функцию**, которая принимает число `x` и возвращает `x + addend` (как фабрика делегатов в C#).\n\nПроверка вызывает сначала `makeAdder(addend)`, затем возвращённую функцию с `x` (второй вызов в тесте).",
+            "starterCode": "function makeAdder(addend) {\n  return (x) => 0;\n}",
+            "referenceSolution": "function makeAdder(addend) {\n  return (x) => x + addend;\n}",
+            "setup": "",
+            "reset": "",
+            "functionName": "makeAdder",
+            "timeoutMs": 4000,
+            "tests": [
+              {
+                "args": [
+                  2
+                ],
+                "calls": [
+                  {
+                    "args": [
+                      10
+                    ]
+                  }
+                ]
+              },
+              {
+                "args": [
+                  0
+                ],
+                "calls": [
+                  {
+                    "args": [
+                      5
+                    ]
+                  }
+                ]
+              },
+              {
+                "args": [
+                  -3
+                ],
+                "calls": [
+                  {
+                    "args": [
+                      3
+                    ]
+                  }
+                ]
+              },
+              {
+                "args": [
+                  1.5
+                ],
+                "calls": [
+                  {
+                    "args": [
+                      2
+                    ]
+                  }
+                ]
+              },
+              {
+                "args": [
+                  100
+                ],
+                "calls": [
+                  {
+                    "args": [
+                      -40
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "type": "theory",
+          "title": "Стиль для C#-команды",
+          "content": "## Когда стрелка, когда function\n\n- Callback короткий — стрелка.\n- Метод объекта / нужен `this` — обычный `function` (или class method).\n- Generators / `new.target` — не стрелка.\n\n## Именование HOF\n\nКак в LINQ: маленькие чистые функции + `map`/`filter`/`reduce` читаемее ручных циклов, когда нет hot path.\n\n```javascript\nconst byId = (id) => (item) => item.id === id;\nconst active = users.filter(byId(42));\n```\n\nTypeScript позже добавит типы «как delegate»; на runtime остаётся duck typing."
+        },
+        {
+          "type": "quiz",
+          "title": "Итоговый тест модуля",
+          "content": {
+            "question": "Чем стрелочная функция **принципиально** ограничена по сравнению с `function`?",
+            "options": [
+              "Не может возвращать значение",
+              "Не может быть передана как аргумент",
+              "Не имеет собственного `this` и не используется с `new`",
+              "Не поддерживает параметры по умолчанию"
+            ],
+            "correctIndices": [
+              2
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "title": "Замыкания и паттерны",
+      "steps": [
+        {
+          "type": "theory",
+          "title": "Lexical scope и замыкание",
+          "content": "## Замыкание (closure)\n\n**Замыкание** — функция, которая «помнит» переменные из **лексического** окружения, где была создана, даже после выхода из этой области.\n\nВ C# ближе всего **локальная функция** или лямбда, захватывающая переменную цикла/метода:\n\n```csharp\nint MakeCounter() {\n    var n = 0;\n    return () => ++n;\n}\n```\n\nВ JavaScript:\n\n```javascript\nfunction makeCounter() {\n  let n = 0;\n  return () => ++n;\n}\nconst c = makeCounter();\nc(); // 1\nc(); // 2\n```\n\nКлючевое отличие от «просто метода»: **ссылка на `n` жива**, пока жива возвращённая функция. Это основа **фабрик**, **мемоизации**, **once**, **debounce** и приватного состояния без `#private`.\n\nНа схеме ниже — цепочка: внешняя функция создаёт внутреннюю; внутренняя держит ссылку на `n`."
+        },
+        {
+          "type": "svg",
+          "title": "Схема: замыкание",
+          "content": {
+            "description": "Внутренняя функция сохраняет доступ к `n` во внешнем лексическом окружении.",
+            "caption": "makeCounter → closure → вызовы",
+            "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 220 90\" width=\"100%\" role=\"img\" aria-label=\"Замыкание: внешняя и внутренняя функция\"><defs><marker id=\"m06-arr\" markerWidth=\"6\" markerHeight=\"6\" refX=\"5\" refY=\"3\" orient=\"auto\"><path d=\"M0,0 L6,3 L0,6 Z\" fill=\"#555\"/></marker></defs><rect x=\"8\" y=\"10\" width=\"90\" height=\"70\" rx=\"6\" fill=\"#e3f2fd\" stroke=\"#1565c0\" stroke-width=\"2\"/><text x=\"53\" y=\"28\" text-anchor=\"middle\" font-size=\"9\" font-weight=\"bold\" fill=\"#333\">makeCounter</text><text x=\"53\" y=\"44\" text-anchor=\"middle\" font-size=\"8\" fill=\"#555\">let n = 0</text><rect x=\"28\" y=\"52\" width=\"50\" height=\"22\" rx=\"4\" fill=\"#fff\" stroke=\"#1565c0\"/><text x=\"53\" y=\"67\" text-anchor=\"middle\" font-size=\"7\" fill=\"#333\">() =&gt; ++n</text><line x1=\"98\" y1=\"45\" x2=\"118\" y2=\"45\" stroke=\"#555\" marker-end=\"url(#m06-arr)\"/><rect x=\"118\" y=\"22\" width=\"94\" height=\"46\" rx=\"6\" fill=\"#fff9c4\" stroke=\"#f9a825\" stroke-width=\"2\"/><text x=\"165\" y=\"40\" text-anchor=\"middle\" font-size=\"9\" fill=\"#333\">closure</text><text x=\"165\" y=\"56\" text-anchor=\"middle\" font-size=\"8\" fill=\"#666\">захват n</text><line x1=\"165\" y1=\"68\" x2=\"165\" y2=\"82\" stroke=\"#2e7d32\" stroke-width=\"2\" marker-end=\"url(#m06-arr)\"/><text x=\"165\" y=\"88\" text-anchor=\"middle\" font-size=\"8\" fill=\"#2e7d32\">c() c() → 1, 2</text></svg>"
+          }
+        },
+        {
+          "type": "theory",
+          "title": "Мемоизация и once",
+          "content": "## Кэширование вызовов\n\n**Memoize** оборачивает функцию и кэширует результат для одного и того же набора аргументов:\n\n```javascript\nfunction memoize(fn) {\n  const cache = new Map();\n  return (...args) => {\n    const key = JSON.stringify(args);\n    if (cache.has(key)) return cache.get(key);\n    const v = fn(...args);\n    cache.set(key, v);\n    return v;\n  };\n}\n```\n\n**Once** вызывает исходную функцию **ровно один раз**, дальше возвращает сохранённый результат (аргументы первого вызова важны, последующие — игнорируются в простейшей версии).\n\nВ тренажёре можно проверить, что «дорогая» функция вызвана нужное число раз, через **`registerSpy`** в `setup` и **`expectInvocations`** в тесте — как mock/spy в unit-тестах."
+        },
+        {
+          "type": "javascript",
+          "title": "Практика: makeCounter",
+          "content": {
+            "description": "Реализуйте **`makeCounter`**: без аргументов возвращает функцию-счётчик. Пока счётчик &lt; 3, каждый вызов возвращает **ту же функцию**; на третьем вызове верните число **`3`** (как в тестах с цепочкой `calls`).",
+            "starterCode": "function makeCounter() {\n  return () => 0;\n}",
+            "referenceSolution": "function makeCounter() {\n  let n = 0;\n  function step() {\n    n += 1;\n    return n < 3 ? step : n;\n  }\n  return step;\n}",
+            "setup": "",
+            "reset": "",
+            "functionName": "makeCounter",
+            "timeoutMs": 3000,
+            "tests": [
+              {
+                "args": [],
+                "calls": [
+                  {
+                    "args": []
+                  },
+                  {
+                    "args": []
+                  },
+                  {
+                    "args": []
+                  }
+                ]
+              },
+              {
+                "args": [],
+                "calls": [
+                  {
+                    "args": []
+                  },
+                  {
+                    "args": []
+                  },
+                  {
+                    "args": []
+                  }
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "type": "javascript",
+          "title": "Практика: memoize",
+          "content": {
+            "description": "Реализуйте **`memoize(fn)`** — обёртку с кэшем по `JSON.stringify(args)`. Не меняйте **`runMemoDemo`**: она дважды вызывает мемоизированную функцию с одним аргументом; при верном кэше «дорогая» функция из `setup` выполнится один раз (см. тест с `expectInvocations`).",
+            "starterCode": "function memoize(fn) {\n  return (...args) => fn(...args);\n}\n\nfunction runMemoDemo() {\n  const m = memoize(globalThis.__expensive);\n  const a = m(3);\n  const b = m(3);\n  return b;\n}",
+            "referenceSolution": "function memoize(fn) {\n  const cache = new Map();\n  return (...args) => {\n    const key = JSON.stringify(args);\n    if (cache.has(key)) return cache.get(key);\n    const v = fn(...args);\n    cache.set(key, v);\n    return v;\n  };\n}\n\nfunction runMemoDemo() {\n  const m = memoize(globalThis.__expensive);\n  const a = m(3);\n  const b = m(3);\n  return b;\n}",
+            "setup": "globalThis.__expensive = registerSpy('expensive', (x) => x * 2);",
+            "reset": "",
+            "functionName": "runMemoDemo",
+            "timeoutMs": 4000,
+            "tests": [
+              {
+                "args": []
+              },
+              {
+                "args": [],
+                "expectInvocations": {
+                  "expensive": 1
+                }
+              },
+              {
+                "args": []
+              }
+            ]
+          }
+        },
+        {
+          "type": "javascript",
+          "title": "Практика: once",
+          "content": {
+            "description": "Реализуйте **`once(fn)`** — обёртку, которая вызывает `fn` только при **первом** вызове и возвращает тот же результат при повторных. Используйте **`runOnceDemo`** как в шаблоне.",
+            "starterCode": "function once(fn) {\n  return (...args) => fn(...args);\n}\n\nfunction runOnceDemo() {\n  const o = once(globalThis.__sideEffect);\n  o(1);\n  return o(99);\n}",
+            "referenceSolution": "function once(fn) {\n  let done = false;\n  let saved;\n  return (...args) => {\n    if (!done) {\n      saved = fn(...args);\n      done = true;\n    }\n    return saved;\n  };\n}\n\nfunction runOnceDemo() {\n  const o = once(globalThis.__sideEffect);\n  o(1);\n  return o(99);\n}",
+            "setup": "globalThis.__sideEffect = registerSpy('sideEffect', (x) => x + 100);",
+            "reset": "",
+            "functionName": "runOnceDemo",
+            "timeoutMs": 4000,
+            "tests": [
+              {
+                "args": []
+              },
+              {
+                "args": [],
+                "expectInvocations": {
+                  "sideEffect": 1
+                }
+              }
+            ]
+          }
+        },
+        {
+          "type": "theory",
+          "title": "Когда замыкания вредят",
+          "content": "## Память и циклы\n\nЗамыкание **удерживает** захваченные переменные. Длинные жизни (обработчики DOM, подписки) без `removeEventListener` / `dispose` — типичная утечка в SPA.\n\n**`var` в цикле** (legacy): все колбэки могут видеть одно и то же финальное значение. С **`let`** каждая итерация — своё биндинг (ближе к ожиданиям C# `foreach`).\n\n**Модули ES** и **IIFE** historically использовали замыкания для «приватных» полей до `#field` в классах.\n\nДальше — quiz по модулю."
+        },
+        {
+          "type": "quiz",
+          "title": "Тест: замыкания",
+          "content": {
+            "question": "Что вернёт следующий код?\n\n```javascript\nfunction outer() {\n  let x = 1;\n  return function inner() {\n    return x;\n  };\n}\nconst f = outer();\nx = 10;\nconsole.log(f());\n```\n\n(Предположим, `x` снаружи не объявлена — только внутри `outer`.)",
+            "options": [
+              "`1` — `inner` читает захваченный `x`",
+              "`10` — глобальная переменная перезаписала замыкание",
+              "`undefined`",
+              "ReferenceError при вызове `f()`"
+            ],
+            "correctIndices": [
+              0
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "title": "Привязка this: call, apply, bind",
+      "steps": [
+        {
+          "type": "theory",
+          "title": "Что такое this в JS",
+          "content": "## `this` — не как `this` в C#\n\nВ C# **`this`** в методе экземпляра всегда указывает на текущий объект (кроме `static`).\n\nВ JavaScript **`this`** определяется **способом вызова**, а не местом объявления функции:\n\n| Вызов | `this` (упрощённо) |\n|--------|---------------------|\n| `obj.method()` | `obj` |\n| `fn()` | `undefined` (strict) или global |\n| `new Fn()` | новый объект |\n| `fn.call(ctx, …)` | `ctx` |\n\n**Стрелочные функции** не имеют своего `this` — берут из внешнего лексического окружения (как захват переменной).\n\nМетоды **`call`**, **`apply`**, **`bind`** — явная привязка контекста; аналог нет «из коробки» в C#, но похож на передачу `Action` с уже захваченным `this`."
+        },
+        {
+          "type": "svg",
+          "title": "Схема: call и bind",
+          "content": {
+            "description": "`call` сразу вызывает функцию с заданным `this`. `bind` возвращает новую функцию с зафиксированным `this`.",
+            "caption": "fn.call(ctx, a, b) vs fn.bind(ctx)",
+            "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 210 72\" width=\"100%\" role=\"img\" aria-label=\"call и bind\"><defs><marker id=\"m07-arr\" markerWidth=\"6\" markerHeight=\"6\" refX=\"5\" refY=\"3\" orient=\"auto\"><path d=\"M0,0 L6,3 L0,6 Z\" fill=\"#555\"/></marker></defs><rect x=\"6\" y=\"20\" width=\"44\" height=\"32\" rx=\"4\" fill=\"#e8eaf6\" stroke=\"#3949ab\"/><text x=\"28\" y=\"40\" text-anchor=\"middle\" font-size=\"8\" fill=\"#333\">fn</text><rect x=\"58\" y=\"12\" width=\"40\" height=\"24\" rx=\"4\" fill=\"#c5cae9\" stroke=\"#3949ab\"/><text x=\"78\" y=\"28\" text-anchor=\"middle\" font-size=\"8\" fill=\"#333\">ctx</text><line x1=\"50\" y1=\"36\" x2=\"58\" y2=\"24\" stroke=\"#555\" marker-end=\"url(#m07-arr)\"/><text x=\"108\" y=\"26\" font-size=\"9\" fill=\"#333\">.call(ctx,a,b)</text><line x1=\"108\" y1=\"32\" x2=\"168\" y2=\"32\" stroke=\"#2e7d32\" marker-end=\"url(#m07-arr)\"/><text x=\"188\" y=\"36\" font-size=\"9\" fill=\"#2e7d32\">результат</text><text x=\"108\" y=\"58\" font-size=\"9\" fill=\"#333\">.bind(ctx)</text><line x1=\"108\" y1=\"64\" x2=\"168\" y2=\"64\" stroke=\"#f9a825\" marker-end=\"url(#m07-arr)\"/><text x=\"188\" y=\"68\" font-size=\"8\" fill=\"#f57f17\">новая fn</text></svg>"
+          }
+        },
+        {
+          "type": "theory",
+          "title": "call, apply, bind",
+          "content": "## Три API одной семьи\n\n```javascript\nfunction greet(greeting, name) {\n  return `${greeting}, ${name} from ${this.label}`;\n}\nconst ctx = { label: 'team' };\n\ngreet.call(ctx, 'Hi', 'Ann');   // аргументы списком\ngreet.apply(ctx, ['Hi', 'Ann']); // аргументы массивом\nconst bound = greet.bind(ctx, 'Hi');\nbound('Bob'); // 'Hi, Bob from team'\n```\n\n**`bind`** также может **частично** применять аргументы (currying с фиксированным префиксом).\n\nВ практике ниже вы реализуете тонкие обёртки, делегирующие в нативные методы — чтобы закрепить контракт."
+        },
+        {
+          "type": "javascript",
+          "title": "Практика: invokeWithCall",
+          "content": {
+            "description": "Реализуйте **`invokeWithCall(fn, ctx, args)`** — вызов `fn` с `this === ctx` и аргументами из массива `args` (используйте **`Function.prototype.call`**). **`demoCall`** не меняйте.",
+            "starterCode": "function invokeWithCall(fn, ctx, args) {\n  return fn();\n}\n\nfunction demoCall() {\n  const ctx = { base: 10 };\n  function add(a, b) {\n    return this.base + a + b;\n  }\n  return invokeWithCall(add, ctx, [1, 2]);\n}",
+            "referenceSolution": "function invokeWithCall(fn, ctx, args) {\n  return fn.call(ctx, ...args);\n}\n\nfunction demoCall() {\n  const ctx = { base: 10 };\n  function add(a, b) {\n    return this.base + a + b;\n  }\n  return invokeWithCall(add, ctx, [1, 2]);\n}",
+            "setup": "",
+            "reset": "",
+            "functionName": "demoCall",
+            "timeoutMs": 3000,
+            "tests": [
+              {
+                "args": []
+              },
+              {
+                "args": []
+              }
+            ]
+          }
+        },
+        {
+          "type": "javascript",
+          "title": "Практика: invokeWithApply",
+          "content": {
+            "description": "Реализуйте **`invokeWithApply(fn, ctx, args)`** — то же, но через **`apply`**. **`demoApply`** не меняйте.",
+            "starterCode": "function invokeWithApply(fn, ctx, args) {\n  return fn.call(ctx);\n}\n\nfunction demoApply() {\n  const ctx = { tag: 'id:' };\n  function format(x) {\n    return this.tag + x;\n  }\n  return invokeWithApply(format, ctx, [42]);\n}",
+            "referenceSolution": "function invokeWithApply(fn, ctx, args) {\n  return fn.apply(ctx, args);\n}\n\nfunction demoApply() {\n  const ctx = { tag: 'id:' };\n  function format(x) {\n    return this.tag + x;\n  }\n  return invokeWithApply(format, ctx, [42]);\n}",
+            "setup": "",
+            "reset": "",
+            "functionName": "demoApply",
+            "timeoutMs": 3000,
+            "tests": [
+              {
+                "args": []
+              },
+              {
+                "args": []
+              }
+            ]
+          }
+        },
+        {
+          "type": "theory",
+          "title": "Потеря this",
+          "content": "## Отсоединённый метод\n\n```javascript\nconst user = {\n  name: 'Ann',\n  hello() { return `Hi, ${this.name}`; },\n};\nconst h = user.hello;\nh(); // strict: TypeError или this без name\n```\n\nКлассический фикс в React (до hooks): `this.onClick = this.onClick.bind(this)` в конструкторе.\n\n**`bind`** возвращает функцию с навсегда привязанным `this` (и опционально частью аргументов)."
+        },
+        {
+          "type": "javascript",
+          "title": "Практика: bindMethod",
+          "content": {
+            "description": "Реализуйте **`bindMethod(obj, methodName)`** — верните функцию, которая вызывает `obj[methodName]` с `this === obj` (через **`bind`**). **`demoBind`** не меняйте.",
+            "starterCode": "function bindMethod(obj, methodName) {\n  const fn = obj[methodName];\n  return () => fn();\n}\n\nfunction demoBind() {\n  const o = {\n    n: 5,\n    twice() {\n      return this.n * 2;\n    },\n  };\n  const t = bindMethod(o, 'twice');\n  return t();\n}",
+            "referenceSolution": "function bindMethod(obj, methodName) {\n  const fn = obj[methodName];\n  return fn.bind(obj);\n}\n\nfunction demoBind() {\n  const o = {\n    n: 5,\n    twice() {\n      return this.n * 2;\n    },\n  };\n  const t = bindMethod(o, 'twice');\n  return t();\n}",
+            "setup": "",
+            "reset": "",
+            "functionName": "demoBind",
+            "timeoutMs": 3000,
+            "tests": [
+              {
+                "args": []
+              },
+              {
+                "args": []
+              }
+            ]
+          }
+        },
+        {
+          "type": "quiz",
+          "title": "Тест: this",
+          "content": {
+            "question": "Чем `fn.apply(ctx, [1, 2])` отличается от `fn.call(ctx, 1, 2)`?",
+            "options": [
+              "Практически эквивалентны для этих аргументов; разница в форме передачи args",
+              "`apply` меняет `this` на глобальный объект",
+              "`call` не принимает `this`",
+              "`apply` работает только со стрелочными функциями"
+            ],
+            "correctIndices": [
+              0
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "title": "Объекты: деструктуризация и spread",
+      "steps": [
+        {
+          "type": "theory",
+          "title": "Деструктуризация",
+          "content": "## Разбор объектов и массивов\n\n**Деструктуризация** — синтаксис «распаковки» полей в переменные. В C# близки **deconstruction** и pattern matching, но в JS это повсеместно в параметрах функций.\n\n```javascript\nconst user = { id: 1, name: 'Ann', role: 'dev' };\nconst { name, role } = user;\n\nconst nums = [10, 20, 30];\nconst [first, second] = nums;\n```\n\n**Значения по умолчанию** и **переименование**:\n\n```javascript\nconst { name: displayName = 'Guest' } = user;\n```\n\n**Rest** в объекте собирает оставшиеся поля:\n\n```javascript\nconst { id, ...rest } = user;\n```\n\nВ практике — функции, возвращающие новые объекты без мутации исходников (immutable-style, как с `record`/`with` в новых версиях C#)."
+        },
+        {
+          "type": "svg",
+          "title": "Схема: spread объектов",
+          "content": {
+            "description": "Оператор `{ ...a, ...b }` создаёт shallow-копию с перекрытием полей из `b`.",
+            "caption": "shallow merge",
+            "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 200 70\" width=\"100%\" role=\"img\" aria-label=\"Spread merge объектов\"><defs><marker id=\"m08-arr\" markerWidth=\"6\" markerHeight=\"6\" refX=\"5\" refY=\"3\" orient=\"auto\"><path d=\"M0,0 L6,3 L0,6 Z\" fill=\"#555\"/></marker></defs><rect x=\"8\" y=\"18\" width=\"52\" height=\"36\" rx=\"4\" fill=\"#e3f2fd\" stroke=\"#1565c0\"/><text x=\"34\" y=\"34\" text-anchor=\"middle\" font-size=\"8\" fill=\"#333\">a</text><text x=\"34\" y=\"48\" text-anchor=\"middle\" font-size=\"7\" fill=\"#666\">x:1</text><rect x=\"68\" y=\"18\" width=\"52\" height=\"36\" rx=\"4\" fill=\"#fce4ec\" stroke=\"#c2185b\"/><text x=\"94\" y=\"34\" text-anchor=\"middle\" font-size=\"8\" fill=\"#333\">b</text><text x=\"94\" y=\"48\" text-anchor=\"middle\" font-size=\"7\" fill=\"#666\">y:2</text><text x=\"128\" y=\"38\" font-size=\"12\" fill=\"#333\">→</text><rect x=\"142\" y=\"14\" width=\"52\" height=\"44\" rx=\"4\" fill=\"#e8f5e9\" stroke=\"#2e7d32\"/><text x=\"168\" y=\"32\" text-anchor=\"middle\" font-size=\"8\" fill=\"#333\">{...a,...b}</text><text x=\"168\" y=\"48\" text-anchor=\"middle\" font-size=\"7\" fill=\"#666\">x,y</text></svg>"
+          }
+        },
+        {
+          "type": "javascript",
+          "title": "Практика: pickNameRole",
+          "content": {
+            "description": "Реализуйте **`pickNameRole(person)`** — через **деструктуризацию** верните `{ name, role }` из объекта `person` (остальные поля не нужны).",
+            "starterCode": "function pickNameRole(person) {\n  return { name: '', role: '' };\n}",
+            "referenceSolution": "function pickNameRole(person) {\n  const { name, role } = person;\n  return { name, role };\n}",
+            "setup": "",
+            "reset": "",
+            "functionName": "pickNameRole",
+            "timeoutMs": 3000,
+            "tests": [
+              {
+                "args": [
+                  {
+                    "id": 1,
+                    "name": "Ann",
+                    "role": "dev",
+                    "team": "A"
+                  }
+                ]
+              },
+              {
+                "args": [
+                  {
+                    "name": "Bob",
+                    "role": "qa"
+                  }
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "type": "theory",
+          "title": "Spread и rest",
+          "content": "## `...` в литералах и параметрах\n\n**Spread** «разворачивает» итерируемое в литерале массива/объекта:\n\n```javascript\nconst defaults = { theme: 'light', lang: 'ru' };\nconst prefs = { ...defaults, theme: 'dark' };\n\nconst a = [1, 2];\nconst b = [...a, 3];\n```\n\n**Rest** в параметрах функции собирает хвост в массив (аналог `params` в C#, но только массив):\n\n```javascript\nfunction sum(first, ...rest) {\n  return rest.reduce((s, x) => s + x, first);\n}\n```\n\nКопии **поверхностные** (shallow): вложенные объекты разделяют ссылки."
+        },
+        {
+          "type": "javascript",
+          "title": "Практика: mergeUser",
+          "content": {
+            "description": "Реализуйте **`mergeUser(base, patch)`** — верните **новый** объект: поля из `base`, перекрытые полями из `patch` (**object spread**). Исходные объекты не мутируйте.",
+            "starterCode": "function mergeUser(base, patch) {\n  return base;\n}",
+            "referenceSolution": "function mergeUser(base, patch) {\n  return { ...base, ...patch };\n}",
+            "setup": "",
+            "reset": "",
+            "functionName": "mergeUser",
+            "timeoutMs": 3000,
+            "tests": [
+              {
+                "args": [
+                  {
+                    "name": "Ann",
+                    "role": "dev"
+                  },
+                  {
+                    "role": "lead"
+                  }
+                ]
+              },
+              {
+                "args": [
+                  {
+                    "a": 1
+                  },
+                  {
+                    "b": 2
+                  }
+                ]
+              },
+              {
+                "args": [
+                  {},
+                  {
+                    "x": 0
+                  }
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "type": "javascript",
+          "title": "Практика: moveFirstToLast",
+          "content": {
+            "description": "Реализуйте **`moveFirstToLast(arr)`** — **in-place** перенесите первый элемент массива в конец (длина ≥ 1). Функция может ничего не возвращать; проверяются **мутированные аргументы** (`resultMode: args`).",
+            "starterCode": "function moveFirstToLast(arr) {\n  // измените arr\n}",
+            "referenceSolution": "function moveFirstToLast(arr) {\n  const [first] = arr;\n  arr.shift();\n  arr.push(first);\n}",
+            "setup": "",
+            "reset": "",
+            "functionName": "moveFirstToLast",
+            "resultMode": "args",
+            "timeoutMs": 3000,
+            "tests": [
+              {
+                "args": [
+                  [
+                    1,
+                    2,
+                    3
+                  ]
+                ]
+              },
+              {
+                "args": [
+                  [
+                    "a"
+                  ]
+                ]
+              },
+              {
+                "args": [
+                  [
+                    10,
+                    20
+                  ]
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "type": "theory",
+          "title": "Сравнение с C#",
+          "content": "## Records и with\n\nВ современном C# **`with { }`** на record создаёт копию с изменёнными полями — семантически близко к `{ ...user, name: 'New' }`.\n\n**Object.assign(target, source)** — императивный merge в **target** (мутация), тогда как spread в литерале создаёт новый объект.\n\nДля массивов **`arr.slice()`** / spread — копия первого уровня; глубокое клонирование — `structuredClone` (ES2022) или библиотеки."
+        },
+        {
+          "type": "quiz",
+          "title": "Тест: spread",
+          "content": {
+            "question": "Что вернёт `{ ...{ a: 1, b: 2 }, b: 3 }`?",
+            "options": [
+              "`{ a: 1, b: 3 }`",
+              "`{ a: 1, b: 2, b: 3 }` — два поля b",
+              "`{ b: 3 }`",
+              "SyntaxError"
+            ],
+            "correctIndices": [
+              0
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "title": "Прототипы и Object.create",
+      "steps": [
+        {
+          "type": "theory",
+          "title": "Прототипная модель",
+          "content": "## Не как классы CLR по умолчанию\n\nДо ES2015 «классы» в JS — **синтаксический сахар** над **прототипами**. Каждый объект имеет внутреннюю ссылку **`[[Prototype]]`** (доступ через `Object.getPrototypeOf`).\n\nПоиск свойства: сначала **own** на объекте, затем цепочка прототипов, пока не `null`.\n\n```javascript\nconst proto = { greet() { return `Hi, ${this.name}`; } };\nconst user = Object.create(proto);\nuser.name = 'Ann';\nuser.greet(); // Hi, Ann\n```\n\nВ C# ближе **наследование интерфейсов + явная реализация**, но здесь **делегирование** на уровне runtime без отдельного типа интерфейса."
+        },
+        {
+          "type": "svg",
+          "title": "Схема: цепочка прототипов",
+          "content": {
+            "description": "Объект `user` делегирует отсутствующие свойства объекту `proto`.",
+            "caption": "[[Prototype]] → proto",
+            "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 200 88\" width=\"100%\" role=\"img\" aria-label=\"Цепочка прототипов\"><defs><marker id=\"m09-arr\" markerWidth=\"6\" markerHeight=\"6\" refX=\"5\" refY=\"3\" orient=\"auto\"><path d=\"M0,0 L6,3 L0,6 Z\" fill=\"#555\"/></marker></defs><rect x=\"70\" y=\"8\" width=\"60\" height=\"32\" rx=\"4\" fill=\"#fff9c4\" stroke=\"#f9a825\" stroke-width=\"2\"/><text x=\"100\" y=\"24\" text-anchor=\"middle\" font-size=\"8\" font-weight=\"bold\" fill=\"#333\">user</text><text x=\"100\" y=\"36\" text-anchor=\"middle\" font-size=\"7\" fill=\"#666\">name</text><line x1=\"100\" y1=\"40\" x2=\"100\" y2=\"52\" stroke=\"#555\" marker-end=\"url(#m09-arr)\"/><text x=\"118\" y=\"48\" font-size=\"7\" fill=\"#555\">[[Prototype]]</text><rect x=\"70\" y=\"54\" width=\"60\" height=\"32\" rx=\"4\" fill=\"#e3f2fd\" stroke=\"#1565c0\" stroke-width=\"2\"/><text x=\"100\" y=\"70\" text-anchor=\"middle\" font-size=\"8\" font-weight=\"bold\" fill=\"#333\">proto</text><text x=\"100\" y=\"82\" text-anchor=\"middle\" font-size=\"7\" fill=\"#666\">greet()</text></svg>"
+          }
+        },
+        {
+          "type": "theory",
+          "title": "Object.create",
+          "content": "## Явное задание прототипа\n\n**`Object.create(proto)`** создаёт объект с `[[Prototype]] === proto`.\n\n```javascript\nconst methods = {\n  area() { return this.w * this.h; },\n};\nfunction createRect(w, h) {\n  const r = Object.create(methods);\n  r.w = w;\n  r.h = h;\n  return r;\n}\n```\n\n**`Object.getPrototypeOf` / `Object.setPrototypeOf`** — редко в прикладном коде; **`class extends`** компилируется в похожую связь.\n\n**`hasOwnProperty`** / **`Object.hasOwn(obj, key)`** — отличить own от унаследованного."
+        },
+        {
+          "type": "javascript",
+          "title": "Практика: createWithProto",
+          "content": {
+            "description": "Реализуйте **`createWithProto(proto, props)`** — создайте объект через **`Object.create(proto)`**, скопируйте поля из **`props`**. **`demoCreateWithProto`** не меняйте: она проверяет метод на прототипе (возвращаемое значение — JSON-строка).",
+            "starterCode": "function createWithProto(proto, props) {\n  return props;\n}\n\nfunction demoCreateWithProto() {\n  const proto = {\n    label() {\n      return `${this.name}!`;\n    },\n  };\n  const o = createWithProto(proto, { name: 'Ann' });\n  return o.label();\n}",
+            "referenceSolution": "function createWithProto(proto, props) {\n  const obj = Object.create(proto);\n  return Object.assign(obj, props);\n}\n\nfunction demoCreateWithProto() {\n  const proto = {\n    label() {\n      return `${this.name}!`;\n    },\n  };\n  const o = createWithProto(proto, { name: 'Ann' });\n  return o.label();\n}",
+            "setup": "",
+            "reset": "",
+            "functionName": "demoCreateWithProto",
+            "timeoutMs": 3000,
+            "tests": [
+              {
+                "args": []
+              },
+              {
+                "args": []
+              }
+            ]
+          }
+        },
+        {
+          "type": "javascript",
+          "title": "Практика: buildGreeter",
+          "content": {
+            "description": "Реализуйте **`buildGreeter(prefix)`** — верните функцию **`createPerson(name)`**, которая создаёт объект с **`Object.create`** от общего прототипа с методом **`hello()`**, возвращающим `` `${prefix}, ${this.name}` ``.",
+            "starterCode": "function buildGreeter(prefix) {\n  return function createPerson(name) {\n    return { name, hello() { return ''; } };\n  };\n}",
+            "referenceSolution": "function buildGreeter(prefix) {\n  const proto = {\n    hello() {\n      return `${prefix}, ${this.name}`;\n    },\n  };\n  return function createPerson(name) {\n    const person = Object.create(proto);\n    person.name = name;\n    return person;\n  };\n}",
+            "setup": "",
+            "reset": "",
+            "functionName": "buildGreeter",
+            "timeoutMs": 4000,
+            "tests": [
+              {
+                "args": [
+                  "Hi"
+                ],
+                "calls": [
+                  {
+                    "args": [
+                      "Ann"
+                    ]
+                  },
+                  {
+                    "method": "hello",
+                    "args": []
+                  }
+                ]
+              },
+              {
+                "args": [
+                  "Hello"
+                ],
+                "calls": [
+                  {
+                    "args": [
+                      "Bob"
+                    ]
+                  },
+                  {
+                    "method": "hello",
+                    "args": []
+                  }
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "type": "javascript",
+          "title": "Практика: ownKeysCount",
+          "content": {
+            "description": "Реализуйте **`ownKeysCount(obj)`** — число **собственных** перечисляемых строковых ключей объекта (как `Object.keys(obj).length`; не считайте унаследованные).",
+            "starterCode": "function ownKeysCount(obj) {\n  return 0;\n}",
+            "referenceSolution": "function ownKeysCount(obj) {\n  return Object.keys(obj).length;\n}",
+            "setup": "",
+            "reset": "",
+            "functionName": "ownKeysCount",
+            "timeoutMs": 3000,
+            "tests": [
+              {
+                "args": [
+                  {
+                    "a": 1,
+                    "b": 2
+                  }
+                ]
+              },
+              {
+                "args": [
+                  {}
+                ]
+              },
+              {
+                "args": [
+                  {
+                    "x": 0
+                  }
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "type": "theory",
+          "title": "Классы поверх прототипов",
+          "content": "## `class` — синтаксис\n\n```javascript\nclass Person {\n  constructor(name) { this.name = name; }\n  hello() { return `Hi, ${this.name}`; }\n}\n```\n\nМетоды **`Person.prototype`**. **`extends`** связывает прототипы конструкторов и добавляет **`super`**.\n\nПонимание **`Object.create`** помогает читать legacy-код и polyfill'ы до ES2015."
+        },
+        {
+          "type": "quiz",
+          "title": "Тест: прототипы",
+          "content": {
+            "question": "Что делает `Object.create(proto)`?",
+            "options": [
+              "Создаёт новый объект с `[[Prototype]]`, указывающим на `proto`",
+              "Глубоко клонирует `proto`",
+              "Добавляет все поля `proto` как own-свойства без прототипа",
+              "Вызывает конструктор `proto`"
+            ],
+            "correctIndices": [
+              0
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "title": "Классы ES2015",
+      "steps": [
+        {
+          "type": "theory",
+          "title": "class и constructor",
+          "content": "## Синтаксис, знакомый C#-разработчику\n\n```javascript\nclass Account {\n  constructor(owner, balance = 0) {\n    this.owner = owner;\n    this.balance = balance;\n  }\n  deposit(amount) {\n    this.balance += amount;\n    return this;\n  }\n}\n```\n\n**`constructor`** — тело, выполняемое при **`new`**. Методы попадают на **`prototype`** (перечисляемые `false`).\n\n**`extends` / `super`** — наследование с вызовом конструктора базового класса.\n\nОтличия от C#: нет модификаторов `public/private` до `#поля`; **стрелки в полях класса** — own-свойство экземпляра; hoisting классов — TDZ до объявления."
+        },
+        {
+          "type": "svg",
+          "title": "Схема: class и экземпляр",
+          "content": {
+            "description": "`new Class()` создаёт объект, связанный с `Class.prototype`.",
+            "caption": "new → instance",
+            "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 200 76\" width=\"100%\" role=\"img\" aria-label=\"Класс и экземпляр\"><defs><marker id=\"m10-arr\" markerWidth=\"6\" markerHeight=\"6\" refX=\"5\" refY=\"3\" orient=\"auto\"><path d=\"M0,0 L6,3 L0,6 Z\" fill=\"#555\"/></marker></defs><rect x=\"12\" y=\"10\" width=\"76\" height=\"40\" rx=\"6\" fill=\"#e8eaf6\" stroke=\"#3949ab\" stroke-width=\"2\"/><text x=\"50\" y=\"28\" text-anchor=\"middle\" font-size=\"9\" font-weight=\"bold\" fill=\"#333\">Counter</text><text x=\"50\" y=\"42\" text-anchor=\"middle\" font-size=\"7\" fill=\"#666\">prototype</text><line x1=\"88\" y1=\"30\" x2=\"108\" y2=\"30\" stroke=\"#555\" marker-end=\"url(#m10-arr)\"/><text x=\"118\" y=\"26\" font-size=\"8\" fill=\"#333\">new</text><rect x=\"130\" y=\"14\" width=\"58\" height=\"32\" rx=\"4\" fill=\"#e8f5e9\" stroke=\"#2e7d32\"/><text x=\"159\" y=\"34\" text-anchor=\"middle\" font-size=\"8\" fill=\"#333\">instance</text><text x=\"50\" y=\"68\" text-anchor=\"middle\" font-size=\"7\" fill=\"#555\">methods on prototype</text></svg>"
+          }
+        },
+        {
+          "type": "theory",
+          "title": "Проверка через construct",
+          "content": "## Классы в тренажёре\n\nДля шагов с **`construct: { className }`** первый шаг теста — **`new ClassName(...args)`**, дальше — цепочка **`calls`** с **`method`** на возвращённом экземпляре.\n\nМутирующие методы (`push`, `put`) должны возвращать **`this`**, иначе цепочка оборвётся.\n\nПример — упрощённый **LRU** или **кольцевой буфер** фиксированной ёмкости: `put`/`get` или `push`/`toArray`."
+        },
+        {
+          "type": "javascript",
+          "title": "Практика: rectArea",
+          "content": {
+            "description": "Реализуйте **`rectArea(width, height)`** — объявите класс **`Rectangle`** с полями `width`, `height` и методом **`area()`**, верните площадь нового экземпляра.",
+            "starterCode": "function rectArea(width, height) {\n  class Rectangle {\n    constructor(w, h) {\n      this.width = w;\n      this.height = h;\n    }\n    area() {\n      return 0;\n    }\n  }\n  return new Rectangle(width, height).area();\n}",
+            "referenceSolution": "function rectArea(width, height) {\n  class Rectangle {\n    constructor(w, h) {\n      this.width = w;\n      this.height = h;\n    }\n    area() {\n      return this.width * this.height;\n    }\n  }\n  return new Rectangle(width, height).area();\n}",
+            "setup": "",
+            "reset": "",
+            "functionName": "rectArea",
+            "timeoutMs": 3000,
+            "tests": [
+              {
+                "args": [
+                  3,
+                  4
+                ]
+              },
+              {
+                "args": [
+                  10,
+                  2
+                ]
+              },
+              {
+                "args": [
+                  0,
+                  5
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "type": "javascript",
+          "title": "Практика: BankAccount",
+          "content": {
+            "description": "Реализуйте класс **`BankAccount`**: **`constructor(initial)`**, **`deposit(amount)`** (увеличивает баланс, возвращает `this`), **`balance()`** — текущий баланс. Тесты используют **`construct`** и **`calls`**.",
+            "starterCode": "class BankAccount {\n  constructor(initial) {\n    this._balance = 0;\n  }\n  deposit(amount) {\n    return this;\n  }\n  balance() {\n    return 0;\n  }\n}",
+            "referenceSolution": "class BankAccount {\n  constructor(initial) {\n    this._balance = initial;\n  }\n  deposit(amount) {\n    this._balance += amount;\n    return this;\n  }\n  balance() {\n    return this._balance;\n  }\n}",
+            "setup": "",
+            "reset": "",
+            "construct": {
+              "className": "BankAccount"
+            },
+            "timeoutMs": 4000,
+            "tests": [
+              {
+                "args": [
+                  100
+                ],
+                "calls": [
+                  {
+                    "method": "deposit",
+                    "args": [
+                      50
+                    ]
+                  },
+                  {
+                    "method": "balance",
+                    "args": []
+                  }
+                ]
+              },
+              {
+                "args": [
+                  0
+                ],
+                "calls": [
+                  {
+                    "method": "deposit",
+                    "args": [
+                      10
+                    ]
+                  },
+                  {
+                    "method": "deposit",
+                    "args": [
+                      5
+                    ]
+                  },
+                  {
+                    "method": "balance",
+                    "args": []
+                  }
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "type": "javascript",
+          "title": "Практика: TinyLRU",
+          "content": {
+            "description": "Реализуйте **`TinyLRU`**: `constructor(capacity)`, **`get(key)`** (нет ключа → `-1`; при hit ключ становится «свежим»), **`put(key, value)`** (при переполнении удалите **least recently used**). Мутирующие методы возвращайте **`this`**. Проверка через **`construct`** и **`calls`** (упрощённый LRU, ёмкость 2).",
+            "starterCode": "class TinyLRU {\n  constructor(capacity) {\n    this.capacity = capacity;\n  }\n  get(key) {\n    return -1;\n  }\n  put(key, value) {\n    return this;\n  }\n}",
+            "referenceSolution": "class TinyLRU {\n  constructor(capacity) {\n    this.capacity = capacity;\n    this.map = new Map();\n  }\n  get(key) {\n    if (!this.map.has(key)) return -1;\n    const value = this.map.get(key);\n    this.map.delete(key);\n    this.map.set(key, value);\n    return value;\n  }\n  put(key, value) {\n    if (this.map.has(key)) this.map.delete(key);\n    this.map.set(key, value);\n    if (this.map.size > this.capacity) {\n      const oldest = this.map.keys().next().value;\n      this.map.delete(oldest);\n    }\n    return this;\n  }\n}",
+            "setup": "",
+            "reset": "",
+            "construct": {
+              "className": "TinyLRU"
+            },
+            "timeoutMs": 5000,
+            "tests": [
+              {
+                "args": [
+                  2
+                ],
+                "calls": [
+                  {
+                    "method": "put",
+                    "args": [
+                      1,
+                      10
+                    ]
+                  },
+                  {
+                    "method": "put",
+                    "args": [
+                      2,
+                      20
+                    ]
+                  },
+                  {
+                    "method": "get",
+                    "args": [
+                      1
+                    ]
+                  }
+                ]
+              },
+              {
+                "args": [
+                  2
+                ],
+                "calls": [
+                  {
+                    "method": "put",
+                    "args": [
+                      1,
+                      1
+                    ]
+                  },
+                  {
+                    "method": "put",
+                    "args": [
+                      2,
+                      2
+                    ]
+                  },
+                  {
+                    "method": "put",
+                    "args": [
+                      3,
+                      3
+                    ]
+                  },
+                  {
+                    "method": "get",
+                    "args": [
+                      1
+                    ]
+                  }
+                ]
+              },
+              {
+                "args": [
+                  2
+                ],
+                "calls": [
+                  {
+                    "method": "put",
+                    "args": [
+                      1,
+                      1
+                    ]
+                  },
+                  {
+                    "method": "put",
+                    "args": [
+                      2,
+                      2
+                    ]
+                  },
+                  {
+                    "method": "put",
+                    "args": [
+                      3,
+                      3
+                    ]
+                  },
+                  {
+                    "method": "get",
+                    "args": [
+                      2
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "type": "theory",
+          "title": "Статика и private fields",
+          "content": "## Дополнения ES\n\n**`static method()`** — на функции-конструкторе, не на экземпляре.\n\n**`#privateField`** — настоящие private (hard privacy), в отличие от `_convention`.\n\n**`instanceof`** проверяет цепочку **`prototype`**.\n\nДля interop с C# через WASM/JS interop часто экспортируют plain objects; классы JS — когда нужны методы на стороне клиента."
+        },
+        {
+          "type": "quiz",
+          "title": "Тест: классы",
+          "content": {
+            "question": "Где в типичном объявлении `class Foo { bar() {} }` хранится функция `bar` для экземпляров?",
+            "options": [
+              "На `Foo.prototype` (наследуется экземплярами)",
+              "Как own-свойство каждого экземпляра при `new`",
+              "В статическом блоке `Foo` только",
+              "В глобальной области видимости"
+            ],
+            "correctIndices": [
+              0
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "title": "Массивы: map, filter, reduce",
+      "steps": [
+        {
+          "type": "theory",
+          "title": "Массивы и LINQ-подобный стиль",
+          "content": "## Массив как рабочая лошадка\n\nВ C# цепочки **`Select` / `Where` / `Aggregate`** строят **`IEnumerable<T>`** (часто лениво). В JavaScript **`Array.prototype.map`**, **`filter`**, **`reduce`** работают **сразу** и возвращают **новый массив** (кроме `reduce` — аккумулятор).\n\n```csharp\nvar sum = items.Where(x => x > 0).Select(x => x * x).Sum();\n```\n\n```javascript\nconst sum = items\n  .filter((x) => x > 0)\n  .map((x) => x * x)\n  .reduce((a, b) => a + b, 0);\n```\n\n**`reduce`** — универсальный свёртчик (как `Aggregate`). Начальное значение аккумулятора задавайте явно, иначе первый элемент массива станет seed (опасно для пустого массива).\n\nМетоды **не мутируют** исходный массив (в отличие от `push`/`sort` на месте). Для immutable-стиля, знакомого по LINQ to Objects, это основной паттерн."
+        },
+        {
+          "type": "svg",
+          "title": "Схема: pipeline map → filter → reduce",
+          "content": {
+            "caption": "data → map → filter → reduce → result",
+            "description": "Каждый шаг принимает массив и возвращает новый (кроме финального `reduce`).",
+            "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 280 64\" width=\"100%\" role=\"img\" aria-label=\"Pipeline map filter reduce\"><defs><marker id=\"m11-arr\" markerWidth=\"6\" markerHeight=\"6\" refX=\"5\" refY=\"3\" orient=\"auto\"><path d=\"M0,0 L6,3 L0,6 Z\" fill=\"#455a64\"/></marker></defs><rect id=\"m11-in\" x=\"6\" y=\"20\" width=\"44\" height=\"28\" rx=\"4\" fill=\"#eceff1\" stroke=\"#607d8b\"/><text x=\"28\" y=\"38\" text-anchor=\"middle\" font-size=\"8\" fill=\"#37474f\">[]</text><rect id=\"m11-map\" x=\"62\" y=\"16\" width=\"48\" height=\"36\" rx=\"4\" fill=\"#e3f2fd\" stroke=\"#1565c0\"/><text x=\"86\" y=\"38\" text-anchor=\"middle\" font-size=\"8\" fill=\"#0d47a1\">map</text><rect id=\"m11-filter\" x=\"122\" y=\"16\" width=\"48\" height=\"36\" rx=\"4\" fill=\"#fff9c4\" stroke=\"#f9a825\"/><text x=\"146\" y=\"38\" text-anchor=\"middle\" font-size=\"8\" fill=\"#e65100\">filter</text><rect id=\"m11-reduce\" x=\"182\" y=\"16\" width=\"48\" height=\"36\" rx=\"4\" fill=\"#fce4ec\" stroke=\"#c2185b\"/><text x=\"206\" y=\"38\" text-anchor=\"middle\" font-size=\"8\" fill=\"#880e4f\">reduce</text><rect id=\"m11-out\" x=\"242\" y=\"20\" width=\"32\" height=\"28\" rx=\"4\" fill=\"#e8f5e9\" stroke=\"#2e7d32\"/><text x=\"258\" y=\"38\" text-anchor=\"middle\" font-size=\"8\" fill=\"#1b5e20\">#</text><line x1=\"50\" y1=\"34\" x2=\"62\" y2=\"34\" stroke=\"#455a64\" marker-end=\"url(#m11-arr)\"/><line x1=\"110\" y1=\"34\" x2=\"122\" y2=\"34\" stroke=\"#455a64\" marker-end=\"url(#m11-arr)\"/><line x1=\"170\" y1=\"34\" x2=\"182\" y2=\"34\" stroke=\"#455a64\" marker-end=\"url(#m11-arr)\"/><line x1=\"230\" y1=\"34\" x2=\"242\" y2=\"34\" stroke=\"#455a64\" marker-end=\"url(#m11-arr)\"/></svg>"
+          }
+        },
+        {
+          "type": "theory",
+          "title": "Порядок, пустые массивы, сравнение с C#",
+          "content": "## Порядок элементов\n\n`map`/`filter` **сохраняют порядок**. Если задача — «множество уникальных значений», порядок в ответе может быть неважен; в тренажёре для таких кейсов есть **`unordered: true`** на тесте.\n\n## Пустой массив\n\n```javascript\n[].reduce((a, b) => a + b); // TypeError без initial\n[].reduce((a, b) => a + b, 0); // 0\n```\n\nВ C# **`Sum()`** на пустой последовательности даёт **0**; в JS без initial — исключение.\n\n## `Array.from` и spread\n\nПреобразование array-like / итерируемого: **`Array.from`**, **`[...iterable]`** — аналог **`ToArray()`** / materialize.\n\n```csharp\nvar arr = list.ToArray();\n```\n\n```javascript\nconst arr = [...listLike];\n```"
+        },
+        {
+          "type": "javascript",
+          "title": "Практика: sumPositive",
+          "content": {
+            "description": "Реализуйте **`sumPositive(nums)`**: сумма **строго положительных** элементов массива `nums` через **`filter`** и **`reduce`** (начальное значение аккумулятора `0`).",
+            "starterCode": "function sumPositive(nums) {\n  return 0;\n}",
+            "referenceSolution": "function sumPositive(nums) {\n  return nums.filter((n) => n > 0).reduce((a, b) => a + b, 0);\n}",
+            "setup": "",
+            "reset": "",
+            "functionName": "sumPositive",
+            "timeoutMs": 3000,
+            "tests": [
+              {
+                "args": [
+                  [
+                    1,
+                    -2,
+                    3,
+                    0,
+                    4
+                  ]
+                ]
+              },
+              {
+                "args": [
+                  [
+                    -1,
+                    -2
+                  ]
+                ]
+              },
+              {
+                "args": [
+                  []
+                ]
+              },
+              {
+                "args": [
+                  [
+                    0.5,
+                    1.5
+                  ]
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "type": "javascript",
+          "title": "Практика: squaresOfEvensSum",
+          "content": {
+            "description": "Реализуйте **`squaresOfEvensSum(nums)`**: оставьте **чётные** числа, возведите каждое в квадрат, верните **сумму** (цепочка `filter` → `map` → `reduce`).",
+            "starterCode": "function squaresOfEvensSum(nums) {\n  return 0;\n}",
+            "referenceSolution": "function squaresOfEvensSum(nums) {\n  return nums\n    .filter((n) => n % 2 === 0)\n    .map((n) => n * n)\n    .reduce((a, b) => a + b, 0);\n}",
+            "setup": "",
+            "reset": "",
+            "functionName": "squaresOfEvensSum",
+            "timeoutMs": 3000,
+            "tests": [
+              {
+                "args": [
+                  [
+                    1,
+                    2,
+                    3,
+                    4
+                  ]
+                ]
+              },
+              {
+                "args": [
+                  [
+                    -2,
+                    0,
+                    5
+                  ]
+                ]
+              },
+              {
+                "args": [
+                  []
+                ]
+              },
+              {
+                "args": [
+                  [
+                    3,
+                    5,
+                    7
+                  ]
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "type": "javascript",
+          "title": "Практика: uniqueFlat",
+          "content": {
+            "description": "Реализуйте **`uniqueFlat(...arrays)`**: объедините все переданные массивы (**`flat` один уровень** или spread + concat), верните **новый массив уникальных** значений (порядок первого появления сохраняйте; для одного из тестов порядок в ответе **не проверяется** — `unordered`).",
+            "starterCode": "function uniqueFlat(...arrays) {\n  return [];\n}",
+            "referenceSolution": "function uniqueFlat(...arrays) {\n  const merged = arrays.flat();\n  return [...new Set(merged)];\n}",
+            "setup": "",
+            "reset": "",
+            "functionName": "uniqueFlat",
+            "timeoutMs": 4000,
+            "tests": [
+              {
+                "args": [
+                  [
+                    1,
+                    2
+                  ],
+                  [
+                    2,
+                    3
+                  ]
+                ]
+              },
+              {
+                "args": [
+                  [],
+                  [
+                    1
+                  ]
+                ]
+              },
+              {
+                "args": [
+                  [
+                    1,
+                    1
+                  ],
+                  [
+                    1
+                  ]
+                ],
+                "unordered": true
+              },
+              {
+                "args": [
+                  [
+                    "a"
+                  ],
+                  [
+                    "b",
+                    "a"
+                  ]
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "type": "theory",
+          "title": "Когда цикл, когда методы массива",
+          "content": "## Производительность и читаемость\n\nHot path и большие данные иногда оправдывают **`for`**. Для бизнес-логики и DTO-трансформаций цепочки **`map`/`filter`** обычно читаются как LINQ.\n\n## Методы изменяют массив\n\n**`sort`**, **`reverse`**, **`splice`** — mutating. Копируйте перед сортировкой, если исходник нужен:\n\n```javascript\nconst sorted = [...nums].sort((a, b) => a - b);\n```\n\nВ C# **`OrderBy`** не мутирует исходный **`List<T>`**; **`List.Sort()`** — мутирует."
+        },
+        {
+          "type": "quiz",
+          "title": "Тест: массивы",
+          "content": {
+            "question": "Что вернёт `[].reduce((a, b) => a + b, 0)`?",
+            "options": [
+              "`undefined`",
+              "`0`",
+              "TypeError",
+              "`NaN`"
+            ],
+            "correctIndices": [
+              1
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "title": "Map, Set и коллекции",
+      "steps": [
+        {
+          "type": "theory",
+          "title": "Map и Set vs Dictionary и HashSet",
+          "content": "## Ключи и уникальность\n\n**`Map`** — пары ключ–значение с любыми ключами (включая объекты). **`Set`** — уникальные значения.\n\n```csharp\nvar d = new Dictionary<string, int>();\nvar s = new HashSet<int>();\n```\n\n```javascript\nconst m = new Map([['a', 1]]);\nconst s = new Set([1, 2, 2]);\n```\n\n**`Map`** сохраняет **порядок вставки** (как `Dictionary` в современном .NET). **`Object`** как словарь — legacy: ключи только string/Symbol, наследуемые поля, приведение ключей.\n\n**`WeakMap` / `WeakSet`** — слабые ссылки (GC); в курсе — базовые **`Map`/`Set`**."
+        },
+        {
+          "type": "svg",
+          "title": "Схема: Map и порядок LRU",
+          "content": {
+            "caption": "Map: insertion order → eviction",
+            "description": "Упрощённый LRU на `Map`: при `get` ключ «освежается» (delete + set), при переполнении удаляется первый ключ итератора.",
+            "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 240 80\" width=\"100%\" role=\"img\" aria-label=\"Map LRU порядок\"><defs><marker id=\"m12-arr\" markerWidth=\"6\" markerHeight=\"6\" refX=\"5\" refY=\"3\" orient=\"auto\"><path d=\"M0,0 L6,3 L0,6 Z\" fill=\"#37474f\"/></marker></defs><rect id=\"m12-map\" x=\"12\" y=\"14\" width=\"216\" height=\"52\" rx=\"6\" fill=\"#e8eaf6\" stroke=\"#3949ab\" stroke-width=\"2\"/><text x=\"120\" y=\"32\" text-anchor=\"middle\" font-size=\"9\" font-weight=\"bold\" fill=\"#283593\">Map</text><rect id=\"m12-k1\" x=\"24\" y=\"40\" width=\"36\" height=\"20\" rx=\"3\" fill=\"#ffcdd2\" stroke=\"#c62828\"/><text x=\"42\" y=\"54\" text-anchor=\"middle\" font-size=\"7\" fill=\"#b71c1c\">LRU</text><rect id=\"m12-k2\" x=\"68\" y=\"40\" width=\"36\" height=\"20\" rx=\"3\" fill=\"#fff9c4\" stroke=\"#f9a825\"/><text x=\"86\" y=\"54\" text-anchor=\"middle\" font-size=\"7\" fill=\"#e65100\">k2</text><rect id=\"m12-k3\" x=\"112\" y=\"40\" width=\"36\" height=\"20\" rx=\"3\" fill=\"#c8e6c9\" stroke=\"#2e7d32\"/><text x=\"130\" y=\"54\" text-anchor=\"middle\" font-size=\"7\" fill=\"#1b5e20\">MRU</text><line x1=\"156\" y1=\"50\" x2=\"188\" y2=\"50\" stroke=\"#37474f\" marker-end=\"url(#m12-arr)\"/><text x=\"200\" y=\"48\" font-size=\"7\" fill=\"#555\">get→move</text></svg>"
+          }
+        },
+        {
+          "type": "theory",
+          "title": "API Map/Set и LRU на Map",
+          "content": "## Частые операции\n\n```javascript\nm.set(k, v);\nm.get(k);\nm.has(k);\nm.delete(k);\nm.size;\n\nfor (const [k, v] of m) { /* ... */ }\n```\n\n**`Set`**: `add`, `has`, `delete`, spread **`[...s]`** для массива.\n\n## LRU cache\n\nКлассический приём: **`Map`** как очередь по порядку использования. **`get`**: если ключ есть — удалить и вставить снова (становится «свежим»). **`put`**: при переполнении — **`map.keys().next().value`** (самый старый).\n\nВ C# **`MemoryCache` / `IMemoryCache`** решают похожую задачу на уровне framework; здесь — компактная модель для понимания коллекций ES."
+        },
+        {
+          "type": "javascript",
+          "title": "Практика: distinctCount",
+          "content": {
+            "description": "Реализуйте **`distinctCount(values)`** — число **уникальных** элементов массива `values` (используйте **`Set`**).",
+            "starterCode": "function distinctCount(values) {\n  return 0;\n}",
+            "referenceSolution": "function distinctCount(values) {\n  return new Set(values).size;\n}",
+            "setup": "",
+            "reset": "",
+            "functionName": "distinctCount",
+            "timeoutMs": 3000,
+            "tests": [
+              {
+                "args": [
+                  [
+                    1,
+                    2,
+                    2,
+                    3
+                  ]
+                ]
+              },
+              {
+                "args": [
+                  []
+                ]
+              },
+              {
+                "args": [
+                  [
+                    "x"
+                  ]
+                ]
+              },
+              {
+                "args": [
+                  [
+                    0,
+                    0,
+                    0
+                  ]
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "type": "javascript",
+          "title": "Практика: invertMap",
+          "content": {
+            "description": "Реализуйте **`invertMap(pairs)`**: на вход массив пар **`[key, value]`** (строки). Верните **новый `Map`**, где ключи — бывшие **значения**, значения — бывшие **ключи**. Если value дублируется, побеждает **последняя** пара в массиве.",
+            "starterCode": "function invertMap(pairs) {\n  return new Map();\n}",
+            "referenceSolution": "function invertMap(pairs) {\n  const out = new Map();\n  for (const [k, v] of pairs) {\n    out.set(v, k);\n  }\n  return out;\n}",
+            "setup": "",
+            "reset": "",
+            "functionName": "invertMap",
+            "timeoutMs": 4000,
+            "tests": [
+              {
+                "args": [
+                  [
+                    [
+                      "a",
+                      "1"
+                    ],
+                    [
+                      "b",
+                      "2"
+                    ]
+                  ]
+                ],
+                "calls": [
+                  {
+                    "method": "get",
+                    "args": [
+                      "1"
+                    ]
+                  }
+                ]
+              },
+              {
+                "args": [
+                  [
+                    [
+                      "x",
+                      "y"
+                    ],
+                    [
+                      "z",
+                      "y"
+                    ]
+                  ]
+                ],
+                "calls": [
+                  {
+                    "method": "get",
+                    "args": [
+                      "y"
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "type": "javascript",
+          "title": "Практика: MapLRU",
+          "content": {
+            "description": "Реализуйте класс **`MapLRU`**: `constructor(capacity)`, **`get(key)`** (нет ключа → `-1`; hit делает ключ «свежим»), **`put(key, value)`** (evict LRU при переполнении). Мутирующие методы возвращайте **`this`**. Используйте **`Map`**. Проверка через **`construct`** и **`calls`**.",
+            "starterCode": "class MapLRU {\n  constructor(capacity) {\n    this.capacity = capacity;\n  }\n  get(key) {\n    return -1;\n  }\n  put(key, value) {\n    return this;\n  }\n}",
+            "referenceSolution": "class MapLRU {\n  constructor(capacity) {\n    this.capacity = capacity;\n    this.map = new Map();\n  }\n  get(key) {\n    if (!this.map.has(key)) return -1;\n    const value = this.map.get(key);\n    this.map.delete(key);\n    this.map.set(key, value);\n    return value;\n  }\n  put(key, value) {\n    if (this.map.has(key)) this.map.delete(key);\n    this.map.set(key, value);\n    if (this.map.size > this.capacity) {\n      const oldest = this.map.keys().next().value;\n      this.map.delete(oldest);\n    }\n    return this;\n  }\n}",
+            "setup": "",
+            "reset": "",
+            "construct": {
+              "className": "MapLRU"
+            },
+            "timeoutMs": 5000,
+            "tests": [
+              {
+                "args": [
+                  2
+                ],
+                "calls": [
+                  {
+                    "method": "put",
+                    "args": [
+                      1,
+                      10
+                    ]
+                  },
+                  {
+                    "method": "put",
+                    "args": [
+                      2,
+                      20
+                    ]
+                  },
+                  {
+                    "method": "get",
+                    "args": [
+                      1
+                    ]
+                  }
+                ]
+              },
+              {
+                "args": [
+                  2
+                ],
+                "calls": [
+                  {
+                    "method": "put",
+                    "args": [
+                      1,
+                      1
+                    ]
+                  },
+                  {
+                    "method": "put",
+                    "args": [
+                      2,
+                      2
+                    ]
+                  },
+                  {
+                    "method": "put",
+                    "args": [
+                      3,
+                      3
+                    ]
+                  },
+                  {
+                    "method": "get",
+                    "args": [
+                      1
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "type": "theory",
+          "title": "Interop с C# и JSON",
+          "content": "## Не-JSON типы\n\n**`Map`/`Set`** не сериализуются в JSON «из коробки» как объекты/массивы. Для API и хранения — **`Object.fromEntries(map)`**, **`[...set]`**, или plain objects.\n\n## Когда что выбирать\n\n- Частые lookup по string key → **`Record`** / plain object часто достаточно.\n- Ключ — объект, порядок важен, частые add/delete → **`Map`**.\n- Уникальность в потоке → **`Set`** (как **`Distinct()`** в LINQ).\n\n```csharp\nitems.Distinct().Count();\n```\n\n```javascript\ndistinctCount(items);\n```"
+        },
+        {
+          "type": "quiz",
+          "title": "Тест: Map и Set",
+          "content": {
+            "question": "Чем `new Map()` принципиально удобнее plain object для частых add/delete пар ключ–значение?",
+            "options": [
+              "Ключи только строки, как у JSON",
+              "Сохраняет порядок вставки и не смешивается с прототипом Object",
+              "Автоматически сортирует ключи по алфавиту",
+              "Хранит только числовые ключи"
+            ],
+            "correctIndices": [
+              1
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "title": "Итераторы и генераторы",
+      "steps": [
+        {
+          "type": "theory",
+          "title": "Итерируемое и for..of",
+          "content": "## Протокол iterable\n\nОбъект **iterable**, если у него есть **`Symbol.iterator`**, возвращающий iterator с методом **`next()`** (`{ value, done }`).\n\n**`for..of`**, spread **`[...x]`**, **`Array.from`** потребляют iterable.\n\n```csharp\nforeach (var x in list) { }\n```\n\n```javascript\nfor (const x of list) { }\n```\n\nМассивы iterable; **`Map`** iterable по парам **`[key, value]`**.\n\n## Генераторы\n\n**`function*`** возвращает объект-генератор (и iterable, и iterator):\n\n```javascript\nfunction* range(a, b) {\n  for (let i = a; i < b; i += 1) yield i;\n}\n```\n\n**`yield`** приостанавливает функцию; **`next()`** возобновляет. В C# ближе **`yield return`** в **`IEnumerable`** / **`IAsyncEnumerable`** (async generators — отдельная тема)."
+        },
+        {
+          "type": "svg",
+          "title": "Схема: generator и next()",
+          "content": {
+            "caption": "yield → pause → next()",
+            "description": "Каждый `yield` отдаёт значение наружу; состояние функции сохраняется в генераторе.",
+            "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 220 88\" width=\"100%\" role=\"img\" aria-label=\"Генератор и next\"><defs><marker id=\"m13-arr\" markerWidth=\"6\" markerHeight=\"6\" refX=\"5\" refY=\"3\" orient=\"auto\"><path d=\"M0,0 L6,3 L0,6 Z\" fill=\"#555\"/></marker></defs><rect id=\"m13-gen\" x=\"10\" y=\"12\" width=\"88\" height=\"64\" rx=\"6\" fill=\"#e3f2fd\" stroke=\"#1565c0\" stroke-width=\"2\"/><text x=\"54\" y=\"32\" text-anchor=\"middle\" font-size=\"9\" font-weight=\"bold\" fill=\"#0d47a1\">function*</text><text x=\"54\" y=\"48\" text-anchor=\"middle\" font-size=\"8\" fill=\"#555\">yield 1</text><text x=\"54\" y=\"62\" text-anchor=\"middle\" font-size=\"8\" fill=\"#555\">yield 2</text><line x1=\"98\" y1=\"44\" x2=\"118\" y2=\"44\" stroke=\"#555\" marker-end=\"url(#m13-arr)\"/><rect id=\"m13-iter\" x=\"118\" y=\"24\" width=\"92\" height=\"40\" rx=\"4\" fill=\"#fff9c4\" stroke=\"#f9a825\"/><text x=\"164\" y=\"42\" text-anchor=\"middle\" font-size=\"8\" fill=\"#e65100\">.next()</text><text x=\"164\" y=\"56\" text-anchor=\"middle\" font-size=\"7\" fill=\"#666\">value / done</text></svg>"
+          }
+        },
+        {
+          "type": "theory",
+          "title": "Materialize и ленивость",
+          "content": "## Ленивость vs LINQ\n\nГенератор **не** считает все значения заранее — как **`yield return`** в C#. Чтобы сравнить с массивом в тестах, часто **materialize**:\n\n```javascript\nfunction collectSquares(n) {\n  function* gen() {\n    for (let i = 1; i <= n; i += 1) yield i * i;\n  }\n  return [...gen()];\n}\n```\n\n**`return` в generator** завершает последовательность (`done: true`).\n\n**Делегирование**: **`yield* otherIterable`** — проксирует итерацию (как вложенный `foreach`)."
+        },
+        {
+          "type": "javascript",
+          "title": "Практика: rangeArray",
+          "content": {
+            "description": "Реализуйте **`rangeArray(from, toExclusive)`** через **`function*`** и spread: целые **`i`** от **`from`** (включительно) до **`toExclusive`** (исключительно). Верните **массив**.",
+            "starterCode": "function rangeArray(from, toExclusive) {\n  return [];\n}",
+            "referenceSolution": "function rangeArray(from, toExclusive) {\n  function* gen() {\n    for (let i = from; i < toExclusive; i += 1) yield i;\n  }\n  return [...gen()];\n}",
+            "setup": "",
+            "reset": "",
+            "functionName": "rangeArray",
+            "timeoutMs": 4000,
+            "tests": [
+              {
+                "args": [
+                  0,
+                  3
+                ]
+              },
+              {
+                "args": [
+                  2,
+                  2
+                ]
+              },
+              {
+                "args": [
+                  -1,
+                  2
+                ]
+              },
+              {
+                "args": [
+                  1,
+                  5
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "type": "javascript",
+          "title": "Практика: takeSquares",
+          "content": {
+            "description": "Реализуйте **`takeSquares(count)`**: генератор **`function*`** выдаёт квадраты **`1, 4, 9, …`** для **`count`** первых натуральных чисел; верните массив из **`count`** элементов (materialize через **`for..of`** или spread).",
+            "starterCode": "function takeSquares(count) {\n  return [];\n}",
+            "referenceSolution": "function takeSquares(count) {\n  function* gen() {\n    for (let i = 1; i <= count; i += 1) yield i * i;\n  }\n  return [...gen()];\n}",
+            "setup": "",
+            "reset": "",
+            "functionName": "takeSquares",
+            "timeoutMs": 4000,
+            "tests": [
+              {
+                "args": [
+                  0
+                ]
+              },
+              {
+                "args": [
+                  1
+                ]
+              },
+              {
+                "args": [
+                  4
+                ]
+              },
+              {
+                "args": [
+                  3
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "type": "javascript",
+          "title": "Практика: flattenWithYieldStar",
+          "content": {
+            "description": "Реализуйте **`flattenWithYieldStar(nested)`**: `nested` — массив массивов чисел. Используйте **`function*`** и **`yield*`** для обхода вложенных массивов; верните **плоский массив** чисел.",
+            "starterCode": "function flattenWithYieldStar(nested) {\n  return [];\n}",
+            "referenceSolution": "function flattenWithYieldStar(nested) {\n  function* walk() {\n    for (const part of nested) {\n      yield* part;\n    }\n  }\n  return [...walk()];\n}",
+            "setup": "",
+            "reset": "",
+            "functionName": "flattenWithYieldStar",
+            "timeoutMs": 4000,
+            "tests": [
+              {
+                "args": [
+                  [
+                    [
+                      1,
+                      2
+                    ],
+                    [
+                      3
+                    ]
+                  ]
+                ]
+              },
+              {
+                "args": [
+                  [
+                    [],
+                    [
+                      1
+                    ]
+                  ]
+                ]
+              },
+              {
+                "args": [
+                  []
+                ]
+              },
+              {
+                "args": [
+                  [
+                    [
+                      5
+                    ],
+                    [
+                      6,
+                      7
+                    ]
+                  ]
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "type": "theory",
+          "title": "C# IAsyncEnumerable и осторожность",
+          "content": "## Сравнение с C#\n\n| C# | JS |\n|----|-----|\n| `yield return` | `yield` |\n| `IEnumerable<T>` | iterable / generator |\n| `IAsyncEnumerable<T>` | async generator `async function*` |\n\nГенераторы **не** thread-safe «итераторы по коллекции» из нескольких потоков — в JS один поток, но **один generator** нельзя безопасно дергать из двух мест без дисциплины.\n\nНе используйте **`function*`** там, где нужен **`this`** методом объекта — обычный method generator привязан к объекту, но стрелки generator syntax не существует."
+        },
+        {
+          "type": "quiz",
+          "title": "Тест: генераторы",
+          "content": {
+            "question": "Что делает `yield*` внутри `function*`?",
+            "options": [
+              "Синхронно копирует массив в генератор",
+              "Делегирует итерацию другому iterable/generator",
+              "Превращает generator в Promise",
+              "Завершает generator без `done`"
+            ],
+            "correctIndices": [
+              1
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "title": "Symbol и Proxy (основы)",
+      "steps": [
+        {
+          "type": "theory",
+          "title": "Symbol: уникальные ключи",
+          "content": "## Зачем Symbol\n\n**`Symbol(description)`** создаёт **уникальный** примитив — часто как **ключ свойства**, который не конфликтует с строковыми полями.\n\n```javascript\nconst id = Symbol('id');\nconst user = { name: 'Ann', [id]: 42 };\n```\n\n**`Symbol.for('app.id')`** — **глобальный реестр** (как shared ключ между модулями). **`Symbol.keyFor(sym)`** — обратно имя.\n\nВ C# нет прямого аналога; ближе **typed keys** / **`nameof`** + convention, но не runtime-uniqueness.\n\n**`Object.keys`** / **`JSON.stringify`** **не** перечисляют Symbol-свойства — «скрытые» от типичной сериализации поля."
+        },
+        {
+          "type": "svg",
+          "title": "Схема: Proxy перехватывает get",
+          "content": {
+            "caption": "target ← handler.get",
+            "description": "Proxy оборачивает объект; операции (get/set/has) можно перехватить в handler.",
+            "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 210 76\" width=\"100%\" role=\"img\" aria-label=\"Proxy get trap\"><defs><marker id=\"m14-arr\" markerWidth=\"6\" markerHeight=\"6\" refX=\"5\" refY=\"3\" orient=\"auto\"><path d=\"M0,0 L6,3 L0,6 Z\" fill=\"#555\"/></marker></defs><rect id=\"m14-client\" x=\"8\" y=\"24\" width=\"52\" height=\"28\" rx=\"4\" fill=\"#eceff1\" stroke=\"#607d8b\"/><text x=\"34\" y=\"42\" text-anchor=\"middle\" font-size=\"8\" fill=\"#37474f\">client</text><rect id=\"m14-proxy\" x=\"72\" y=\"14\" width=\"66\" height=\"48\" rx=\"6\" fill=\"#fff9c4\" stroke=\"#f9a825\" stroke-width=\"2\"/><text x=\"105\" y=\"34\" text-anchor=\"middle\" font-size=\"9\" font-weight=\"bold\" fill=\"#e65100\">Proxy</text><text x=\"105\" y=\"50\" text-anchor=\"middle\" font-size=\"7\" fill=\"#666\">get trap</text><line x1=\"60\" y1=\"38\" x2=\"72\" y2=\"38\" stroke=\"#555\" marker-end=\"url(#m14-arr)\"/><rect id=\"m14-target\" x=\"148\" y=\"24\" width=\"52\" height=\"28\" rx=\"4\" fill=\"#e8f5e9\" stroke=\"#2e7d32\"/><text x=\"174\" y=\"42\" text-anchor=\"middle\" font-size=\"8\" fill=\"#1b5e20\">target</text><line x1=\"138\" y1=\"38\" x2=\"148\" y2=\"38\" stroke=\"#555\" marker-end=\"url(#m14-arr)\"/></svg>"
+          }
+        },
+        {
+          "type": "theory",
+          "title": "Proxy: meta-programming",
+          "content": "## Базовый Proxy\n\n```javascript\nconst target = { x: 1 };\nconst p = new Proxy(target, {\n  get(t, prop) {\n    if (prop === 'x') return t.x * 10;\n    return t[prop];\n  },\n});\np.x; // 10\n```\n\n**`Reflect`** — зеркальные операции (`Reflect.get`, `Reflect.set`) для вызова default-поведения из trap.\n\nИспользуют для **validation**, **logging**, **virtual properties**, reactive frameworks (частично). Не путать с **COM Proxy** / **DispatchProxy** в .NET — идея «перехватчика» похожа, API другое.\n\n**Revocable**: **`Proxy.revocable`** — отключить прокси навсегда."
+        },
+        {
+          "type": "javascript",
+          "title": "Практика: registrySymbolsEqual",
+          "content": {
+            "description": "Реализуйте **`registrySymbolsEqual(name)`**: верните **`true`**, если **`Symbol.for(name) === Symbol.for(name)`** (два обращения к глобальному реестру для одного `name`).",
+            "starterCode": "function registrySymbolsEqual(name) {\n  return false;\n}",
+            "referenceSolution": "function registrySymbolsEqual(name) {\n  return Symbol.for(name) === Symbol.for(name);\n}",
+            "setup": "",
+            "reset": "",
+            "functionName": "registrySymbolsEqual",
+            "timeoutMs": 3000,
+            "tests": [
+              {
+                "args": [
+                  "vibetest.demo"
+                ]
+              },
+              {
+                "args": [
+                  "app.config"
+                ]
+              },
+              {
+                "args": [
+                  ""
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "type": "javascript",
+          "title": "Практика: tagWithSymbol",
+          "content": {
+            "description": "Реализуйте **`tagWithSymbol(obj, tagName, value)`**: создайте **`Symbol.for(tagName)`**, верните **новый объект** `{ ...obj, [sym]: value }` (spread + symbol key). **`readTag(obj, tagName)`** — прочитайте значение по **`Symbol.for(tagName)`** (если нет — `undefined`). Тесты вызывают **`demoTagRead`** из шаблона.",
+            "starterCode": "function tagWithSymbol(obj, tagName, value) {\n  return obj;\n}\nfunction readTag(obj, tagName) {\n  return undefined;\n}\nfunction demoTagRead() {\n  const o = tagWithSymbol({ id: 1 }, 'meta.kind', 'user');\n  return readTag(o, 'meta.kind');\n}",
+            "referenceSolution": "function tagWithSymbol(obj, tagName, value) {\n  const sym = Symbol.for(tagName);\n  return { ...obj, [sym]: value };\n}\nfunction readTag(obj, tagName) {\n  return obj[Symbol.for(tagName)];\n}\nfunction demoTagRead() {\n  const o = tagWithSymbol({ id: 1 }, 'meta.kind', 'user');\n  return readTag(o, 'meta.kind');\n}",
+            "setup": "",
+            "reset": "",
+            "functionName": "demoTagRead",
+            "timeoutMs": 4000,
+            "tests": [
+              {
+                "args": []
+              },
+              {
+                "args": []
+              }
+            ]
+          }
+        },
+        {
+          "type": "javascript",
+          "title": "Практика: doubleOnGetProxy",
+          "content": {
+            "description": "Реализуйте **`readDoubledX(obj)`**: оберните `obj` в **`Proxy`**, trap **`get`**: для свойства **`'x'`** верните **`target.x * 2`**, для остальных — **`Reflect.get`**. Верните **`proxy.x`** (число). **`demoDoubleProxy`** не меняйте.",
+            "starterCode": "function readDoubledX(obj) {\n  return obj.x;\n}\nfunction demoDoubleProxy() {\n  return readDoubledX({ x: 7, y: 1 });\n}",
+            "referenceSolution": "function readDoubledX(obj) {\n  const p = new Proxy(obj, {\n    get(target, prop, receiver) {\n      if (prop === 'x') return target.x * 2;\n      return Reflect.get(target, prop, receiver);\n    },\n  });\n  return p.x;\n}\nfunction demoDoubleProxy() {\n  return readDoubledX({ x: 7, y: 1 });\n}",
+            "setup": "",
+            "reset": "",
+            "functionName": "demoDoubleProxy",
+            "timeoutMs": 4000,
+            "tests": [
+              {
+                "args": []
+              },
+              {
+                "args": []
+              }
+            ]
+          }
+        },
+        {
+          "type": "theory",
+          "title": "Ограничения для C#-interop",
+          "content": "## Symbol и JSON\n\nПри обмене с backend / C# **Symbol-поля теряются** в JSON. Держите контракт на **string keys**.\n\n## Proxy и plain data\n\nProxy **не** является plain object — сравнение в тренажёре и `structuredClone` ведут себя иначе. В задачах возвращайте **примитивы/ plain JSON**, а Proxy держите внутри функции.\n\n**Well-known symbols**: `Symbol.iterator`, `Symbol.toStringTag` — hooks протоколов ES."
+        },
+        {
+          "type": "quiz",
+          "title": "Тест: Symbol и Proxy",
+          "content": {
+            "question": "Попадут ли Symbol-свойства объекта в результат `JSON.stringify(obj)`?",
+            "options": [
+              "Да, с ключом вида `Symbol(desc)`",
+              "Нет, они пропускаются",
+              "Да, но только `Symbol.for`",
+              "Да, если enumerable"
+            ],
+            "correctIndices": [
+              1
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "title": "Ошибки и отклонения Promise",
+      "steps": [
+        {
+          "type": "theory",
+          "title": "throw, try/catch, Error",
+          "content": "## Исключения в JS\n\n**`throw value`** прерывает выполнение до ближайшего **`catch`**. Лучше **`throw new Error('message')`** — stack trace.\n\n```csharp\ntry { } catch (Exception ex) { }\nfinally { }\n```\n\n```javascript\ntry {\n  risky();\n} catch (err) {\n  console.error(err.message);\n} finally {\n  cleanup();\n}\n```\n\n**`Error`**, **`TypeError`**, **`RangeError`** — встроенные типы. В strict mode многие ошибки **раньше** становятся throw (например присвоение readonly).\n\nSync **throw** в async-функции **не** превращается автоматически в reject Promise (до первого await — может быть sync throw из вызова async fn)."
+        },
+        {
+          "type": "svg",
+          "title": "Схема: fulfill vs reject",
+          "content": {
+            "caption": "Promise settled: ok / err",
+            "description": "В тренажёре `rejects: true` сравнивает reason при отклонении Promise (не sync throw до финала).",
+            "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 220 72\" width=\"100%\" role=\"img\" aria-label=\"Promise fulfill и reject\"><defs><marker id=\"m15-arr\" markerWidth=\"6\" markerHeight=\"6\" refX=\"5\" refY=\"3\" orient=\"auto\"><path d=\"M0,0 L6,3 L0,6 Z\" fill=\"#455a64\"/></marker></defs><rect id=\"m15-fn\" x=\"12\" y=\"20\" width=\"56\" height=\"32\" rx=\"4\" fill=\"#e3f2fd\" stroke=\"#1565c0\"/><text x=\"40\" y=\"40\" text-anchor=\"middle\" font-size=\"8\" fill=\"#0d47a1\">async fn</text><line x1=\"68\" y1=\"36\" x2=\"88\" y2=\"36\" stroke=\"#455a64\" marker-end=\"url(#m15-arr)\"/><rect id=\"m15-ok\" x=\"88\" y=\"8\" width=\"56\" height=\"28\" rx=\"4\" fill=\"#e8f5e9\" stroke=\"#2e7d32\"/><text x=\"116\" y=\"26\" text-anchor=\"middle\" font-size=\"8\" fill=\"#1b5e20\">fulfill</text><rect id=\"m15-bad\" x=\"88\" y=\"44\" width=\"56\" height=\"28\" rx=\"4\" fill=\"#ffebee\" stroke=\"#c62828\"/><text x=\"116\" y=\"62\" text-anchor=\"middle\" font-size=\"8\" fill=\"#b71c1c\">reject</text><text id=\"m15-note\" x=\"168\" y=\"40\" font-size=\"7\" fill=\"#546e7a\">rejects:true</text></svg>"
+          }
+        },
+        {
+          "type": "theory",
+          "title": "Promise reject и тренажёр",
+          "content": "## Async и reject\n\n```javascript\nasync function load(id) {\n  if (id < 0) return Promise.reject('invalid id');\n  return id;\n}\n```\n\nВ **dual-run** при **`rejects: true`** обе среды должны **отклонить** Promise на финале; сравнивается **reason** (строка или `Error.message`).\n\n**Sync throw** из тела, вызванного как обычная функция, — **не** тот же путь, что reject (в v1 тренажёра).\n\n```csharp\nawait task; // Task faulted\n```\n\n```javascript\nawait promise; // rejection\n```\n\n**`throw` внутри async** после await — reject promise."
+        },
+        {
+          "type": "javascript",
+          "title": "Практика: classifyParsePositive",
+          "content": {
+            "description": "Реализуйте **`parsePositiveInt(text)`** (внутренняя логика): при невалидном вводе **`throw new Error('invalid')`** (не строка из цифр `/^\\d+$/` или **`'0'`**). Реализуйте **`classifyParsePositive(text)`**: при успехе верните **`{ ok: true, value }`**, при **`invalid`** — **`{ ok: false, message: 'invalid' }`** (перехватите throw). Тесты вызывают **`classifyParsePositive`**.",
+            "starterCode": "function parsePositiveInt(text) {\n  return Number(text);\n}\nfunction classifyParsePositive(text) {\n  return { ok: true, value: 0 };\n}",
+            "referenceSolution": "function parsePositiveInt(text) {\n  if (typeof text !== 'string' || !/^\\d+$/.test(text) || text === '0') {\n    throw new Error('invalid');\n  }\n  return Number(text);\n}\nfunction classifyParsePositive(text) {\n  try {\n    return { ok: true, value: parsePositiveInt(text) };\n  } catch (e) {\n    if (e instanceof Error && e.message === 'invalid') {\n      return { ok: false, message: 'invalid' };\n    }\n    throw e;\n  }\n}",
+            "setup": "",
+            "reset": "",
+            "functionName": "classifyParsePositive",
+            "timeoutMs": 4000,
+            "tests": [
+              {
+                "args": [
+                  "42"
+                ]
+              },
+              {
+                "args": [
+                  "007"
+                ]
+              },
+              {
+                "args": [
+                  "0"
+                ]
+              },
+              {
+                "args": [
+                  "-1"
+                ]
+              },
+              {
+                "args": [
+                  "12a"
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "type": "javascript",
+          "title": "Практика: getMessageOrDefault",
+          "content": {
+            "description": "Реализуйте **`getMessageOrDefault(err, fallback)`**: если `err` — **`Error`**, верните **`err.message`**; иначе **`fallback`**. Не меняйте **`runGetMessageSuite(which)`** — она прогоняет три сценария для тестов.",
+            "starterCode": "function getMessageOrDefault(err, fallback) {\n  return fallback;\n}\nfunction runGetMessageSuite(which) {\n  if (which === 'error') return getMessageOrDefault(new Error('boom'), 'x');\n  if (which === 'plain') return getMessageOrDefault('plain', 'fallback');\n  return getMessageOrDefault(null, 'none');\n}",
+            "referenceSolution": "function getMessageOrDefault(err, fallback) {\n  if (err instanceof Error) return err.message;\n  return fallback;\n}\nfunction runGetMessageSuite(which) {\n  if (which === 'error') return getMessageOrDefault(new Error('boom'), 'x');\n  if (which === 'plain') return getMessageOrDefault('plain', 'fallback');\n  return getMessageOrDefault(null, 'none');\n}",
+            "setup": "",
+            "reset": "",
+            "functionName": "runGetMessageSuite",
+            "timeoutMs": 3000,
+            "tests": [
+              {
+                "args": [
+                  "error"
+                ]
+              },
+              {
+                "args": [
+                  "plain"
+                ]
+              },
+              {
+                "args": [
+                  "null"
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "type": "javascript",
+          "title": "Практика: requirePositiveAsync",
+          "content": {
+            "description": "Реализуйте **`async function requirePositiveAsync(n)`**: если **`n < 0`**, верните **`Promise.reject('negative')`**; иначе **`n`**. Один тест ожидает **reject** (`rejects: true`).",
+            "starterCode": "async function requirePositiveAsync(n) {\n  return n;\n}",
+            "referenceSolution": "async function requirePositiveAsync(n) {\n  if (n < 0) return Promise.reject('negative');\n  return n;\n}",
+            "setup": "",
+            "reset": "",
+            "functionName": "requirePositiveAsync",
+            "timeoutMs": 4000,
+            "tests": [
+              {
+                "args": [
+                  5
+                ]
+              },
+              {
+                "args": [
+                  0
+                ]
+              },
+              {
+                "args": [
+                  -3
+                ],
+                "rejects": true
+              },
+              {
+                "args": [
+                  100
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "type": "theory",
+          "title": "Стиль обработки для C#-команд",
+          "content": "## Result vs throw\n\nВ C# часто **`Result<T>`** / nullable вместо exceptions для ожидаемых ошибок. В JS доминируют **throw** и **Promise rejection**; для API — явные коды ошибок в JSON.\n\n## Не глотать reject\n\n```javascript\nasync function run() {\n  try {\n    await step();\n  } catch (e) {\n    report(e);\n    throw e;\n  }\n}\n```\n\n**`finally`** полезен для release ресурсов (как **`using`** / **`try/finally`** в C#).\n\nНе используйте пустой **`catch {}`** — скрывает баги так же, как **`catch (Exception) { }`** без логики."
+        },
+        {
+          "type": "quiz",
+          "title": "Тест: ошибки",
+          "content": {
+            "question": "Что проверяет тест с **`rejects: true`** в JS-практике vibetest?",
+            "options": [
+              "Что функция синхронно бросает исключение",
+              "Что обе среды отклоняют Promise и reason совпадает",
+              "Что результат `undefined`",
+              "Что `console.error` был вызван"
+            ],
+            "correctIndices": [
+              1
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "title": "Event loop и fake timers",
+      "steps": [
+        {
+          "type": "theory",
+          "title": "Стек, очереди задач",
+          "content": "## Один поток, много очередей\n\nВ C# **`async/await`** часто уходит в thread pool, но UI-поток остаётся отдельной моделью. В браузере и типичном Node **ваш JS-код на одном потоке**: один call stack.\n\n**Macrotask** (task): `setTimeout`, I/O callbacks хоста.\n\n**Microtask**: `Promise.then`, `queueMicrotask` — очередь **опустошается полностью** после каждого macrotask (упрощённо).\n\n```javascript\nconsole.log('sync');\nPromise.resolve().then(() => console.log('micro'));\nsetTimeout(() => console.log('macro'), 0);\nconsole.log('sync2');\n// sync, sync2, micro, macro\n```\n\nПонимание порядка критично для багов «данные ещё не обновились» и для тестов с таймерами."
+        },
+        {
+          "type": "svg",
+          "title": "Схема: micro перед следующим macro",
+          "content": {
+            "caption": "После sync-кода — **microtasks**, затем **macrotask**",
+            "description": "Event loop: выполнить sync → drain microtask queue → взять одну macrotask → снова microtasks.",
+            "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 280 100\" width=\"100%\" role=\"img\" aria-label=\"Event loop micro и macro\"><defs><marker id=\"m16-arr\" markerWidth=\"7\" markerHeight=\"7\" refX=\"5\" refY=\"3.5\" orient=\"auto\"><path d=\"M0,0 L7,3.5 L0,7 Z\" fill=\"#37474f\"/></marker></defs><rect id=\"m16-sync\" x=\"8\" y=\"30\" width=\"56\" height=\"36\" rx=\"4\" fill=\"#e3f2fd\" stroke=\"#1565c0\"/><text x=\"36\" y=\"52\" text-anchor=\"middle\" font-size=\"9\" fill=\"#0d47a1\">sync</text><rect id=\"m16-micro\" x=\"84\" y=\"22\" width=\"72\" height=\"52\" rx=\"4\" fill=\"#f3e5f5\" stroke=\"#7b1fa2\"/><text x=\"120\" y=\"44\" text-anchor=\"middle\" font-size=\"9\" fill=\"#4a148c\">microtasks</text><text x=\"120\" y=\"58\" text-anchor=\"middle\" font-size=\"7\" fill=\"#666\">Promise.then</text><rect id=\"m16-macro\" x=\"176\" y=\"30\" width=\"96\" height=\"36\" rx=\"4\" fill=\"#fff3e0\" stroke=\"#ef6c00\"/><text x=\"224\" y=\"52\" text-anchor=\"middle\" font-size=\"9\" fill=\"#e65100\">macrotask</text><line x1=\"64\" y1=\"48\" x2=\"84\" y2=\"48\" stroke=\"#37474f\" marker-end=\"url(#m16-arr)\"/><line x1=\"156\" y1=\"48\" x2=\"176\" y2=\"48\" stroke=\"#37474f\" marker-end=\"url(#m16-arr)\"/></svg>"
+          }
+        },
+        {
+          "type": "theory",
+          "title": "Fake timers в тренажёре",
+          "content": "## `setTimeout` без ожидания wall-clock\n\nВ практике курса **`setTimeout` / `clearTimeout`** — **fake timers**: время продвигает поле **`advanceMs`** в тесте, а не реальные миллисекунды.\n\nПорядок проверки кейса (упрощённо):\n\n1. Вызов вашей функции (в т.ч. `await` промиса, если вернули thenable).\n2. Опционально **`flushMicrotasks`** — один «тик» microtask queue после invoke.\n3. **`advanceMs`** — сдвинуть fake clock и выполнить due callbacks.\n4. **`expectInvocations`** — счётчики **`registerSpy`** из `setup`.\n\n```javascript\n// setup\nconst log = registerSpy('log', (x) => x);\n\n// тест: advanceMs: 0, expectInvocations: { log: 1 }\n```\n\nБез `advanceMs` промис, ждущий только `setTimeout`, может **не успеть** resolve до deadline шага — это ожидаемо."
+        },
+        {
+          "type": "quiz",
+          "title": "Проверка: порядок",
+          "content": {
+            "question": "В типичном браузерном event loop что выполнится **сразу после** синхронного кода (до следующего `setTimeout` callback)?",
+            "options": [
+              "Все отложенные macrotask подряд",
+              "Очередь microtask (например, `Promise.then`)",
+              "Новый HTTP-запрос",
+              "Перерисовка DOM всегда первой"
+            ],
+            "correctIndices": [
+              1
+            ]
+          }
+        },
+        {
+          "type": "javascript",
+          "title": "Практика: macroMicroDemo",
+          "content": {
+            "description": "Реализуйте **`macroMicroDemo()`** (без аргументов):\n\n- Вызовите **`log('micro')`** в microtask (`Promise.resolve().then(...)` или `queueMicrotask`).\n- Запланируйте **`log('macro')`** через **`setTimeout(..., 0)`**.\n- Синхронно верните строку **`'scheduled'`**.\n\nSpy **`log`** уже в `setup`. Не меняйте `setup`.",
+            "starterCode": "function macroMicroDemo() {\n  return '';\n}",
+            "referenceSolution": "function macroMicroDemo() {\n  Promise.resolve().then(() => log('micro'));\n  setTimeout(() => log('macro'), 0);\n  return 'scheduled';\n}",
+            "setup": "const log = registerSpy('log', (x) => x);",
+            "reset": "",
+            "functionName": "macroMicroDemo",
+            "timeoutMs": 5000,
+            "tests": [
+              {
+                "args": [],
+                "expectInvocations": {
+                  "log": 1
+                },
+                "advanceMs": 0
+              },
+              {
+                "args": [],
+                "flushMicrotasks": true,
+                "expectInvocations": {
+                  "log": 2
+                },
+                "advanceMs": 0
+              }
+            ]
+          }
+        },
+        {
+          "type": "javascript",
+          "title": "Практика: nestedTimerSpy",
+          "content": {
+            "description": "Реализуйте **`nestedTimerSpy()`**:\n\n- Запланируйте **`tick`** (spy из `setup`) через **вложенные** `setTimeout`: внешний **`50` ms**, внутренний ещё **`50` ms**.\n- Синхронно верните **`0`**.\n\nПроверка: **`advanceMs`** + **`expectInvocations`** для **`tick`** (как в тестах fake timers).",
+            "starterCode": "function nestedTimerSpy() {\n  return -1;\n}",
+            "referenceSolution": "function nestedTimerSpy() {\n  setTimeout(() => setTimeout(() => tick(), 50), 50);\n  return 0;\n}",
+            "setup": "const tick = registerSpy('tick', () => 1);",
+            "reset": "",
+            "functionName": "nestedTimerSpy",
+            "timeoutMs": 5000,
+            "tests": [
+              {
+                "args": [],
+                "expectInvocations": {
+                  "tick": 0
+                },
+                "advanceMs": 80
+              },
+              {
+                "args": [],
+                "expectInvocations": {
+                  "tick": 1
+                },
+                "advanceMs": 100
+              }
+            ]
+          }
+        },
+        {
+          "type": "theory",
+          "title": "Сопоставление с C#",
+          "content": "## TaskScheduler vs event loop\n\n**`Task.Run`** и thread pool — параллельность CLR. **JS Promise** — кооперативная модель на одном потоке: continuation часто microtask.\n\n**`SynchronizationContext`** в C# (UI) напоминает «вернуться на UI thread»; в JS «UI thread» и есть поток JS.\n\nДля тестов: **`Task.Delay`** ≈ `setTimeout` + fake clock; **`FakeTimeProvider`** (.NET 8+) — аналог fake timers.\n\n```csharp\nawait Task.Delay(100); // реальное или fake время в тестах\n```\n\n```javascript\nawait new Promise((r) => setTimeout(r, 100)); // в курсе — advanceMs\n```"
+        },
+        {
+          "type": "quiz",
+          "title": "Итоговый тест модуля",
+          "content": {
+            "question": "Зачем в тестах практики задают **`advanceMs`**?",
+            "options": [
+              "Ускорить реальный wall-clock в Worker",
+              "Продвинуть fake timers и выполнить due `setTimeout` callbacks",
+              "Автоматически вызвать все `Promise.then` без ограничений",
+              "Сбросить spy-счётчики"
+            ],
+            "correctIndices": [
+              1
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "title": "Promise и цепочки",
+      "steps": [
+        {
+          "type": "theory",
+          "title": "Promise как future",
+          "content": "## Три состояния\n\n**Promise** — объект представления асинхронного результата: **pending → fulfilled / rejected**. Близко к **`Task<T>`** / **`ValueTask`**, но:\n\n- Нет отмены «из коробки» (до **`AbortSignal`** на API хоста).\n- Ошибки в `then` → rejected; «unhandled rejection» — событие хоста.\n\n```javascript\nconst p = fetch('/api'); // Promise<Response>\np.then((r) => r.json()).then(console.log).catch(console.error);\n```\n\n```csharp\nvar json = await http.GetStringAsync(url);\n```\n\n**`.then(onFulfilled, onRejected)`** возвращает **новый** Promise — композиция цепочкой, как `ContinueWith`, но fluent."
+        },
+        {
+          "type": "svg",
+          "title": "Схема: цепочка then",
+          "content": {
+            "caption": "Каждый **`.then`** — новый Promise",
+            "description": "Значение пробрасывается вниз; throw или rejected → catch.",
+            "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 260 72\" width=\"100%\" role=\"img\" aria-label=\"Цепочка Promise then\"><defs><marker id=\"m17-arr\" markerWidth=\"7\" markerHeight=\"7\" refX=\"5\" refY=\"3.5\" orient=\"auto\"><path d=\"M0,0 L7,3.5 L0,7 Z\" fill=\"#37474f\"/></marker></defs><rect id=\"m17-p0\" x=\"8\" y=\"22\" width=\"48\" height=\"28\" rx=\"4\" fill=\"#e8eaf6\" stroke=\"#3949ab\"/><text x=\"32\" y=\"40\" text-anchor=\"middle\" font-size=\"8\" fill=\"#1a237e\">P0</text><rect id=\"m17-t1\" x=\"68\" y=\"22\" width=\"48\" height=\"28\" rx=\"4\" fill=\"#fff9c4\" stroke=\"#f9a825\"/><text x=\"92\" y=\"40\" text-anchor=\"middle\" font-size=\"8\" fill=\"#e65100\">then</text><rect id=\"m17-p1\" x=\"128\" y=\"22\" width=\"48\" height=\"28\" rx=\"4\" fill=\"#e8eaf6\" stroke=\"#3949ab\"/><text x=\"152\" y=\"40\" text-anchor=\"middle\" font-size=\"8\" fill=\"#1a237e\">P1</text><rect id=\"m17-t2\" x=\"188\" y=\"22\" width=\"48\" height=\"28\" rx=\"4\" fill=\"#fff9c4\" stroke=\"#f9a825\"/><text x=\"212\" y=\"40\" text-anchor=\"middle\" font-size=\"8\" fill=\"#e65100\">then</text><line x1=\"56\" y1=\"36\" x2=\"68\" y2=\"36\" stroke=\"#37474f\" marker-end=\"url(#m17-arr)\"/><line x1=\"116\" y1=\"36\" x2=\"128\" y2=\"36\" stroke=\"#37474f\" marker-end=\"url(#m17-arr)\"/><line x1=\"176\" y1=\"36\" x2=\"188\" y2=\"36\" stroke=\"#37474f\" marker-end=\"url(#m17-arr)\"/></svg>"
+          }
+        },
+        {
+          "type": "theory",
+          "title": "all, race, catch",
+          "content": "## Статические методы\n\n```javascript\nPromise.all([p1, p2]);     // один reject → весь reject\nPromise.allSettled([...]); // массив { status, value|reason }\nPromise.race([...]);       // первый settle\n```\n\nВ C# ближе **`Task.WhenAll`**, **`Task.WhenAny`**, но типы строже.\n\n**`.catch(fn)`** = `.then(undefined, fn)`. **`.finally(fn)`** — как `try/finally` без изменения значения (кроме throw из finally).\n\n```javascript\nreturn Promise.resolve(n)\n  .then((x) => x + 1)\n  .then((x) => x * 2);\n```\n\nВ практике ниже — цепочки без `async` (чистые Promise), чтобы видеть thenable в тренажёре."
+        },
+        {
+          "type": "quiz",
+          "title": "Проверка: all",
+          "content": {
+            "question": "Что делает **`Promise.all([p1, p2])`**, если **`p1`** уже rejected?",
+            "options": [
+              "Ждёт только `p2`",
+              "Сразу rejected с причиной из `p1` (остальные не отменяются автоматически)",
+              "Возвращает `[undefined, value2]`",
+              "SyntaxError"
+            ],
+            "correctIndices": [
+              1
+            ]
+          }
+        },
+        {
+          "type": "javascript",
+          "title": "Практика: chainTriple",
+          "content": {
+            "description": "Реализуйте **`chainTriple(start)`**: верните Promise, который:\n\n1. Начинается с **`Promise.resolve(start)`**.\n2. **`+ 1`**, затем **`* 2`**, затем **`- 3`** (три `.then` подряд).\n\nПример: `start = 5` → `((5+1)*2)-3` = **9**.",
+            "starterCode": "function chainTriple(start) {\n  return Promise.resolve(0);\n}",
+            "referenceSolution": "function chainTriple(start) {\n  return Promise.resolve(start)\n    .then((x) => x + 1)\n    .then((x) => x * 2)\n    .then((x) => x - 3);\n}",
+            "setup": "",
+            "reset": "",
+            "functionName": "chainTriple",
+            "timeoutMs": 5000,
+            "tests": [
+              {
+                "args": [
+                  5
+                ]
+              },
+              {
+                "args": [
+                  0
+                ]
+              },
+              {
+                "args": [
+                  -2
+                ]
+              },
+              {
+                "args": [
+                  10
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "type": "javascript",
+          "title": "Практика: sumAllPromises",
+          "content": {
+            "description": "Реализуйте **`sumAllPromises(values)`**: `values` — массив чисел. Верните Promise суммы, используя **`Promise.all`** (оберните каждый элемент в `Promise.resolve(v)`) и **`reduce`** / цикл.\n\nПустой массив → **`0`**.",
+            "starterCode": "function sumAllPromises(values) {\n  return Promise.resolve(0);\n}",
+            "referenceSolution": "function sumAllPromises(values) {\n  return Promise.all(values.map((v) => Promise.resolve(v))).then((nums) =>\n    nums.reduce((a, b) => a + b, 0),\n  );\n}",
+            "setup": "",
+            "reset": "",
+            "functionName": "sumAllPromises",
+            "timeoutMs": 5000,
+            "tests": [
+              {
+                "args": [
+                  [
+                    1,
+                    2,
+                    3
+                  ]
+                ]
+              },
+              {
+                "args": [
+                  []
+                ]
+              },
+              {
+                "args": [
+                  [
+                    10
+                  ]
+                ]
+              },
+              {
+                "args": [
+                  [
+                    -1,
+                    1,
+                    2
+                  ]
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "type": "theory",
+          "title": "Ошибки и C#",
+          "content": "## throw в then\n\n```javascript\nPromise.resolve()\n  .then(() => { throw new Error('x'); })\n  .catch((e) => e.message); // 'x'\n```\n\nВ C# **`await`** разворачивает exception; в Promise — **rejection reason** (любое значение).\n\n**Anti-pattern:** pyramid of `.then`; **`async/await`** — следующий модуль — синтаксический сахар над Promise.\n\nНе смешивайте забытый **`return`** внутри `then` (получите `undefined` в следующем звене) — частая ошибка после LINQ, где return неявный."
+        },
+        {
+          "type": "quiz",
+          "title": "Итоговый тест модуля",
+          "content": {
+            "question": "Что вернёт **`Promise.resolve(1).then((x) => x + 1).then((x) => x * 3)`** после settle?",
+            "options": [
+              "`1`",
+              "`2`",
+              "`6`",
+              "`Promise<6>` без await"
+            ],
+            "correctIndices": [
+              2
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "title": "async/await и debounce",
+      "steps": [
+        {
+          "type": "theory",
+          "title": "async — Promise наружу",
+          "content": "## Синтаксис await\n\n**`async function`** всегда возвращает **Promise**. **`await`** приостанавливает только **текущую** async-функцию, не блокируя поток (в отличие от sync wait в UI).\n\n```javascript\nasync function load() {\n  const r = await fetch('/api');\n  return r.status;\n}\n```\n\n```csharp\nasync Task<int> Load() {\n  var r = await http.GetAsync(url);\n  return (int)r.StatusCode;\n}\n```\n\n**`await`** на non-Promise оборачивает в `Promise.resolve`. **`try/catch`** вокруг `await` ловит rejection — как try вокруг `await task` в C#."
+        },
+        {
+          "type": "svg",
+          "title": "Схема: debounce",
+          "content": {
+            "caption": "Повторные вызовы **сбрасывают** таймер",
+            "description": "Debounce: выполнить fn один раз после паузы wait с момента последнего вызова.",
+            "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 240 80\" width=\"100%\" role=\"img\" aria-label=\"Debounce таймер\"><defs><marker id=\"m18-arr\" markerWidth=\"7\" markerHeight=\"7\" refX=\"5\" refY=\"3.5\" orient=\"auto\"><path d=\"M0,0 L7,3.5 L0,7 Z\" fill=\"#37474f\"/></marker></defs><rect id=\"m18-calls\" x=\"8\" y=\"12\" width=\"120\" height=\"24\" rx=\"4\" fill=\"#ffebee\" stroke=\"#c62828\"/><text x=\"68\" y=\"28\" text-anchor=\"middle\" font-size=\"8\" fill=\"#b71c1c\">d() d() d()</text><rect id=\"m18-wait\" x=\"8\" y=\"44\" width=\"120\" height=\"24\" rx=\"4\" fill=\"#fff3e0\" stroke=\"#ef6c00\"/><text x=\"68\" y=\"60\" text-anchor=\"middle\" font-size=\"8\" fill=\"#e65100\">wait 50ms</text><line x1=\"128\" y1=\"56\" x2=\"148\" y2=\"56\" stroke=\"#37474f\" marker-end=\"url(#m18-arr)\"/><rect id=\"m18-fn\" x=\"148\" y=\"40\" width=\"84\" height=\"32\" rx=\"4\" fill=\"#e8f5e9\" stroke=\"#2e7d32\"/><text x=\"190\" y=\"60\" text-anchor=\"middle\" font-size=\"9\" fill=\"#1b5e20\">fn once</text></svg>"
+          }
+        },
+        {
+          "type": "theory",
+          "title": "Debounce и fake timers",
+          "content": "## Паттерн для поиска\n\n```javascript\nfunction debounce(fn, wait) {\n  let timerId;\n  return function debounced(...args) {\n    clearTimeout(timerId);\n    timerId = setTimeout(() => fn.apply(this, args), wait);\n  };\n}\n```\n\nВ C# UI — **`DispatcherTimer`**, **`Debouncer`** из библиотек; семантика та же.\n\nВ тренажёре проверка через **`registerSpy`**, **`advanceMs`** и серию вызовов до продвижения часов — как unit-тест с fake time.\n\n**`async debounce`** редко нужен: debounce синхронно планирует macro; fn может быть async внутри timeout."
+        },
+        {
+          "type": "quiz",
+          "title": "Проверка: async",
+          "content": {
+            "question": "Что вернёт выражение **`typeof (async () => 1)()`**?",
+            "options": [
+              "`\"number\"`",
+              "`\"object\"` (Promise)",
+              "`\"function\"`",
+              "`\"undefined\"`"
+            ],
+            "correctIndices": [
+              1
+            ]
+          }
+        },
+        {
+          "type": "javascript",
+          "title": "Практика: asyncSum",
+          "content": {
+            "description": "Реализуйте **`async function asyncSum(a, b)`**:\n\n- **`await Promise.resolve()`** (microtask).\n- Верните **`a + b`**.\n\nЗакрепляет, что **`async`** возвращает Promise, а **`await`** на уже resolved Promise не ждёт macrotimer.",
+            "starterCode": "async function asyncSum(a, b) {\n  return 0;\n}",
+            "referenceSolution": "async function asyncSum(a, b) {\n  await Promise.resolve();\n  return a + b;\n}",
+            "setup": "",
+            "reset": "",
+            "functionName": "asyncSum",
+            "timeoutMs": 5000,
+            "tests": [
+              {
+                "args": [
+                  2,
+                  3
+                ]
+              },
+              {
+                "args": [
+                  0,
+                  0
+                ]
+              },
+              {
+                "args": [
+                  -1,
+                  1
+                ]
+              },
+              {
+                "args": [
+                  100,
+                  250
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "type": "javascript",
+          "title": "Практика: runDebouncedSearch",
+          "content": {
+            "description": "Реализуйте **`debounce(fn, wait)`** и **`runDebouncedSearch()`**:\n\n- Spy **`search`** уже в `setup` как **`globalThis.__search`**.\n- **`runDebouncedSearch()`** создаёт **`debounce(globalThis.__search, 50)`**, трижды вызывает с `'a'`, `'b'`, `'c'`, синхронно возвращает **`'typing'`**.\n\nТесты: **`expectInvocations`** + **`advanceMs`**.",
+            "starterCode": "function debounce(fn, wait) {\n  return (...args) => fn(...args);\n}\n\nfunction runDebouncedSearch() {\n  return '';\n}",
+            "referenceSolution": "function debounce(fn, wait) {\n  let timerId;\n  return function debounced(...args) {\n    clearTimeout(timerId);\n    timerId = setTimeout(() => fn.apply(this, args), wait);\n  };\n}\n\nfunction runDebouncedSearch() {\n  const d = debounce(globalThis.__search, 50);\n  d('a');\n  d('b');\n  d('c');\n  return 'typing';\n}",
+            "setup": "globalThis.__search = registerSpy('search', (q) => q);",
+            "reset": "",
+            "functionName": "runDebouncedSearch",
+            "timeoutMs": 6000,
+            "tests": [
+              {
+                "args": [],
+                "expectInvocations": {
+                  "search": 0
+                },
+                "advanceMs": 40
+              },
+              {
+                "args": [],
+                "expectInvocations": {
+                  "search": 1
+                },
+                "advanceMs": 50
+              }
+            ]
+          }
+        },
+        {
+          "type": "theory",
+          "title": "async/await после debounce",
+          "content": "## Композиция\n\n```javascript\nconst debouncedSave = debounce(async (draft) => {\n  await api.save(draft);\n}, 300);\n```\n\nОшибки из async fn внутри timeout — **unhandled rejection**, если не `.catch` на результате fn.\n\n**Parallel:** `await Promise.all([a(), b()])` ≈ **`Task.WhenAll`**.\n\n**Sequential:**\n\n```javascript\nfor (const id of ids) {\n  await fetchOne(id);\n}\n```\n\nНе используйте **`forEach(async ...)`** и не ждите — classic bug."
+        },
+        {
+          "type": "quiz",
+          "title": "Итоговый тест модуля",
+          "content": {
+            "question": "После серии быстрых вызовов debounce( fn, 50 ) и **`advanceMs: 50`**, сколько раз должен вызваться **`fn`**?",
+            "options": [
+              "Столько же, сколько было вызовов debounced-функции",
+              "Ровно один раз (последний вызов «побеждает»)",
+              "Ноль — debounce только для sync fn",
+              "Два раза — первый и последний"
+            ],
+            "correctIndices": [
+              1
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "title": "JSON, Date и стандартная библиотека",
+      "steps": [
+        {
+          "type": "theory",
+          "title": "JSON в JS vs System.Text.Json",
+          "content": "## `JSON.parse` / `JSON.stringify`\n\nВстроенный **JSON** — часть ECMAScript (не DOM). В C# — **`System.Text.Json`**, **`JsonSerializer`**, атрибуты имён.\n\n```javascript\nconst obj = JSON.parse('{\"a\":1}');\nJSON.stringify({ a: 1, b: undefined }); // \"{\\\"a\\\":1}\" — undefined опускается\n```\n\n**Ловушки:**\n\n- Даты в JSON — **строки**, не `Date` (нужен reviver или ручной парс).\n- **`bigint`** по умолчанию не сериализуется.\n- Нет комментариев в JSON — в отличие от `appsettings` с комментариями в некоторых конфигах.\n\n```csharp\nvar dto = JsonSerializer.Deserialize<MyDto>(json);\n```"
+        },
+        {
+          "type": "svg",
+          "title": "Схема: JSON ↔ объект",
+          "content": {
+            "caption": "**parse** / **stringify** — только JSON-типы",
+            "description": "Результат parse — plain objects и arrays; Date и Map не восстанавливаются автоматически.",
+            "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 260 70\" width=\"100%\" role=\"img\" aria-label=\"JSON parse stringify\"><defs><marker id=\"m19-arr\" markerWidth=\"7\" markerHeight=\"7\" refX=\"5\" refY=\"3.5\" orient=\"auto\"><path d=\"M0,0 L7,3.5 L0,7 Z\" fill=\"#37474f\"/></marker></defs><rect id=\"m19-str\" x=\"8\" y=\"20\" width=\"72\" height=\"32\" rx=\"4\" fill=\"#fff9c4\" stroke=\"#f9a825\"/><text x=\"44\" y=\"40\" text-anchor=\"middle\" font-size=\"8\" font-family=\"ui-monospace, monospace\" fill=\"#333\">'{...}'</text><rect id=\"m19-obj\" x=\"180\" y=\"20\" width=\"72\" height=\"32\" rx=\"4\" fill=\"#e8f5e9\" stroke=\"#2e7d32\"/><text x=\"216\" y=\"40\" text-anchor=\"middle\" font-size=\"8\" fill=\"#1b5e20\">object</text><line x1=\"80\" y1=\"36\" x2=\"112\" y2=\"36\" stroke=\"#37474f\" marker-end=\"url(#m19-arr)\"/><text x=\"122\" y=\"32\" font-size=\"8\" fill=\"#1565c0\">parse</text><line x1=\"168\" y1=\"36\" x2=\"180\" y2=\"36\" stroke=\"#37474f\" marker-end=\"url(#m19-arr)\"/><line x1=\"252\" y1=\"36\" x2=\"220\" y2=\"36\" stroke=\"#37474f\" marker-end=\"url(#m19-arr)\"/><text x=\"122\" y=\"52\" font-size=\"8\" fill=\"#1565c0\">stringify</text></svg>"
+          }
+        },
+        {
+          "type": "theory",
+          "title": "Date и UTC",
+          "content": "## `Date` — миллисекунды с epoch\n\n```javascript\nconst d = new Date('2024-06-01T12:00:00.000Z');\nd.getTime(); // UTC ms\nd.toISOString(); // всегда UTC с Z\n```\n\nВ C# **`DateTimeOffset`** явнее про offset; **`DateTime`** Kind путает так же, как local vs UTC в JS.\n\n**`Date.parse`** / конструктор — разбор ISO; locale-строки зависят от реализации.\n\nДля API контрактов храните **ISO-8601 UTC** строки или число ms — как в JSON Web API на .NET.\n\n```javascript\nfunction formatUtcDateOnly(ms) {\n  return new Date(ms).toISOString().slice(0, 10);\n}\n```"
+        },
+        {
+          "type": "quiz",
+          "title": "Проверка: JSON",
+          "content": {
+            "question": "Что произойдёт при **`JSON.stringify({ x: undefined, y: 1 })`**?",
+            "options": [
+              "`\"{\\\"x\\\":null,\\\"y\\\":1}\"`",
+              "`\"{\\\"y\\\":1}\"` — ключ `x` опущен",
+              "SyntaxError",
+              "`undefined`"
+            ],
+            "correctIndices": [
+              1
+            ]
+          }
+        },
+        {
+          "type": "javascript",
+          "title": "Практика: safeParseJson",
+          "content": {
+            "description": "Реализуйте **`safeParseJson(text)`**:\n\n- При успешном **`JSON.parse(text)`** верните **`{ ok: true, value }`**.\n- При ошибке — **`{ ok: false, error: 'invalid' }`** (строка фиксированная, без текста exception).\n\nНе бросайте исключения наружу.",
+            "starterCode": "function safeParseJson(text) {\n  return { ok: false, error: 'invalid' };\n}",
+            "referenceSolution": "function safeParseJson(text) {\n  try {\n    return { ok: true, value: JSON.parse(text) };\n  } catch {\n    return { ok: false, error: 'invalid' };\n  }\n}",
+            "setup": "",
+            "reset": "",
+            "functionName": "safeParseJson",
+            "timeoutMs": 4000,
+            "tests": [
+              {
+                "args": [
+                  "{\"a\":1}"
+                ]
+              },
+              {
+                "args": [
+                  "[]"
+                ]
+              },
+              {
+                "args": [
+                  "not json"
+                ]
+              },
+              {
+                "args": [
+                  "{"
+                ]
+              },
+              {
+                "args": [
+                  "\"hello\""
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "type": "javascript",
+          "title": "Практика: formatUtcDateOnly",
+          "content": {
+            "description": "Реализуйте **`formatUtcDateOnly(utcMs)`**: для числа UTC-миллисекунд верните **`YYYY-MM-DD`** из **`toISOString()`** (первые 10 символов).\n\nПример: `Date.parse('2024-03-15T23:30:00.000Z')` → **`'2024-03-15'`**.",
+            "starterCode": "function formatUtcDateOnly(utcMs) {\n  return '';\n}",
+            "referenceSolution": "function formatUtcDateOnly(utcMs) {\n  return new Date(utcMs).toISOString().slice(0, 10);\n}",
+            "setup": "",
+            "reset": "",
+            "functionName": "formatUtcDateOnly",
+            "timeoutMs": 4000,
+            "tests": [
+              {
+                "args": [
+                  1710504000000
+                ]
+              },
+              {
+                "args": [
+                  0
+                ]
+              },
+              {
+                "args": [
+                  946684800000
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "type": "theory",
+          "title": "Модули ES (кратко)",
+          "content": "## import / export\n\n```javascript\nexport function helper() {}\nimport { helper } from './helper.js';\n```\n\nВ C# — **projects + namespaces**; tree-shaking и dynamic `import()` — отдельная тема bundler'а.\n\n**Stdlib ES:** `Map`, `Set`, `Promise`, `Symbol`, `Intl` — не путать с Node **`node:fs`** (хост).\n\nДля конфигов в .NET часто **JSON** + **options pattern**; в фронте — тот же JSON + runtime parse + Zod/validation (в этом приложении — generated schemas)."
+        },
+        {
+          "type": "quiz",
+          "title": "Итоговый тест модуля",
+          "content": {
+            "question": "Как получить UTC ISO-строку из `Date`?",
+            "options": [
+              "`d.toString()`",
+              "`d.toLocaleDateString()`",
+              "`d.toISOString()`",
+              "`d.toJSON()` с локальным offset"
+            ],
+            "correctIndices": [
+              2
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "title": "Строки и регулярные выражения",
+      "steps": [
+        {
+          "type": "theory",
+          "title": "Строки: immutable UTF-16",
+          "content": "## Не `System.String` один в один\n\nJS **string** — immutable последовательность UTF-16 code units. **`length`** — в code units, не в graphemes (эмодзи могут занимать 2 unit).\n\n```javascript\nconst s = '  hello   world  ';\ns.trim();\ns.includes('world');\ns.split(/\\s+/);\n`template ${1 + 1}`;\n```\n\nВ C# — **`ReadOnlySpan<char>`**, **`string`**, интерполяция `$\"\"`; regex — **`Regex`** класс, в JS — литерал **`/pattern/flags`** или **`new RegExp`**.\n\nПрактика regex в курсе: паттерн **строкой** (как `new RegExp(pattern)`), без обрамляющих `/`."
+        },
+        {
+          "type": "svg",
+          "title": "Схема: test vs match",
+          "content": {
+            "caption": "**.test** → boolean; **.match** → детали",
+            "description": "В шаге regex сравнивается только RegExp.test(input) с эталоном.",
+            "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 220 64\" width=\"100%\" role=\"img\" aria-label=\"RegExp test\"><rect id=\"m20-in\" x=\"8\" y=\"18\" width=\"80\" height=\"28\" rx=\"4\" fill=\"#e3f2fd\" stroke=\"#1565c0\"/><text x=\"48\" y=\"36\" text-anchor=\"middle\" font-size=\"8\" font-family=\"ui-monospace, monospace\" fill=\"#333\">input</text><rect id=\"m20-re\" x=\"108\" y=\"18\" width=\"48\" height=\"28\" rx=\"4\" fill=\"#fff9c4\" stroke=\"#f9a825\"/><text x=\"132\" y=\"36\" text-anchor=\"middle\" font-size=\"8\" fill=\"#e65100\">re</text><rect id=\"m20-out\" x=\"168\" y=\"18\" width=\"44\" height=\"28\" rx=\"4\" fill=\"#e8f5e9\" stroke=\"#2e7d32\"/><text x=\"190\" y=\"36\" text-anchor=\"middle\" font-size=\"9\" fill=\"#1b5e20\">bool</text><text x=\"110\" y=\"58\" font-size=\"7\" fill=\"#666\">.test(input)</text></svg>"
+          }
+        },
+        {
+          "type": "theory",
+          "title": "Regex для C#-команды",
+          "content": "## Экранирование и флаги\n\n| C# | JS |\n|----|-----|\n| `@\"\\d+\"` | `'\\\\d+'` в JSON курса |\n| `RegexOptions.IgnoreCase` | флаг `i` (в курсе — без флагов в поле паттерна) |\n| `^` `$` | те же якоря |\n\n```javascript\n/^[a-z0-9._%+-]+@[a-z0-9.-]+\\.[a-z]{2,}$/i.test(email);\n```\n\nУпрощённый email-паттерн — учебный, не RFC-complete.\n\n**Методы строк:** `replace`, `replaceAll`, `match`, `search` — regex или string."
+        },
+        {
+          "type": "quiz",
+          "title": "Проверка: якоря",
+          "content": {
+            "question": "Паттерн **`^\\\\d+$`** (как строка в RegExp) совпадёт с?",
+            "options": [
+              "`'12a'`",
+              "`'012'`",
+              "`' 12 '`",
+              "`'1.5'`"
+            ],
+            "correctIndices": [
+              1
+            ]
+          }
+        },
+        {
+          "type": "javascript",
+          "title": "Практика: collapseWhitespace",
+          "content": {
+            "description": "Реализуйте **`collapseWhitespace(text)`**:\n\n- **`trim()`** по краям.\n- Внутренние пробельные серии (пробел, tab, newline) замените **одним пробелом**.\n\nПодсказка: **`split(/\\s+/)`** + **`join(' ')`** или **`replaceAll`**.",
+            "starterCode": "function collapseWhitespace(text) {\n  return text;\n}",
+            "referenceSolution": "function collapseWhitespace(text) {\n  return text.trim().split(/\\s+/).filter(Boolean).join(' ');\n}",
+            "setup": "",
+            "reset": "",
+            "functionName": "collapseWhitespace",
+            "timeoutMs": 4000,
+            "tests": [
+              {
+                "args": [
+                  "  hello   world  "
+                ]
+              },
+              {
+                "args": [
+                  "one"
+                ]
+              },
+              {
+                "args": [
+                  "  a\\n\\tb  "
+                ]
+              },
+              {
+                "args": [
+                  ""
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "type": "regex",
+          "title": "Практика: простой email",
+          "content": {
+            "description": "Напишите **паттерн** (строку для `RegExp`):\n\n- Локальная часть: буквы, цифры, `.`, `_`, `%`, `+`, `-` — один или более.\n- `@`\n- Домен: буквы, цифры, `.`, `-` — один или более.\n- `.` и TLD: **2–6** латинских букв.\n- Строка **целиком**: якоря **`^`** и **`$`**.\n\nРегистр **не** игнорируйте (без флага `i`): только `[a-z]` в шаблоне.",
+            "starterCode": "^.+@.+$",
+            "referenceSolution": "^[a-z0-9._%+-]+@[a-z0-9.-]+\\.[a-z]{2,6}$",
+            "timeoutMs": 3000,
+            "tests": [
+              {
+                "input": "user@example.com"
+              },
+              {
+                "input": "a.b+c@sub.domain.co"
+              },
+              {
+                "input": "User@example.com"
+              },
+              {
+                "input": "bad@"
+              },
+              {
+                "input": "x@y.z"
+              },
+              {
+                "input": "plain"
+              }
+            ]
+          }
+        },
+        {
+          "type": "javascript",
+          "title": "Практика: countWords",
+          "content": {
+            "description": "Реализуйте **`countWords(text)`** — число «слов» после **`trim`**: разбейте по **`/\\s+/`**, пустая строка → **`0`**.",
+            "starterCode": "function countWords(text) {\n  return 0;\n}",
+            "referenceSolution": "function countWords(text) {\n  const t = text.trim();\n  if (t.length === 0) return 0;\n  return t.split(/\\s+/).length;\n}",
+            "setup": "",
+            "reset": "",
+            "functionName": "countWords",
+            "timeoutMs": 4000,
+            "tests": [
+              {
+                "args": [
+                  "one two three"
+                ]
+              },
+              {
+                "args": [
+                  "  hi  "
+                ]
+              },
+              {
+                "args": [
+                  ""
+                ]
+              },
+              {
+                "args": [
+                  "single"
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "type": "quiz",
+          "title": "Итоговый тест модуля",
+          "content": {
+            "question": "Как в этом курсе проверяется regex-шаг?",
+            "options": [
+              "Полное совпадение match[0] с input",
+              "Одинаковый boolean `RegExp.test(input)` у ученика и эталона",
+              "Число capture groups",
+              "Сравнение через JSON.stringify паттерна"
+            ],
+            "correctIndices": [
+              1
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

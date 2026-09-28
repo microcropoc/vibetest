@@ -1,0 +1,74 @@
+:host {
+  display: block;
+  max-width: 100%;
+  min-width: 0;
+  line-height: 1.55;
+}
+
+:host(.markdown-content--host-inline) {
+  display: inline;
+}
+
+.markdown-content {
+  max-width: 100%;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+:host ::ng-deep .markdown-content :where(p, ul, ol, pre, blockquote) {
+  margin: 0 0 0.75rem;
+}
+
+:host ::ng-deep .markdown-content :where(h1, h2, h3, h4, h5, h6) {
+  margin: 1.25rem 0 0.5rem;
+}
+
+:host ::ng-deep .markdown-content > :where(:first-child) {
+  margin-top: 0;
+}
+
+:host ::ng-deep .markdown-content > :where(:last-child) {
+  margin-bottom: 0;
+}
+
+:host ::ng-deep .markdown-content :where(pre) {
+  max-width: 100%;
+  padding: 0.75rem 1rem;
+  overflow-x: auto;
+  overflow-y: hidden;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  background: var(--color-bg-subtle);
+  box-sizing: border-box;
+}
+
+:host ::ng-deep .markdown-content :where(:not(pre) > code) {
+  padding: 0.1em 0.35em;
+  border-radius: 4px;
+  background: var(--color-bg-subtle);
+  font-size: 0.92em;
+  overflow-wrap: anywhere;
+}
+
+:host ::ng-deep .markdown-content :where(pre code) {
+  display: block;
+  padding: 0;
+  border-radius: 0;
+  background: transparent;
+  font-size: inherit;
+  white-space: pre;
+  overflow-wrap: normal;
+}
+
+:host ::ng-deep .markdown-content :where(img, video, svg) {
+  max-width: 100%;
+  height: auto;
+}
+
+:host ::ng-deep .markdown-content :where(table) {
+  display: block;
+  max-width: 100%;
+  overflow-x: auto;
+}

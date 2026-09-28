@@ -1,0 +1,5 @@
+@if (inline()) {
+  <span class="markdown-content" [innerHTML]="html()"></span>
+} @else {
+  <div class="markdown-content" [innerHTML]="html()"></div>
+}

@@ -80,6 +80,8 @@ flowchart TD
 
 Поля `content` — см. `$defs/*Content` в схеме и **`description`** у каждого поля.
 
+**Markdown в плеере:** theory `content`; practice `description`; quiz `question` (блочный) и `options[]` (inline); svg `description` (блочный) и `caption` (inline). Рендер **без санитизации** (курс доверенный). Строки интерпретируются как Markdown: сырой HTML без backticks становится разметкой; `*`/`_` — emphasis; escape в regex/SQL без inline code или fenced-блоков может измениться. Авто-миграции старых курсов в IndexedDB нет — при необходимости переимпорт с корректной разметкой.
+
 ### `theory`
 
 `content` — строка markdown; рендер **без санитизации** (курс доверенный, ответственность автора). Прогресс `completed` по «Далее».
@@ -94,7 +96,7 @@ flowchart TD
 
 ### `svg`
 
-Inline SVG (SMIL/CSS и т.п.); рендер **без санитизации** (курс доверенный). Без автопроверки — как theory.
+Inline SVG (SMIL/CSS и т.п.); рендер SVG **без санитизации** (курс доверенный). Без автопроверки — как theory. Поля **`caption`** и **`description`** — Markdown (caption: inline; description: блочный, как theory); рендер **без санитизации**.
 
 В карточке шага SVG **вписывается** в область figure (без внутреннего scroll). Кнопка **«Развернуть»** открывает in-app overlay (`role="dialog"`) на весь viewport: SVG целиком (в DOM только одна копия разметки), **+** / **−** / **Сброс** (масштаб 1–4 от fit-baseline), **pan** одним pointer при scale > 1, **pinch** двумя пальцами и **zoom** колёсиком мыши (масштаб вокруг точки жеста); закрытие — «Закрыть», backdrop, Escape; сброс zoom/pan и возврат фокуса на «Развернуть». Browser Fullscreen API — не используется.
 
@@ -111,7 +113,7 @@ Inline SVG (SMIL/CSS и т.п.); рендер **без санитизации** 
 
 ### `quiz`
 
-Один индекс в `correctIndices` → radio; несколько → checkbox. В схеме: уникальные индексы; при импорте дополнительно проверять, что каждый индекс `< options.length`. Локальная проверка; успех → `completed`.
+Один индекс в `correctIndices` → radio; несколько → checkbox. В схеме: уникальные индексы; при импорте дополнительно проверять, что каждый индекс `< options.length`. Локальная проверка; успех → `completed`. **`question`** — блочный Markdown (как theory); **`options[]`** — inline Markdown; рендер **без санитизации**.
 
 ```json
 {
@@ -126,6 +128,8 @@ Inline SVG (SMIL/CSS и т.п.); рендер **без санитизации** 
 ```
 
 ### Практика (`javascript`, `sqlite`, `regex`)
+
+Поле **`description`** — блочный Markdown (как theory); рендер **без санитизации**.
 
 Проверка в Web Worker. Обязательное **`timeoutMs`** (100–30000): один deadline на **весь** шаг практики (javascriptInit/sqliteInit/regexInit + все `tests[]`, не per-case); кооперативно в раннере через `Date.now()` / `deadlineMs`, плюс watchdog на **main thread** (`ExecutionWorkerWrapperService` / practice runner → `Worker.terminate()` при превышении). Воркер сам sync hang не прерывает. У JavaScript thenable **checker** — отдельный cap 250 ms по **wall-clock** `Date.now()+250` (не fake timers practice bag, не `deadlineMs` кейса); bag `ctx` заморожен (`Object.freeze`); sync hang в checker/коде ученика — общий `timeoutMs` / terminate без деталей кейса. **`structure.args`** materialize всегда; **`structure.result`** serialize — только equal-path без checker. Курсы **доверенные**; Worker защищает от зависания, не от произвольного кода в origin.
 

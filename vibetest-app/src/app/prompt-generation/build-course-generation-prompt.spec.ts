@@ -35,18 +35,20 @@ describe('buildCourseGenerationPrompt', () => {
     expect(prompt).not.toContain('обёртка markdown вокруг всего ответа');
   });
 
-  it('requires ```json fenced output and theory Markdown inside content', () => {
+  it('requires ```json fenced output and Markdown in step text fields', () => {
     const prompt = buildCourseGenerationPrompt('Тест', schemaSnippet);
 
     expect(prompt).toContain('Формат вывода');
     expect(prompt).toContain('```json');
-    expect(prompt).toContain('Шаги theory');
-    expect(prompt).toContain('идентификатором языка');
-    expect(prompt).toContain('javascript');
-    expect(prompt).toContain('заголовки');
+    expect(prompt).toContain('Markdown в текстовых полях');
+    expect(prompt).toContain('content.description');
+    expect(prompt).toContain('content.question');
+    expect(prompt).toContain('content.options[]');
+    expect(prompt).toContain('content.caption');
     expect(prompt).toContain('inline code');
-    expect(prompt).toContain('внутри строки content');
     expect(prompt).toContain('отдельный уровень');
+    expect(prompt).toContain('сырой HTML');
+    expect(prompt).toContain('Regex-паттерны');
   });
 
   it('uses placeholder when description is empty', () => {

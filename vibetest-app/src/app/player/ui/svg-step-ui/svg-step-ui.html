@@ -1,6 +1,8 @@
 <div class="svg-step-ui">
-  @if (content().caption) {
-    <p class="svg-step-ui__caption">{{ content().caption }}</p>
+  @if (content().caption; as caption) {
+    <p class="svg-step-ui__caption">
+      <app-markdown-content [markdown]="caption" [inline]="true" />
+    </p>
   }
 
   <div class="svg-step-ui__figure-row">
@@ -25,8 +27,8 @@
     </button>
   </div>
 
-  @if (content().description) {
-    <p class="svg-step-ui__description">{{ content().description }}</p>
+  @if (content().description; as description) {
+    <app-markdown-content class="svg-step-ui__description" [markdown]="description" />
   }
 
   <app-svg-fullscreen-viewer

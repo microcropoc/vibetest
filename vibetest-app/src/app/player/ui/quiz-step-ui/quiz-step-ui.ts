@@ -2,11 +2,13 @@ import { Component, computed, input, output } from '@angular/core';
 
 import type { Step } from '../../../courses/course.model';
 import { isValidSelection } from '../../step-engine/quiz/quiz-answer';
+import { MarkdownContentComponent } from '../markdown-content/markdown-content';
 
 type QuizStep = Extract<Step, { type: 'quiz' }>;
 
 @Component({
   selector: 'app-quiz-step-ui',
+  imports: [MarkdownContentComponent],
   templateUrl: './quiz-step-ui.html',
   styleUrl: './quiz-step-ui.scss',
 })

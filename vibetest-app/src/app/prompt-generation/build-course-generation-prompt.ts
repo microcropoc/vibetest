@@ -10,11 +10,14 @@ const INSTRUCTIONS = `Сгенерируй JSON курса для импорта
 - В каждом модуле обязательно должны быть шаги типов theory, svg и quiz (минимум по одному шагу каждого типа в каждом модуле).
 - Формат — import-DTO: schemaVersion равен 1, без полей courseId, moduleId, stepId и createdAt.
 
-Шаги theory (поле content — Markdown):
-- Если в теории есть программный или технический код (JavaScript, SQL, HTML, CSS и т.д.), многострочный код оформляй fenced Markdown-блоком с обязательным идентификатором языка (например javascript, sql, html).
-- Структурируй теорию: заголовки (## / ###), абзацы, списки; перед и после примера — краткое пояснение на русском.
-- Не смешивай код и обычный текст в одном неразмеченном фрагменте; короткие фрагменты допустимы в inline code (одинарные обратные кавычки).
-- Fenced blocks внутри строки content для theory — часть JSON-строки (экранируй обратные кавычки); это отдельный уровень, не путать с внешней обёрткой ответа.
+Markdown в текстовых полях шагов (как в theory; fenced blocks внутри JSON-строк — экранируй обратные кавычки; отдельный уровень от внешней обёртки \`\`\`json):
+- theory (поле content): заголовки (## / ###), абзацы, списки; многострочный код — fenced-блок с языком (javascript, sql, html и т.д.); короткие фрагменты — inline code.
+- javascript / sqlite / regex (поле content.description): то же — условие задачи с fenced-блоками для примеров кода.
+- quiz (content.question): Markdown с fenced-блоками при необходимости; content.options[] — только inline Markdown (inline code, **жирный**), без fenced-блоков.
+- svg (content.description): Markdown с fenced-блоками; content.caption — только inline Markdown, без fenced-блоков.
+- Не смешивай код и обычный текст в одном неразмеченном фрагменте.
+- Не вставляй сырой HTML в Markdown-поля: литеральные угловые скобки и HTML-теги — только внутри inline code или fenced-блоков.
+- Regex-паттерны, SQL, фрагменты с символами *, _, \\ — оборачивай в inline code или fenced-блок, иначе Markdown изменит текст (например a\\.b без backticks станет a.b).
 
 Формат вывода (обязательно):
 - Весь ответ — один fenced-блок с идентификатором json.
@@ -24,7 +27,7 @@ const INSTRUCTIONS = `Сгенерируй JSON курса для импорта
 
 Требования к синтаксису JSON (строго):
 - Все строковые значения — корректный JSON: экранируй символы " и \\, управляющие символы; переносы строк внутри строк только как \\n (при необходимости \\r, \\t). Не вставляй буквальные переводы строк внутрь JSON-строк.
-- Особенно проверь экранирование в полях content (theory, включая обратные кавычки в Markdown), svg, starterCode, referenceSolution, setup, reset и в SQL/regex-текстах practice-шагов.
+- Особенно проверь экранирование в полях content (theory, practice description, quiz question, svg description/caption — обратные кавычки в Markdown), svg, starterCode, referenceSolution, setup, reset и в SQL/regex-текстах practice-шагов.
 - Запрещено: комментарии в JSON, trailing commas после последнего элемента, любой текст вне единственного \`\`\`json-блока.
 
 Перед ответом (обязательно):

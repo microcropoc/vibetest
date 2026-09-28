@@ -9,6 +9,19 @@ describe('SvgStepUiComponent', () => {
     }).compileComponents();
   });
 
+  it('renders caption and description as markdown', async () => {
+    const fixture = TestBed.createComponent(SvgStepUiComponent);
+    fixture.componentRef.setInput('content', {
+      svg: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 10 10"></svg>',
+      caption: 'Figure **A**',
+      description: 'See `circle` below',
+    });
+    await fixture.whenStable();
+    const root = fixture.nativeElement as HTMLElement;
+    expect(root.querySelector('.svg-step-ui__caption strong')?.textContent).toBe('A');
+    expect(root.querySelector('.svg-step-ui__description code')?.textContent).toBe('circle');
+  });
+
   it('renders inline SVG markup', async () => {
     const fixture = TestBed.createComponent(SvgStepUiComponent);
     fixture.componentRef.setInput('content', {

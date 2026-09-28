@@ -2,6 +2,7 @@ import { Component, input, output } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 
 import type { PracticeCodeEditorLanguage } from '../code-editor/practice-code-editor-language';
+import { MarkdownContentComponent } from '../markdown-content/markdown-content';
 import { PracticeStepShellComponent } from './practice-step-shell';
 
 @Component({
@@ -42,7 +43,7 @@ describe('PracticeStepShellComponent', () => {
       imports: [PracticeStepShellComponent],
     })
       .overrideComponent(PracticeStepShellComponent, {
-        set: { imports: [CodeEditorStub] },
+        set: { imports: [CodeEditorStub, MarkdownContentComponent] },
       })
       .compileComponents();
   });
@@ -75,6 +76,20 @@ describe('PracticeStepShellComponent', () => {
     fixture.componentRef.setInput('feedback', { kind: 'error', message: 'Failed test' });
     await fixture.whenStable();
     expect(fixture.nativeElement.textContent).toContain('Failed test');
+  });
+
+  it('renders practice description as markdown with fenced code', async () => {
+    const fixture = TestBed.createComponent(PracticeStepShellComponent);
+    const step = {
+      ...javascriptStep,
+      content: {
+        ...javascriptStep.content,
+        description: 'Use:\n```javascript\nreturn 1;\n```',
+      },
+    };
+    fixture.componentRef.setInput('step', step);
+    await fixture.whenStable();
+    expect(fixture.nativeElement.querySelector('.practice-step-shell__description pre code')).toBeTruthy();
   });
 
   it('does not render referenceSolution or checker', async () => {

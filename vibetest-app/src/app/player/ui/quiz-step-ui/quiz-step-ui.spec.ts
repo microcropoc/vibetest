@@ -14,6 +14,44 @@ describe('QuizStepUiComponent', () => {
     }).compileComponents();
   });
 
+  it('renders question and options as markdown', async () => {
+    const fixture = TestBed.createComponent(QuizStepUiComponent);
+    if (quizStep.type !== 'quiz') {
+      throw new Error('expected quiz step fixture');
+    }
+    const step = {
+      ...quizStep,
+      content: {
+        ...quizStep.content,
+        question: 'Pick **one**',
+        options: ['`x => x * 2`', 'plain'],
+      },
+    };
+    fixture.componentRef.setInput('step', step);
+    await fixture.whenStable();
+    const root = fixture.nativeElement as HTMLElement;
+    expect(root.querySelector('.quiz-step-ui__question strong')?.textContent).toBe('one');
+    expect(root.querySelector('.quiz-step-ui__label code')?.textContent).toContain('x => x * 2');
+  });
+
+  it('parses raw HTML in an option as markup (authors should use inline code)', async () => {
+    const fixture = TestBed.createComponent(QuizStepUiComponent);
+    if (quizStep.type !== 'quiz') {
+      throw new Error('expected quiz step fixture');
+    }
+    const step = {
+      ...quizStep,
+      content: {
+        ...quizStep.content,
+        options: ['<em>emphasis</em>', 'plain'],
+      },
+    };
+    fixture.componentRef.setInput('step', step);
+    await fixture.whenStable();
+    const root = fixture.nativeElement as HTMLElement;
+    expect(root.querySelector('.quiz-step-ui__label em')?.textContent).toBe('emphasis');
+  });
+
   it('uses radio inputs for single-answer quiz', async () => {
     const fixture = TestBed.createComponent(QuizStepUiComponent);
     fixture.componentRef.setInput('step', quizStep);

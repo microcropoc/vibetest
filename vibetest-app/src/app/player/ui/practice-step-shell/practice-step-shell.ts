@@ -1,6 +1,7 @@
 import { Component, computed, input, output } from '@angular/core';
 
 import { CodeEditor } from '../code-editor/code-editor';
+import { MarkdownContentComponent } from '../markdown-content/markdown-content';
 import type { PracticeCodeEditorLanguage } from '../code-editor/practice-code-editor-language';
 import {
   practiceStepShellLabels,
@@ -10,7 +11,7 @@ import {
 
 @Component({
   selector: 'app-practice-step-shell',
-  imports: [CodeEditor],
+  imports: [CodeEditor, MarkdownContentComponent],
   templateUrl: './practice-step-shell.html',
   styleUrl: './practice-step-shell.scss',
 })

@@ -2,13 +2,14 @@ import { Component, computed, ElementRef, inject, input, signal, viewChild } fro
 import { DomSanitizer, type SafeHtml } from '@angular/platform-browser';
 
 import type { Step } from '../../../courses/course.model';
+import { MarkdownContentComponent } from '../markdown-content/markdown-content';
 import { SvgFullscreenViewerComponent } from '../svg-fullscreen-viewer/svg-fullscreen-viewer';
 
 type SvgStepContent = Extract<Step, { type: 'svg' }>['content'];
 
 @Component({
   selector: 'app-svg-step-ui',
-  imports: [SvgFullscreenViewerComponent],
+  imports: [MarkdownContentComponent, SvgFullscreenViewerComponent],
   templateUrl: './svg-step-ui.html',
   styleUrl: './svg-step-ui.scss',
 })

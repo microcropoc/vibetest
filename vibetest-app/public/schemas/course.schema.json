@@ -115,12 +115,12 @@
         "caption": {
           "type": "string",
           "maxLength": 300,
-          "description": "Необязательная подпись над рисунком."
+          "description": "Необязательная подпись над рисунком (inline Markdown: **жирный**, inline code; без fenced-блоков)."
         },
         "description": {
           "type": "string",
           "maxLength": 2000,
-          "description": "Необязательное пояснение под рисунком."
+          "description": "Необязательное пояснение под рисунком (Markdown; многострочный код — fenced-блоки с языком)."
         }
       }
     },
@@ -134,7 +134,7 @@
           "type": "string",
           "minLength": 1,
           "maxLength": 1000,
-          "description": "Текст вопроса."
+          "description": "Текст вопроса (Markdown; многострочный код — fenced-блоки с языком)."
         },
         "options": {
           "type": "array",
@@ -145,7 +145,7 @@
             "type": "string",
             "minLength": 1,
             "maxLength": 300,
-            "description": "Текст одного варианта."
+            "description": "Текст одного варианта (inline Markdown: inline code, **жирный**; без fenced-блоков)."
           }
         },
         "correctIndices": {
@@ -173,7 +173,7 @@
           "type": "string",
           "minLength": 1,
           "maxLength": 5000,
-          "description": "Условие задачи для ученика (Markdown/plain text)."
+          "description": "Условие задачи для ученика (Markdown; многострочный код — fenced-блоки с языком, как в theory)."
         },
         "starterCode": {
           "type": "string",
@@ -338,7 +338,7 @@
           "type": "string",
           "minLength": 1,
           "maxLength": 5000,
-          "description": "Условие задачи для ученика."
+          "description": "Условие задачи для ученика (Markdown; многострочный код — fenced-блоки с языком, как в theory)."
         },
         "starterCode": {
           "type": "string",
@@ -401,7 +401,7 @@
           "type": "string",
           "minLength": 1,
           "maxLength": 5000,
-          "description": "Условие задачи для ученика."
+          "description": "Условие задачи для ученика (Markdown; многострочный код — fenced-блоки с языком, как в theory)."
         },
         "starterCode": {
           "type": "string",

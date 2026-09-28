@@ -1,5 +1,8 @@
 <div class="practice-step-shell">
-  <p class="practice-step-shell__description">{{ step().content.description }}</p>
+  <app-markdown-content
+    class="practice-step-shell__description"
+    [markdown]="step().content.description"
+  />
   <p class="practice-step-shell__hint">{{ labels().hint }}</p>
   <p class="practice-step-shell__timeout">Лимит выполнения: {{ timeoutMs() }} мс</p>
 

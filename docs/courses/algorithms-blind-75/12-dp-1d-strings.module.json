@@ -1,0 +1,263 @@
+{
+  "schemaVersion": 1,
+  "title": "DP: строки и подмассивы",
+  "steps": [
+    {
+      "type": "theory",
+      "title": "Строки и подпоследовательности",
+      "content": "## Палиндромы, LIS, Word Break\n\nРасширение от центра, DP по интервалам или по индексу. **Longest Increasing Subsequence** — O(n log n) с tails или O(n²) DP."
+    },
+    {
+      "type": "svg",
+      "title": "Палиндром: два указателя",
+      "content": {
+        "caption": "Расширение от **центра**",
+        "description": "Longest Palindromic Substring часто решают за O(n²).",
+        "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 200 50\" width=\"100%\" role=\"img\" aria-label=\"Палиндром\"><text id=\"m12-str\" x=\"100\" y=\"30\" text-anchor=\"middle\" font-size=\"14\" fill=\"#37474f\">a b b a</text></svg>"
+      }
+    },
+    {
+      "type": "javascript",
+      "title": "Разминка: палиндром подстрока?",
+      "content": {
+        "description": "Строка **`s`**. Есть ли подстрока-палиндром длины ≥ 2?",
+        "starterCode": "function hasPalindromeSubstring(s) {\n  return false;\n}",
+        "referenceSolution": "function hasPalindromeSubstring(s) {\n  for (let i = 0; i < s.length; i += 1) {\n    for (let j = i + 1; j < s.length; j += 1) {\n      const sub = s.slice(i, j + 1);\n      if (sub.length >= 2 && sub === sub.split(\"\").reverse().join(\"\")) return true;\n    }\n  }\n  return false;\n}",
+        "setup": "",
+        "reset": "",
+        "functionName": "hasPalindromeSubstring",
+        "timeoutMs": 8000,
+        "tests": [
+          {
+            "args": [
+              "abcba"
+            ]
+          },
+          {
+            "args": [
+              "abc"
+            ]
+          },
+          {
+            "args": [
+              "aa"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "type": "javascript",
+      "title": "Longest Palindromic Substring",
+      "content": {
+        "description": "Строка `s`. **Самая длинная** палиндромная подстрока.\n\n[LeetCode 5. Longest Palindromic Substring](https://leetcode.com/problems/longest-palindromic-substring/)",
+        "starterCode": "function longestPalindrome(s) {\n  return \"\";\n}",
+        "referenceSolution": "function longestPalindrome(s) {\n  let best = \"\";\n  const expand = (l, r) => {\n    while (l >= 0 && r < s.length && s[l] === s[r]) {\n      l -= 1;\n      r += 1;\n    }\n    const cand = s.slice(l + 1, r);\n    if (cand.length > best.length) best = cand;\n  };\n  for (let i = 0; i < s.length; i += 1) {\n    expand(i, i);\n    expand(i, i + 1);\n  }\n  return best;\n}",
+        "setup": "",
+        "reset": "",
+        "functionName": "longestPalindrome",
+        "timeoutMs": 8000,
+        "tests": [
+          {
+            "args": [
+              "babad"
+            ]
+          },
+          {
+            "args": [
+              "cbbd"
+            ]
+          },
+          {
+            "args": [
+              "a"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "type": "javascript",
+      "title": "Palindromic Substrings",
+      "content": {
+        "description": "Строка `s`. Сколько **палиндромных подстрок** (включая длины 1)?\n\n[LeetCode 647. Palindromic Substrings](https://leetcode.com/problems/palindromic-substrings/)",
+        "starterCode": "function countSubstrings(s) {\n  return 0;\n}",
+        "referenceSolution": "function countSubstrings(s) {\n  let count = 0;\n  const expand = (l, r) => {\n    while (l >= 0 && r < s.length && s[l] === s[r]) {\n      count += 1;\n      l -= 1;\n      r += 1;\n    }\n  };\n  for (let i = 0; i < s.length; i += 1) {\n    expand(i, i);\n    expand(i, i + 1);\n  }\n  return count;\n}",
+        "setup": "",
+        "reset": "",
+        "functionName": "countSubstrings",
+        "timeoutMs": 8000,
+        "tests": [
+          {
+            "args": [
+              "abc"
+            ]
+          },
+          {
+            "args": [
+              "aaa"
+            ]
+          },
+          {
+            "args": [
+              "aa"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "type": "javascript",
+      "title": "Maximum Product Subarray",
+      "content": {
+        "description": "Массив `nums`. **Максимальное произведение** непрерывного подмассива.\n\n[LeetCode 152. Maximum Product Subarray](https://leetcode.com/problems/maximum-product-subarray/)",
+        "starterCode": "function maxProduct(nums) {\n  return 0;\n}",
+        "referenceSolution": "function maxProduct(nums) {\n  let best = nums[0];\n  let curMax = 1;\n  let curMin = 1;\n  for (const x of nums) {\n    const candidates = [x, curMax * x, curMin * x];\n    curMax = Math.max(...candidates);\n    curMin = Math.min(...candidates);\n    best = Math.max(best, curMax);\n  }\n  return best;\n}",
+        "setup": "",
+        "reset": "",
+        "functionName": "maxProduct",
+        "timeoutMs": 8000,
+        "tests": [
+          {
+            "args": [
+              [
+                2,
+                3,
+                -2,
+                4
+              ]
+            ]
+          },
+          {
+            "args": [
+              [
+                -2,
+                0,
+                -1
+              ]
+            ]
+          },
+          {
+            "args": [
+              [
+                -2
+              ]
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "type": "javascript",
+      "title": "Word Break",
+      "content": {
+        "description": "Строка `s`, словарь `wordDict`. Можно ли разбить `s` на слова из словаря (слова можно повторять)?\n\n[LeetCode 139. Word Break](https://leetcode.com/problems/word-break/)",
+        "starterCode": "function wordBreak(s, wordDict) {\n  return false;\n}",
+        "referenceSolution": "function wordBreak(s, wordDict) {\n  const set = new Set(wordDict);\n  const dp = Array(s.length + 1).fill(false);\n  dp[0] = true;\n  for (let i = 1; i <= s.length; i += 1) {\n    for (let j = 0; j < i; j += 1) {\n      if (dp[j] && set.has(s.slice(j, i))) {\n        dp[i] = true;\n        break;\n      }\n    }\n  }\n  return dp[s.length];\n}",
+        "setup": "",
+        "reset": "",
+        "functionName": "wordBreak",
+        "timeoutMs": 8000,
+        "tests": [
+          {
+            "args": [
+              "leetcode",
+              [
+                "leet",
+                "code"
+              ]
+            ]
+          },
+          {
+            "args": [
+              "applepenapple",
+              [
+                "apple",
+                "pen"
+              ]
+            ]
+          },
+          {
+            "args": [
+              "catsandog",
+              [
+                "cats",
+                "dog",
+                "sand",
+                "and",
+                "cat"
+              ]
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "type": "javascript",
+      "title": "Longest Increasing Subsequence",
+      "content": {
+        "description": "Массив `nums`. Длина **самой длинной строго возрастающей** подпоследовательности.\n\n[LeetCode 300. Longest Increasing Subsequence](https://leetcode.com/problems/longest-increasing-subsequence/)",
+        "starterCode": "function lengthOfLIS(nums) {\n  return 0;\n}",
+        "referenceSolution": "function lengthOfLIS(nums) {\n  const tails = [];\n  for (const x of nums) {\n    let lo = 0;\n    let hi = tails.length;\n    while (lo < hi) {\n      const mid = Math.floor((lo + hi) / 2);\n      if (tails[mid] < x) lo = mid + 1;\n      else hi = mid;\n    }\n    tails[lo] = x;\n  }\n  return tails.length;\n}",
+        "setup": "",
+        "reset": "",
+        "functionName": "lengthOfLIS",
+        "timeoutMs": 8000,
+        "tests": [
+          {
+            "args": [
+              [
+                10,
+                9,
+                2,
+                5,
+                3,
+                7,
+                101,
+                18
+              ]
+            ]
+          },
+          {
+            "args": [
+              [
+                0,
+                1,
+                0,
+                3,
+                2,
+                3
+              ]
+            ]
+          },
+          {
+            "args": [
+              [
+                7,
+                7,
+                7,
+                7
+              ]
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "type": "quiz",
+      "title": "Quiz: строки DP",
+      "content": {
+        "question": "LIS длины n можно ускорить до O(n log n) с помощью…",
+        "options": [
+          "Monotonic stack",
+          "Бинарного поиска по tails",
+          "Trie",
+          "Только BFS"
+        ],
+        "correctIndices": [
+          1
+        ]
+      }
+    }
+  ]
+}

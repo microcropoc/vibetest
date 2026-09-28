@@ -1,0 +1,317 @@
+{
+  "schemaVersion": 1,
+  "title": "Trie (префиксное дерево)",
+  "steps": [
+    {
+      "type": "theory",
+      "title": "Trie и словарь",
+      "content": "## Префиксное дерево\n\nУзлы хранят детей по символу; `isEnd` — конец слова.\n\nЗадачи Blind 75: **Implement Trie**, **Design Add and Search Words**, **Word Search II** (DFS + Trie)."
+    },
+    {
+      "type": "svg",
+      "title": "Trie узлы",
+      "content": {
+        "caption": "Общие **префиксы** делят путь",
+        "description": "Поиск слова — O(длина слова).",
+        "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 240 90\" width=\"100%\" role=\"img\" aria-label=\"Trie\"><circle id=\"m08-root\" cx=\"30\" cy=\"45\" r=\"10\" fill=\"#eceff1\" stroke=\"#546e7a\"/><circle id=\"m08-c\" cx=\"80\" cy=\"45\" r=\"10\" fill=\"#e3f2fd\" stroke=\"#1565c0\"/><text x=\"80\" y=\"49\" text-anchor=\"middle\" font-size=\"9\">c</text><circle id=\"m08-a\" cx=\"130\" cy=\"25\" r=\"10\" fill=\"#e8f5e9\" stroke=\"#2e7d32\"/><text x=\"130\" y=\"29\" text-anchor=\"middle\" font-size=\"9\">a</text><circle id=\"m08-t\" cx=\"180\" cy=\"25\" r=\"10\" fill=\"#fff9c4\" stroke=\"#f9a825\"/><text x=\"180\" y=\"29\" text-anchor=\"middle\" font-size=\"9\">t</text><line id=\"m08-e1\" x1=\"40\" y1=\"45\" x2=\"70\" y2=\"45\" stroke=\"#78909c\"/><line id=\"m08-e2\" x1=\"90\" y1=\"42\" x2=\"120\" y2=\"28\" stroke=\"#78909c\"/><line id=\"m08-e3\" x1=\"140\" y1=\"25\" x2=\"170\" y2=\"25\" stroke=\"#78909c\"/></svg>"
+      }
+    },
+    {
+      "type": "javascript",
+      "title": "Разминка: общий префикс строк",
+      "content": {
+        "description": "**`longestCommonPrefix(strs)`** — longest common prefix (может быть `\"\"`).",
+        "starterCode": "function longestCommonPrefix(strs) {\n  return \"\";\n}",
+        "referenceSolution": "function longestCommonPrefix(strs) {\n  if (!strs.length) return \"\";\n  let prefix = strs[0];\n  for (let i = 1; i < strs.length; i += 1) {\n    while (!strs[i].startsWith(prefix)) {\n      prefix = prefix.slice(0, -1);\n      if (!prefix) return \"\";\n    }\n  }\n  return prefix;\n}",
+        "setup": "",
+        "reset": "",
+        "functionName": "longestCommonPrefix",
+        "timeoutMs": 8000,
+        "tests": [
+          {
+            "args": [
+              [
+                "flower",
+                "flow",
+                "flight"
+              ]
+            ]
+          },
+          {
+            "args": [
+              [
+                "dog",
+                "racecar",
+                "car"
+              ]
+            ]
+          },
+          {
+            "args": [
+              [
+                "a"
+              ]
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "type": "javascript",
+      "title": "Implement Trie",
+      "content": {
+        "description": "Класс **`Trie`**: `insert(word)`, `search(word)`, `startsWith(prefix)` → boolean. `insert` возвращает `this`. [LeetCode 208. Implement Trie (Prefix Tree)](https://leetcode.com/problems/implement-trie-prefix-tree/)",
+        "starterCode": "class Trie {\n  constructor() {}\n  insert(word) {\n    return this;\n  }\n  search(word) {\n    return false;\n  }\n  startsWith(prefix) {\n    return false;\n  }\n}",
+        "referenceSolution": "class Trie {\n  constructor() {\n    this.root = {};\n  }\n  insert(word) {\n    let node = this.root;\n    for (const c of word) {\n      if (!node[c]) node[c] = {};\n      node = node[c];\n    }\n    node.end = true;\n    return this;\n  }\n  _walk(prefix) {\n    let node = this.root;\n    for (const c of prefix) {\n      if (!node[c]) return null;\n      node = node[c];\n    }\n    return node;\n  }\n  search(word) {\n    const node = this._walk(word);\n    return Boolean(node && node.end);\n  }\n  startsWith(prefix) {\n    return this._walk(prefix) !== null;\n  }\n}",
+        "setup": "",
+        "reset": "",
+        "construct": {
+          "className": "Trie"
+        },
+        "timeoutMs": 8000,
+        "tests": [
+          {
+            "args": [],
+            "calls": [
+              {
+                "method": "insert",
+                "args": [
+                  "apple"
+                ]
+              },
+              {
+                "method": "search",
+                "args": [
+                  "apple"
+                ]
+              }
+            ]
+          },
+          {
+            "args": [],
+            "calls": [
+              {
+                "method": "insert",
+                "args": [
+                  "apple"
+                ]
+              },
+              {
+                "method": "search",
+                "args": [
+                  "app"
+                ]
+              }
+            ]
+          },
+          {
+            "args": [],
+            "calls": [
+              {
+                "method": "insert",
+                "args": [
+                  "apple"
+                ]
+              },
+              {
+                "method": "startsWith",
+                "args": [
+                  "app"
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "type": "javascript",
+      "title": "Design Add and Search Words",
+      "content": {
+        "description": "Класс **`WordDictionary`**: `addWord(word)`, `search(word)` — `'.'` = любая буква. [LeetCode 211. Design Add and Search Words Data Structure](https://leetcode.com/problems/design-add-and-search-words-data-structure/)",
+        "starterCode": "class WordDictionary {\n  constructor() {}\n  addWord(word) {\n    return this;\n  }\n  search(word) {\n    return false;\n  }\n}",
+        "referenceSolution": "class WordDictionary {\n  constructor() {\n    this.root = {};\n  }\n  addWord(word) {\n    let node = this.root;\n    for (const c of word) {\n      if (!node[c]) node[c] = {};\n      node = node[c];\n    }\n    node.end = true;\n    return this;\n  }\n  search(word) {\n    const dfs = (node, i) => {\n      if (i === word.length) return Boolean(node.end);\n      const c = word[i];\n      if (c === \".\") {\n        for (const key of Object.keys(node)) {\n          if (key !== \"end\" && dfs(node[key], i + 1)) return true;\n        }\n        return false;\n      }\n      if (!node[c]) return false;\n      return dfs(node[c], i + 1);\n    };\n    return dfs(this.root, 0);\n  }\n}",
+        "setup": "",
+        "reset": "",
+        "construct": {
+          "className": "WordDictionary"
+        },
+        "timeoutMs": 8000,
+        "tests": [
+          {
+            "args": [],
+            "calls": [
+              {
+                "method": "addWord",
+                "args": [
+                  "bad"
+                ]
+              },
+              {
+                "method": "addWord",
+                "args": [
+                  "dad"
+                ]
+              },
+              {
+                "method": "addWord",
+                "args": [
+                  "mad"
+                ]
+              },
+              {
+                "method": "search",
+                "args": [
+                  "pad"
+                ]
+              }
+            ]
+          },
+          {
+            "args": [],
+            "calls": [
+              {
+                "method": "addWord",
+                "args": [
+                  "bad"
+                ]
+              },
+              {
+                "method": "search",
+                "args": [
+                  "bad"
+                ]
+              }
+            ]
+          },
+          {
+            "args": [],
+            "calls": [
+              {
+                "method": "addWord",
+                "args": [
+                  "bad"
+                ]
+              },
+              {
+                "method": "addWord",
+                "args": [
+                  "dad"
+                ]
+              },
+              {
+                "method": "search",
+                "args": [
+                  ".ad"
+                ]
+              }
+            ]
+          },
+          {
+            "args": [],
+            "calls": [
+              {
+                "method": "addWord",
+                "args": [
+                  "bad"
+                ]
+              },
+              {
+                "method": "search",
+                "args": [
+                  "b.."
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "type": "javascript",
+      "title": "Word Search II",
+      "content": {
+        "description": "Доска `board` (массив строк) и `words`. Верните все слова из `words`, которые можно собрать **соседними** клетками (без повторного использования клетки). Порядок в ответе не важен (`unordered: true`). [LeetCode 212. Word Search II](https://leetcode.com/problems/word-search-ii/)",
+        "starterCode": "function findWords(board, words) {\n  return [];\n}",
+        "referenceSolution": "function findWords(board, words) {\n  const rows = board.length;\n  const cols = board[0].length;\n  const root = {};\n  for (const w of words) {\n    let node = root;\n    for (const c of w) {\n      if (!node[c]) node[c] = {};\n      node = node[c];\n    }\n    node.word = w;\n  }\n  const out = new Set();\n  const dfs = (r, c, node) => {\n    const ch = board[r][c];\n    if (!node[ch]) return;\n    node = node[ch];\n    if (node.word) {\n      out.add(node.word);\n      delete node.word;\n    }\n    board[r][c] = \"#\";\n    const dirs = [[1, 0], [-1, 0], [0, 1], [0, -1]];\n    for (const [dr, dc] of dirs) {\n      const nr = r + dr;\n      const nc = c + dc;\n      if (nr >= 0 && nr < rows && nc >= 0 && nc < cols && board[nr][nc] !== \"#\") {\n        dfs(nr, nc, node);\n      }\n    }\n    board[r][c] = ch;\n  };\n  for (let r = 0; r < rows; r += 1) {\n    for (let c = 0; c < cols; c += 1) dfs(r, c, root);\n  }\n  return [...out];\n}",
+        "setup": "",
+        "reset": "",
+        "functionName": "findWords",
+        "timeoutMs": 8000,
+        "tests": [
+          {
+            "args": [
+              [
+                [
+                  "o",
+                  "a",
+                  "a",
+                  "n"
+                ],
+                [
+                  "e",
+                  "t",
+                  "a",
+                  "e"
+                ],
+                [
+                  "i",
+                  "h",
+                  "k",
+                  "r"
+                ],
+                [
+                  "i",
+                  "f",
+                  "l",
+                  "v"
+                ]
+              ],
+              [
+                "oath",
+                "pea",
+                "eat",
+                "rain"
+              ]
+            ],
+            "unordered": true
+          },
+          {
+            "args": [
+              [
+                [
+                  "a",
+                  "b"
+                ],
+                [
+                  "c",
+                  "d"
+                ]
+              ],
+              [
+                "abcb"
+              ]
+            ],
+            "unordered": true
+          }
+        ]
+      }
+    },
+    {
+      "type": "quiz",
+      "title": "Quiz: Trie",
+      "content": {
+        "question": "Trie особенно выгоден, когда нужно много раз искать по…",
+        "options": [
+          "Полному совпадению массива",
+          "Префиксу строки",
+          "Сумме двух чисел",
+          "Inorder BST"
+        ],
+        "correctIndices": [
+          1
+        ]
+      }
+    }
+  ]
+}

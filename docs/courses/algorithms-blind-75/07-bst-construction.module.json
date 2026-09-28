@@ -1,0 +1,343 @@
+{
+  "schemaVersion": 1,
+  "title": "BST: валидация и построение",
+  "steps": [
+    {
+      "type": "theory",
+      "title": "BST и рекурсия",
+      "content": "## Инвариант BST\n\nДля каждого узла: левое поддерево < val < правое.\n\n**Kth smallest** — inorder. **Построение** из preorder + inorder — рекурсия с границами."
+    },
+    {
+      "type": "svg",
+      "title": "BST инвариант",
+      "content": {
+        "caption": "Левое < **root** < правое",
+        "description": "Inorder обход BST даёт отсортированную последовательность.",
+        "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 220 100\" width=\"100%\" role=\"img\" aria-label=\"BST\"><circle id=\"m07-root\" cx=\"110\" cy=\"30\" r=\"16\" fill=\"#fff9c4\" stroke=\"#f9a825\"/><text x=\"110\" y=\"35\" text-anchor=\"middle\" font-size=\"11\">8</text><circle id=\"m07-l\" cx=\"70\" cy=\"70\" r=\"12\" fill=\"#e8f5e9\"/><text x=\"70\" y=\"74\" text-anchor=\"middle\" font-size=\"9\">3</text><circle id=\"m07-r\" cx=\"150\" cy=\"70\" r=\"12\" fill=\"#e8f5e9\"/><text x=\"150\" y=\"74\" text-anchor=\"middle\" font-size=\"9\">10</text><line id=\"m07-e1\" x1=\"110\" y1=\"46\" x2=\"70\" y2=\"58\" stroke=\"#78909c\"/><line id=\"m07-e2\" x1=\"110\" y1=\"46\" x2=\"150\" y2=\"58\" stroke=\"#78909c\"/></svg>"
+      }
+    },
+    {
+      "type": "javascript",
+      "title": "Разминка: inorder обход",
+      "content": {
+        "description": "**`inorderValues(root)`** — массив значений inorder (LNR).",
+        "starterCode": "function inorderValues(root) {\n  return [];\n}",
+        "referenceSolution": "function inorderValues(root) {\n  const out = [];\n  const walk = (node) => {\n    if (!node) return;\n    walk(node.left);\n    out.push(node.val);\n    walk(node.right);\n  };\n  walk(root);\n  return out;\n}",
+        "setup": "",
+        "reset": "",
+        "functionName": "inorderValues",
+        "timeoutMs": 8000,
+        "tests": [
+          {
+            "args": [
+              [
+                2,
+                1,
+                3
+              ]
+            ]
+          },
+          {
+            "args": [
+              [
+                1
+              ]
+            ]
+          },
+          {
+            "args": [
+              []
+            ]
+          }
+        ],
+        "structure": {
+          "args": [
+            "tree"
+          ],
+          "result": "raw"
+        }
+      }
+    },
+    {
+      "type": "javascript",
+      "title": "Validate Binary Search Tree",
+      "content": {
+        "description": "Является ли дерево **валидным BST**? [LeetCode 98. Validate Binary Search Tree](https://leetcode.com/problems/validate-binary-search-tree/)",
+        "starterCode": "function isValidBST(root) {\n  return true;\n}",
+        "referenceSolution": "function isValidBST(root) {\n  const valid = (node, lo, hi) => {\n    if (!node) return true;\n    if (node.val <= lo || node.val >= hi) return false;\n    return valid(node.left, lo, node.val) && valid(node.right, node.val, hi);\n  };\n  return valid(root, -Infinity, Infinity);\n}",
+        "setup": "",
+        "reset": "",
+        "functionName": "isValidBST",
+        "timeoutMs": 8000,
+        "tests": [
+          {
+            "args": [
+              [
+                2,
+                1,
+                3
+              ]
+            ]
+          },
+          {
+            "args": [
+              [
+                5,
+                1,
+                4,
+                null,
+                null,
+                3,
+                6
+              ]
+            ]
+          },
+          {
+            "args": [
+              [
+                1,
+                1
+              ]
+            ]
+          }
+        ],
+        "structure": {
+          "args": [
+            "tree"
+          ],
+          "result": "raw"
+        }
+      }
+    },
+    {
+      "type": "javascript",
+      "title": "Kth Smallest Element in a BST",
+      "content": {
+        "description": "`k`-й **наименьший** элемент (1-indexed). [LeetCode 230. Kth Smallest Element in a BST](https://leetcode.com/problems/kth-smallest-element-in-a-bst/)",
+        "starterCode": "function kthSmallest(root, k) {\n  return 0;\n}",
+        "referenceSolution": "function kthSmallest(root, k) {\n  const stack = [];\n  let cur = root;\n  while (cur || stack.length) {\n    while (cur) {\n      stack.push(cur);\n      cur = cur.left;\n    }\n    cur = stack.pop();\n    k -= 1;\n    if (k === 0) return cur.val;\n    cur = cur.right;\n  }\n  return 0;\n}",
+        "setup": "",
+        "reset": "",
+        "functionName": "kthSmallest",
+        "timeoutMs": 8000,
+        "tests": [
+          {
+            "args": [
+              [
+                3,
+                1,
+                4,
+                null,
+                2
+              ],
+              1
+            ]
+          },
+          {
+            "args": [
+              [
+                3,
+                1,
+                4,
+                null,
+                2
+              ],
+              3
+            ]
+          },
+          {
+            "args": [
+              [
+                5,
+                3,
+                6,
+                2,
+                4,
+                null,
+                null,
+                1
+              ],
+              4
+            ]
+          }
+        ],
+        "structure": {
+          "args": [
+            "tree",
+            "raw"
+          ],
+          "result": "raw"
+        }
+      }
+    },
+    {
+      "type": "javascript",
+      "title": "Construct Binary Tree from Preorder and Inorder",
+      "content": {
+        "description": "Массивы **preorder** и **inorder** (уникальные значения). Постройте дерево (верните корень → serialize tree). [LeetCode 105. Construct Binary Tree from Preorder and Inorder Traversal](https://leetcode.com/problems/construct-binary-tree-from-preorder-and-inorder-traversal/)",
+        "starterCode": "function buildTree(preorder, inorder) {\n  return null;\n}",
+        "referenceSolution": "function buildTree(preorder, inorder) {\n  if (!preorder.length) return null;\n  const rootVal = preorder[0];\n  const mid = inorder.indexOf(rootVal);\n  const root = { val: rootVal, left: null, right: null };\n  root.left = buildTree(preorder.slice(1, mid + 1), inorder.slice(0, mid));\n  root.right = buildTree(preorder.slice(mid + 1), inorder.slice(mid + 1));\n  return root;\n}",
+        "setup": "",
+        "reset": "",
+        "functionName": "buildTree",
+        "timeoutMs": 8000,
+        "tests": [
+          {
+            "args": [
+              [
+                3,
+                9,
+                20,
+                15,
+                7
+              ],
+              [
+                9,
+                3,
+                15,
+                20,
+                7
+              ]
+            ]
+          },
+          {
+            "args": [
+              [
+                -1
+              ],
+              [
+                -1
+              ]
+            ]
+          },
+          {
+            "args": [
+              [
+                1,
+                2
+              ],
+              [
+                2,
+                1
+              ]
+            ]
+          }
+        ],
+        "structure": {
+          "args": [
+            "raw",
+            "raw"
+          ],
+          "result": "tree"
+        }
+      }
+    },
+    {
+      "type": "javascript",
+      "title": "Binary Tree Maximum Path Sum",
+      "content": {
+        "description": "Максимальная **сумма пути** (любой узел — «вершина» пути). [LeetCode 124. Binary Tree Maximum Path Sum](https://leetcode.com/problems/binary-tree-maximum-path-sum/)",
+        "starterCode": "function maxPathSum(root) {\n  return 0;\n}",
+        "referenceSolution": "function maxPathSum(root) {\n  let best = -Infinity;\n  const gain = (node) => {\n    if (!node) return 0;\n    const left = Math.max(0, gain(node.left));\n    const right = Math.max(0, gain(node.right));\n    best = Math.max(best, node.val + left + right);\n    return node.val + Math.max(left, right);\n  };\n  gain(root);\n  return best;\n}",
+        "setup": "",
+        "reset": "",
+        "functionName": "maxPathSum",
+        "timeoutMs": 8000,
+        "tests": [
+          {
+            "args": [
+              [
+                1,
+                2,
+                3
+              ]
+            ]
+          },
+          {
+            "args": [
+              [
+                -10,
+                9,
+                20,
+                null,
+                null,
+                15,
+                7
+              ]
+            ]
+          },
+          {
+            "args": [
+              [
+                2,
+                -1
+              ]
+            ]
+          }
+        ],
+        "structure": {
+          "args": [
+            "tree"
+          ],
+          "result": "raw"
+        }
+      }
+    },
+    {
+      "type": "javascript",
+      "title": "Serialize and Deserialize Binary Tree",
+      "content": {
+        "description": "Класс **`Codec`**: `serialize(root)` → строка, `deserialize(data)` → дерево. Тесты через **`__codecTreeRoundtrip(levelOrder)`** из `setup`: сравнивается level-order обход до и после round-trip.\n\n[LeetCode 297. Serialize and Deserialize Binary Tree](https://leetcode.com/problems/serialize-and-deserialize-binary-tree/)",
+        "starterCode": "class Codec {\n  serialize(root) {\n    return \"\";\n  }\n  deserialize(data) {\n    return null;\n  }\n}",
+        "referenceSolution": "class Codec {\n  serialize(root) {\n    if (!root) return \"[]\";\n    const out = [];\n    const q = [root];\n    while (q.length) {\n      const node = q.shift();\n      if (!node) {\n        out.push(\"null\");\n        continue;\n      }\n      out.push(String(node.val));\n      q.push(node.left ?? null, node.right ?? null);\n    }\n    while (out.length && out[out.length - 1] === \"null\") out.pop();\n    return `[${out.join(\",\")}]`;\n  }\n  deserialize(data) {\n    if (data === \"[]\") return null;\n    const vals = data.slice(1, -1).split(\",\").map((x) => (x === \"null\" ? null : Number(x)));\n    const nodes = vals.map((v) => (v === null ? null : { val: v, left: null, right: null }));\n    const root = nodes[0];\n    const q = [root];\n    let i = 1;\n    while (q.length && i < nodes.length) {\n      const node = q.shift();\n      if (!node) continue;\n      if (i < nodes.length) {\n        node.left = nodes[i];\n        i += 1;\n      }\n      if (i < nodes.length) {\n        node.right = nodes[i];\n        i += 1;\n      }\n      if (node.left) q.push(node.left);\n      if (node.right) q.push(node.right);\n    }\n    return root;\n  }\n}",
+        "setup": "function __levelOrder(root) {\n  if (!root) return [];\n  const out = [];\n  const q = [root];\n  while (q.length) {\n    const node = q.shift();\n    if (!node) {\n      out.push(null);\n      continue;\n    }\n    out.push(node.val);\n    q.push(node.left ?? null, node.right ?? null);\n  }\n  while (out.length && out[out.length - 1] === null) out.pop();\n  return out;\n}\nfunction __codecTreeRoundtrip(levelOrder) {\n  const codec = new Codec();\n  const root = __materializeTree(levelOrder);\n  const copy = codec.deserialize(codec.serialize(root));\n  const a = __levelOrder(root);\n  const b = __levelOrder(copy);\n  return JSON.stringify(a) === JSON.stringify(b);\n}\nfunction __materializeTree(arr) {\n  if (!arr.length) return null;\n  const nodes = arr.map((v) => (v === null ? null : { val: v, left: null, right: null }));\n  const root = nodes[0];\n  const q = [root];\n  let i = 1;\n  while (q.length && i < nodes.length) {\n    const node = q.shift();\n    if (!node) continue;\n    if (i < nodes.length) { node.left = nodes[i]; i += 1; }\n    if (i < nodes.length) { node.right = nodes[i]; i += 1; }\n    if (node.left) q.push(node.left);\n    if (node.right) q.push(node.right);\n  }\n  return root;\n}",
+        "reset": "",
+        "functionName": "__codecTreeRoundtrip",
+        "timeoutMs": 8000,
+        "tests": [
+          {
+            "args": [
+              [
+                1,
+                2,
+                3,
+                null,
+                null,
+                4,
+                5
+              ]
+            ]
+          },
+          {
+            "args": [
+              []
+            ]
+          },
+          {
+            "args": [
+              [
+                1
+              ]
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "type": "quiz",
+      "title": "Quiz: BST",
+      "content": {
+        "question": "K-й наименьший в BST удобно искать через…",
+        "options": [
+          "Preorder",
+          "Inorder",
+          "Postorder",
+          "Level order только"
+        ],
+        "correctIndices": [
+          1
+        ]
+      }
+    }
+  ]
+}

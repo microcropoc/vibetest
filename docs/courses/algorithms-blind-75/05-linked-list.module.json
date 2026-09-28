@@ -1,0 +1,361 @@
+{
+  "schemaVersion": 1,
+  "title": "Связные списки",
+  "steps": [
+    {
+      "type": "theory",
+      "title": "Связные списки в практике",
+      "content": "## Узлы `{ val, next }`\n\nВ JSON тесты передают **`number[]`**, раннер materialize в список (`structure`: `list`).\n\nПаттерны: dummy head, fast/slow pointers, reverse in-place.\n\n**Цикл:** для Linked List Cycle в `setup` есть `__buildCycleList` и обёртка `__runHasCycle` — реализуйте **`hasCycle(head)`**."
+    },
+    {
+      "type": "svg",
+      "title": "Узлы списка",
+      "content": {
+        "caption": "**head** → узлы с полем **next**",
+        "description": "Dummy-узел упрощает вставку у головы.",
+        "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 300 60\" width=\"100%\" role=\"img\" aria-label=\"Связный список\"><rect id=\"m05-n1\" x=\"40\" y=\"20\" width=\"50\" height=\"28\" rx=\"4\" fill=\"#e3f2fd\" stroke=\"#1565c0\"/><text x=\"65\" y=\"38\" text-anchor=\"middle\" font-size=\"10\">1</text><line id=\"m05-e1\" x1=\"90\" y1=\"34\" x2=\"110\" y2=\"34\" stroke=\"#37474f\" marker-end=\"url(#m05-ar)\"/><rect id=\"m05-n2\" x=\"112\" y=\"20\" width=\"50\" height=\"28\" rx=\"4\" fill=\"#e3f2fd\" stroke=\"#1565c0\"/><text x=\"137\" y=\"38\" text-anchor=\"middle\" font-size=\"10\">2</text><line id=\"m05-e2\" x1=\"162\" y1=\"34\" x2=\"182\" y2=\"34\" stroke=\"#37474f\" marker-end=\"url(#m05-ar)\"/><rect id=\"m05-n3\" x=\"184\" y=\"20\" width=\"50\" height=\"28\" rx=\"4\" fill=\"#e3f2fd\" stroke=\"#1565c0\"/><text x=\"209\" y=\"38\" text-anchor=\"middle\" font-size=\"10\">3</text><defs><marker id=\"m05-ar\" markerWidth=\"6\" markerHeight=\"6\" refX=\"5\" refY=\"3\" orient=\"auto\"><path d=\"M0,0 L6,3 L0,6 Z\" fill=\"#37474f\"/></marker></defs></svg>"
+      }
+    },
+    {
+      "type": "javascript",
+      "title": "Разминка: длина списка",
+      "content": {
+        "description": "**`listLength(head)`** — число узлов. Аргумент — массив чисел (`structure` list).",
+        "starterCode": "function listLength(head) {\n  return 0;\n}",
+        "referenceSolution": "function listLength(head) {\n  let n = 0;\n  let cur = head;\n  while (cur) {\n    n += 1;\n    cur = cur.next;\n  }\n  return n;\n}",
+        "setup": "",
+        "reset": "",
+        "functionName": "listLength",
+        "timeoutMs": 8000,
+        "tests": [
+          {
+            "args": [
+              [
+                1,
+                2,
+                3
+              ]
+            ]
+          },
+          {
+            "args": [
+              []
+            ]
+          },
+          {
+            "args": [
+              [
+                7
+              ]
+            ]
+          }
+        ],
+        "structure": {
+          "args": [
+            "list"
+          ],
+          "result": "raw"
+        }
+      }
+    },
+    {
+      "type": "javascript",
+      "title": "Reverse Linked List",
+      "content": {
+        "description": "Разверните односвязный список. [LeetCode 206. Reverse Linked List](https://leetcode.com/problems/reverse-linked-list/)",
+        "starterCode": "function reverseList(head) {\n  return head;\n}",
+        "referenceSolution": "function reverseList(head) {\n  let prev = null;\n  let cur = head;\n  while (cur) {\n    const next = cur.next;\n    cur.next = prev;\n    prev = cur;\n    cur = next;\n  }\n  return prev;\n}",
+        "setup": "",
+        "reset": "",
+        "functionName": "reverseList",
+        "timeoutMs": 8000,
+        "tests": [
+          {
+            "args": [
+              [
+                1,
+                2,
+                3
+              ]
+            ]
+          },
+          {
+            "args": [
+              [
+                1,
+                2
+              ]
+            ]
+          },
+          {
+            "args": [
+              []
+            ]
+          }
+        ],
+        "structure": {
+          "args": [
+            "list"
+          ],
+          "result": "list"
+        }
+      }
+    },
+    {
+      "type": "javascript",
+      "title": "Merge Two Sorted Lists",
+      "content": {
+        "description": "Два отсортированных списка — слейте в один отсортированный. [LeetCode 21. Merge Two Sorted Lists](https://leetcode.com/problems/merge-two-sorted-lists/)",
+        "starterCode": "function mergeTwoLists(list1, list2) {\n  return list1;\n}",
+        "referenceSolution": "function mergeTwoLists(list1, list2) {\n  const dummy = { val: 0, next: null };\n  let tail = dummy;\n  while (list1 && list2) {\n    if (list1.val <= list2.val) {\n      tail.next = list1;\n      list1 = list1.next;\n    } else {\n      tail.next = list2;\n      list2 = list2.next;\n    }\n    tail = tail.next;\n  }\n  tail.next = list1 ?? list2;\n  return dummy.next;\n}",
+        "setup": "",
+        "reset": "",
+        "functionName": "mergeTwoLists",
+        "timeoutMs": 8000,
+        "tests": [
+          {
+            "args": [
+              [
+                1,
+                2,
+                4
+              ],
+              [
+                1,
+                3,
+                4
+              ]
+            ]
+          },
+          {
+            "args": [
+              [],
+              []
+            ]
+          },
+          {
+            "args": [
+              [],
+              [
+                0
+              ]
+            ]
+          }
+        ],
+        "structure": {
+          "args": [
+            "list",
+            "list"
+          ],
+          "result": "list"
+        }
+      }
+    },
+    {
+      "type": "javascript",
+      "title": "Reorder List",
+      "content": {
+        "description": "Список `L0→L1→…→Ln-1→Ln` — переставьте в `L0→Ln→L1→Ln-1→…` **in-place** (верните голову). [LeetCode 143. Reorder List](https://leetcode.com/problems/reorder-list/)",
+        "starterCode": "function reorderList(head) {\n  return head;\n}",
+        "referenceSolution": "function reorderList(head) {\n  if (!head || !head.next) return head;\n  let slow = head;\n  let fast = head;\n  while (fast.next && fast.next.next) {\n    slow = slow.next;\n    fast = fast.next.next;\n  }\n  let second = slow.next;\n  slow.next = null;\n  let prev = null;\n  while (second) {\n    const n = second.next;\n    second.next = prev;\n    prev = second;\n    second = n;\n  }\n  second = prev;\n  let first = head;\n  while (second) {\n    const t1 = first.next;\n    const t2 = second.next;\n    first.next = second;\n    second.next = t1;\n    first = t1;\n    second = t2;\n  }\n  return head;\n}",
+        "setup": "",
+        "reset": "",
+        "functionName": "reorderList",
+        "timeoutMs": 8000,
+        "tests": [
+          {
+            "args": [
+              [
+                1,
+                2,
+                3,
+                4
+              ]
+            ]
+          },
+          {
+            "args": [
+              [
+                1,
+                2,
+                3,
+                4,
+                5
+              ]
+            ]
+          },
+          {
+            "args": [
+              [
+                1
+              ]
+            ]
+          }
+        ],
+        "structure": {
+          "args": [
+            "list"
+          ],
+          "result": "list"
+        }
+      }
+    },
+    {
+      "type": "javascript",
+      "title": "Remove Nth Node From End of List",
+      "content": {
+        "description": "Удалите **n-й с конца** узел (1-indexed) и верните голову. [LeetCode 19. Remove Nth Node From End of List](https://leetcode.com/problems/remove-nth-node-from-end-of-list/)",
+        "starterCode": "function removeNthFromEnd(head, n) {\n  return head;\n}",
+        "referenceSolution": "function removeNthFromEnd(head, n) {\n  const dummy = { val: 0, next: head };\n  let fast = dummy;\n  let slow = dummy;\n  for (let i = 0; i < n; i += 1) fast = fast.next;\n  while (fast.next) {\n    fast = fast.next;\n    slow = slow.next;\n  }\n  slow.next = slow.next.next;\n  return dummy.next;\n}",
+        "setup": "",
+        "reset": "",
+        "functionName": "removeNthFromEnd",
+        "timeoutMs": 8000,
+        "tests": [
+          {
+            "args": [
+              [
+                1,
+                2,
+                3,
+                4,
+                5
+              ],
+              2
+            ]
+          },
+          {
+            "args": [
+              [
+                1
+              ],
+              1
+            ]
+          },
+          {
+            "args": [
+              [
+                1,
+                2
+              ],
+              1
+            ]
+          }
+        ],
+        "structure": {
+          "args": [
+            "list",
+            "raw"
+          ],
+          "result": "list"
+        }
+      }
+    },
+    {
+      "type": "javascript",
+      "title": "Linked List Cycle",
+      "content": {
+        "description": "Есть ли **цикл** в списке? Реализуйте **`hasCycle(head)`**. Тесты вызывают **`__runHasCycle(values, pos)`** из `setup` (`pos` — индекс, куда tail.next, `-1` без цикла).\n\n[LeetCode 141. Linked List Cycle](https://leetcode.com/problems/linked-list-cycle/)",
+        "starterCode": "function hasCycle(head) {\n  return false;\n}",
+        "referenceSolution": "function hasCycle(head) {\n  let slow = head;\n  let fast = head;\n  while (fast && fast.next) {\n    slow = slow.next;\n    fast = fast.next.next;\n    if (slow === fast) return true;\n  }\n  return false;\n}",
+        "setup": "function __buildCycleList(values, pos) {\n  if (values.length === 0) return null;\n  const nodes = values.map((val) => ({ val, next: null }));\n  for (let i = 0; i < nodes.length - 1; i += 1) nodes[i].next = nodes[i + 1];\n  if (pos >= 0 && pos < nodes.length) nodes[nodes.length - 1].next = nodes[pos];\n  return nodes[0];\n}\nfunction __runHasCycle(values, pos) {\n  return hasCycle(__buildCycleList(values, pos));\n}",
+        "reset": "",
+        "functionName": "__runHasCycle",
+        "timeoutMs": 8000,
+        "tests": [
+          {
+            "args": [
+              [
+                3,
+                2,
+                0,
+                -4
+              ],
+              1
+            ]
+          },
+          {
+            "args": [
+              [
+                1,
+                2
+              ],
+              0
+            ]
+          },
+          {
+            "args": [
+              [
+                1
+              ],
+              -1
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "type": "javascript",
+      "title": "Merge k Sorted Lists",
+      "content": {
+        "description": "Массив **отсортированных списков** (`number[][]`). Слейте в один отсортированный список, верните **массив значений** (хелперы построения списка внутри функции).\n\n[LeetCode 23. Merge k Sorted Lists](https://leetcode.com/problems/merge-k-sorted-lists/)",
+        "starterCode": "function mergeKLists(arrays) {\n  return [];\n}",
+        "referenceSolution": "function mergeKLists(arrays) {\n  const toList = (arr) => {\n    const dummy = { val: 0, next: null };\n    let cur = dummy;\n    for (const v of arr) {\n      cur.next = { val: v, next: null };\n      cur = cur.next;\n    }\n    return dummy.next;\n  };\n  const toArray = (head) => {\n    const out = [];\n    while (head) {\n      out.push(head.val);\n      head = head.next;\n    }\n    return out;\n  };\n  const lists = arrays.map(toList).filter(Boolean);\n  if (lists.length === 0) return [];\n  while (lists.length > 1) {\n    const a = lists.shift();\n    const b = lists.shift();\n    lists.push(mergeTwo(a, b));\n  }\n  return toArray(lists[0]);\n  function mergeTwo(l1, l2) {\n    const dummy = { val: 0, next: null };\n    let tail = dummy;\n    while (l1 && l2) {\n      if (l1.val <= l2.val) {\n        tail.next = l1;\n        l1 = l1.next;\n      } else {\n        tail.next = l2;\n        l2 = l2.next;\n      }\n      tail = tail.next;\n    }\n    tail.next = l1 ?? l2;\n    return dummy.next;\n  }\n}",
+        "setup": "",
+        "reset": "",
+        "functionName": "mergeKLists",
+        "timeoutMs": 8000,
+        "tests": [
+          {
+            "args": [
+              [
+                [
+                  1,
+                  4,
+                  5
+                ],
+                [
+                  1,
+                  3,
+                  4
+                ],
+                [
+                  2,
+                  6
+                ]
+              ]
+            ]
+          },
+          {
+            "args": [
+              []
+            ]
+          },
+          {
+            "args": [
+              [
+                []
+              ]
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "type": "quiz",
+      "title": "Quiz: списки",
+      "content": {
+        "question": "Fast/slow указатели чаще всего помогают обнаружить…",
+        "options": [
+          "Отсортированность",
+          "Цикл в списке",
+          "BST",
+          "Trie"
+        ],
+        "correctIndices": [
+          1
+        ]
+      }
+    }
+  ]
+}

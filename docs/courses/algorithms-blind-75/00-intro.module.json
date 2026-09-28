@@ -1,0 +1,152 @@
+{
+  "schemaVersion": 1,
+  "title": "Введение: сложность и инструменты JS",
+  "steps": [
+    {
+      "type": "theory",
+      "title": "Big-O и структуры данных",
+      "content": "## Зачем Big-O\n\nBlind 75 — набор классических задач с **LeetCode**. На интервью и в продакшене важно оценивать **время и память**.\n\n- **O(1)** — доступ по индексу, `Map.get`.\n- **O(n)** — один проход по массиву.\n- **O(n log n)** — сортировка.\n\nВ JS для алгоритмов чаще всего: **`Map` / `Set`**, двух указателей, скользящее окно, стек, BFS/DFS, DP.\n\n```javascript\n// Ловушка: sort без компаратора сортирует как строки\n[10, 2, 1].sort(); // [1, 10, 2]\n[10, 2, 1].sort((a, b) => a - b);\n```"
+    },
+    {
+      "type": "svg",
+      "title": "Рост сложности",
+      "content": {
+        "caption": "**O(n)** vs **O(n²)** на больших n",
+        "description": "Линейный алгоритм масштабируется предсказуемее квадратичного.",
+        "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 320 120\" width=\"100%\" role=\"img\" aria-label=\"Сравнение O(n) и O(n²)\"><line x1=\"40\" y1=\"100\" x2=\"300\" y2=\"100\" stroke=\"#37474f\"/><line x1=\"40\" y1=\"100\" x2=\"40\" y2=\"20\" stroke=\"#37474f\"/><polyline id=\"m00-on\" points=\"40,100 120,70 200,50 280,35\" fill=\"none\" stroke=\"#1565c0\" stroke-width=\"2\"/><polyline id=\"m00-on2\" points=\"40,100 100,95 160,80 220,50 280,20\" fill=\"none\" stroke=\"#c62828\" stroke-width=\"2\"/><text x=\"250\" y=\"30\" font-size=\"10\" fill=\"#c62828\">O(n²)</text><text x=\"250\" y=\"45\" font-size=\"10\" fill=\"#1565c0\">O(n)</text></svg>"
+      }
+    },
+    {
+      "type": "javascript",
+      "title": "Разминка: частоты символов",
+      "content": {
+        "description": "Реализуйте **`charFrequency(s)`**: верните объект `{ [char]: count }` для всех символов строки `s`.",
+        "starterCode": "function charFrequency(s) {\n  return {};\n}",
+        "referenceSolution": "function charFrequency(s) {\n  const out = {};\n  for (const c of s) {\n    out[c] = (out[c] ?? 0) + 1;\n  }\n  return out;\n}",
+        "setup": "",
+        "reset": "",
+        "functionName": "charFrequency",
+        "timeoutMs": 8000,
+        "tests": [
+          {
+            "args": [
+              "aab"
+            ]
+          },
+          {
+            "args": [
+              ""
+            ]
+          },
+          {
+            "args": [
+              "abcabc"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "type": "javascript",
+      "title": "Разминка: два множества",
+      "content": {
+        "description": "Даны массивы **`a`** и **`b`**. Верните **новый массив** элементов, которые есть в обоих (пересечение), **без дубликатов**, в порядке первого появления в `a`.",
+        "starterCode": "function intersectUnique(a, b) {\n  return [];\n}",
+        "referenceSolution": "function intersectUnique(a, b) {\n  const setB = new Set(b);\n  const seen = new Set();\n  const out = [];\n  for (const x of a) {\n    if (setB.has(x) && !seen.has(x)) {\n      seen.add(x);\n      out.push(x);\n    }\n  }\n  return out;\n}",
+        "setup": "",
+        "reset": "",
+        "functionName": "intersectUnique",
+        "timeoutMs": 8000,
+        "tests": [
+          {
+            "args": [
+              [
+                1,
+                2,
+                2,
+                3
+              ],
+              [
+                2,
+                3,
+                4
+              ]
+            ]
+          },
+          {
+            "args": [
+              [
+                1
+              ],
+              [
+                2
+              ]
+            ]
+          },
+          {
+            "args": [
+              [],
+              [
+                1
+              ]
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "type": "javascript",
+      "title": "Разминка: стабильная сортировка чисел",
+      "content": {
+        "description": "Реализуйте **`sortNumbers(nums)`**: верните **новый** массив чисел, отсортированный по возрастанию (не мутируйте вход).",
+        "starterCode": "function sortNumbers(nums) {\n  return nums;\n}",
+        "referenceSolution": "function sortNumbers(nums) {\n  return nums.slice().sort((a, b) => a - b);\n}",
+        "setup": "",
+        "reset": "",
+        "functionName": "sortNumbers",
+        "timeoutMs": 8000,
+        "tests": [
+          {
+            "args": [
+              [
+                3,
+                1,
+                2
+              ]
+            ]
+          },
+          {
+            "args": [
+              [
+                10,
+                2,
+                1
+              ]
+            ]
+          },
+          {
+            "args": [
+              []
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "type": "quiz",
+      "title": "Проверка: инструменты",
+      "content": {
+        "question": "Что вернёт `[10, 2, 1].sort()` без второго аргумента?",
+        "options": [
+          "[1, 2, 10]",
+          "[1, 10, 2]",
+          "[10, 2, 1]",
+          "ошибку"
+        ],
+        "correctIndices": [
+          1
+        ]
+      }
+    }
+  ]
+}

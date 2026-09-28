@@ -1,0 +1,305 @@
+{
+  "schemaVersion": 1,
+  "title": "Куча и backtracking",
+  "steps": [
+    {
+      "type": "theory",
+      "title": "Heap и backtracking",
+      "content": "## Min/max heap\n\nВ JS нет встроенной кучи — часто **`push` + sort** для учебных задач или две кучи для медианы.\n\n## Backtracking\n\nСтроим решение по шагам, откатываемся (`pop`), когда путь тупиковый. **Combination Sum**, **Word Search** — классика DFS с выбором."
+    },
+    {
+      "type": "svg",
+      "title": "Две кучи для медианы",
+      "content": {
+        "caption": "**max-heap** слева, **min-heap** справа",
+        "description": "Медиана — верх max-кучи или среднее двух вершин при равном размере.",
+        "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 280 90\" width=\"100%\" role=\"img\" aria-label=\"Две кучи\"><rect id=\"m09-left\" x=\"30\" y=\"25\" width=\"90\" height=\"50\" rx=\"6\" fill=\"#e3f2fd\" stroke=\"#1565c0\"/><text x=\"75\" y=\"55\" text-anchor=\"middle\" font-size=\"10\">max</text><rect id=\"m09-right\" x=\"160\" y=\"25\" width=\"90\" height=\"50\" rx=\"6\" fill=\"#fff3e0\" stroke=\"#ef6c00\"/><text x=\"205\" y=\"55\" text-anchor=\"middle\" font-size=\"10\">min</text></svg>"
+      }
+    },
+    {
+      "type": "javascript",
+      "title": "Разминка: k-й по величине элемент",
+      "content": {
+        "description": "Массив **`nums`**, **`k`**. Верните **k-й наибольший** элемент (1 = максимум).",
+        "starterCode": "function kthLargestSimple(nums, k) {\n  return 0;\n}",
+        "referenceSolution": "function kthLargestSimple(nums, k) {\n  return nums.slice().sort((a, b) => b - a)[k - 1];\n}",
+        "setup": "",
+        "reset": "",
+        "functionName": "kthLargestSimple",
+        "timeoutMs": 8000,
+        "tests": [
+          {
+            "args": [
+              [
+                3,
+                2,
+                1,
+                5,
+                6,
+                4
+              ],
+              2
+            ]
+          },
+          {
+            "args": [
+              [
+                3,
+                2,
+                3,
+                1,
+                2,
+                4,
+                5,
+                5,
+                6
+              ],
+              4
+            ]
+          },
+          {
+            "args": [
+              [
+                1
+              ],
+              1
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "type": "javascript",
+      "title": "Find Median from Data Stream",
+      "content": {
+        "description": "Класс **`MedianFinder`**: `addNum(num)`, `findMedian()` — медиана текущего потока. `addNum` возвращает `this`.\n\n[LeetCode 295. Find Median from Data Stream](https://leetcode.com/problems/find-median-from-data-stream/)",
+        "starterCode": "class MedianFinder {\n  constructor() {}\n  addNum(num) {\n    return this;\n  }\n  findMedian() {\n    return 0;\n  }\n}",
+        "referenceSolution": "class MedianFinder {\n  constructor() {\n    this.lo = [];\n    this.hi = [];\n  }\n  addNum(num) {\n    this.lo.push(num);\n    this.lo.sort((a, b) => b - a);\n    this.hi.push(this.lo.shift());\n    this.hi.sort((a, b) => a - b);\n    if (this.lo.length < this.hi.length) this.lo.push(this.hi.shift());\n    return this;\n  }\n  findMedian() {\n    if (this.lo.length > this.hi.length) return this.lo[0];\n    return (this.lo[0] + this.hi[0]) / 2;\n  }\n}",
+        "setup": "",
+        "reset": "",
+        "construct": {
+          "className": "MedianFinder"
+        },
+        "timeoutMs": 8000,
+        "tests": [
+          {
+            "args": [],
+            "calls": [
+              {
+                "method": "addNum",
+                "args": [
+                  1
+                ]
+              },
+              {
+                "method": "addNum",
+                "args": [
+                  2
+                ]
+              },
+              {
+                "method": "findMedian",
+                "args": []
+              }
+            ]
+          },
+          {
+            "args": [],
+            "calls": [
+              {
+                "method": "addNum",
+                "args": [
+                  1
+                ]
+              },
+              {
+                "method": "addNum",
+                "args": [
+                  2
+                ]
+              },
+              {
+                "method": "addNum",
+                "args": [
+                  3
+                ]
+              },
+              {
+                "method": "findMedian",
+                "args": []
+              }
+            ]
+          },
+          {
+            "args": [],
+            "calls": [
+              {
+                "method": "addNum",
+                "args": [
+                  2
+                ]
+              },
+              {
+                "method": "findMedian",
+                "args": []
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "type": "javascript",
+      "title": "Combination Sum",
+      "content": {
+        "description": "Массив **уникальных** `candidates` и `target`. Все комбинации (одно число можно использовать многократно), сумма = `target`. Порядок комбинаций не важен (`unordered: true`).\n\n[LeetCode 39. Combination Sum](https://leetcode.com/problems/combination-sum/)",
+        "starterCode": "function combinationSum(candidates, target) {\n  return [];\n}",
+        "referenceSolution": "function combinationSum(candidates, target) {\n  const out = [];\n  const cur = [];\n  const dfs = (start, sum) => {\n    if (sum === target) {\n      out.push(cur.slice());\n      return;\n    }\n    if (sum > target) return;\n    for (let i = start; i < candidates.length; i += 1) {\n      cur.push(candidates[i]);\n      dfs(i, sum + candidates[i]);\n      cur.pop();\n    }\n  };\n  dfs(0, 0);\n  return out;\n}",
+        "setup": "",
+        "reset": "",
+        "functionName": "combinationSum",
+        "timeoutMs": 8000,
+        "tests": [
+          {
+            "args": [
+              [
+                2,
+                3,
+                6,
+                7
+              ],
+              7
+            ],
+            "unordered": true
+          },
+          {
+            "args": [
+              [
+                2,
+                3,
+                5
+              ],
+              8
+            ],
+            "unordered": true
+          },
+          {
+            "args": [
+              [
+                7
+              ],
+              7
+            ],
+            "unordered": true
+          }
+        ]
+      }
+    },
+    {
+      "type": "javascript",
+      "title": "Word Search",
+      "content": {
+        "description": "Доска `board` (массив строк), слово `word`. Можно ли собрать `word` из **соседних** клеток без повторного использования клетки?\n\n[LeetCode 79. Word Search](https://leetcode.com/problems/word-search/)",
+        "starterCode": "function exist(board, word) {\n  return false;\n}",
+        "referenceSolution": "function exist(board, word) {\n  const rows = board.length;\n  const cols = board[0].length;\n  const dfs = (r, c, i) => {\n    if (i === word.length) return true;\n    if (r < 0 || c < 0 || r >= rows || c >= cols || board[r][c] !== word[i]) return false;\n    const ch = board[r][c];\n    board[r][c] = \"#\";\n    const ok =\n      dfs(r + 1, c, i + 1) ||\n      dfs(r - 1, c, i + 1) ||\n      dfs(r, c + 1, i + 1) ||\n      dfs(r, c - 1, i + 1);\n    board[r][c] = ch;\n    return ok;\n  };\n  for (let r = 0; r < rows; r += 1) {\n    for (let c = 0; c < cols; c += 1) {\n      if (dfs(r, c, 0)) return true;\n    }\n  }\n  return false;\n}",
+        "setup": "",
+        "reset": "",
+        "functionName": "exist",
+        "timeoutMs": 8000,
+        "tests": [
+          {
+            "args": [
+              [
+                [
+                  "A",
+                  "B",
+                  "C",
+                  "E"
+                ],
+                [
+                  "S",
+                  "F",
+                  "C",
+                  "S"
+                ],
+                [
+                  "A",
+                  "D",
+                  "E",
+                  "E"
+                ]
+              ],
+              "ABCCED"
+            ]
+          },
+          {
+            "args": [
+              [
+                [
+                  "A",
+                  "B",
+                  "C",
+                  "E"
+                ],
+                [
+                  "S",
+                  "F",
+                  "C",
+                  "S"
+                ],
+                [
+                  "A",
+                  "D",
+                  "E",
+                  "E"
+                ]
+              ],
+              "SEE"
+            ]
+          },
+          {
+            "args": [
+              [
+                [
+                  "A",
+                  "B",
+                  "C",
+                  "E"
+                ],
+                [
+                  "S",
+                  "F",
+                  "C",
+                  "S"
+                ],
+                [
+                  "A",
+                  "D",
+                  "E",
+                  "E"
+                ]
+              ],
+              "ABCB"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "type": "quiz",
+      "title": "Quiz: heap и backtracking",
+      "content": {
+        "question": "Backtracking при переборе комбинаций обязательно включает…",
+        "options": [
+          "Сортировку всего массива на каждом шаге",
+          "Откат (undo) последнего выбора",
+          "BFS без visited",
+          "Только жадный выбор"
+        ],
+        "correctIndices": [
+          1
+        ]
+      }
+    }
+  ]
+}

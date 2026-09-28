@@ -1,0 +1,226 @@
+{
+  "schemaVersion": 1,
+  "title": "Скользящее окно",
+  "steps": [
+    {
+      "type": "theory",
+      "title": "Паттерн: скользящее окно",
+      "content": "## Окно фиксированной или переменной длины\n\nПоддерживайте `[left, right]` и инвариант (например, «в окне не больше K разных символов»).\n\n- **Фиксированное** — длина K.\n- **Переменное** — расширяем `right`, сжимаем `left`, пока инвариант нарушен.\n\nЧасто **O(n)** вместо O(n²)."
+    },
+    {
+      "type": "svg",
+      "title": "Окно на массиве",
+      "content": {
+        "caption": "**left** и **right** задают подмассив",
+        "description": "Скользящее окно обновляет состояние за O(1) при сдвиге границы.",
+        "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 300 70\" width=\"100%\" role=\"img\" aria-label=\"Скользящее окно\"><rect id=\"m03-track\" x=\"30\" y=\"25\" width=\"240\" height=\"20\" fill=\"#eceff1\" stroke=\"#90a4ae\"/><rect id=\"m03-win\" x=\"90\" y=\"22\" width=\"80\" height=\"26\" fill=\"#bbdefb\" stroke=\"#1565c0\" stroke-width=\"2\" opacity=\"0.8\"/><text id=\"m03-lbl\" x=\"130\" y=\"60\" text-anchor=\"middle\" font-size=\"9\">window</text></svg>"
+      }
+    },
+    {
+      "type": "javascript",
+      "title": "Разминка: максимальная сумма подмассива длины k",
+      "content": {
+        "description": "Массив **`nums`**, **`k`**. Максимальная сумма **подряд идущих** `k` элементов.",
+        "starterCode": "function maxSumSubarrayK(nums, k) {\n  return 0;\n}",
+        "referenceSolution": "function maxSumSubarrayK(nums, k) {\n  let sum = 0;\n  for (let i = 0; i < k; i += 1) sum += nums[i];\n  let best = sum;\n  for (let r = k; r < nums.length; r += 1) {\n    sum += nums[r] - nums[r - k];\n    best = Math.max(best, sum);\n  }\n  return best;\n}",
+        "setup": "",
+        "reset": "",
+        "functionName": "maxSumSubarrayK",
+        "timeoutMs": 8000,
+        "tests": [
+          {
+            "args": [
+              [
+                1,
+                2,
+                3,
+                4,
+                5
+              ],
+              2
+            ]
+          },
+          {
+            "args": [
+              [
+                2,
+                2,
+                2
+              ],
+              3
+            ]
+          },
+          {
+            "args": [
+              [
+                -1,
+                -2,
+                -3
+              ],
+              2
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "type": "javascript",
+      "title": "Best Time to Buy and Sell Stock",
+      "content": {
+        "description": "Массив цен `prices`, `prices[i]` — цена в день `i`. Максимальная **прибыль** от одной покупки и одной продажи (продажа после покупки).\n\n[LeetCode 121. Best Time to Buy and Sell Stock](https://leetcode.com/problems/best-time-to-buy-and-sell-stock/)",
+        "starterCode": "function maxProfit(prices) {\n  return 0;\n}",
+        "referenceSolution": "function maxProfit(prices) {\n  let minPrice = Infinity;\n  let best = 0;\n  for (const p of prices) {\n    minPrice = Math.min(minPrice, p);\n    best = Math.max(best, p - minPrice);\n  }\n  return best;\n}",
+        "setup": "",
+        "reset": "",
+        "functionName": "maxProfit",
+        "timeoutMs": 8000,
+        "tests": [
+          {
+            "args": [
+              [
+                7,
+                1,
+                5,
+                3,
+                6,
+                4
+              ]
+            ]
+          },
+          {
+            "args": [
+              [
+                7,
+                6,
+                4,
+                3,
+                1
+              ]
+            ]
+          },
+          {
+            "args": [
+              [
+                2,
+                4,
+                1
+              ]
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "type": "javascript",
+      "title": "Longest Substring Without Repeating Characters",
+      "content": {
+        "description": "Строка `s`. Длина **самой длинной** подстроки **без повторяющихся** символов.\n\n[LeetCode 3. Longest Substring Without Repeating Characters](https://leetcode.com/problems/longest-substring-without-repeating-characters/)",
+        "starterCode": "function lengthOfLongestSubstring(s) {\n  return 0;\n}",
+        "referenceSolution": "function lengthOfLongestSubstring(s) {\n  const last = new Map();\n  let left = 0;\n  let best = 0;\n  for (let right = 0; right < s.length; right += 1) {\n    const c = s[right];\n    if (last.has(c) && last.get(c) >= left) left = last.get(c) + 1;\n    last.set(c, right);\n    best = Math.max(best, right - left + 1);\n  }\n  return best;\n}",
+        "setup": "",
+        "reset": "",
+        "functionName": "lengthOfLongestSubstring",
+        "timeoutMs": 8000,
+        "tests": [
+          {
+            "args": [
+              "abcabcbb"
+            ]
+          },
+          {
+            "args": [
+              "bbbbb"
+            ]
+          },
+          {
+            "args": [
+              "pwwkew"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "type": "javascript",
+      "title": "Longest Repeating Character Replacement",
+      "content": {
+        "description": "Строка `s`, число `k`. Длина **самой длинной** подстроки, которую можно сделать из **одной буквы**, заменив не более `k` символов.\n\n[LeetCode 424. Longest Repeating Character Replacement](https://leetcode.com/problems/longest-repeating-character-replacement/)",
+        "starterCode": "function characterReplacement(s, k) {\n  return 0;\n}",
+        "referenceSolution": "function characterReplacement(s, k) {\n  const count = new Map();\n  let left = 0;\n  let maxFreq = 0;\n  let best = 0;\n  for (let right = 0; right < s.length; right += 1) {\n    const c = s[right];\n    count.set(c, (count.get(c) ?? 0) + 1);\n    maxFreq = Math.max(maxFreq, count.get(c));\n    while (right - left + 1 - maxFreq > k) {\n      const lc = s[left];\n      count.set(lc, count.get(lc) - 1);\n      left += 1;\n    }\n    best = Math.max(best, right - left + 1);\n  }\n  return best;\n}",
+        "setup": "",
+        "reset": "",
+        "functionName": "characterReplacement",
+        "timeoutMs": 8000,
+        "tests": [
+          {
+            "args": [
+              "ABAB",
+              2
+            ]
+          },
+          {
+            "args": [
+              "AABABBA",
+              1
+            ]
+          },
+          {
+            "args": [
+              "AAAA",
+              0
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "type": "javascript",
+      "title": "Minimum Window Substring",
+      "content": {
+        "description": "Строки `s` и `t`. **Минимальная** подстрока `s`, содержащая все символы `t` (с учётом кратности). Если нет — `\"\"`.\n\n[LeetCode 76. Minimum Window Substring](https://leetcode.com/problems/minimum-window-substring/)",
+        "starterCode": "function minWindow(s, t) {\n  return \"\";\n}",
+        "referenceSolution": "function minWindow(s, t) {\n  if (!t.length) return \"\";\n  const need = new Map();\n  for (const c of t) need.set(c, (need.get(c) ?? 0) + 1);\n  let have = 0;\n  const req = need.size;\n  let left = 0;\n  let bestLen = Infinity;\n  let bestStart = 0;\n  const window = new Map();\n  for (let right = 0; right < s.length; right += 1) {\n    const c = s[right];\n    window.set(c, (window.get(c) ?? 0) + 1);\n    if (need.has(c) && window.get(c) === need.get(c)) have += 1;\n    while (have === req) {\n      if (right - left + 1 < bestLen) {\n        bestLen = right - left + 1;\n        bestStart = left;\n      }\n      const lc = s[left];\n      window.set(lc, window.get(lc) - 1);\n      if (need.has(lc) && window.get(lc) < need.get(lc)) have -= 1;\n      left += 1;\n    }\n  }\n  return bestLen === Infinity ? \"\" : s.slice(bestStart, bestStart + bestLen);\n}",
+        "setup": "",
+        "reset": "",
+        "functionName": "minWindow",
+        "timeoutMs": 8000,
+        "tests": [
+          {
+            "args": [
+              "ADOBECODEBANC",
+              "ABC"
+            ]
+          },
+          {
+            "args": [
+              "a",
+              "a"
+            ]
+          },
+          {
+            "args": [
+              "a",
+              "aa"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "type": "quiz",
+      "title": "Quiz: скользящее окно",
+      "content": {
+        "question": "При переменном окне типичный шаг при нарушении инварианта:",
+        "options": [
+          "Увеличить только right",
+          "Сдвинуть left вправо",
+          "Сортировать строку",
+          "Бинарный поиск"
+        ],
+        "correctIndices": [
+          1
+        ]
+      }
+    }
+  ]
+}

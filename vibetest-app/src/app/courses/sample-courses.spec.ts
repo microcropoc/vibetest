@@ -3,7 +3,10 @@ import { join } from 'node:path';
 
 import { describe, expect, it } from 'vitest';
 
-import { buildJavascriptForCsharpCourse } from './build-javascript-for-csharp-course.spec-helper';
+import {
+  buildCourseFromSources,
+  listCourseSourceSlugs,
+} from './build-course-from-sources.spec-helper';
 import type { Course, Step } from './course.model';
 import { parseImportCourseText } from './import-parse';
 import {
@@ -14,7 +17,7 @@ import {
 import { validatePracticeReferences } from './validate-practice-references';
 
 const docsCoursesDir = join(process.cwd(), '..', 'docs', 'courses');
-const flagshipCoursePath = join(docsCoursesDir, 'javascript-for-csharp.json');
+const courseSourceSlugs = listCourseSourceSlugs(docsCoursesDir);
 
 function normalizeEol(text: string): string {
   return text.replace(/\r\n/g, '\n');
@@ -66,11 +69,15 @@ describe('docs/courses sample courses', () => {
   const deps = createInProcessPracticeReferenceValidationDeps();
   const coursePaths = listTopLevelCourseJsonPaths();
 
-  it('assembled javascript-for-csharp.json matches in-memory build', () => {
-    const onDisk = normalizeEol(readFileSync(flagshipCoursePath, 'utf8'));
-    const built = buildJavascriptForCsharpCourse({ coursesRoot: docsCoursesDir });
-    expect(onDisk).toBe(built);
-  });
+  it.each(courseSourceSlugs.map((slug) => [slug, slug] as const))(
+    'assembled %s.json matches in-memory build',
+    (slug) => {
+      const path = join(docsCoursesDir, `${slug}.json`);
+      const onDisk = normalizeEol(readFileSync(path, 'utf8'));
+      const built = buildCourseFromSources({ coursesRoot: docsCoursesDir, slug });
+      expect(onDisk).toBe(built);
+    },
+  );
 
   it.each(coursePaths.map((p) => [p.replace(/\\/g, '/'), p] as const))(
     'parses %s',
@@ -109,20 +116,24 @@ describe('docs/courses sample courses', () => {
     120_000,
   );
 
-  it('javascript-for-csharp module and SVG invariants', () => {
-    const course = courseFromPath(flagshipCoursePath);
-    for (const mod of course.modules) {
-      assertModuleShape(mod.steps);
-      for (const step of mod.steps) {
-        if (step.type !== 'svg') {
-          continue;
+  it.each(courseSourceSlugs.map((slug) => [slug, slug] as const))(
+    '%s module and SVG invariants',
+    (slug) => {
+      const path = join(docsCoursesDir, `${slug}.json`);
+      const course = courseFromPath(path);
+      for (const mod of course.modules) {
+        assertModuleShape(mod.steps);
+        for (const step of mod.steps) {
+          if (step.type !== 'svg') {
+            continue;
+          }
+          expect(step.content.svg, `${mod.title} / ${step.title}`).toContain('viewBox=');
+          expect(step.content.svg, `${mod.title} / ${step.title}`).toContain('role="img"');
+          expect(step.content.svg, `${mod.title} / ${step.title}`).toContain('aria-label=');
         }
-        expect(step.content.svg, `${mod.title} / ${step.title}`).toContain('viewBox=');
-        expect(step.content.svg, `${mod.title} / ${step.title}`).toContain('role="img"');
-        expect(step.content.svg, `${mod.title} / ${step.title}`).toContain('aria-label=');
       }
-    }
-    const ids = collectSvgIds(course);
-    expect(new Set(ids).size).toBe(ids.length);
-  });
+      const ids = collectSvgIds(course);
+      expect(new Set(ids).size).toBe(ids.length);
+    },
+  );
 });

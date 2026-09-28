@@ -1,0 +1,543 @@
+{
+  "schemaVersion": 1,
+  "title": "Графы",
+  "steps": [
+    {
+      "type": "theory",
+      "title": "Графы: DFS, BFS, топосорт",
+      "content": "## Представление\n\nСетка (острова), список рёбер, adjacency list.\n\n- **DFS/BFS** — связность, острова.\n- **Topological sort** — курс-план, Alien Dictionary.\n- **Union-Find** — компоненты, valid tree."
+    },
+    {
+      "type": "svg",
+      "title": "Обход графа",
+      "content": {
+        "caption": "**BFS** — по слоям, **DFS** — в глубину",
+        "description": "Visited не даёт зациклиться на неориентированном графе.",
+        "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 240 80\" width=\"100%\" role=\"img\" aria-label=\"Граф\"><circle id=\"m10-n1\" cx=\"50\" cy=\"40\" r=\"12\" fill=\"#e3f2fd\" stroke=\"#1565c0\"/><circle id=\"m10-n2\" cx=\"120\" cy=\"25\" r=\"12\" fill=\"#e8f5e9\" stroke=\"#2e7d32\"/><circle id=\"m10-n3\" cx=\"120\" cy=\"55\" r=\"12\" fill=\"#e8f5e9\" stroke=\"#2e7d32\"/><circle id=\"m10-n4\" cx=\"190\" cy=\"40\" r=\"12\" fill=\"#fff3e0\" stroke=\"#ef6c00\"/><line x1=\"62\" y1=\"40\" x2=\"108\" y2=\"28\" stroke=\"#78909c\"/><line x1=\"62\" y1=\"40\" x2=\"108\" y2=\"52\" stroke=\"#78909c\"/><line x1=\"132\" y1=\"28\" x2=\"178\" y2=\"38\" stroke=\"#78909c\"/></svg>"
+      }
+    },
+    {
+      "type": "javascript",
+      "title": "Разминка: число компонент на сетке 0/1",
+      "content": {
+        "description": "Сетка **`grid`** из `0` и `1`. Сколько связных областей из `1` (4-соседство)?",
+        "starterCode": "function countOnesRegions(grid) {\n  return 0;\n}",
+        "referenceSolution": "function countOnesRegions(grid) {\n  const rows = grid.length;\n  if (!rows) return 0;\n  const cols = grid[0].length;\n  let count = 0;\n  const dfs = (r, c) => {\n    if (r < 0 || c < 0 || r >= rows || c >= cols || grid[r][c] !== 1) return;\n    grid[r][c] = 0;\n    dfs(r + 1, c);\n    dfs(r - 1, c);\n    dfs(r, c + 1);\n    dfs(r, c - 1);\n  };\n  for (let r = 0; r < rows; r += 1) {\n    for (let c = 0; c < cols; c += 1) {\n      if (grid[r][c] === 1) {\n        count += 1;\n        dfs(r, c);\n      }\n    }\n  }\n  return count;\n}",
+        "setup": "",
+        "reset": "",
+        "functionName": "countOnesRegions",
+        "timeoutMs": 8000,
+        "tests": [
+          {
+            "args": [
+              [
+                [
+                  1,
+                  1,
+                  0
+                ],
+                [
+                  0,
+                  1,
+                  0
+                ],
+                [
+                  0,
+                  0,
+                  1
+                ]
+              ]
+            ]
+          },
+          {
+            "args": [
+              [
+                [
+                  1,
+                  1,
+                  1
+                ]
+              ]
+            ]
+          },
+          {
+            "args": [
+              [
+                [
+                  0
+                ]
+              ]
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "type": "javascript",
+      "title": "Number of Islands",
+      "content": {
+        "description": "Сетка `grid` из `'1'` и `'0'`. Количество **островов** (связных `'1'`, 4-соседство).\n\n[LeetCode 200. Number of Islands](https://leetcode.com/problems/number-of-islands/)",
+        "starterCode": "function numIslands(grid) {\n  return 0;\n}",
+        "referenceSolution": "function numIslands(grid) {\n  const rows = grid.length;\n  if (!rows) return 0;\n  const cols = grid[0].length;\n  let count = 0;\n  const dfs = (r, c) => {\n    if (r < 0 || c < 0 || r >= rows || c >= cols || grid[r][c] !== \"1\") return;\n    grid[r][c] = \"0\";\n    dfs(r + 1, c);\n    dfs(r - 1, c);\n    dfs(r, c + 1);\n    dfs(r, c - 1);\n  };\n  for (let r = 0; r < rows; r += 1) {\n    for (let c = 0; c < cols; c += 1) {\n      if (grid[r][c] === \"1\") {\n        count += 1;\n        dfs(r, c);\n      }\n    }\n  }\n  return count;\n}",
+        "setup": "",
+        "reset": "",
+        "functionName": "numIslands",
+        "timeoutMs": 8000,
+        "tests": [
+          {
+            "args": [
+              [
+                [
+                  "1",
+                  "1",
+                  "1",
+                  "1",
+                  "0"
+                ],
+                [
+                  "1",
+                  "1",
+                  "0",
+                  "1",
+                  "0"
+                ],
+                [
+                  "1",
+                  "1",
+                  "0",
+                  "0",
+                  "0"
+                ],
+                [
+                  "0",
+                  "0",
+                  "0",
+                  "0",
+                  "0"
+                ]
+              ]
+            ]
+          },
+          {
+            "args": [
+              [
+                [
+                  "1",
+                  "1",
+                  "0",
+                  "0",
+                  "0"
+                ],
+                [
+                  "1",
+                  "1",
+                  "0",
+                  "0",
+                  "0"
+                ],
+                [
+                  "0",
+                  "0",
+                  "1",
+                  "0",
+                  "0"
+                ],
+                [
+                  "0",
+                  "0",
+                  "0",
+                  "1",
+                  "1"
+                ]
+              ]
+            ]
+          },
+          {
+            "args": [
+              [
+                [
+                  "1"
+                ]
+              ]
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "type": "javascript",
+      "title": "Clone Graph",
+      "content": {
+        "description": "Клонирование **неориентированного** графа. Реализуйте **`cloneGraph(node)`**. Тесты: adjacency list `[[2,4],[1,3],[2,4],[1,3]]` → вызов **`__runCloneGraph(adj)`** из `setup` (проверка изоморфности через сериализацию).\n\n[LeetCode 133. Clone Graph](https://leetcode.com/problems/clone-graph/)",
+        "starterCode": "function cloneGraph(node) {\n  return null;\n}",
+        "referenceSolution": "function cloneGraph(node) {\n  if (!node) return null;\n  const map = new Map();\n  const dfs = (n) => {\n    if (map.has(n.val)) return map.get(n.val);\n    const copy = { val: n.val, neighbors: [] };\n    map.set(n.val, copy);\n    for (const nb of n.neighbors) copy.neighbors.push(dfs(nb));\n    return copy;\n  };\n  return dfs(node);\n}",
+        "setup": "function __buildGraph(adj) {\n  if (!adj.length) return null;\n  const nodes = adj.map((_, i) => ({ val: i + 1, neighbors: [] }));\n  for (let i = 0; i < adj.length; i += 1) {\n    for (const n of adj[i]) nodes[i].neighbors.push(nodes[n - 1]);\n  }\n  return nodes[0];\n}\nfunction __serializeGraph(node) {\n  if (!node) return [];\n  const visited = new Map();\n  const q = [node];\n  visited.set(node.val, node);\n  while (q.length) {\n    const cur = q.shift();\n    for (const nb of cur.neighbors) {\n      if (!visited.has(nb.val)) {\n        visited.set(nb.val, nb);\n        q.push(nb);\n      }\n    }\n  }\n  return [...visited.keys()]\n    .sort((a, b) => a - b)\n    .map((k) => visited.get(k).neighbors.map((n) => n.val).sort((a, b) => a - b));\n}\nfunction __runCloneGraph(adj) {\n  if (!adj.length) return [];\n  const cloned = cloneGraph(__buildGraph(adj));\n  return __serializeGraph(cloned);\n}",
+        "reset": "",
+        "functionName": "__runCloneGraph",
+        "timeoutMs": 8000,
+        "tests": [
+          {
+            "args": [
+              [
+                [
+                  2,
+                  4
+                ],
+                [
+                  1,
+                  3
+                ],
+                [
+                  2,
+                  4
+                ],
+                [
+                  1,
+                  3
+                ]
+              ]
+            ]
+          },
+          {
+            "args": [
+              []
+            ]
+          },
+          {
+            "args": [
+              [
+                [
+                  2
+                ],
+                [
+                  1
+                ]
+              ]
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "type": "javascript",
+      "title": "Pacific Atlantic Water Flow",
+      "content": {
+        "description": "Сетка высот `heights`. Клетки, откуда вода может дойти **и** до Тихого (**левая/верхняя** граница), **и** до Атлантического (**правая/нижняя**). Верните координаты `[r, c]` (порядок не важен — `unordered: true`).\n\n[LeetCode 417. Pacific Atlantic Water Flow](https://leetcode.com/problems/pacific-atlantic-water-flow/)",
+        "starterCode": "function pacificAtlantic(heights) {\n  return [];\n}",
+        "referenceSolution": "function pacificAtlantic(heights) {\n  const rows = heights.length;\n  const cols = heights[0].length;\n  const pac = new Set();\n  const atl = new Set();\n  const key = (r, c) => `${r},${c}`;\n  const dfs = (r, c, seen, prev) => {\n    seen.add(key(r, c));\n    const dirs = [[1, 0], [-1, 0], [0, 1], [0, -1]];\n    for (const [dr, dc] of dirs) {\n      const nr = r + dr;\n      const nc = c + dc;\n      if (nr < 0 || nc < 0 || nr >= rows || nc >= cols) continue;\n      if (heights[nr][nc] < prev) continue;\n      if (seen.has(key(nr, nc))) continue;\n      dfs(nr, nc, seen, heights[nr][nc]);\n    }\n  };\n  for (let c = 0; c < cols; c += 1) {\n    dfs(0, c, pac, heights[0][c]);\n    dfs(rows - 1, c, atl, heights[rows - 1][c]);\n  }\n  for (let r = 0; r < rows; r += 1) {\n    dfs(r, 0, pac, heights[r][0]);\n    dfs(r, cols - 1, atl, heights[r][cols - 1]);\n  }\n  const out = [];\n  for (const k of pac) {\n    if (atl.has(k)) {\n      const [r, c] = k.split(\",\").map(Number);\n      out.push([r, c]);\n    }\n  }\n  return out;\n}",
+        "setup": "",
+        "reset": "",
+        "functionName": "pacificAtlantic",
+        "timeoutMs": 8000,
+        "tests": [
+          {
+            "args": [
+              [
+                [
+                  1,
+                  2,
+                  2,
+                  3,
+                  5
+                ],
+                [
+                  3,
+                  2,
+                  3,
+                  4,
+                  4
+                ],
+                [
+                  2,
+                  4,
+                  5,
+                  3,
+                  1
+                ],
+                [
+                  6,
+                  7,
+                  1,
+                  4,
+                  5
+                ],
+                [
+                  5,
+                  1,
+                  1,
+                  2,
+                  4
+                ]
+              ]
+            ],
+            "unordered": true
+          },
+          {
+            "args": [
+              [
+                [
+                  2,
+                  1
+                ],
+                [
+                  1,
+                  2
+                ]
+              ]
+            ],
+            "unordered": true
+          }
+        ]
+      }
+    },
+    {
+      "type": "javascript",
+      "title": "Course Schedule",
+      "content": {
+        "description": "`numCourses` и список пар `prerequisites` `[a, b]`: чтобы взять `a`, нужно `b`. Можно ли пройти **все** курсы?\n\n[LeetCode 207. Course Schedule](https://leetcode.com/problems/course-schedule/)",
+        "starterCode": "function canFinish(numCourses, prerequisites) {\n  return false;\n}",
+        "referenceSolution": "function canFinish(numCourses, prerequisites) {\n  const indeg = Array(numCourses).fill(0);\n  const adj = Array.from({ length: numCourses }, () => []);\n  for (const [a, b] of prerequisites) {\n    adj[b].push(a);\n    indeg[a] += 1;\n  }\n  const q = [];\n  for (let i = 0; i < numCourses; i += 1) if (indeg[i] === 0) q.push(i);\n  let seen = 0;\n  while (q.length) {\n    const u = q.shift();\n    seen += 1;\n    for (const v of adj[u]) {\n      indeg[v] -= 1;\n      if (indeg[v] === 0) q.push(v);\n    }\n  }\n  return seen === numCourses;\n}",
+        "setup": "",
+        "reset": "",
+        "functionName": "canFinish",
+        "timeoutMs": 8000,
+        "tests": [
+          {
+            "args": [
+              2,
+              [
+                [
+                  1,
+                  0
+                ]
+              ]
+            ]
+          },
+          {
+            "args": [
+              2,
+              [
+                [
+                  1,
+                  0
+                ],
+                [
+                  0,
+                  1
+                ]
+              ]
+            ]
+          },
+          {
+            "args": [
+              3,
+              [
+                [
+                  1,
+                  0
+                ],
+                [
+                  2,
+                  1
+                ]
+              ]
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "type": "javascript",
+      "title": "Number of Connected Components",
+      "content": {
+        "description": "`n` вершин (0…n-1) и `edges`. Число **связных компонент** в неориентированном графе.\n\n[LeetCode 323. Number of Connected Components in an Undirected Graph](https://leetcode.com/problems/number-of-connected-components-in-an-undirected-graph/) — *LeetCode Premium; условие выше самодостаточно*",
+        "starterCode": "function countComponents(n, edges) {\n  return 0;\n}",
+        "referenceSolution": "function countComponents(n, edges) {\n  const parent = Array.from({ length: n }, (_, i) => i);\n  const find = (x) => {\n    if (parent[x] !== x) parent[x] = find(parent[x]);\n    return parent[x];\n  };\n  const unite = (a, b) => {\n    const pa = find(a);\n    const pb = find(b);\n    if (pa === pb) return false;\n    parent[pa] = pb;\n    return true;\n  };\n  let comps = n;\n  for (const [a, b] of edges) if (unite(a, b)) comps -= 1;\n  return comps;\n}",
+        "setup": "",
+        "reset": "",
+        "functionName": "countComponents",
+        "timeoutMs": 8000,
+        "tests": [
+          {
+            "args": [
+              5,
+              [
+                [
+                  0,
+                  1
+                ],
+                [
+                  1,
+                  2
+                ],
+                [
+                  3,
+                  4
+                ]
+              ]
+            ]
+          },
+          {
+            "args": [
+              5,
+              [
+                [
+                  0,
+                  1
+                ],
+                [
+                  1,
+                  2
+                ],
+                [
+                  2,
+                  3
+                ],
+                [
+                  3,
+                  4
+                ]
+              ]
+            ]
+          },
+          {
+            "args": [
+              1,
+              []
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "type": "javascript",
+      "title": "Graph Valid Tree",
+      "content": {
+        "description": "`n` узлов и `edges`. Является ли граф **деревом** (связный, без циклов, ровно n-1 ребро)?\n\n[LeetCode 261. Graph Valid Tree](https://leetcode.com/problems/graph-valid-tree/) — *LeetCode Premium; условие выше самодостаточно*",
+        "starterCode": "function validTree(n, edges) {\n  return false;\n}",
+        "referenceSolution": "function validTree(n, edges) {\n  if (edges.length !== n - 1) return false;\n  const parent = Array.from({ length: n }, (_, i) => i);\n  const find = (x) => {\n    if (parent[x] !== x) parent[x] = find(parent[x]);\n    return parent[x];\n  };\n  for (const [a, b] of edges) {\n    const pa = find(a);\n    const pb = find(b);\n    if (pa === pb) return false;\n    parent[pa] = pb;\n  }\n  return true;\n}",
+        "setup": "",
+        "reset": "",
+        "functionName": "validTree",
+        "timeoutMs": 8000,
+        "tests": [
+          {
+            "args": [
+              5,
+              [
+                [
+                  0,
+                  1
+                ],
+                [
+                  0,
+                  2
+                ],
+                [
+                  0,
+                  3
+                ],
+                [
+                  1,
+                  4
+                ]
+              ]
+            ]
+          },
+          {
+            "args": [
+              5,
+              [
+                [
+                  0,
+                  1
+                ],
+                [
+                  1,
+                  2
+                ],
+                [
+                  2,
+                  3
+                ],
+                [
+                  1,
+                  3
+                ],
+                [
+                  1,
+                  4
+                ]
+              ]
+            ]
+          },
+          {
+            "args": [
+              1,
+              []
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "type": "javascript",
+      "title": "Alien Dictionary",
+      "content": {
+        "description": "Отсортированный словарь инопланетного языка `words`. Верните **любой** валидный порядок букв или `\"\"`, если невозможно.\n\n[LeetCode 269. Alien Dictionary](https://leetcode.com/problems/alien-dictionary/) — *LeetCode Premium; условие выше самодостаточно*",
+        "starterCode": "function alienOrder(words) {\n  return \"\";\n}",
+        "referenceSolution": "function alienOrder(words) {\n  const adj = new Map();\n  const indeg = new Map();\n  for (const w of words) {\n    for (const c of w) if (!indeg.has(c)) indeg.set(c, 0);\n  }\n  for (let i = 0; i < words.length - 1; i += 1) {\n    const w1 = words[i];\n    const w2 = words[i + 1];\n    if (w1.length > w2.length && w1.startsWith(w2)) return \"\";\n    let j = 0;\n    while (j < w1.length && j < w2.length && w1[j] === w2[j]) j += 1;\n    if (j < w1.length && j < w2.length) {\n      const a = w1[j];\n      const b = w2[j];\n      if (!adj.has(a)) adj.set(a, new Set());\n      if (!adj.get(a).has(b)) {\n        adj.get(a).add(b);\n        indeg.set(b, indeg.get(b) + 1);\n      }\n    }\n  }\n  const q = [];\n  for (const [c, d] of indeg) if (d === 0) q.push(c);\n  const out = [];\n  while (q.length) {\n    const c = q.shift();\n    out.push(c);\n    for (const nb of adj.get(c) ?? []) {\n      indeg.set(nb, indeg.get(nb) - 1);\n      if (indeg.get(nb) === 0) q.push(nb);\n    }\n  }\n  return out.length === indeg.size ? out.join(\"\") : \"\";\n}",
+        "setup": "",
+        "reset": "",
+        "functionName": "alienOrder",
+        "timeoutMs": 8000,
+        "tests": [
+          {
+            "args": [
+              [
+                "wrt",
+                "wrf",
+                "er",
+                "ett",
+                "rftt"
+              ]
+            ]
+          },
+          {
+            "args": [
+              [
+                "z",
+                "x"
+              ]
+            ]
+          },
+          {
+            "args": [
+              [
+                "z",
+                "x",
+                "z"
+              ]
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "type": "quiz",
+      "title": "Quiz: графы",
+      "content": {
+        "question": "Проверка ацикличности курс-плана удобнее всего через…",
+        "options": [
+          "Сортировку массива",
+          "Топологическую сортировку / indegree",
+          "Trie",
+          "Binary search"
+        ],
+        "correctIndices": [
+          1
+        ]
+      }
+    }
+  ]
+}

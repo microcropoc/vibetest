@@ -1,0 +1,662 @@
+{
+  "schemaVersion": 1,
+  "title": "Массивы и хеширование",
+  "steps": [
+    {
+      "type": "theory",
+      "title": "Паттерн: хеш-таблица и Set",
+      "content": "## Массивы + Map / Set\n\nBlind 75 начинается с задач, где за **O(n)** нужно ответить на вопрос «видели ли мы это раньше?» или «какая частота?».\n\n- **`Set`** — быстрая проверка дубликата.\n- **`Map`** — значение по ключу (индекс, счётчик, группа).\n\nКомplement для Two Sum: для `nums[i]` ищем `target - nums[i]` в Map.\n\n```javascript\nconst seen = new Map();\nfor (let i = 0; i < nums.length; i += 1) {\n  const need = target - nums[i];\n  if (seen.has(need)) return [seen.get(need), i];\n  seen.set(nums[i], i);\n}\n```"
+    },
+    {
+      "type": "svg",
+      "title": "Хеш: ключ → значение",
+      "content": {
+        "caption": "**Map** даёт ожидаемый **O(1)** доступ",
+        "description": "Вместо вложенного цикла O(n²) один проход с Map часто даёт O(n).",
+        "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 280 100\" width=\"100%\" role=\"img\" aria-label=\"Хеш-таблица Map\"><rect id=\"m01-map\" x=\"90\" y=\"20\" width=\"100\" height=\"60\" rx=\"6\" fill=\"#e3f2fd\" stroke=\"#1565c0\" stroke-width=\"2\"/><text x=\"140\" y=\"42\" text-anchor=\"middle\" font-size=\"11\" fill=\"#0d47a1\">Map</text><rect id=\"m01-key\" x=\"20\" y=\"38\" width=\"50\" height=\"24\" rx=\"4\" fill=\"#fff9c4\" stroke=\"#f9a825\"/><text x=\"45\" y=\"54\" text-anchor=\"middle\" font-size=\"9\">key</text><line id=\"m01-arr1\" x1=\"70\" y1=\"50\" x2=\"88\" y2=\"50\" stroke=\"#37474f\" stroke-width=\"2\" marker-end=\"url(#m01-mk)\"/><defs><marker id=\"m01-mk\" markerWidth=\"6\" markerHeight=\"6\" refX=\"5\" refY=\"3\" orient=\"auto\"><path d=\"M0,0 L6,3 L0,6 Z\" fill=\"#37474f\"/></marker></defs><rect id=\"m01-val\" x=\"210\" y=\"38\" width=\"50\" height=\"24\" rx=\"4\" fill=\"#e8f5e9\" stroke=\"#2e7d32\"/><text x=\"235\" y=\"54\" text-anchor=\"middle\" font-size=\"9\">val</text><line id=\"m01-arr2\" x1=\"190\" y1=\"50\" x2=\"208\" y2=\"50\" stroke=\"#37474f\" stroke-width=\"2\" marker-end=\"url(#m01-mk)\"/></svg>"
+      }
+    },
+    {
+      "type": "javascript",
+      "title": "Разминка: есть ли дубликат",
+      "content": {
+        "description": "Разминка перед Blind 75: **`hasDuplicate(nums)`** — верните `true`, если в массиве есть два одинаковых числа.",
+        "starterCode": "function hasDuplicate(nums) {\n  return false;\n}",
+        "referenceSolution": "function hasDuplicate(nums) {\n  const seen = new Set();\n  for (const x of nums) {\n    if (seen.has(x)) return true;\n    seen.add(x);\n  }\n  return false;\n}",
+        "setup": "",
+        "reset": "",
+        "functionName": "hasDuplicate",
+        "timeoutMs": 8000,
+        "tests": [
+          {
+            "args": [
+              [
+                1,
+                2,
+                3,
+                1
+              ]
+            ]
+          },
+          {
+            "args": [
+              [
+                1,
+                2,
+                3,
+                4
+              ]
+            ]
+          },
+          {
+            "args": [
+              [
+                1,
+                1,
+                1,
+                3,
+                3,
+                4,
+                3,
+                2,
+                4,
+                2
+              ]
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "type": "javascript",
+      "title": "Contains Duplicate",
+      "content": {
+        "description": "Дан массив целых чисел. Верните `true`, если какое-то значение встречается **минимум дважды**.\n\n[LeetCode 217. Contains Duplicate](https://leetcode.com/problems/contains-duplicate/)",
+        "starterCode": "function containsDuplicate(nums) {\n  return false;\n}",
+        "referenceSolution": "function containsDuplicate(nums) {\n  return new Set(nums).size !== nums.length;\n}",
+        "setup": "",
+        "reset": "",
+        "functionName": "containsDuplicate",
+        "timeoutMs": 8000,
+        "tests": [
+          {
+            "args": [
+              [
+                1,
+                2,
+                3,
+                1
+              ]
+            ]
+          },
+          {
+            "args": [
+              [
+                1,
+                2,
+                3,
+                4
+              ]
+            ]
+          },
+          {
+            "args": [
+              [
+                1,
+                1,
+                1,
+                3,
+                3,
+                4,
+                3,
+                2,
+                4,
+                2
+              ]
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "type": "javascript",
+      "title": "Valid Anagram",
+      "content": {
+        "description": "Строки `s` и `t`. Верните `true`, если `t` — анаграмма `s` (те же буквы, другой порядок).\n\n[LeetCode 242. Valid Anagram](https://leetcode.com/problems/valid-anagram/)",
+        "starterCode": "function isAnagram(s, t) {\n  return false;\n}",
+        "referenceSolution": "function isAnagram(s, t) {\n  if (s.length !== t.length) return false;\n  const count = new Map();\n  for (const c of s) count.set(c, (count.get(c) ?? 0) + 1);\n  for (const c of t) {\n    const n = count.get(c);\n    if (!n) return false;\n    if (n === 1) count.delete(c);\n    else count.set(c, n - 1);\n  }\n  return count.size === 0;\n}",
+        "setup": "",
+        "reset": "",
+        "functionName": "isAnagram",
+        "timeoutMs": 8000,
+        "tests": [
+          {
+            "args": [
+              "anagram",
+              "nagaram"
+            ]
+          },
+          {
+            "args": [
+              "rat",
+              "car"
+            ]
+          },
+          {
+            "args": [
+              "a",
+              "ab"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "type": "javascript",
+      "title": "Two Sum",
+      "content": {
+        "description": "Массив `nums` и `target`. Верните индексы **двух разных** элементов с суммой `target` (ровно одно решение). Пара `[i, j]`, `i < j`.\n\n[LeetCode 1. Two Sum](https://leetcode.com/problems/two-sum/)",
+        "starterCode": "function twoSum(nums, target) {\n  return [];\n}",
+        "referenceSolution": "function twoSum(nums, target) {\n  const seen = new Map();\n  for (let i = 0; i < nums.length; i += 1) {\n    const need = target - nums[i];\n    if (seen.has(need)) return [seen.get(need), i];\n    seen.set(nums[i], i);\n  }\n  return [];\n}",
+        "setup": "",
+        "reset": "",
+        "functionName": "twoSum",
+        "timeoutMs": 8000,
+        "tests": [
+          {
+            "args": [
+              [
+                2,
+                7,
+                11,
+                15
+              ],
+              9
+            ]
+          },
+          {
+            "args": [
+              [
+                3,
+                2,
+                4
+              ],
+              6
+            ]
+          },
+          {
+            "args": [
+              [
+                3,
+                3
+              ],
+              6
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "type": "javascript",
+      "title": "Group Anagrams",
+      "content": {
+        "description": "Массив строк. Сгруппируйте анаграммы. Порядок групп и строк внутри группы **не важен** (`unordered: true`).\n\n[LeetCode 49. Group Anagrams](https://leetcode.com/problems/group-anagrams/)",
+        "starterCode": "function groupAnagrams(strs) {\n  return [];\n}",
+        "referenceSolution": "function groupAnagrams(strs) {\n  const map = new Map();\n  for (const s of strs) {\n    const key = s.split(\"\").sort().join(\"\");\n    if (!map.has(key)) map.set(key, []);\n    map.get(key).push(s);\n  }\n  return [...map.values()];\n}",
+        "setup": "",
+        "reset": "",
+        "functionName": "groupAnagrams",
+        "timeoutMs": 8000,
+        "tests": [
+          {
+            "args": [
+              [
+                "eat",
+                "tea",
+                "tan",
+                "ate",
+                "nat",
+                "bat"
+              ]
+            ],
+            "unordered": true
+          },
+          {
+            "args": [
+              [
+                ""
+              ]
+            ],
+            "unordered": true
+          },
+          {
+            "args": [
+              [
+                "a"
+              ]
+            ],
+            "unordered": true
+          }
+        ]
+      }
+    },
+    {
+      "type": "javascript",
+      "title": "Top K Frequent Elements",
+      "content": {
+        "description": "Массив `nums`, число `k`. Верните `k` самых частых элементов (порядок в ответе не важен — сравнение как multiset через `unordered`).\n\n[LeetCode 347. Top K Frequent Elements](https://leetcode.com/problems/top-k-frequent-elements/)",
+        "starterCode": "function topKFrequent(nums, k) {\n  return [];\n}",
+        "referenceSolution": "function topKFrequent(nums, k) {\n  const freq = new Map();\n  for (const n of nums) freq.set(n, (freq.get(n) ?? 0) + 1);\n  return [...freq.entries()]\n    .sort((a, b) => b[1] - a[1])\n    .slice(0, k)\n    .map(([n]) => n);\n}",
+        "setup": "",
+        "reset": "",
+        "functionName": "topKFrequent",
+        "timeoutMs": 8000,
+        "tests": [
+          {
+            "args": [
+              [
+                1,
+                1,
+                1,
+                2,
+                2,
+                3
+              ],
+              2
+            ],
+            "unordered": true
+          },
+          {
+            "args": [
+              [
+                1
+              ],
+              1
+            ],
+            "unordered": true
+          },
+          {
+            "args": [
+              [
+                4,
+                4,
+                4,
+                5,
+                5,
+                6
+              ],
+              2
+            ],
+            "unordered": true
+          }
+        ]
+      }
+    },
+    {
+      "type": "javascript",
+      "title": "Product of Array Except Self",
+      "content": {
+        "description": "Массив `nums`. Верните массив `answer`, где `answer[i]` — произведение всех элементов **кроме** `nums[i]`. Без деления; **in-place** в переданном массиве через `resultMode: \"args\"` (можно использовать тот же массив как выход, мутируя его).\n\nРеализуйте `productExceptSelf(nums)`: после вызова `nums` должен стать ответом.\n\n[LeetCode 238. Product of Array Except Self](https://leetcode.com/problems/product-of-array-except-self/)",
+        "starterCode": "function productExceptSelf(nums) {\n  return nums;\n}",
+        "referenceSolution": "function productExceptSelf(nums) {\n  const n = nums.length;\n  const out = new Array(n);\n  out[0] = 1;\n  for (let i = 1; i < n; i += 1) out[i] = out[i - 1] * nums[i - 1];\n  let suffix = 1;\n  for (let i = n - 1; i >= 0; i -= 1) {\n    out[i] *= suffix;\n    suffix *= nums[i];\n  }\n  for (let i = 0; i < n; i += 1) nums[i] = out[i];\n}",
+        "setup": "",
+        "reset": "",
+        "functionName": "productExceptSelf",
+        "timeoutMs": 8000,
+        "tests": [
+          {
+            "args": [
+              [
+                1,
+                2,
+                3,
+                4
+              ]
+            ]
+          },
+          {
+            "args": [
+              [
+                -1,
+                1,
+                0,
+                -3,
+                3
+              ]
+            ]
+          }
+        ],
+        "resultMode": "args"
+      }
+    },
+    {
+      "type": "javascript",
+      "title": "Encode and Decode Strings",
+      "content": {
+        "description": "Реализуйте класс **`Codec`**: `encode(strs)` → одна строка, `decode(s)` → исходный массив строк. Тесты вызывают **`__stringsRoundtrip(strs)`** из `setup` (round-trip через ваш класс).\n\n[LeetCode 271. Encode and Decode Strings](https://leetcode.com/problems/encode-and-decode-strings/) — *LeetCode Premium; условие выше самодостаточно*",
+        "starterCode": "class Codec {\n  encode(strs) {\n    return \"\";\n  }\n  decode(s) {\n    return [];\n  }\n}",
+        "referenceSolution": "class Codec {\n  encode(strs) {\n    return strs.map((str) => `${str.length}#${str}`).join(\"\");\n  }\n  decode(s) {\n    const out = [];\n    let i = 0;\n    while (i < s.length) {\n      let j = i;\n      while (s[j] !== \"#\") j += 1;\n      const len = Number(s.slice(i, j));\n      out.push(s.slice(j + 1, j + 1 + len));\n      i = j + 1 + len;\n    }\n    return out;\n  }\n}",
+        "setup": "function __stringsRoundtrip(strs) {\n  const c = new Codec();\n  return c.decode(c.encode(strs));\n}",
+        "reset": "",
+        "functionName": "__stringsRoundtrip",
+        "timeoutMs": 8000,
+        "tests": [
+          {
+            "args": [
+              [
+                "neet",
+                "code",
+                "love",
+                "you"
+              ]
+            ]
+          },
+          {
+            "args": [
+              [
+                "a",
+                "b"
+              ]
+            ]
+          },
+          {
+            "args": [
+              [
+                ""
+              ]
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "type": "javascript",
+      "title": "Valid Sudoku",
+      "content": {
+        "description": "Доска 9×9: строки — массивы из 9 символов (`\"1\"`…`\"9\"` или `\".\"`). Верните `true`, если конфигурация **валидна** (без проверки, решаема ли головоломка).\n\n[LeetCode 36. Valid Sudoku](https://leetcode.com/problems/valid-sudoku/)",
+        "starterCode": "function isValidSudoku(board) {\n  return true;\n}",
+        "referenceSolution": "function isValidSudoku(board) {\n  const rows = Array.from({ length: 9 }, () => new Set());\n  const cols = Array.from({ length: 9 }, () => new Set());\n  const boxes = Array.from({ length: 9 }, () => new Set());\n  for (let r = 0; r < 9; r += 1) {\n    for (let c = 0; c < 9; c += 1) {\n      const ch = board[r][c];\n      if (ch === \".\") continue;\n      const b = Math.floor(r / 3) * 3 + Math.floor(c / 3);\n      if (rows[r].has(ch) || cols[c].has(ch) || boxes[b].has(ch)) return false;\n      rows[r].add(ch);\n      cols[c].add(ch);\n      boxes[b].add(ch);\n    }\n  }\n  return true;\n}",
+        "setup": "",
+        "reset": "",
+        "functionName": "isValidSudoku",
+        "timeoutMs": 8000,
+        "tests": [
+          {
+            "args": [
+              [
+                [
+                  "5",
+                  "3",
+                  ".",
+                  ".",
+                  "7",
+                  ".",
+                  ".",
+                  ".",
+                  "."
+                ],
+                [
+                  "6",
+                  ".",
+                  ".",
+                  "1",
+                  "9",
+                  "5",
+                  ".",
+                  ".",
+                  "."
+                ],
+                [
+                  ".",
+                  "9",
+                  "8",
+                  ".",
+                  ".",
+                  ".",
+                  ".",
+                  "6",
+                  "."
+                ],
+                [
+                  "8",
+                  ".",
+                  ".",
+                  ".",
+                  "6",
+                  ".",
+                  ".",
+                  ".",
+                  "3"
+                ],
+                [
+                  "4",
+                  ".",
+                  ".",
+                  "8",
+                  ".",
+                  "3",
+                  ".",
+                  ".",
+                  "1"
+                ],
+                [
+                  "7",
+                  ".",
+                  ".",
+                  ".",
+                  "2",
+                  ".",
+                  ".",
+                  ".",
+                  "6"
+                ],
+                [
+                  ".",
+                  "6",
+                  ".",
+                  ".",
+                  ".",
+                  ".",
+                  "2",
+                  "8",
+                  "."
+                ],
+                [
+                  ".",
+                  ".",
+                  ".",
+                  "4",
+                  "1",
+                  "9",
+                  ".",
+                  ".",
+                  "5"
+                ],
+                [
+                  ".",
+                  ".",
+                  ".",
+                  ".",
+                  "8",
+                  ".",
+                  ".",
+                  "7",
+                  "9"
+                ]
+              ]
+            ]
+          },
+          {
+            "args": [
+              [
+                [
+                  "8",
+                  "3",
+                  ".",
+                  ".",
+                  "7",
+                  ".",
+                  ".",
+                  ".",
+                  "."
+                ],
+                [
+                  "6",
+                  ".",
+                  ".",
+                  "1",
+                  "9",
+                  "5",
+                  ".",
+                  ".",
+                  "."
+                ],
+                [
+                  ".",
+                  "9",
+                  "8",
+                  ".",
+                  ".",
+                  ".",
+                  ".",
+                  "6",
+                  "."
+                ],
+                [
+                  "8",
+                  ".",
+                  ".",
+                  ".",
+                  "6",
+                  ".",
+                  ".",
+                  ".",
+                  "3"
+                ],
+                [
+                  "4",
+                  ".",
+                  ".",
+                  "8",
+                  ".",
+                  "3",
+                  ".",
+                  ".",
+                  "1"
+                ],
+                [
+                  "7",
+                  ".",
+                  ".",
+                  ".",
+                  "2",
+                  ".",
+                  ".",
+                  ".",
+                  "6"
+                ],
+                [
+                  ".",
+                  "6",
+                  ".",
+                  ".",
+                  ".",
+                  ".",
+                  "2",
+                  "8",
+                  "."
+                ],
+                [
+                  ".",
+                  ".",
+                  ".",
+                  "4",
+                  "1",
+                  "9",
+                  ".",
+                  ".",
+                  "5"
+                ],
+                [
+                  ".",
+                  ".",
+                  ".",
+                  ".",
+                  "8",
+                  ".",
+                  ".",
+                  "7",
+                  "9"
+                ]
+              ]
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "type": "javascript",
+      "title": "Longest Consecutive Sequence",
+      "content": {
+        "description": "Несортированный массив `nums`. Длина **самой длинной** последовательности подряд идущих целых (элементы не обязаны быть соседями в массиве). Алгоритм за **O(n)**.\n\n[LeetCode 128. Longest Consecutive Sequence](https://leetcode.com/problems/longest-consecutive-sequence/)",
+        "starterCode": "function longestConsecutive(nums) {\n  return 0;\n}",
+        "referenceSolution": "function longestConsecutive(nums) {\n  const set = new Set(nums);\n  let best = 0;\n  for (const x of set) {\n    if (set.has(x - 1)) continue;\n    let len = 1;\n    while (set.has(x + len)) len += 1;\n    best = Math.max(best, len);\n  }\n  return best;\n}",
+        "setup": "",
+        "reset": "",
+        "functionName": "longestConsecutive",
+        "timeoutMs": 8000,
+        "tests": [
+          {
+            "args": [
+              [
+                100,
+                4,
+                200,
+                1,
+                3,
+                2
+              ]
+            ]
+          },
+          {
+            "args": [
+              [
+                0,
+                3,
+                7,
+                2,
+                5,
+                8,
+                4,
+                6,
+                0,
+                1
+              ]
+            ]
+          },
+          {
+            "args": [
+              []
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "type": "quiz",
+      "title": "Quiz: массивы и хеши",
+      "content": {
+        "question": "Какая структура лучше всего подходит для Two Sum за один проход?",
+        "options": [
+          "Двумерный массив",
+          "Map от значения к индексу",
+          "Stack",
+          "Queue"
+        ],
+        "correctIndices": [
+          1
+        ]
+      }
+    }
+  ]
+}

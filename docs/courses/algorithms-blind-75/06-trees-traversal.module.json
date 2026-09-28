@@ -1,0 +1,432 @@
+{
+  "schemaVersion": 1,
+  "title": "Деревья: обход и сравнение",
+  "steps": [
+    {
+      "type": "theory",
+      "title": "Обходы бинарного дерева",
+      "content": "## DFS и BFS\n\n- **Preorder / inorder / postorder** — рекурсия или стек.\n- **Level order** — очередь (BFS).\n\nВ JSON дерево — **level-order** массив с `null` (`structure`: `tree`)."
+    },
+    {
+      "type": "svg",
+      "title": "Бинарное дерево",
+      "content": {
+        "caption": "Каждый узел: **left**, **right**",
+        "description": "BFS обходит уровень за уровнем.",
+        "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 200 120\" width=\"100%\" role=\"img\" aria-label=\"Дерево\"><circle id=\"m06-root\" cx=\"100\" cy=\"25\" r=\"14\" fill=\"#c8e6c9\" stroke=\"#2e7d32\"/><circle id=\"m06-l\" cx=\"60\" cy=\"65\" r=\"12\" fill=\"#e3f2fd\" stroke=\"#1565c0\"/><circle id=\"m06-r\" cx=\"140\" cy=\"65\" r=\"12\" fill=\"#e3f2fd\" stroke=\"#1565c0\"/><line id=\"m06-e1\" x1=\"100\" y1=\"39\" x2=\"60\" y2=\"53\" stroke=\"#78909c\"/><line id=\"m06-e2\" x1=\"100\" y1=\"39\" x2=\"140\" y2=\"53\" stroke=\"#78909c\"/></svg>"
+      }
+    },
+    {
+      "type": "javascript",
+      "title": "Разминка: глубина дерева",
+      "content": {
+        "description": "**`maxDepth(root)`** — максимальная глубина (пустое дерево → 0).",
+        "starterCode": "function maxDepth(root) {\n  return 0;\n}",
+        "referenceSolution": "function maxDepth(root) {\n  if (!root) return 0;\n  return 1 + Math.max(maxDepth(root.left), maxDepth(root.right));\n}",
+        "setup": "",
+        "reset": "",
+        "functionName": "maxDepth",
+        "timeoutMs": 8000,
+        "tests": [
+          {
+            "args": [
+              [
+                3,
+                9,
+                20,
+                null,
+                null,
+                15,
+                7
+              ]
+            ]
+          },
+          {
+            "args": [
+              [
+                1,
+                null,
+                2
+              ]
+            ]
+          },
+          {
+            "args": [
+              []
+            ]
+          }
+        ],
+        "structure": {
+          "args": [
+            "tree"
+          ],
+          "result": "raw"
+        }
+      }
+    },
+    {
+      "type": "javascript",
+      "title": "Invert Binary Tree",
+      "content": {
+        "description": "Зеркально отразите дерево. [LeetCode 226. Invert Binary Tree](https://leetcode.com/problems/invert-binary-tree/)",
+        "starterCode": "function invertTree(root) {\n  return root;\n}",
+        "referenceSolution": "function invertTree(root) {\n  if (!root) return null;\n  const left = invertTree(root.left);\n  const right = invertTree(root.right);\n  root.left = right;\n  root.right = left;\n  return root;\n}",
+        "setup": "",
+        "reset": "",
+        "functionName": "invertTree",
+        "timeoutMs": 8000,
+        "tests": [
+          {
+            "args": [
+              [
+                4,
+                2,
+                7,
+                1,
+                3,
+                6,
+                9
+              ]
+            ]
+          },
+          {
+            "args": [
+              [
+                2,
+                1,
+                3
+              ]
+            ]
+          },
+          {
+            "args": [
+              []
+            ]
+          }
+        ],
+        "structure": {
+          "args": [
+            "tree"
+          ],
+          "result": "tree"
+        }
+      }
+    },
+    {
+      "type": "javascript",
+      "title": "Maximum Depth of Binary Tree",
+      "content": {
+        "description": "Максимальная глубина. [LeetCode 104. Maximum Depth of Binary Tree](https://leetcode.com/problems/maximum-depth-of-binary-tree/)",
+        "starterCode": "function maxDepthTree(root) {\n  return 0;\n}",
+        "referenceSolution": "function maxDepthTree(root) {\n  if (!root) return 0;\n  return 1 + Math.max(maxDepthTree(root.left), maxDepthTree(root.right));\n}",
+        "setup": "",
+        "reset": "",
+        "functionName": "maxDepthTree",
+        "timeoutMs": 8000,
+        "tests": [
+          {
+            "args": [
+              [
+                3,
+                9,
+                20,
+                null,
+                null,
+                15,
+                7
+              ]
+            ]
+          },
+          {
+            "args": [
+              [
+                1,
+                null,
+                2
+              ]
+            ]
+          },
+          {
+            "args": [
+              []
+            ]
+          }
+        ],
+        "structure": {
+          "args": [
+            "tree"
+          ],
+          "result": "raw"
+        }
+      }
+    },
+    {
+      "type": "javascript",
+      "title": "Same Tree",
+      "content": {
+        "description": "Два дерева — одинаковые? [LeetCode 100. Same Tree](https://leetcode.com/problems/same-tree/)",
+        "starterCode": "function isSameTree(p, q) {\n  return false;\n}",
+        "referenceSolution": "function isSameTree(p, q) {\n  if (!p && !q) return true;\n  if (!p || !q || p.val !== q.val) return false;\n  return isSameTree(p.left, q.left) && isSameTree(p.right, q.right);\n}",
+        "setup": "",
+        "reset": "",
+        "functionName": "isSameTree",
+        "timeoutMs": 8000,
+        "tests": [
+          {
+            "args": [
+              [
+                1,
+                2,
+                3
+              ],
+              [
+                1,
+                2,
+                3
+              ]
+            ]
+          },
+          {
+            "args": [
+              [
+                1,
+                2
+              ],
+              [
+                1,
+                null,
+                2
+              ]
+            ]
+          },
+          {
+            "args": [
+              [
+                1,
+                2,
+                1
+              ],
+              [
+                1,
+                1,
+                2
+              ]
+            ]
+          }
+        ],
+        "structure": {
+          "args": [
+            "tree",
+            "tree"
+          ],
+          "result": "raw"
+        }
+      }
+    },
+    {
+      "type": "javascript",
+      "title": "Subtree of Another Tree",
+      "content": {
+        "description": "Дерево `subRoot` — поддерево `root`? [LeetCode 572. Subtree of Another Tree](https://leetcode.com/problems/subtree-of-another-tree/)",
+        "starterCode": "function isSubtree(root, subRoot) {\n  return false;\n}",
+        "referenceSolution": "function isSubtree(root, subRoot) {\n  const same = (a, b) => {\n    if (!a && !b) return true;\n    if (!a || !b || a.val !== b.val) return false;\n    return same(a.left, b.left) && same(a.right, b.right);\n  };\n  if (!root) return false;\n  if (same(root, subRoot)) return true;\n  return isSubtree(root.left, subRoot) || isSubtree(root.right, subRoot);\n}",
+        "setup": "",
+        "reset": "",
+        "functionName": "isSubtree",
+        "timeoutMs": 8000,
+        "tests": [
+          {
+            "args": [
+              [
+                3,
+                4,
+                5,
+                1,
+                2
+              ],
+              [
+                4,
+                1,
+                2
+              ]
+            ]
+          },
+          {
+            "args": [
+              [
+                3,
+                4,
+                5,
+                1,
+                2,
+                null,
+                null,
+                null,
+                null,
+                0
+              ],
+              [
+                4,
+                1,
+                2
+              ]
+            ]
+          },
+          {
+            "args": [
+              [
+                1,
+                2,
+                3
+              ],
+              [
+                1,
+                2
+              ]
+            ]
+          }
+        ],
+        "structure": {
+          "args": [
+            "tree",
+            "tree"
+          ],
+          "result": "raw"
+        }
+      }
+    },
+    {
+      "type": "javascript",
+      "title": "Lowest Common Ancestor of a BST",
+      "content": {
+        "description": "BST и два значения `p`, `q` (узлы существуют). Верните **значение** LCA (не ссылку). [LeetCode 235. Lowest Common Ancestor of a BST](https://leetcode.com/problems/lowest-common-ancestor-of-a-binary-search-tree/)",
+        "starterCode": "function lowestCommonAncestorBST(root, p, q) {\n  return 0;\n}",
+        "referenceSolution": "function lowestCommonAncestorBST(root, p, q) {\n  let cur = root;\n  while (cur) {\n    if (p < cur.val && q < cur.val) cur = cur.left;\n    else if (p > cur.val && q > cur.val) cur = cur.right;\n    else return cur.val;\n  }\n  return 0;\n}",
+        "setup": "",
+        "reset": "",
+        "functionName": "lowestCommonAncestorBST",
+        "timeoutMs": 8000,
+        "tests": [
+          {
+            "args": [
+              [
+                6,
+                2,
+                8,
+                0,
+                4,
+                7,
+                9,
+                null,
+                null,
+                3,
+                5
+              ],
+              2,
+              8
+            ]
+          },
+          {
+            "args": [
+              [
+                6,
+                2,
+                8,
+                0,
+                4,
+                7,
+                9,
+                null,
+                null,
+                3,
+                5
+              ],
+              2,
+              4
+            ]
+          },
+          {
+            "args": [
+              [
+                2,
+                1
+              ],
+              2,
+              1
+            ]
+          }
+        ],
+        "structure": {
+          "args": [
+            "tree",
+            "raw",
+            "raw"
+          ],
+          "result": "raw"
+        }
+      }
+    },
+    {
+      "type": "javascript",
+      "title": "Binary Tree Level Order Traversal",
+      "content": {
+        "description": "Обход по уровням: массив массивов значений слева направо. [LeetCode 102. Binary Tree Level Order Traversal](https://leetcode.com/problems/binary-tree-level-order-traversal/)",
+        "starterCode": "function levelOrder(root) {\n  return [];\n}",
+        "referenceSolution": "function levelOrder(root) {\n  if (!root) return [];\n  const out = [];\n  const q = [root];\n  while (q.length) {\n    const level = [];\n    const size = q.length;\n    for (let i = 0; i < size; i += 1) {\n      const node = q.shift();\n      level.push(node.val);\n      if (node.left) q.push(node.left);\n      if (node.right) q.push(node.right);\n    }\n    out.push(level);\n  }\n  return out;\n}",
+        "setup": "",
+        "reset": "",
+        "functionName": "levelOrder",
+        "timeoutMs": 8000,
+        "tests": [
+          {
+            "args": [
+              [
+                3,
+                9,
+                20,
+                null,
+                null,
+                15,
+                7
+              ]
+            ]
+          },
+          {
+            "args": [
+              [
+                1
+              ]
+            ]
+          },
+          {
+            "args": [
+              []
+            ]
+          }
+        ],
+        "structure": {
+          "args": [
+            "tree"
+          ],
+          "result": "raw"
+        }
+      }
+    },
+    {
+      "type": "quiz",
+      "title": "Quiz: деревья",
+      "content": {
+        "question": "Level-order обход реализуют чаще через…",
+        "options": [
+          "Стек DFS",
+          "Очередь BFS",
+          "Hash Map",
+          "Trie"
+        ],
+        "correctIndices": [
+          1
+        ]
+      }
+    }
+  ]
+}

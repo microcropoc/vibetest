@@ -1,11 +1,12 @@
-import { readFileSync, readdirSync } from 'node:fs';
+import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
 
 import { parseImportCourseText } from './import-parse';
 import { parseImportModuleText } from './import-module-parse';
 
-export type JavascriptForCsharpCoursePaths = {
+export type BuildCourseFromSourcesPaths = {
   readonly coursesRoot: string;
+  readonly slug: string;
 };
 
 function assertCourseHeader(
@@ -25,12 +26,12 @@ function assertCourseHeader(
     throw new Error(`${fileName}: schemaVersion must be 1`);
   }
   const title = record['title'];
-  if (typeof title !== 'string' || title.length < 1 || title.length > 120) {
-    throw new Error(`${fileName}: title must be a string of length 1–120`);
+  if (typeof title !== 'string') {
+    throw new Error(`${fileName}: title must be a string`);
   }
   const description = record['description'];
-  if (typeof description !== 'string' || description.length < 1 || description.length > 2000) {
-    throw new Error(`${fileName}: description must be a string of length 1–2000`);
+  if (typeof description !== 'string') {
+    throw new Error(`${fileName}: description must be a string`);
   }
   return { schemaVersion: 1, title, description };
 }
@@ -44,9 +45,18 @@ function formatParseIssues(
   return `${fileName}: ${stage}: ${detail}`;
 }
 
-/** Assemble the flagship course JSON (LF, trailing newline) without writing a file. */
-export function buildJavascriptForCsharpCourse(paths: JavascriptForCsharpCoursePaths): string {
-  const sourceDir = join(paths.coursesRoot, 'javascript-for-csharp');
+/** Directories under coursesRoot that contain course.json (assembled course sources). */
+export function listCourseSourceSlugs(coursesRoot: string): readonly string[] {
+  return readdirSync(coursesRoot, { withFileTypes: true })
+    .filter((entry) => entry.isDirectory())
+    .map((entry) => entry.name)
+    .filter((name) => existsSync(join(coursesRoot, name, 'course.json')))
+    .sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
+}
+
+/** Assemble course JSON (LF, trailing newline) without writing a file. */
+export function buildCourseFromSources(paths: BuildCourseFromSourcesPaths): string {
+  const sourceDir = join(paths.coursesRoot, paths.slug);
   const headerPath = join(sourceDir, 'course.json');
   const header = assertCourseHeader(JSON.parse(readFileSync(headerPath, 'utf8')), 'course.json');
 
@@ -55,7 +65,7 @@ export function buildJavascriptForCsharpCourse(paths: JavascriptForCsharpCourseP
     .sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
 
   if (moduleFiles.length === 0) {
-    throw new Error('No module files found in javascript-for-csharp/');
+    throw new Error(`No module files found in ${paths.slug}/`);
   }
 
   const modules = moduleFiles.map((fileName) => {
@@ -75,9 +85,10 @@ export function buildJavascriptForCsharpCourse(paths: JavascriptForCsharpCourseP
     modules,
   };
   const json = `${JSON.stringify(course, null, 2)}\n`;
+  const outLabel = `${paths.slug}.json`;
   const courseParsed = parseImportCourseText(json);
   if (!courseParsed.ok) {
-    throw new Error(formatParseIssues('javascript-for-csharp.json', courseParsed.stage, courseParsed.issues));
+    throw new Error(formatParseIssues(outLabel, courseParsed.stage, courseParsed.issues));
   }
   return json;
 }

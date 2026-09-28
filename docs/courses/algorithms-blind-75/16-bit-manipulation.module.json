@@ -1,0 +1,249 @@
+{
+  "schemaVersion": 1,
+  "title": "Битовые операции",
+  "steps": [
+    {
+      "type": "theory",
+      "title": "Bit manipulation",
+      "content": "## AND, OR, XOR, shifts\n\n**XOR** — пары, missing number. **Brian Kernighan** — подсчёт единиц. **Reverse bits** — сдвиги. **Sum of Two Integers** — без `+`/`-`."
+    },
+    {
+      "type": "svg",
+      "title": "XOR",
+      "content": {
+        "caption": "**a ^ a = 0**",
+        "description": "Одиночный элемент в массиве пар — классический XOR.",
+        "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 200 60\" width=\"100%\" role=\"img\" aria-label=\"XOR\"><text x=\"100\" y=\"35\" text-anchor=\"middle\" font-size=\"14\" fill=\"#1565c0\">a ⊕ b</text></svg>"
+      }
+    },
+    {
+      "type": "javascript",
+      "title": "Разминка: xor всех элементов",
+      "content": {
+        "description": "**`xorAll(nums)`** — XOR всех чисел массива.",
+        "starterCode": "function xorAll(nums) {\n  return 0;\n}",
+        "referenceSolution": "function xorAll(nums) {\n  return nums.reduce((a, b) => a ^ b, 0);\n}",
+        "setup": "",
+        "reset": "",
+        "functionName": "xorAll",
+        "timeoutMs": 8000,
+        "tests": [
+          {
+            "args": [
+              [
+                1,
+                2,
+                3,
+                4
+              ]
+            ]
+          },
+          {
+            "args": [
+              [
+                4,
+                1,
+                2,
+                1,
+                2
+              ]
+            ]
+          },
+          {
+            "args": [
+              [
+                0
+              ]
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "type": "javascript",
+      "title": "Number of 1 Bits",
+      "content": {
+        "description": "Беззнаковое 32-bit `n`. Сколько битов равны **1** (Hamming weight).\n\n[LeetCode 191. Number of 1 Bits](https://leetcode.com/problems/number-of-1-bits/)",
+        "starterCode": "function hammingWeight(n) {\n  return 0;\n}",
+        "referenceSolution": "function hammingWeight(n) {\n  let count = 0;\n  while (n) {\n    n &= n - 1;\n    count += 1;\n  }\n  return count;\n}",
+        "setup": "",
+        "reset": "",
+        "functionName": "hammingWeight",
+        "timeoutMs": 8000,
+        "tests": [
+          {
+            "args": [
+              11
+            ]
+          },
+          {
+            "args": [
+              128
+            ]
+          },
+          {
+            "args": [
+              2147483645
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "type": "javascript",
+      "title": "Counting Bits",
+      "content": {
+        "description": "Число `n`. Массив `ans`, где `ans[i]` — число единиц в двоичной записи `i` для `0…n`.\n\n[LeetCode 338. Counting Bits](https://leetcode.com/problems/counting-bits/)",
+        "starterCode": "function countBits(n) {\n  return [];\n}",
+        "referenceSolution": "function countBits(n) {\n  const ans = Array(n + 1).fill(0);\n  for (let i = 1; i <= n; i += 1) ans[i] = ans[i >> 1] + (i & 1);\n  return ans;\n}",
+        "setup": "",
+        "reset": "",
+        "functionName": "countBits",
+        "timeoutMs": 8000,
+        "tests": [
+          {
+            "args": [
+              2
+            ]
+          },
+          {
+            "args": [
+              5
+            ]
+          },
+          {
+            "args": [
+              0
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "type": "javascript",
+      "title": "Reverse Bits",
+      "content": {
+        "description": "32-bit `n`. Перевернуть биты (младшие ↔ старшие).\n\n[LeetCode 190. Reverse Bits](https://leetcode.com/problems/reverse-bits/)",
+        "starterCode": "function reverseBits(n) {\n  return 0;\n}",
+        "referenceSolution": "function reverseBits(n) {\n  let res = 0;\n  for (let i = 0; i < 32; i += 1) {\n    res = (res << 1) | (n & 1);\n    n >>>= 1;\n  }\n  return res >>> 0;\n}",
+        "setup": "",
+        "reset": "",
+        "functionName": "reverseBits",
+        "timeoutMs": 8000,
+        "tests": [
+          {
+            "args": [
+              43261596
+            ]
+          },
+          {
+            "args": [
+              2147483644
+            ]
+          },
+          {
+            "args": [
+              0
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "type": "javascript",
+      "title": "Missing Number",
+      "content": {
+        "description": "Массив `nums` длины `n` с числами `0…n` (ровно одно пропущено). Найдите его.\n\n[LeetCode 268. Missing Number](https://leetcode.com/problems/missing-number/)",
+        "starterCode": "function missingNumber(nums) {\n  return 0;\n}",
+        "referenceSolution": "function missingNumber(nums) {\n  let xor = nums.length;\n  for (let i = 0; i < nums.length; i += 1) xor ^= i ^ nums[i];\n  return xor;\n}",
+        "setup": "",
+        "reset": "",
+        "functionName": "missingNumber",
+        "timeoutMs": 8000,
+        "tests": [
+          {
+            "args": [
+              [
+                3,
+                0,
+                1
+              ]
+            ]
+          },
+          {
+            "args": [
+              [
+                0,
+                1
+              ]
+            ]
+          },
+          {
+            "args": [
+              [
+                9,
+                6,
+                4,
+                2,
+                3,
+                5,
+                7,
+                0,
+                1
+              ]
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "type": "javascript",
+      "title": "Sum of Two Integers",
+      "content": {
+        "description": "Сложите `a` и `b` **без** операторов `+` и `-` (32-bit signed).\n\n[LeetCode 371. Sum of Two Integers](https://leetcode.com/problems/sum-of-two-integers/)",
+        "starterCode": "function getSum(a, b) {\n  return 0;\n}",
+        "referenceSolution": "function getSum(a, b) {\n  while (b !== 0) {\n    const carry = (a & b) << 1;\n    a = a ^ b;\n    b = carry;\n  }\n  return a | 0;\n}",
+        "setup": "",
+        "reset": "",
+        "functionName": "getSum",
+        "timeoutMs": 8000,
+        "tests": [
+          {
+            "args": [
+              1,
+              2
+            ]
+          },
+          {
+            "args": [
+              2,
+              3
+            ]
+          },
+          {
+            "args": [
+              -1,
+              1
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "type": "quiz",
+      "title": "Quiz: биты",
+      "content": {
+        "question": "Missing Number за O(n) и O(1) памяти часто решают через…",
+        "options": [
+          "Сортировку",
+          "XOR",
+          "BFS",
+          "Heap"
+        ],
+        "correctIndices": [
+          1
+        ]
+      }
+    }
+  ]
+}

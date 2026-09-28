@@ -1,0 +1,289 @@
+{
+  "schemaVersion": 1,
+  "title": "Матрицы",
+  "steps": [
+    {
+      "type": "theory",
+      "title": "Матрицы in-place",
+      "content": "## Поворот и обход\n\n**Rotate Image** — transpose + reverse rows. **Spiral Order** — границы сжимаются. **Set Matrix Zeroes** — маркеры в первой строке/столбце."
+    },
+    {
+      "type": "svg",
+      "title": "Поворот 90°",
+      "content": {
+        "caption": "Transpose + reverse строк",
+        "description": "In-place для n×n.",
+        "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\" width=\"100%\" role=\"img\" aria-label=\"Поворот\"><rect id=\"m15-sq\" x=\"25\" y=\"25\" width=\"50\" height=\"50\" fill=\"#e3f2fd\" stroke=\"#1565c0\" transform=\"rotate(15 50 50)\"/></svg>"
+      }
+    },
+    {
+      "type": "javascript",
+      "title": "Разминка: транспонирование квадратной матрицы",
+      "content": {
+        "description": "Квадратная **`matrix`**. Верните **новую** транспонированную матрицу (не мутируйте вход).",
+        "starterCode": "function transposeMatrix(matrix) {\n  return [];\n}",
+        "referenceSolution": "function transposeMatrix(matrix) {\n  const n = matrix.length;\n  return matrix[0].map((_, c) => matrix.map((row) => row[c]));\n}",
+        "setup": "",
+        "reset": "",
+        "functionName": "transposeMatrix",
+        "timeoutMs": 8000,
+        "tests": [
+          {
+            "args": [
+              [
+                [
+                  1,
+                  2
+                ],
+                [
+                  3,
+                  4
+                ]
+              ]
+            ]
+          },
+          {
+            "args": [
+              [
+                [
+                  1
+                ]
+              ]
+            ]
+          },
+          {
+            "args": [
+              [
+                [
+                  1,
+                  2,
+                  3
+                ],
+                [
+                  4,
+                  5,
+                  6
+                ],
+                [
+                  7,
+                  8,
+                  9
+                ]
+              ]
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "type": "javascript",
+      "title": "Rotate Image",
+      "content": {
+        "description": "Квадрат `matrix` n×n. Поверните на **90° по часовой** **in-place** (`resultMode: \"args\"`).\n\n[LeetCode 48. Rotate Image](https://leetcode.com/problems/rotate-image/)",
+        "starterCode": "function rotate(matrix) {\n  return matrix;\n}",
+        "referenceSolution": "function rotate(matrix) {\n  const n = matrix.length;\n  for (let i = 0; i < n; i += 1) {\n    for (let j = i + 1; j < n; j += 1) {\n      const t = matrix[i][j];\n      matrix[i][j] = matrix[j][i];\n      matrix[j][i] = t;\n    }\n  }\n  for (let i = 0; i < n; i += 1) matrix[i].reverse();\n  return matrix;\n}",
+        "setup": "",
+        "reset": "",
+        "functionName": "rotate",
+        "timeoutMs": 8000,
+        "tests": [
+          {
+            "args": [
+              [
+                [
+                  1,
+                  2,
+                  3
+                ],
+                [
+                  4,
+                  5,
+                  6
+                ],
+                [
+                  7,
+                  8,
+                  9
+                ]
+              ]
+            ]
+          },
+          {
+            "args": [
+              [
+                [
+                  5,
+                  1,
+                  9,
+                  11
+                ],
+                [
+                  2,
+                  4,
+                  8,
+                  10
+                ],
+                [
+                  13,
+                  3,
+                  6,
+                  7
+                ],
+                [
+                  15,
+                  14,
+                  12,
+                  16
+                ]
+              ]
+            ]
+          }
+        ],
+        "resultMode": "args"
+      }
+    },
+    {
+      "type": "javascript",
+      "title": "Spiral Matrix",
+      "content": {
+        "description": "Матрица `matrix`. Элементы **по спирали** (clockwise).\n\n[LeetCode 54. Spiral Matrix](https://leetcode.com/problems/spiral-matrix/)",
+        "starterCode": "function spiralOrder(matrix) {\n  return [];\n}",
+        "referenceSolution": "function spiralOrder(matrix) {\n  const out = [];\n  if (!matrix.length) return out;\n  let top = 0;\n  let bottom = matrix.length - 1;\n  let left = 0;\n  let right = matrix[0].length - 1;\n  while (top <= bottom && left <= right) {\n    for (let c = left; c <= right; c += 1) out.push(matrix[top][c]);\n    top += 1;\n    for (let r = top; r <= bottom; r += 1) out.push(matrix[r][right]);\n    right -= 1;\n    if (top <= bottom) {\n      for (let c = right; c >= left; c -= 1) out.push(matrix[bottom][c]);\n      bottom -= 1;\n    }\n    if (left <= right) {\n      for (let r = bottom; r >= top; r -= 1) out.push(matrix[r][left]);\n      left += 1;\n    }\n  }\n  return out;\n}",
+        "setup": "",
+        "reset": "",
+        "functionName": "spiralOrder",
+        "timeoutMs": 8000,
+        "tests": [
+          {
+            "args": [
+              [
+                [
+                  1,
+                  2,
+                  3
+                ],
+                [
+                  4,
+                  5,
+                  6
+                ],
+                [
+                  7,
+                  8,
+                  9
+                ]
+              ]
+            ]
+          },
+          {
+            "args": [
+              [
+                [
+                  1,
+                  2,
+                  3,
+                  4
+                ],
+                [
+                  5,
+                  6,
+                  7,
+                  8
+                ],
+                [
+                  9,
+                  10,
+                  11,
+                  12
+                ]
+              ]
+            ]
+          },
+          {
+            "args": [
+              [
+                [
+                  1
+                ]
+              ]
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "type": "javascript",
+      "title": "Set Matrix Zeroes",
+      "content": {
+        "description": "Если элемент **0**, обнулите **всю** его строку и столбец **in-place** (`resultMode: \"args\"`).\n\n[LeetCode 73. Set Matrix Zeroes](https://leetcode.com/problems/set-matrix-zeroes/)",
+        "starterCode": "function setZeroes(matrix) {\n  return matrix;\n}",
+        "referenceSolution": "function setZeroes(matrix) {\n  const rows = matrix.length;\n  const cols = matrix[0].length;\n  let row0 = false;\n  let col0 = false;\n  for (let c = 0; c < cols; c += 1) if (matrix[0][c] === 0) row0 = true;\n  for (let r = 0; r < rows; r += 1) if (matrix[r][0] === 0) col0 = true;\n  for (let r = 1; r < rows; r += 1) {\n    for (let c = 1; c < cols; c += 1) {\n      if (matrix[r][c] === 0) {\n        matrix[r][0] = 0;\n        matrix[0][c] = 0;\n      }\n    }\n  }\n  for (let r = 1; r < rows; r += 1) {\n    for (let c = 1; c < cols; c += 1) {\n      if (matrix[r][0] === 0 || matrix[0][c] === 0) matrix[r][c] = 0;\n    }\n  }\n  if (row0) for (let c = 0; c < cols; c += 1) matrix[0][c] = 0;\n  if (col0) for (let r = 0; r < rows; r += 1) matrix[r][0] = 0;\n  return matrix;\n}",
+        "setup": "",
+        "reset": "",
+        "functionName": "setZeroes",
+        "timeoutMs": 8000,
+        "tests": [
+          {
+            "args": [
+              [
+                [
+                  1,
+                  1,
+                  1
+                ],
+                [
+                  1,
+                  0,
+                  1
+                ],
+                [
+                  1,
+                  1,
+                  1
+                ]
+              ]
+            ]
+          },
+          {
+            "args": [
+              [
+                [
+                  0,
+                  1,
+                  2
+                ],
+                [
+                  3,
+                  4,
+                  5
+                ],
+                [
+                  6,
+                  7,
+                  8
+                ]
+              ]
+            ]
+          }
+        ],
+        "resultMode": "args"
+      }
+    },
+    {
+      "type": "quiz",
+      "title": "Quiz: матрицы",
+      "content": {
+        "question": "Rotate Image in-place часто делают через…",
+        "options": [
+          "BFS",
+          "Transpose и reverse строк",
+          "Trie",
+          "Heap"
+        ],
+        "correctIndices": [
+          1
+        ]
+      }
+    }
+  ]
+}

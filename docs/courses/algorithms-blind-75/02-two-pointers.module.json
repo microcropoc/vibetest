@@ -1,0 +1,308 @@
+{
+  "schemaVersion": 1,
+  "title": "Два указателя",
+  "steps": [
+    {
+      "type": "theory",
+      "title": "Паттерн: два указателя",
+      "content": "## Два указателя на отсортированном массиве или с обоих концов\n\n- **Сортированный массив + target** — `left` / `right`, двигаем по сумме.\n- **Палиндром** — символы с краёв к центру.\n- **3Sum** — фиксируем `i`, внутри two pointers; пропуск дубликатов.\n\nСложность часто **O(n)** или **O(n log n)** из-за сортировки."
+    },
+    {
+      "type": "svg",
+      "title": "Указатели left и right",
+      "content": {
+        "caption": "**Два указателя** сжимают интервал",
+        "description": "На отсorted массиве движение только внутрь даёт линейный проход.",
+        "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 300 80\" width=\"100%\" role=\"img\" aria-label=\"Два указателя\"><rect id=\"m02-bar\" x=\"40\" y=\"30\" width=\"220\" height=\"20\" rx=\"4\" fill=\"#eceff1\" stroke=\"#546e7a\"/><circle id=\"m02-left\" cx=\"60\" cy=\"40\" r=\"8\" fill=\"#1565c0\"/><text id=\"m02-lt\" x=\"60\" y=\"65\" text-anchor=\"middle\" font-size=\"9\">L</text><circle id=\"m02-right\" cx=\"240\" cy=\"40\" r=\"8\" fill=\"#c62828\"/><text id=\"m02-rt\" x=\"240\" y=\"65\" text-anchor=\"middle\" font-size=\"9\">R</text></svg>"
+      }
+    },
+    {
+      "type": "javascript",
+      "title": "Разминка: сумма пары на отсортированном",
+      "content": {
+        "description": "Отсортированный **`nums`**, **`target`**. Есть ли два разных индекса с суммой `target`? Верните `true` / `false` (1-based индексы на LeetCode Two Sum II — здесь достаточно boolean).",
+        "starterCode": "function sortedPairSumExists(nums, target) {\n  return false;\n}",
+        "referenceSolution": "function sortedPairSumExists(nums, target) {\n  let l = 0;\n  let r = nums.length - 1;\n  while (l < r) {\n    const sum = nums[l] + nums[r];\n    if (sum === target) return true;\n    if (sum < target) l += 1;\n    else r -= 1;\n  }\n  return false;\n}",
+        "setup": "",
+        "reset": "",
+        "functionName": "sortedPairSumExists",
+        "timeoutMs": 8000,
+        "tests": [
+          {
+            "args": [
+              [
+                1,
+                2,
+                3,
+                4,
+                6
+              ],
+              6
+            ]
+          },
+          {
+            "args": [
+              [
+                1,
+                3,
+                4
+              ],
+              6
+            ]
+          },
+          {
+            "args": [
+              [
+                1,
+                2
+              ],
+              4
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "type": "javascript",
+      "title": "Valid Palindrome",
+      "content": {
+        "description": "Строка `s`. Палиндром, если после удаления не буквенно-цифровых и приведения к нижнему регистру читается одинаково.\n\n[LeetCode 125. Valid Palindrome](https://leetcode.com/problems/valid-palindrome/)",
+        "starterCode": "function isPalindrome(s) {\n  return false;\n}",
+        "referenceSolution": "function isPalindrome(s) {\n  const t = s.toLowerCase().replace(/[^a-z0-9]/g, \"\");\n  let l = 0;\n  let r = t.length - 1;\n  while (l < r) {\n    if (t[l] !== t[r]) return false;\n    l += 1;\n    r -= 1;\n  }\n  return true;\n}",
+        "setup": "",
+        "reset": "",
+        "functionName": "isPalindrome",
+        "timeoutMs": 8000,
+        "tests": [
+          {
+            "args": [
+              "A man, a plan, a canal: Panama"
+            ]
+          },
+          {
+            "args": [
+              "race a car"
+            ]
+          },
+          {
+            "args": [
+              " "
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "type": "javascript",
+      "title": "Two Sum II",
+      "content": {
+        "description": "Отсортированный `numbers`, `target`. Индексы **1-based** двух чисел с суммой `target` (ровно одно решение).\n\n[LeetCode 167. Two Sum II](https://leetcode.com/problems/two-sum-ii-input-array-is-sorted/)",
+        "starterCode": "function twoSumII(numbers, target) {\n  return [];\n}",
+        "referenceSolution": "function twoSumII(numbers, target) {\n  let l = 0;\n  let r = numbers.length - 1;\n  while (l < r) {\n    const sum = numbers[l] + numbers[r];\n    if (sum === target) return [l + 1, r + 1];\n    if (sum < target) l += 1;\n    else r -= 1;\n  }\n  return [];\n}",
+        "setup": "",
+        "reset": "",
+        "functionName": "twoSumII",
+        "timeoutMs": 8000,
+        "tests": [
+          {
+            "args": [
+              [
+                2,
+                7,
+                11,
+                15
+              ],
+              9
+            ]
+          },
+          {
+            "args": [
+              [
+                2,
+                3,
+                4
+              ],
+              6
+            ]
+          },
+          {
+            "args": [
+              [
+                -1,
+                0
+              ],
+              -1
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "type": "javascript",
+      "title": "3Sum",
+      "content": {
+        "description": "Массив `nums`. Все **уникальные** тройки с суммой 0. Порядок не важен (`unordered: true`).\n\n[LeetCode 15. 3Sum](https://leetcode.com/problems/3sum/)",
+        "starterCode": "function threeSum(nums) {\n  return [];\n}",
+        "referenceSolution": "function threeSum(nums) {\n  const sorted = nums.slice().sort((a, b) => a - b);\n  const out = [];\n  for (let i = 0; i < sorted.length - 2; i += 1) {\n    if (i > 0 && sorted[i] === sorted[i - 1]) continue;\n    let l = i + 1;\n    let r = sorted.length - 1;\n    while (l < r) {\n      const sum = sorted[i] + sorted[l] + sorted[r];\n      if (sum === 0) {\n        out.push([sorted[i], sorted[l], sorted[r]]);\n        l += 1;\n        r -= 1;\n        while (l < r && sorted[l] === sorted[l - 1]) l += 1;\n        while (l < r && sorted[r] === sorted[r + 1]) r -= 1;\n      } else if (sum < 0) l += 1;\n      else r -= 1;\n    }\n  }\n  return out;\n}",
+        "setup": "",
+        "reset": "",
+        "functionName": "threeSum",
+        "timeoutMs": 8000,
+        "tests": [
+          {
+            "args": [
+              [
+                -1,
+                0,
+                1,
+                2,
+                -1,
+                -4
+              ]
+            ],
+            "unordered": true
+          },
+          {
+            "args": [
+              [
+                0,
+                1,
+                1
+              ]
+            ],
+            "unordered": true
+          },
+          {
+            "args": [
+              [
+                0,
+                0,
+                0
+              ]
+            ],
+            "unordered": true
+          }
+        ]
+      }
+    },
+    {
+      "type": "javascript",
+      "title": "Container With Most Water",
+      "content": {
+        "description": "Массив высот `height`. Выберите две линии, образующие контейнер с **максимальной** площадью (длина × min высот).\n\n[LeetCode 11. Container With Most Water](https://leetcode.com/problems/container-with-most-water/)",
+        "starterCode": "function maxArea(height) {\n  return 0;\n}",
+        "referenceSolution": "function maxArea(height) {\n  let l = 0;\n  let r = height.length - 1;\n  let best = 0;\n  while (l < r) {\n    best = Math.max(best, Math.min(height[l], height[r]) * (r - l));\n    if (height[l] < height[r]) l += 1;\n    else r -= 1;\n  }\n  return best;\n}",
+        "setup": "",
+        "reset": "",
+        "functionName": "maxArea",
+        "timeoutMs": 8000,
+        "tests": [
+          {
+            "args": [
+              [
+                1,
+                8,
+                6,
+                2,
+                5,
+                4,
+                8,
+                3,
+                7
+              ]
+            ]
+          },
+          {
+            "args": [
+              [
+                1,
+                1
+              ]
+            ]
+          },
+          {
+            "args": [
+              [
+                4,
+                3,
+                2,
+                1,
+                4
+              ]
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "type": "javascript",
+      "title": "Trapping Rain Water",
+      "content": {
+        "description": "Массив высот `height`. Сколько воды удержится между столбиками после дождя?\n\n[LeetCode 42. Trapping Rain Water](https://leetcode.com/problems/trapping-rain-water/)",
+        "starterCode": "function trap(height) {\n  return 0;\n}",
+        "referenceSolution": "function trap(height) {\n  let l = 0;\n  let r = height.length - 1;\n  let leftMax = 0;\n  let rightMax = 0;\n  let water = 0;\n  while (l < r) {\n    if (height[l] < height[r]) {\n      if (height[l] >= leftMax) leftMax = height[l];\n      else water += leftMax - height[l];\n      l += 1;\n    } else {\n      if (height[r] >= rightMax) rightMax = height[r];\n      else water += rightMax - height[r];\n      r -= 1;\n    }\n  }\n  return water;\n}",
+        "setup": "",
+        "reset": "",
+        "functionName": "trap",
+        "timeoutMs": 8000,
+        "tests": [
+          {
+            "args": [
+              [
+                0,
+                1,
+                0,
+                2,
+                1,
+                0,
+                1,
+                3,
+                2,
+                1,
+                2,
+                1
+              ]
+            ]
+          },
+          {
+            "args": [
+              [
+                4,
+                2,
+                0,
+                3,
+                2,
+                5
+              ]
+            ]
+          },
+          {
+            "args": [
+              [
+                1,
+                2,
+                1
+              ]
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "type": "quiz",
+      "title": "Quiz: два указателя",
+      "content": {
+        "question": "На отсортированном массиве для Two Sum II указатель с меньшей суммой, чем target, обычно двигают…",
+        "options": [
+          "right влево",
+          "left вправо",
+          "оба к центру симметрично всегда",
+          "ни один"
+        ],
+        "correctIndices": [
+          1
+        ]
+      }
+    }
+  ]
+}

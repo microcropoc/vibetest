@@ -2,6 +2,7 @@
 
 # Compiled output
 /dist
+/public/bundled-courses/
 /tmp
 /out-tsc
 /bazel-out

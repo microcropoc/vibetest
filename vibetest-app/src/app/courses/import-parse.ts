@@ -1,8 +1,9 @@
 import type { ZodError } from 'zod';
 
 import type { Course } from './course.model';
-import { importDtoToCourse } from './import-dto-to-course';
+import type { ImportCourse } from './import-course-zod-schema';
 import { ImportCourseSchema } from './import-course-zod-schema';
+import { importDtoToCourse, type ImportDtoToCourseDeps } from './import-dto-to-course';
 import type { ImportIssue, ImportValidationStage } from './import-types';
 import { validateCourseSemantics } from './semantic-validation';
 import {
@@ -20,6 +21,10 @@ export type ImportParseFailure = {
 
 export type ImportParseResult = ImportParseSuccess | ImportParseFailure;
 
+export type ImportCourseDtoParseResult =
+  | { readonly ok: true; readonly dto: ImportCourse }
+  | ImportParseFailure;
+
 function jsonParseIssue(error: unknown): ImportIssue {
   const message = error instanceof SyntaxError ? error.message : 'Invalid JSON';
   return { path: 'json', message };
@@ -32,7 +37,17 @@ function zodIssues(error: ZodError): readonly ImportIssue[] {
   }));
 }
 
-export function parseImportCourseText(text: string): ImportParseResult {
+export function formatImportParseIssues(
+  label: string,
+  stage: ImportValidationStage,
+  issues: readonly ImportIssue[],
+): string {
+  const detail = issues.map((issue) => `${issue.path}: ${issue.message}`).join('; ');
+  return `${label}: ${stage}: ${detail}`;
+}
+
+/** Parse import text through JSON + Zod only (no UUID assignment). */
+export function parseImportCourseDtoText(text: string): ImportCourseDtoParseResult {
   let jsonText: string;
   try {
     jsonText = unwrapJsonImportText(text);
@@ -56,7 +71,19 @@ export function parseImportCourseText(text: string): ImportParseResult {
     return { ok: false, stage: 'zod', issues: zodIssues(zodResult.error) };
   }
 
-  const course = importDtoToCourse(zodResult.data);
+  return { ok: true, dto: zodResult.data };
+}
+
+export function parseImportCourseText(
+  text: string,
+  dtoDeps: ImportDtoToCourseDeps = {},
+): ImportParseResult {
+  const dtoResult = parseImportCourseDtoText(text);
+  if (!dtoResult.ok) {
+    return dtoResult;
+  }
+
+  const course = importDtoToCourse(dtoResult.dto, dtoDeps);
   const semanticIssues = validateCourseSemantics(course);
   if (semanticIssues.length > 0) {
     return { ok: false, stage: 'semantic', issues: semanticIssues };

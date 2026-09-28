@@ -3,4 +3,22 @@
   <p class="settings-page__hint">Тема применяется сразу и сохраняется в этом браузере.</p>
 
   <app-theme-picker [value]="theme()" (themeChange)="onThemeChange($event)" />
+
+  <section class="settings-page__section" aria-labelledby="settings-bundled-heading">
+    <h2 id="settings-bundled-heading" class="settings-page__section-title">Встроенные курсы</h2>
+    <p class="settings-page__hint">
+      Курсы из комплекта приложения. Если вы удалили их из списка, их можно вернуть без повторного импорта JSON.
+    </p>
+    <button
+      type="button"
+      class="settings-page__button"
+      [disabled]="bundledRestoreBusy()"
+      (click)="onRestoreBundledCourses()"
+    >
+      Добавить недостающие курсы
+    </button>
+    @if (bundledRestoreMessage(); as message) {
+      <p class="settings-page__status" role="status">{{ message }}</p>
+    }
+  </section>
 </section>

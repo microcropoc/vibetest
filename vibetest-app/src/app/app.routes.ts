@@ -48,6 +48,13 @@ export const routes: Routes = [
           ),
       },
       {
+        path: 'course-generation',
+        loadComponent: () =>
+          import('./course-generation/pages/course-generation-page/course-generation-page').then(
+            (m) => m.CourseGenerationPage,
+          ),
+      },
+      {
         path: 'settings',
         loadComponent: () =>
           import('./settings/pages/settings-page/settings-page').then((m) => m.SettingsPage),

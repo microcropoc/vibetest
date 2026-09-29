@@ -1,6 +1,8 @@
 import 'fake-indexeddb/auto';
 
-import { settingsRowForTheme } from './settings-row-parse';
+import type { LlmProfile } from '../settings/llm-profile.model';
+
+import { settingsRowForLlmProfiles, settingsRowForTheme } from './settings-row-parse';
 import { SettingsRepository } from './settings-repository';
 import { createTestVibetestDb, destroyTestVibetestDb } from './test-db-harness';
 import type { VibetestDb } from './vibetest-db';
@@ -42,5 +44,36 @@ describe('SettingsRepository', () => {
     await repo.setTheme('light');
     const row = await db.settings.get('theme');
     expect(row).toEqual(settingsRowForTheme('light'));
+  });
+
+  it('returns empty llm profiles until saved', async () => {
+    db = createTestVibetestDb();
+    const repo = SettingsRepository.forDb(db);
+    expect(await repo.getLlmProfiles()).toEqual([]);
+  });
+
+  it('persists and loads llm profiles', async () => {
+    db = createTestVibetestDb();
+    const repo = SettingsRepository.forDb(db);
+    const profiles: readonly LlmProfile[] = [
+      {
+        id: '550e8400-e29b-41d4-a716-446655440000',
+        label: 'Local',
+        baseUrl: 'http://localhost:1234/v1',
+        apiKey: 'key',
+        model: 'm',
+      },
+    ];
+    await repo.setLlmProfiles(profiles);
+    expect(await repo.getLlmProfiles()).toEqual(profiles);
+    const row = await db.settings.get('llmProfiles');
+    expect(row).toEqual(settingsRowForLlmProfiles(profiles));
+  });
+
+  it('returns empty list for corrupt llm profiles row', async () => {
+    db = createTestVibetestDb();
+    await db.settings.put({ key: 'llmProfiles', value: [{ bad: true }] });
+    const repo = SettingsRepository.forDb(db);
+    expect(await repo.getLlmProfiles()).toEqual([]);
   });
 });

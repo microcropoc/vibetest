@@ -1,0 +1,57 @@
+<section class="llm-profiles-editor" aria-labelledby="llm-profiles-editor-heading">
+  <h2 id="llm-profiles-editor-heading" class="llm-profiles-editor__title">Генерация курса (LLM)</h2>
+  <p class="llm-profiles-editor__hint">
+    Профили для LM Studio или другого OpenAI-compatible API. Ключ хранится только в этом браузере.
+  </p>
+
+  @if (loading()) {
+    <p class="llm-profiles-editor__status">Загрузка…</p>
+  } @else {
+    @if (profiles().length === 0) {
+      <p class="llm-profiles-editor__status">Профилей пока нет.</p>
+    } @else {
+      <ul class="llm-profiles-editor__list">
+        @for (profile of profiles(); track profile.id) {
+          <li class="llm-profiles-editor__item">
+            <div class="llm-profiles-editor__item-main">
+              <span class="llm-profiles-editor__item-label">{{ profile.label }}</span>
+              <span class="llm-profiles-editor__item-meta">{{ profile.model }} · {{ maskApiKey(profile.apiKey) }}</span>
+            </div>
+            <div class="llm-profiles-editor__item-actions">
+              <button type="button" class="llm-profiles-editor__button" (click)="onStartEdit(profile)">
+                Изменить
+              </button>
+              <button
+                type="button"
+                class="llm-profiles-editor__button llm-profiles-editor__button--danger"
+                (click)="onDelete(profile)"
+              >
+                Удалить
+              </button>
+            </div>
+          </li>
+        }
+      </ul>
+    }
+
+    @if (!formOpen()) {
+      <button type="button" class="llm-profiles-editor__button llm-profiles-editor__button--primary" (click)="onStartAdd()">
+        Добавить профиль
+      </button>
+    } @else {
+      <app-llm-profile-fields [value]="formValue()" (valueChange)="onFormValueChange($event)" />
+      <div class="llm-profiles-editor__toolbar">
+        <button type="button" class="llm-profiles-editor__button llm-profiles-editor__button--primary" (click)="onSave()">
+          Сохранить
+        </button>
+        <button type="button" class="llm-profiles-editor__button" (click)="onCancelEdit()">Отмена</button>
+      </div>
+    }
+
+    @if (formError(); as error) {
+      <p class="llm-profiles-editor__error" role="alert">{{ error }}</p>
+    } @else if (statusMessage(); as message) {
+      <p class="llm-profiles-editor__status" role="status">{{ message }}</p>
+    }
+  }
+</section>

@@ -1,0 +1,129 @@
+<section class="course-generation-page">
+  <h1 class="course-generation-page__title">Генерация курса</h1>
+  <p class="course-generation-page__hint">
+    Опишите тему курса и выберите профиль LM Studio. При успешной проверке JSON курс импортируется автоматически.
+  </p>
+
+  @if (schemaLoading()) {
+    <p class="course-generation-page__status">Загрузка схемы…</p>
+  } @else if (schemaError(); as schemaErr) {
+    <p class="course-generation-page__error" role="alert">{{ schemaErr }}</p>
+  } @else {
+    <label class="course-generation-page__label">
+      Описание курса
+      <textarea
+        class="course-generation-page__description"
+        rows="6"
+        placeholder="Например: базовый курс по регулярным выражениям для начинающих"
+        [value]="courseDescription()"
+        (input)="onDescriptionInput($event)"
+      ></textarea>
+    </label>
+
+    <fieldset class="course-generation-page__profile-mode">
+      <legend class="course-generation-page__profile-mode-legend">Профиль LLM</legend>
+      <label class="course-generation-page__radio">
+        <input
+          type="radio"
+          name="profileMode"
+          value="saved"
+          [checked]="profileMode() === 'saved'"
+          [disabled]="profiles().length === 0"
+          (change)="onProfileModeChange('saved')"
+        />
+        Сохранённый профиль
+      </label>
+      <label class="course-generation-page__radio">
+        <input
+          type="radio"
+          name="profileMode"
+          value="new"
+          [checked]="profileMode() === 'new'"
+          (change)="onProfileModeChange('new')"
+        />
+        Новый профиль
+      </label>
+    </fieldset>
+
+    @if (profileMode() === 'saved') {
+      <label class="course-generation-page__label">
+        Профиль
+        <select class="course-generation-page__select" (change)="onSelectedProfileChange($event)">
+          @for (profile of profiles(); track profile.id) {
+            <option [value]="profile.id" [selected]="profile.id === selectedProfileId()">
+              {{ profile.label }} ({{ profile.model }})
+            </option>
+          }
+        </select>
+      </label>
+      @if (profiles().length === 0) {
+        <p class="course-generation-page__status">
+          Нет сохранённых профилей — добавьте в «Настройках» или выберите «Новый профиль».
+        </p>
+      }
+    } @else {
+      <app-llm-profile-fields
+        [value]="newProfileFields()"
+        (valueChange)="onNewProfileFieldsChange($event)"
+      />
+      <label class="course-generation-page__checkbox">
+        <input
+          type="checkbox"
+          [checked]="saveNewProfile()"
+          (change)="onSaveNewProfileChange($event)"
+        />
+        Сохранить профиль для следующих генераций
+      </label>
+    }
+
+    <div class="course-generation-page__toolbar">
+      <button
+        type="button"
+        class="course-generation-page__generate"
+        [disabled]="!canGenerate()"
+        (click)="onGenerate()"
+      >
+        @if (generating()) {
+          Генерация…
+        } @else {
+          Сгенерировать
+        }
+      </button>
+      @if (generating()) {
+        <button type="button" class="course-generation-page__cancel" (click)="onCancelGenerate()">
+          Отмена
+        </button>
+      }
+      @if (!hasDescription()) {
+        <span class="course-generation-page__status">Введите описание курса, чтобы начать генерацию.</span>
+      }
+    </div>
+
+    @if (apiError(); as err) {
+      <p class="course-generation-page__error" role="alert">{{ err }}</p>
+    }
+
+    @if (generatedCourseId(); as courseId) {
+      <p class="course-generation-page__success" role="status">
+        Курс импортирован.
+        <a class="course-generation-page__link" [routerLink]="['/courses', courseId]">Открыть модули</a>
+      </p>
+    }
+
+    @if (importStage(); as stage) {
+      <h2 class="course-generation-page__issues-title">{{ stageHeading() }}</h2>
+      <ul class="course-generation-page__issues">
+        @for (issue of importIssues(); track issue.path + issue.message) {
+          <li>{{ formatIssue(issue) }}</li>
+        }
+      </ul>
+    }
+
+    @if (rawModelResponse(); as raw) {
+      <details class="course-generation-page__raw">
+        <summary>Ответ модели</summary>
+        <pre class="course-generation-page__raw-pre">{{ raw }}</pre>
+      </details>
+    }
+  }
+</section>

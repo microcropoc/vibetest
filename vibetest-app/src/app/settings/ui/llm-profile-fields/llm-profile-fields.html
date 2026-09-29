@@ -1,0 +1,47 @@
+<fieldset class="llm-profile-fields">
+  <legend class="llm-profile-fields__legend">Подключение LLM</legend>
+
+  <label class="llm-profile-fields__label">
+    Название
+    <input
+      class="llm-profile-fields__input"
+      type="text"
+      autocomplete="off"
+      [value]="value().label"
+      (input)="onFieldInput('label', $event)"
+    />
+  </label>
+
+  <label class="llm-profile-fields__label">
+    Base URL
+    <input
+      class="llm-profile-fields__input"
+      type="url"
+      autocomplete="off"
+      [value]="value().baseUrl"
+      (input)="onFieldInput('baseUrl', $event)"
+    />
+  </label>
+
+  <label class="llm-profile-fields__label">
+    API key
+    <input
+      class="llm-profile-fields__input"
+      type="password"
+      autocomplete="off"
+      [value]="value().apiKey"
+      (input)="onFieldInput('apiKey', $event)"
+    />
+  </label>
+
+  <label class="llm-profile-fields__label">
+    Model
+    <input
+      class="llm-profile-fields__input"
+      type="text"
+      autocomplete="off"
+      [value]="value().model"
+      (input)="onFieldInput('model', $event)"
+    />
+  </label>
+</fieldset>

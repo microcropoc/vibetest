@@ -38,6 +38,7 @@ describe('AppShell', () => {
     expect(compiled.textContent).toContain('Импорт');
     expect(compiled.textContent).toContain('Инфо');
     expect(compiled.textContent).toContain('Генерация промта');
+    expect(compiled.textContent).toContain('Генерация курса');
     expect(compiled.textContent).toContain('Настройки');
   });
 

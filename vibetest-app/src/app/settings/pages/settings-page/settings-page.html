@@ -4,6 +4,16 @@
 
   <app-theme-picker [value]="theme()" (themeChange)="onThemeChange($event)" />
 
+  <section class="settings-page__section">
+    <app-llm-profiles-editor
+      [profiles]="llmProfiles()"
+      [loading]="llmProfilesLoading()"
+      [statusMessage]="llmProfilesMessage()"
+      (profileSave)="onLlmProfileSave($event)"
+      (profileDelete)="onLlmProfileDelete($event)"
+    />
+  </section>
+
   <section class="settings-page__section" aria-labelledby="settings-bundled-heading">
     <h2 id="settings-bundled-heading" class="settings-page__section-title">Встроенные курсы</h2>
     <p class="settings-page__hint">

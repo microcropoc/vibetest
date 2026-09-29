@@ -10,10 +10,12 @@ import { VibetestDbProvider, vibetestDbProviderFor } from '../storage/vibetest-d
 import type {
   ImportCourseOptions,
   ImportCourseResult,
+  ImportCourseSuccess,
+  ImportCourseValidationFailure,
   ImportModuleOptions,
   ImportModuleResult,
 } from './import-types';
-import { parseImportCourseText } from './import-parse';
+import { parseImportCourseText, type ImportParseSuccess } from './import-parse';
 import { parseImportModuleText } from './import-module-parse';
 import { regenerateCourseIds } from './regenerate-course-ids';
 import {
@@ -75,28 +77,15 @@ export class CourseImportService {
   }
 
   async importCourse(text: string, options: ImportCourseOptions): Promise<ImportCourseResult> {
-    const parsed = parseImportCourseText(text);
-    if (!parsed.ok) {
-      return parsed;
-    }
-
-    let course = parsed.course;
-
-    if (options.validatePracticeSteps === true) {
-      const practiceIssues = await validatePracticeReferences(
-        course,
-        this.practiceValidationDeps(),
-      );
-      if (practiceIssues.length > 0) {
-        return { ok: false, stage: 'practice', issues: practiceIssues };
-      }
-    }
-
     if (options.regenerateIds) {
-      course = regenerateCourseIds(course);
-      await this.courses.put(course);
-      return { ok: true, courseId: course.courseId, action: 'created' };
+      return this.importCourseWithNewIds(text, options);
     }
+
+    const checked = await this.parseAndCheckCourse(text, options);
+    if (!checked.ok) {
+      return checked;
+    }
+    const course = checked.course;
 
     const existing = await this.courses.get(course.courseId);
     if (existing === undefined) {
@@ -114,6 +103,42 @@ export class CourseImportService {
     });
 
     return { ok: true, courseId: course.courseId, action: 'replaced' };
+  }
+
+  /** Always creates a new course with fresh UUIDs, so an id conflict cannot occur. */
+  async importCourseWithNewIds(
+    text: string,
+    options: Pick<ImportCourseOptions, 'validatePracticeSteps'>,
+  ): Promise<ImportCourseSuccess | ImportCourseValidationFailure> {
+    const checked = await this.parseAndCheckCourse(text, options);
+    if (!checked.ok) {
+      return checked;
+    }
+    const course = regenerateCourseIds(checked.course);
+    await this.courses.put(course);
+    return { ok: true, courseId: course.courseId, action: 'created' };
+  }
+
+  private async parseAndCheckCourse(
+    text: string,
+    options: Pick<ImportCourseOptions, 'validatePracticeSteps'>,
+  ): Promise<ImportParseSuccess | ImportCourseValidationFailure> {
+    const parsed = parseImportCourseText(text);
+    if (!parsed.ok) {
+      return parsed;
+    }
+
+    if (options.validatePracticeSteps === true) {
+      const practiceIssues = await validatePracticeReferences(
+        parsed.course,
+        this.practiceValidationDeps(),
+      );
+      if (practiceIssues.length > 0) {
+        return { ok: false, stage: 'practice', issues: practiceIssues };
+      }
+    }
+
+    return { ok: true, course: parsed.course };
   }
 
   async importModule(text: string, options: ImportModuleOptions): Promise<ImportModuleResult> {

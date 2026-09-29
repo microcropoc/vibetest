@@ -7,9 +7,16 @@ const LlmProfileDraftSchema = z.object({
   baseUrl: z.string().trim().min(1).max(500),
   apiKey: z.string().max(500),
   model: z.string().trim().min(1).max(200),
+  structuredOutput: z.boolean().default(false),
 });
 
-const DRAFT_FIELDS = ['label', 'baseUrl', 'apiKey', 'model'] as const satisfies readonly (keyof LlmProfileDraft)[];
+const DRAFT_FIELDS = [
+  'label',
+  'baseUrl',
+  'apiKey',
+  'model',
+  'structuredOutput',
+] as const satisfies readonly (keyof LlmProfileDraft)[];
 
 const LlmProfileSchema = LlmProfileDraftSchema.extend({
   id: z.uuid(),
@@ -26,8 +33,10 @@ export function parseLlmProfiles(value: unknown): readonly LlmProfile[] {
   return LlmProfilesSchema.parse(value);
 }
 
-export function isLlmProfiles(value: unknown): value is readonly LlmProfile[] {
-  return LlmProfilesSchema.safeParse(value).success;
+/** Parsed profiles with defaults applied, or undefined when the value does not match. */
+export function tryParseLlmProfiles(value: unknown): readonly LlmProfile[] | undefined {
+  const result = LlmProfilesSchema.safeParse(value);
+  return result.success ? result.data : undefined;
 }
 
 export function parseLlmProfile(value: unknown): LlmProfile {

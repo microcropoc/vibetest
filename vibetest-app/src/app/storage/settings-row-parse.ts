@@ -1,5 +1,5 @@
 import type { LlmProfile } from '../settings/llm-profile.model';
-import { isLlmProfiles, parseLlmProfiles } from '../settings/parse-llm-profiles';
+import { parseLlmProfiles, tryParseLlmProfiles } from '../settings/parse-llm-profiles';
 import { parseTheme } from '../settings/parse-theme';
 import type { Theme } from '../settings/theme.model';
 
@@ -24,10 +24,7 @@ export function llmProfilesFromSettingsRow(
   if (row === undefined || row.key !== SETTINGS_LLM_PROFILES_KEY) {
     return [];
   }
-  if (!isLlmProfiles(row.value)) {
-    return [];
-  }
-  return parseLlmProfiles(row.value);
+  return tryParseLlmProfiles(row.value) ?? [];
 }
 
 export function settingsRowForLlmProfiles(

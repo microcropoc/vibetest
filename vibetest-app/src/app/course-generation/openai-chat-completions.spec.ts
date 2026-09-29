@@ -5,6 +5,11 @@ import {
   postChatCompletion,
 } from './openai-chat-completions';
 
+const MESSAGES = [
+  { role: 'system' as const, content: 'rules' },
+  { role: 'user' as const, content: 'hello' },
+];
+
 describe('openai-chat-completions', () => {
   it('builds chat completions URL without trailing slash', () => {
     expect(buildChatCompletionsUrl('http://localhost:1234/v1/')).toBe(
@@ -12,24 +17,35 @@ describe('openai-chat-completions', () => {
     );
   });
 
-  it('builds request body with user message', () => {
-    const body = JSON.parse(
-      buildChatCompletionsBody('my-model', 'hello', 0.2),
-    ) as {
+  it('builds request body with system and user messages', () => {
+    const body = JSON.parse(buildChatCompletionsBody('my-model', MESSAGES, { temperature: 0.2 })) as {
       model: string;
       temperature: number;
       messages: { role: string; content: string }[];
     };
     expect(body.model).toBe('my-model');
     expect(body.temperature).toBe(0.2);
-    expect(body.messages).toEqual([{ role: 'user', content: 'hello' }]);
+    expect(body.messages).toEqual(MESSAGES);
   });
 
-  it('parses successful content', () => {
+  it('adds response_format when structured output is enabled', () => {
+    const schema = { type: 'object', properties: { schemaVersion: { type: 'number' } } };
+    const body = JSON.parse(
+      buildChatCompletionsBody('my-model', MESSAGES, {
+        structuredOutput: true,
+        importSchema: schema,
+      }),
+    ) as { response_format?: { type: string; json_schema: { name: string } } };
+    expect(body.response_format?.type).toBe('json_schema');
+    expect(body.response_format?.json_schema.name).toBe('course_import');
+  });
+
+  it('parses successful content and prompt_tokens', () => {
     const result = parseChatCompletionResponseBody({
       choices: [{ message: { content: '{"a":1}' }, finish_reason: 'stop' }],
+      usage: { prompt_tokens: 9000 },
     });
-    expect(result).toEqual({ kind: 'success', content: '{"a":1}' });
+    expect(result).toEqual({ kind: 'success', content: '{"a":1}', promptTokens: 9000 });
   });
 
   it('fails on length finish_reason', () => {
@@ -51,7 +67,7 @@ describe('openai-chat-completions', () => {
       baseUrl: 'http://localhost:1234/v1',
       apiKey: 'secret-key',
       model: 'm',
-      userContent: 'prompt',
+      messages: MESSAGES,
     };
 
     function abortError(): DOMException {
@@ -66,6 +82,21 @@ describe('openai-chat-completions', () => {
         kind: 'failure',
         message: 'Model not loaded',
       });
+    });
+
+    it('appends structured output hint on HTTP error when enabled', async () => {
+      const fetchFn = vi.fn().mockResolvedValue(
+        new Response(JSON.stringify({ error: { message: 'Schema too large' } }), { status: 400 }),
+      );
+      const result = await postChatCompletion(
+        { ...request, structuredOutput: true, importSchema: { type: 'object' } },
+        fetchFn,
+      );
+      expect(result.kind).toBe('failure');
+      if (result.kind === 'failure') {
+        expect(result.message).toContain('Schema too large');
+        expect(result.message).toContain('Structured output');
+      }
     });
 
     it('falls back to the HTTP status when the error body has no message', async () => {
@@ -129,7 +160,7 @@ describe('openai-chat-completions', () => {
         baseUrl: 'http://localhost:1234/v1',
         apiKey: 'k',
         model: 'm',
-        userContent: 'prompt',
+        messages: MESSAGES,
       },
       fetchFn,
     );

@@ -8,6 +8,7 @@ const FIELD_NAMES: Readonly<Record<keyof LlmProfileFieldsValue, string>> = {
   baseUrl: 'Base URL',
   apiKey: 'API key',
   model: 'Model',
+  structuredOutput: 'Structured output',
 };
 
 export function emptyLlmProfileFieldsValue(): LlmProfileFieldsValue {
@@ -16,6 +17,7 @@ export function emptyLlmProfileFieldsValue(): LlmProfileFieldsValue {
     baseUrl: DEFAULT_LLM_BASE_URL,
     apiKey: '',
     model: '',
+    structuredOutput: false,
   };
 }
 
@@ -25,6 +27,7 @@ export function llmProfileFieldsFromProfile(profile: LlmProfileDraft): LlmProfil
     baseUrl: profile.baseUrl,
     apiKey: profile.apiKey,
     model: profile.model,
+    structuredOutput: profile.structuredOutput,
   };
 }
 

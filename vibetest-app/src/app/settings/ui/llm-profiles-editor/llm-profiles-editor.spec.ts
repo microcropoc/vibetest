@@ -10,6 +10,7 @@ const PROFILE: LlmProfile = {
   baseUrl: 'http://localhost:1234/v1',
   apiKey: 'sk-secret-1234',
   model: 'model-1',
+  structuredOutput: true,
 };
 
 type Fixture = ComponentFixture<LlmProfilesEditorComponent>;
@@ -60,6 +61,7 @@ describe('LlmProfilesEditorComponent', () => {
     expect(text).toContain('Local');
     expect(text).toContain('1234');
     expect(text).not.toContain('sk-secret');
+    expect(text).toContain('json_schema');
   });
 
   it('emits a new profile from the add form', async () => {

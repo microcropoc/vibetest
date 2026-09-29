@@ -62,6 +62,7 @@ describe('SettingsRepository', () => {
         baseUrl: 'http://localhost:1234/v1',
         apiKey: 'key',
         model: 'm',
+        structuredOutput: false,
       },
     ];
     await repo.setLlmProfiles(profiles);
@@ -75,5 +76,24 @@ describe('SettingsRepository', () => {
     await db.settings.put({ key: 'llmProfiles', value: [{ bad: true }] });
     const repo = SettingsRepository.forDb(db);
     expect(await repo.getLlmProfiles()).toEqual([]);
+  });
+
+  it('loads legacy llm profiles without structuredOutput as false', async () => {
+    db = createTestVibetestDb();
+    await db.settings.put({
+      key: 'llmProfiles',
+      value: [
+        {
+          id: '550e8400-e29b-41d4-a716-446655440000',
+          label: 'Local',
+          baseUrl: 'http://localhost:1234/v1',
+          apiKey: 'key',
+          model: 'm',
+        },
+      ],
+    });
+    const repo = SettingsRepository.forDb(db);
+    const [profile] = await repo.getLlmProfiles();
+    expect(profile?.structuredOutput).toBe(false);
   });
 });

@@ -1,6 +1,11 @@
 import { unwrapJsonImportText } from '../courses/unwrap-json-import-text';
 
-import { extractFirstJsonFence } from './extract-first-json-fence';
+import {
+  extractFirstJsonFence,
+  extractFirstPlainJsonFence,
+  hasUnclosedJsonFence,
+} from './extract-first-json-fence';
+import { LLM_CONTEXT_LENGTH_HINT } from './llm-import-context-hint';
 
 /** Normalizes LLM output to import-parse input (raw JSON or strict fence). */
 export function prepareLlmImportText(rawContent: string): string {
@@ -12,12 +17,22 @@ export function prepareLlmImportText(rawContent: string): string {
   try {
     return unwrapJsonImportText(trimmed);
   } catch {
-    const fence = extractFirstJsonFence(trimmed);
-    if (fence === undefined) {
-      throw new Error(
-        'Ответ не содержит JSON или блок ```json … ``` для импорта.',
-      );
+    const jsonFence = extractFirstJsonFence(trimmed);
+    if (jsonFence !== undefined) {
+      return unwrapJsonImportText(jsonFence);
     }
-    return unwrapJsonImportText(fence);
+
+    const plainJson = extractFirstPlainJsonFence(trimmed);
+    if (plainJson !== undefined) {
+      return plainJson;
+    }
+
+    if (hasUnclosedJsonFence(trimmed)) {
+      throw new Error(`Блок \`\`\`json не закрыт — ответ обрезан. ${LLM_CONTEXT_LENGTH_HINT}`);
+    }
+
+    throw new Error(
+      `Ответ не содержит JSON для импорта. ${LLM_CONTEXT_LENGTH_HINT}`,
+    );
   }
 }

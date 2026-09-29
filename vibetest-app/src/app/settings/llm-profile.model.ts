@@ -5,6 +5,7 @@ export interface LlmProfile {
   readonly baseUrl: string;
   readonly apiKey: string;
   readonly model: string;
+  readonly structuredOutput: boolean;
 }
 
 export type LlmProfileDraft = Omit<LlmProfile, 'id'>;

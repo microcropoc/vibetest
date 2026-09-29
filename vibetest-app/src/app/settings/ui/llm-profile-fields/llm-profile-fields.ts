@@ -12,7 +12,7 @@ export class LlmProfileFieldsComponent {
   readonly valueChange = output<LlmProfileFieldsValue>();
 
   protected onFieldInput(
-    field: keyof LlmProfileFieldsValue,
+    field: 'label' | 'baseUrl' | 'apiKey' | 'model',
     event: Event,
   ): void {
     const target = event.target;
@@ -22,6 +22,17 @@ export class LlmProfileFieldsComponent {
     this.valueChange.emit({
       ...this.value(),
       [field]: target.value,
+    });
+  }
+
+  protected onStructuredOutputChange(event: Event): void {
+    const target = event.target;
+    if (!(target instanceof HTMLInputElement)) {
+      return;
+    }
+    this.valueChange.emit({
+      ...this.value(),
+      structuredOutput: target.checked,
     });
   }
 }

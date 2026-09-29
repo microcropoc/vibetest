@@ -17,6 +17,7 @@ const SAVED_PROFILE: LlmProfile = {
   baseUrl: 'http://localhost:1234/v1',
   apiKey: 'k',
   model: 'm',
+  structuredOutput: false,
 };
 
 type Fixture = ComponentFixture<CourseGenerationPage>;
@@ -65,7 +66,7 @@ function generateButton(fixture: Fixture): HTMLButtonElement {
 
 describe('CourseGenerationPage', () => {
   let db: VibetestDb;
-  let completeUserPrompt: ReturnType<typeof vi.fn>;
+  let complete: ReturnType<typeof vi.fn>;
   let importCourseWithNewIds: ReturnType<typeof vi.fn>;
 
   beforeEach(async () => {
@@ -78,7 +79,7 @@ describe('CourseGenerationPage', () => {
       }),
     );
 
-    completeUserPrompt = vi.fn();
+    complete = vi.fn();
     importCourseWithNewIds = vi.fn();
 
     await TestBed.configureTestingModule({
@@ -86,7 +87,7 @@ describe('CourseGenerationPage', () => {
       providers: [
         provideRouter([]),
         { provide: SettingsRepository, useValue: SettingsRepository.forDb(db) },
-        { provide: LmStudioClient, useValue: { completeUserPrompt } },
+        { provide: LmStudioClient, useValue: { complete } },
         { provide: CourseImportService, useValue: { importCourseWithNewIds } },
       ],
     }).compileComponents();
@@ -95,6 +96,50 @@ describe('CourseGenerationPage', () => {
   afterEach(async () => {
     vi.unstubAllGlobals();
     await destroyTestVibetestDb(db);
+  });
+
+  it('shows estimated prompt token count before generation', async () => {
+    await SettingsRepository.forDb(db).setLlmProfiles([SAVED_PROFILE]);
+    const fixture = await createReadyPage(true);
+    await typeDescription(fixture, 'Курс');
+    expect(root(fixture).textContent).toContain('Промт ≈');
+    expect(root(fixture).textContent).toContain('Context Length');
+  });
+
+  it('shows context hint and skips import for unclosed json fence', async () => {
+    await SettingsRepository.forDb(db).setLlmProfiles([SAVED_PROFILE]);
+    complete.mockResolvedValue({
+      kind: 'success',
+      content: 'Prose\n```json\n{"schemaVersion":1}',
+    });
+    const fixture = await createReadyPage(true);
+    await typeDescription(fixture, 'Курс');
+    generateButton(fixture).click();
+    await waitFor(fixture, () => (root(fixture).textContent ?? '').includes('не закрыт'));
+    expect(importCourseWithNewIds).not.toHaveBeenCalled();
+  });
+
+  it('passes import schema when structured output is enabled', async () => {
+    const structuredProfile: LlmProfile = { ...SAVED_PROFILE, structuredOutput: true };
+    await SettingsRepository.forDb(db).setLlmProfiles([structuredProfile]);
+    complete.mockResolvedValue({ kind: 'success', content: '{"schemaVersion":1}' });
+    importCourseWithNewIds.mockResolvedValue({
+      ok: true,
+      courseId: '11111111-1111-4111-8111-111111111111',
+      action: 'created',
+    });
+    const fixture = await createReadyPage(true);
+    await typeDescription(fixture, 'Курс');
+    generateButton(fixture).click();
+    await waitFor(fixture, () => complete.mock.calls.length > 0);
+    expect(complete).toHaveBeenCalledWith(
+      structuredProfile,
+      expect.any(Array),
+      expect.objectContaining({ importSchema: expect.objectContaining({ schemaVersion: 1 }) }),
+    );
+    const [, messages] = complete.mock.calls[0]!;
+    expect(messages[0]?.content).not.toContain('Первая строка ответа');
+    expect(messages[1]?.content).toContain('JSON-объект import-DTO');
   });
 
   it('disables generation until a description is entered', async () => {
@@ -108,7 +153,7 @@ describe('CourseGenerationPage', () => {
 
   it('imports course and shows link on successful generation', async () => {
     await SettingsRepository.forDb(db).setLlmProfiles([SAVED_PROFILE]);
-    completeUserPrompt.mockResolvedValue({
+    complete.mockResolvedValue({
       kind: 'success',
       content: '```json\n{"schemaVersion":1}\n```',
     });
@@ -123,10 +168,16 @@ describe('CourseGenerationPage', () => {
     generateButton(fixture).click();
     await waitFor(fixture, () => (root(fixture).textContent ?? '').includes('Курс импортирован'));
 
-    expect(completeUserPrompt).toHaveBeenCalledWith(
+    expect(complete).toHaveBeenCalledWith(
       SAVED_PROFILE,
-      expect.stringContaining('Курс про CSS'),
-      expect.any(AbortSignal),
+      expect.arrayContaining([
+        expect.objectContaining({ role: 'system' }),
+        expect.objectContaining({
+          role: 'user',
+          content: expect.stringContaining('Курс про CSS'),
+        }),
+      ]),
+      expect.objectContaining({ signal: expect.any(AbortSignal) }),
     );
     expect(importCourseWithNewIds).toHaveBeenCalledWith('{"schemaVersion":1}', {
       validatePracticeSteps: false,
@@ -136,7 +187,7 @@ describe('CourseGenerationPage', () => {
 
   it('shows validation issues and raw response when import fails', async () => {
     await SettingsRepository.forDb(db).setLlmProfiles([SAVED_PROFILE]);
-    completeUserPrompt.mockResolvedValue({ kind: 'success', content: '{"schemaVersion":2}' });
+    complete.mockResolvedValue({ kind: 'success', content: '{"schemaVersion":2}' });
     importCourseWithNewIds.mockResolvedValue({
       ok: false,
       stage: 'zod',
@@ -153,7 +204,7 @@ describe('CourseGenerationPage', () => {
   });
 
   it('saves a new profile once and reuses it on the next generation', async () => {
-    completeUserPrompt.mockResolvedValue({ kind: 'failure', message: 'Model not loaded' });
+    complete.mockResolvedValue({ kind: 'failure', message: 'Model not loaded' });
     const fixture = await createReadyPage(false);
     await typeDescription(fixture, 'Курс');
 
@@ -169,19 +220,22 @@ describe('CourseGenerationPage', () => {
     generateButton(fixture).click();
     await waitFor(fixture, () => (root(fixture).textContent ?? '').includes('Model not loaded'));
     generateButton(fixture).click();
-    await waitFor(fixture, () => completeUserPrompt.mock.calls.length === 2);
+    await waitFor(fixture, () => complete.mock.calls.length === 2);
     await waitFor(fixture, () => !generateButton(fixture).disabled);
 
     const stored = await SettingsRepository.forDb(db).getLlmProfiles();
     expect(stored).toHaveLength(1);
     expect(stored[0]?.label).toBe('LM Studio');
-    expect(completeUserPrompt.mock.calls[1]?.[0]).toEqual(stored[0]);
+    expect(complete.mock.calls[1]?.[0]).toEqual(stored[0]);
+    expect(complete.mock.calls[1]?.[1]).toEqual(
+      expect.arrayContaining([expect.objectContaining({ role: 'user' })]),
+    );
     expect(root(fixture).querySelector('select')?.value).toBe(stored[0]?.id);
   });
 
   it('selects the newly saved profile when other profiles already exist', async () => {
     await SettingsRepository.forDb(db).setLlmProfiles([SAVED_PROFILE]);
-    completeUserPrompt.mockResolvedValue({ kind: 'failure', message: 'Model not loaded' });
+    complete.mockResolvedValue({ kind: 'failure', message: 'Model not loaded' });
     const fixture = await createReadyPage(true);
     await typeDescription(fixture, 'Курс');
 
@@ -211,10 +265,14 @@ describe('CourseGenerationPage', () => {
 
   it('cancels a running request without importing', async () => {
     await SettingsRepository.forDb(db).setLlmProfiles([SAVED_PROFILE]);
-    completeUserPrompt.mockImplementation(
-      (_profile: LlmProfile, _prompt: string, signal: AbortSignal) =>
+    complete.mockImplementation(
+      (
+        _profile: LlmProfile,
+        _messages: unknown,
+        options?: { signal?: AbortSignal },
+      ) =>
         new Promise<ChatCompletionResult>((resolve) => {
-          signal.addEventListener('abort', () =>
+          options?.signal?.addEventListener('abort', () =>
             resolve({ kind: 'failure', message: 'Запрос отменён.' }),
           );
         }),
@@ -234,9 +292,13 @@ describe('CourseGenerationPage', () => {
   it('aborts the request when the page is destroyed', async () => {
     await SettingsRepository.forDb(db).setLlmProfiles([SAVED_PROFILE]);
     let capturedSignal: AbortSignal | undefined;
-    completeUserPrompt.mockImplementation(
-      (_profile: LlmProfile, _prompt: string, signal: AbortSignal) => {
-        capturedSignal = signal;
+    complete.mockImplementation(
+      (
+        _profile: LlmProfile,
+        _messages: unknown,
+        options?: { signal?: AbortSignal },
+      ) => {
+        capturedSignal = options?.signal;
         return new Promise<ChatCompletionResult>(() => undefined);
       },
     );

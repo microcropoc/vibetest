@@ -9,6 +9,13 @@
   } @else if (schemaError(); as schemaErr) {
     <p class="course-generation-page__error" role="alert">{{ schemaErr }}</p>
   } @else {
+    <p class="course-generation-page__status">
+      Промт ≈ {{ estimatedPromptTokens() }} токенов (Context Length в LM Studio должен быть больше, с запасом под ответ).
+    </p>
+    @if (lastPromptTokens(); as promptTokens) {
+      <p class="course-generation-page__status">Фактически в промте: {{ promptTokens }} токенов (usage API).</p>
+    }
+
     <label class="course-generation-page__label">
       Описание курса
       <textarea

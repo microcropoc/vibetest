@@ -11,7 +11,9 @@ import {
   loadBundledCourseImportSchema,
   prettyPrintJson,
 } from '../../../info/bundled-course-schema';
-import { buildCourseGenerationPrompt } from '../../../prompt-generation/build-course-generation-prompt';
+import { isPlainObject } from '../../../execution/is-plain-object';
+import { buildCourseGenerationMessages } from '../../../prompt-generation/build-course-generation-prompt';
+import { estimatePromptTokens } from '../../estimate-prompt-tokens';
 import { SettingsRepository } from '../../../storage/settings-repository';
 import type { LlmProfile } from '../../../settings/llm-profile.model';
 import {
@@ -46,7 +48,9 @@ export class CourseGenerationPage {
 
   protected readonly schemaLoading = signal(true);
   protected readonly schemaText = signal('');
+  protected readonly importSchemaRecord = signal<Record<string, unknown> | null>(null);
   protected readonly schemaError = signal<string | null>(null);
+  protected readonly lastPromptTokens = signal<number | null>(null);
 
   protected readonly profiles = signal<readonly LlmProfile[]>([]);
   protected readonly profileMode = signal<ProfileMode>('saved');
@@ -76,6 +80,14 @@ export class CourseGenerationPage {
     const stage = this.importStage();
     return stage ? importStageLabel(stage) : '';
   });
+
+  protected readonly generationMessages = computed(() =>
+    buildCourseGenerationMessages(this.courseDescription(), this.schemaText()),
+  );
+
+  protected readonly estimatedPromptTokens = computed(() =>
+    estimatePromptTokens(this.generationMessages()),
+  );
 
   private abortController: AbortController | undefined;
 
@@ -138,12 +150,27 @@ export class CourseGenerationPage {
         return;
       }
 
-      const prompt = buildCourseGenerationPrompt(this.courseDescription(), this.schemaText());
-      const completion = await this.lmStudio.completeUserPrompt(
+      const schemaRecord = this.importSchemaRecord();
+      const importSchema =
+        profileResult.profile.structuredOutput && schemaRecord !== null ? schemaRecord : undefined;
+      const messages = buildCourseGenerationMessages(this.courseDescription(), this.schemaText(), {
+        structuredOutput: importSchema !== undefined,
+      });
+      const completion = await this.lmStudio.complete(
         profileResult.profile,
-        prompt,
-        controller.signal,
+        [
+          { role: 'system', content: messages.system },
+          { role: 'user', content: messages.user },
+        ],
+        {
+          signal: controller.signal,
+          importSchema,
+        },
       );
+
+      if (completion.promptTokens !== undefined) {
+        this.lastPromptTokens.set(completion.promptTokens);
+      }
 
       if (completion.kind === 'failure') {
         this.apiError.set(completion.message);
@@ -231,16 +258,21 @@ export class CourseGenerationPage {
     this.importIssues.set([]);
     this.importStage.set(null);
     this.generatedCourseId.set(null);
+    this.lastPromptTokens.set(null);
   }
 
   private async loadSchema(): Promise<void> {
     this.schemaLoading.set(true);
     this.schemaError.set(null);
     this.schemaText.set('');
+    this.importSchemaRecord.set(null);
 
     try {
       const schema = await loadBundledCourseImportSchema();
       this.schemaText.set(prettyPrintJson(schema));
+      if (isPlainObject(schema)) {
+        this.importSchemaRecord.set(schema);
+      }
     } catch {
       this.schemaError.set('Не удалось загрузить course-import.schema.json.');
     } finally {

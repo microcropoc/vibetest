@@ -15,7 +15,12 @@
           <li class="llm-profiles-editor__item">
             <div class="llm-profiles-editor__item-main">
               <span class="llm-profiles-editor__item-label">{{ profile.label }}</span>
-              <span class="llm-profiles-editor__item-meta">{{ profile.model }} · {{ maskApiKey(profile.apiKey) }}</span>
+              <span class="llm-profiles-editor__item-meta">
+                {{ profile.model }} · {{ maskApiKey(profile.apiKey) }}
+                @if (profile.structuredOutput) {
+                  · json_schema
+                }
+              </span>
             </div>
             <div class="llm-profiles-editor__item-actions">
               <button type="button" class="llm-profiles-editor__button" (click)="onStartEdit(profile)">

@@ -5,7 +5,14 @@ const ID_A = '550e8400-e29b-41d4-a716-446655440000';
 const ID_B = '550e8400-e29b-41d4-a716-446655440001';
 
 function profile(id: string, label: string): LlmProfile {
-  return { id, label, baseUrl: 'http://localhost:1234/v1', apiKey: 'k', model: 'm' };
+  return {
+    id,
+    label,
+    baseUrl: 'http://localhost:1234/v1',
+    apiKey: 'k',
+    model: 'm',
+    structuredOutput: false,
+  };
 }
 
 describe('upsertLlmProfile', () => {
@@ -38,9 +45,22 @@ describe('profileFromFields', () => {
   it('trims text fields and keeps the key as typed', () => {
     expect(
       profileFromFields(
-        { label: ' Local ', baseUrl: ' http://h/v1 ', apiKey: ' k ', model: ' m ' },
+        {
+          label: ' Local ',
+          baseUrl: ' http://h/v1 ',
+          apiKey: ' k ',
+          model: ' m ',
+          structuredOutput: false,
+        },
         ID_A,
       ),
-    ).toEqual({ id: ID_A, label: 'Local', baseUrl: 'http://h/v1', apiKey: ' k ', model: 'm' });
+    ).toEqual({
+      id: ID_A,
+      label: 'Local',
+      baseUrl: 'http://h/v1',
+      apiKey: ' k ',
+      model: 'm',
+      structuredOutput: false,
+    });
   });
 });

@@ -44,4 +44,16 @@
       (input)="onFieldInput('model', $event)"
     />
   </label>
+
+  <label class="llm-profile-fields__checkbox">
+    <input
+      type="checkbox"
+      [checked]="value().structuredOutput"
+      (change)="onStructuredOutputChange($event)"
+    />
+    Structured output (json_schema)
+  </label>
+  <p class="llm-profile-fields__hint">
+    Не каждая модель или сервер LM Studio поддерживает большую схему import-DTO.
+  </p>
 </fieldset>

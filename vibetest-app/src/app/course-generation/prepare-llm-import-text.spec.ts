@@ -15,11 +15,30 @@ describe('prepareLlmImportText', () => {
     );
   });
 
+  it('unwraps a plain fence when body starts with brace', () => {
+    expect(prepareLlmImportText('text\n```\n{"schemaVersion":1}\n```')).toBe('{"schemaVersion":1}');
+  });
+
   it('rejects an empty response', () => {
     expect(() => prepareLlmImportText('  ')).toThrow('Пустой ответ модели.');
   });
 
   it('rejects prose without json', () => {
-    expect(() => prepareLlmImportText('Sorry, I cannot help')).toThrow('```json');
+    expect(() => prepareLlmImportText('Sorry, I cannot help')).toThrow('Context Length');
+  });
+
+  it('accepts raw json whose string fields contain a json fence', () => {
+    const raw = JSON.stringify(
+      { schemaVersion: 1, content: '## X\n\n```json\n{"a":1}\n```' },
+      null,
+      2,
+    );
+    expect(prepareLlmImportText(raw)).toBe(raw);
+  });
+
+  it('rejects an unclosed json fence', () => {
+    expect(() => prepareLlmImportText('Here:\n```json\n{"schemaVersion":1}')).toThrow(
+      'не закрыт',
+    );
   });
 });

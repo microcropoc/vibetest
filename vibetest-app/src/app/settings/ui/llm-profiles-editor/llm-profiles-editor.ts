@@ -101,6 +101,7 @@ function isSameLlmProfile(a: LlmProfile, b: LlmProfile): boolean {
     a.label === b.label &&
     a.baseUrl === b.baseUrl &&
     a.apiKey === b.apiKey &&
-    a.model === b.model
+    a.model === b.model &&
+    a.structuredOutput === b.structuredOutput
   );
 }

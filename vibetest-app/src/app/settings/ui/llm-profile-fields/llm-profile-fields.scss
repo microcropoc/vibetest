@@ -19,6 +19,22 @@
   font-weight: 500;
 }
 
+.llm-profile-fields__checkbox {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0 0 0.5rem;
+  min-height: var(--touch-target-min);
+  font-weight: 500;
+}
+
+.llm-profile-fields__hint {
+  margin: 0 0 1rem;
+  font-size: 0.875rem;
+  color: var(--color-text-muted);
+  line-height: 1.45;
+}
+
 .llm-profile-fields__input {
   width: 100%;
   min-height: var(--touch-target-min);

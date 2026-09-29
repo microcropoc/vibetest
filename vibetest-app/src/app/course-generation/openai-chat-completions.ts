@@ -1,11 +1,18 @@
 import { z } from 'zod';
 
+export type ChatCompletionMessage = {
+  readonly role: 'system' | 'user';
+  readonly content: string;
+};
+
 export type ChatCompletionRequest = {
   readonly baseUrl: string;
   readonly apiKey: string;
   readonly model: string;
-  readonly userContent: string;
+  readonly messages: readonly ChatCompletionMessage[];
   readonly temperature?: number;
+  readonly structuredOutput?: boolean;
+  readonly importSchema?: Record<string, unknown>;
 };
 
 const ChatCompletionResponseSchema = z.object({
@@ -19,6 +26,11 @@ const ChatCompletionResponseSchema = z.object({
       }),
     )
     .min(1),
+  usage: z
+    .object({
+      prompt_tokens: z.number().int().nonnegative(),
+    })
+    .optional(),
 });
 
 const ChatCompletionErrorBodySchema = z.object({
@@ -28,11 +40,13 @@ const ChatCompletionErrorBodySchema = z.object({
 export type ChatCompletionSuccess = {
   readonly kind: 'success';
   readonly content: string;
+  readonly promptTokens?: number;
 };
 
 export type ChatCompletionFailure = {
   readonly kind: 'failure';
   readonly message: string;
+  readonly promptTokens?: number;
 };
 
 export type ChatCompletionResult = ChatCompletionSuccess | ChatCompletionFailure;
@@ -44,14 +58,38 @@ export function buildChatCompletionsUrl(baseUrl: string): string {
 
 export function buildChatCompletionsBody(
   model: string,
-  userContent: string,
-  temperature: number = 0.2,
+  messages: readonly ChatCompletionMessage[],
+  options?: {
+    readonly temperature?: number;
+    readonly structuredOutput?: boolean;
+    readonly importSchema?: Record<string, unknown>;
+  },
 ): string {
-  return JSON.stringify({
+  const temperature = options?.temperature ?? 0.2;
+  const body: Record<string, unknown> = {
     model: model.trim(),
-    messages: [{ role: 'user', content: userContent }],
+    messages: [...messages],
     temperature,
-  });
+  };
+
+  if (options?.structuredOutput === true && options.importSchema !== undefined) {
+    body['response_format'] = {
+      type: 'json_schema',
+      json_schema: {
+        name: 'course_import',
+        // Bundled schema uses $defs/oneOf and optional fields; OpenAI strict mode rejects it.
+        strict: false,
+        schema: options.importSchema,
+      },
+    };
+  }
+
+  return JSON.stringify(body);
+}
+
+function promptTokensFromBody(json: unknown): number | undefined {
+  const parsed = ChatCompletionResponseSchema.safeParse(json);
+  return parsed.success ? parsed.data.usage?.prompt_tokens : undefined;
 }
 
 export function parseChatCompletionResponseBody(
@@ -62,20 +100,23 @@ export function parseChatCompletionResponseBody(
     return { kind: 'failure', message: 'Некорректный формат ответа API.' };
   }
 
+  const promptTokens = parsed.data.usage?.prompt_tokens;
   const choice = parsed.data.choices[0]!;
   if (choice.finish_reason === 'length') {
     return {
       kind: 'failure',
-      message: 'Ответ модели обрезан (finish_reason: length). Уменьшите курс или увеличьте лимит токенов.',
+      message:
+        'Ответ модели обрезан (finish_reason: length). Уменьшите курс или увеличьте лимит токенов.',
+      promptTokens,
     };
   }
 
   const content = choice.message.content;
   if (content === null || content.trim().length === 0) {
-    return { kind: 'failure', message: 'Пустой текст в ответе модели.' };
+    return { kind: 'failure', message: 'Пустой текст в ответе модели.', promptTokens };
   }
 
-  return { kind: 'success', content };
+  return { kind: 'success', content, promptTokens };
 }
 
 const ABORTED: ChatCompletionFailure = { kind: 'failure', message: 'Запрос отменён.' };
@@ -83,6 +124,9 @@ const ABORTED: ChatCompletionFailure = { kind: 'failure', message: 'Запрос
 function isAbortError(err: unknown): boolean {
   return err instanceof DOMException && err.name === 'AbortError';
 }
+
+const STRUCTURED_OUTPUT_HINT =
+  ' Попробуйте выключить Structured output в профиле.';
 
 export async function postChatCompletion(
   request: ChatCompletionRequest,
@@ -98,11 +142,11 @@ export async function postChatCompletion(
         'Content-Type': 'application/json',
         Authorization: `Bearer ${request.apiKey}`,
       },
-      body: buildChatCompletionsBody(
-        request.model,
-        request.userContent,
-        request.temperature,
-      ),
+      body: buildChatCompletionsBody(request.model, request.messages, {
+        temperature: request.temperature,
+        structuredOutput: request.structuredOutput,
+        importSchema: request.importSchema,
+      }),
       signal,
     });
   } catch (err: unknown) {
@@ -128,15 +172,22 @@ export async function postChatCompletion(
     };
   }
 
+  const promptTokens = promptTokensFromBody(body);
+
   if (!response.ok) {
     const errorBody = ChatCompletionErrorBodySchema.safeParse(body);
-    return {
-      kind: 'failure',
-      message: errorBody.success
-        ? errorBody.data.error.message
-        : `Ошибка API (HTTP ${response.status}).`,
-    };
+    let message = errorBody.success
+      ? errorBody.data.error.message
+      : `Ошибка API (HTTP ${response.status}).`;
+    if (request.structuredOutput === true) {
+      message += STRUCTURED_OUTPUT_HINT;
+    }
+    return { kind: 'failure', message, promptTokens };
   }
 
-  return parseChatCompletionResponseBody(body);
+  const result = parseChatCompletionResponseBody(body);
+  if (result.promptTokens === undefined && promptTokens !== undefined) {
+    return { ...result, promptTokens };
+  }
+  return result;
 }

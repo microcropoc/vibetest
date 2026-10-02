@@ -3,6 +3,8 @@
 
   @if (showFailure()) {
     <p class="quiz-step-ui__error" role="alert">Неверный ответ. Попробуйте снова или нажмите «Повторить».</p>
+  } @else if (showSuccess()) {
+    <p class="quiz-step-ui__success" role="status">Верно! Шаг пройден.</p>
   }
 
   <fieldset class="quiz-step-ui__options">

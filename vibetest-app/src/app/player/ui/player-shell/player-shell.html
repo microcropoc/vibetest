@@ -29,6 +29,7 @@
                 [step]="currentStep"
                 [selectedIndices]="quizSelectedIndices()"
                 [showFailure]="quizShowFailure()"
+                [showSuccess]="quizShowSuccess()"
                 (selectionChange)="onQuizSelection($event)"
                 (submitAnswer)="onQuizSubmit()"
               />

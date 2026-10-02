@@ -16,6 +16,7 @@ export class QuizStepUiComponent {
   readonly step = input.required<QuizStep>();
   readonly selectedIndices = input<readonly number[]>([]);
   readonly showFailure = input(false);
+  readonly showSuccess = input(false);
 
   readonly selectionChange = output<readonly number[]>();
   readonly submitAnswer = output<void>();

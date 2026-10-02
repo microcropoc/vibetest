@@ -16,6 +16,14 @@
   color: var(--color-error-text);
 }
 
+.quiz-step-ui__success {
+  margin: 0 0 1rem;
+  padding: 0.65rem 0.85rem;
+  border-radius: 4px;
+  background: var(--color-success-bg);
+  color: var(--color-success-text);
+}
+
 .quiz-step-ui__options {
   margin: 0 0 1rem;
   padding: 0;

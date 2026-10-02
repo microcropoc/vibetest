@@ -92,4 +92,26 @@ describe('QuizStepUiComponent', () => {
     const root = fixture.nativeElement as HTMLElement;
     expect(root.querySelector('[role="alert"]')?.textContent).toContain('Неверный ответ');
   });
+
+  it('shows success message when showSuccess is true', async () => {
+    const fixture = TestBed.createComponent(QuizStepUiComponent);
+    fixture.componentRef.setInput('step', quizStep);
+    fixture.componentRef.setInput('showSuccess', true);
+    await fixture.whenStable();
+    const root = fixture.nativeElement as HTMLElement;
+    expect(root.querySelector('.quiz-step-ui__success[role="status"]')?.textContent).toContain(
+      'Верно! Шаг пройден.',
+    );
+  });
+
+  it('shows only the failure when both flags are set', async () => {
+    const fixture = TestBed.createComponent(QuizStepUiComponent);
+    fixture.componentRef.setInput('step', quizStep);
+    fixture.componentRef.setInput('showFailure', true);
+    fixture.componentRef.setInput('showSuccess', true);
+    await fixture.whenStable();
+    const root = fixture.nativeElement as HTMLElement;
+    expect(root.querySelector('.quiz-step-ui__error')).toBeTruthy();
+    expect(root.querySelector('.quiz-step-ui__success')).toBeNull();
+  });
 });

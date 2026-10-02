@@ -6,6 +6,7 @@ import {
   practiceDraftFromSnapshot,
 } from '../../practice-step-view';
 import { PlayerOrchestratorService } from '../../player-orchestrator.service';
+import { quizShowsSuccess } from '../../quiz-step-view';
 import type { StepProgressSnapshot } from '../../step-engine/step-progress-snapshot';
 import { PracticeStepShellComponent } from '../practice-step-shell/practice-step-shell';
 import { QuizStepUiComponent } from '../quiz-step-ui/quiz-step-ui';
@@ -42,6 +43,11 @@ export class PlayerShellComponent {
   });
 
   protected readonly quizShowFailure = computed(() => this.snapshot()?.lastCheckFailed ?? false);
+
+  protected readonly quizShowSuccess = computed(() => {
+    const step = this.step();
+    return step?.type === 'quiz' && quizShowsSuccess(step, this.snapshot());
+  });
 
   protected readonly practiceDraft = computed((): string => {
     const step = this.step();

@@ -8,10 +8,10 @@ import {
   loadBundledCourseImportSchema,
   loadBundledCourseOutlineSchema,
   loadBundledModuleImportSchema,
-  prettyPrintJson,
 } from '../../../info/bundled-course-schema';
 import {
   buildFirstModuleCourseMessages,
+  buildModuleMessages,
   buildOutlineMessages,
 } from '../../../prompt-generation/build-staged-generation-messages';
 import {
@@ -20,6 +20,7 @@ import {
   type LlmProfileFieldsValue,
 } from '../../../settings/llm-profile-fields-value';
 import type { LlmProfile } from '../../../settings/llm-profile.model';
+import { isValidLlmContextLength } from '../../../settings/parse-llm-profiles';
 import { LlmProfileFieldsComponent } from '../../../settings/ui/llm-profile-fields/llm-profile-fields';
 import { profileFromFields, upsertLlmProfile } from '../../../settings/upsert-llm-profile';
 import { SettingsRepository } from '../../../storage/settings-repository';
@@ -68,8 +69,12 @@ const ESTIMATE_OUTLINE: CourseOutline = {
   modules: [{ title: '', summary: '', steps: [] }],
 };
 
+/** Room left for the model's answer (one module of JSON) on top of the prompt. */
+const RESPONSE_TOKEN_RESERVE = 4096;
+
+/** Compact JSON: indentation would only spend the model's context window. */
 function generationSchema(schema: unknown): GenerationSchema {
-  return { text: prettyPrintJson(schema), record: isPlainObject(schema) ? schema : null };
+  return { text: JSON.stringify(schema), record: isPlainObject(schema) ? schema : null };
 }
 
 @Component({
@@ -136,23 +141,43 @@ export class CourseGenerationPage {
     return stage ? importStageLabel(stage) : '';
   });
 
-  /** Largest stage prompt: stage 1 or stage 2 with the course-import schema. */
+  /** Largest stage prompt: the plan, the course with module 1, or one more module. */
   protected readonly estimatedPromptTokens = computed(() => {
     const schemas = this.schemas();
     if (schemas === null) {
       return 0;
     }
     const description = this.courseDescription();
+    const outline = this.generationState().outline ?? ESTIMATE_OUTLINE;
     return Math.max(
       estimatePromptTokens(buildOutlineMessages(description, schemas.outline.text)),
       estimatePromptTokens(
-        buildFirstModuleCourseMessages(
-          description,
-          this.generationState().outline ?? ESTIMATE_OUTLINE,
-          schemas.courseImport.text,
-        ),
+        buildFirstModuleCourseMessages(description, outline, schemas.courseImport.text),
       ),
+      estimatePromptTokens(buildModuleMessages(outline, 0, schemas.moduleImport.text)),
     );
+  });
+
+  protected readonly responseTokenReserve = RESPONSE_TOKEN_RESERVE;
+
+  private readonly activeContextLength = computed((): number | null => {
+    if (this.profileMode() === 'new') {
+      const typed = this.newProfileFields().contextLength;
+      return typed !== null && isValidLlmContextLength(typed) ? typed : null;
+    }
+    const id = this.selectedProfileId();
+    return this.profiles().find((p) => p.id === id)?.contextLength ?? null;
+  });
+
+  /** Profile Context Length when the largest stage prompt plus the answer reserve exceeds it. */
+  protected readonly overflowContextLength = computed((): number | null => {
+    const contextLength = this.activeContextLength();
+    if (contextLength === null || this.schemas() === null) {
+      return null;
+    }
+    return this.estimatedPromptTokens() + RESPONSE_TOKEN_RESERVE > contextLength
+      ? contextLength
+      : null;
   });
 
   private abortController: AbortController | undefined;

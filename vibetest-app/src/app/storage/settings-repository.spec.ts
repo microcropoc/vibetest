@@ -63,6 +63,7 @@ describe('SettingsRepository', () => {
         apiKey: 'key',
         model: 'm',
         structuredOutput: false,
+        contextLength: 8192,
       },
     ];
     await repo.setLlmProfiles(profiles);
@@ -78,7 +79,7 @@ describe('SettingsRepository', () => {
     expect(await repo.getLlmProfiles()).toEqual([]);
   });
 
-  it('loads legacy llm profiles without structuredOutput as false', async () => {
+  it('loads legacy llm profiles without structuredOutput and contextLength', async () => {
     db = createTestVibetestDb();
     await db.settings.put({
       key: 'llmProfiles',
@@ -95,5 +96,6 @@ describe('SettingsRepository', () => {
     const repo = SettingsRepository.forDb(db);
     const [profile] = await repo.getLlmProfiles();
     expect(profile?.structuredOutput).toBe(false);
+    expect(profile?.contextLength).toBeNull();
   });
 });

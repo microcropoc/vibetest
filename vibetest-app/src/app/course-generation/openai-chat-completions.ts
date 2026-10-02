@@ -1,5 +1,7 @@
 import { z } from 'zod';
 
+import { contextOverflowMessage } from './context-overflow-message';
+
 export type ChatCompletionMessage = {
   readonly role: 'system' | 'user';
   readonly content: string;
@@ -34,8 +36,17 @@ const ChatCompletionResponseSchema = z.object({
 });
 
 const ChatCompletionErrorBodySchema = z.object({
-  error: z.object({ message: z.string().min(1) }),
+  error: z.union([z.string().min(1), z.object({ message: z.string().min(1) })]),
 });
+
+function serverErrorText(body: unknown): string | null {
+  const parsed = ChatCompletionErrorBodySchema.safeParse(body);
+  if (!parsed.success) {
+    return null;
+  }
+  const error = parsed.data.error;
+  return typeof error === 'string' ? error : error.message;
+}
 
 export type ChatCompletionSuccess = {
   readonly kind: 'success';
@@ -185,10 +196,12 @@ export async function postChatCompletion(
   const promptTokens = promptTokensFromBody(body);
 
   if (!response.ok) {
-    const errorBody = ChatCompletionErrorBodySchema.safeParse(body);
-    let message = errorBody.success
-      ? errorBody.data.error.message
-      : `Ошибка API (HTTP ${response.status}).`;
+    const serverText = serverErrorText(body);
+    const overflow = contextOverflowMessage(serverText ?? JSON.stringify(body) ?? '');
+    if (overflow !== null) {
+      return { kind: 'failure', message: overflow, promptTokens };
+    }
+    let message = serverText ?? `Ошибка API (HTTP ${response.status}).`;
     if (request.structuredOutput === true) {
       message += STRUCTURED_OUTPUT_HINT;
     }

@@ -109,6 +109,66 @@ describe('openai-chat-completions', () => {
       }
     });
 
+    it('uses a string error from an HTTP error body', async () => {
+      const fetchFn = vi.fn().mockResolvedValue(
+        new Response(JSON.stringify({ error: 'Model not loaded' }), { status: 400 }),
+      );
+      expect(await postChatCompletion(request, fetchFn)).toEqual({
+        kind: 'failure',
+        message: 'Model not loaded',
+      });
+    });
+
+    it('explains a context overflow from a string error without the structured output hint', async () => {
+      const fetchFn = vi.fn().mockResolvedValue(
+        new Response(
+          JSON.stringify({
+            error: 'request (8774 tokens) exceeds the available context size (8192 tokens)',
+          }),
+          { status: 400 },
+        ),
+      );
+      const result = await postChatCompletion(
+        { ...request, structuredOutput: true, importSchema: { type: 'object' } },
+        fetchFn,
+      );
+      expect(result).toEqual({
+        kind: 'failure',
+        message:
+          'Промт этапа (≈8774 токенов) не помещается в контекст модели (8192). ' +
+          'Увеличьте Context Length в LM Studio или выберите модель с бóльшим контекстом.',
+      });
+    });
+
+    it('explains a context overflow from error.message', async () => {
+      const fetchFn = vi.fn().mockResolvedValue(
+        new Response(
+          JSON.stringify({
+            error: {
+              message: 'request (9000 tokens) exceeds the available context size (4096 tokens)',
+            },
+          }),
+          { status: 400 },
+        ),
+      );
+      const result = await postChatCompletion(request, fetchFn);
+      expect(result.kind === 'failure' && result.message).toContain(
+        '(≈9000 токенов) не помещается в контекст модели (4096)',
+      );
+    });
+
+    it('detects a context overflow in an unrecognized error body', async () => {
+      const fetchFn = vi.fn().mockResolvedValue(
+        new Response(JSON.stringify({ detail: { code: 'context_length_exceeded' } }), {
+          status: 400,
+        }),
+      );
+      const result = await postChatCompletion(request, fetchFn);
+      expect(result.kind === 'failure' && result.message).toContain(
+        'Промт этапа не помещается в контекст модели.',
+      );
+    });
+
     it('falls back to the HTTP status when the error body has no message', async () => {
       const fetchFn = vi.fn().mockResolvedValue(
         new Response(JSON.stringify({ detail: 'x' }), { status: 401 }),

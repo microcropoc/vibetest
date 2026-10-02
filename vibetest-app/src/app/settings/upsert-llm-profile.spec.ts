@@ -12,6 +12,7 @@ function profile(id: string, label: string): LlmProfile {
     apiKey: 'k',
     model: 'm',
     structuredOutput: false,
+    contextLength: null,
   };
 }
 
@@ -51,6 +52,7 @@ describe('profileFromFields', () => {
           apiKey: ' k ',
           model: ' m ',
           structuredOutput: false,
+          contextLength: 16384,
         },
         ID_A,
       ),
@@ -61,6 +63,7 @@ describe('profileFromFields', () => {
       apiKey: ' k ',
       model: 'm',
       structuredOutput: false,
+      contextLength: 16384,
     });
   });
 });

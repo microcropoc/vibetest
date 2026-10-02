@@ -45,6 +45,24 @@
     />
   </label>
 
+  <label class="llm-profile-fields__label">
+    Context Length
+    <input
+      class="llm-profile-fields__input llm-profile-fields__context-length"
+      type="number"
+      inputmode="numeric"
+      step="1"
+      autocomplete="off"
+      [min]="minContextLength"
+      [value]="value().contextLength ?? ''"
+      (input)="onContextLengthInput($event)"
+    />
+  </label>
+  <p class="llm-profile-fields__hint">
+    Необязательно. Как в LM Studio (Context Length загруженной модели); нужно для предупреждения
+    перед генерацией.
+  </p>
+
   <label class="llm-profile-fields__checkbox">
     <input
       type="checkbox"

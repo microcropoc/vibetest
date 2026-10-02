@@ -20,6 +20,16 @@
   color: var(--color-text-muted);
 }
 
+.course-generation-page__warning {
+  margin: 0.75rem 0 0;
+  padding: 0.5rem 0.75rem;
+  border-left: 4px solid var(--color-warning-accent);
+  border-radius: 4px;
+  background: var(--color-bg-highlight);
+  color: var(--color-text);
+  line-height: 1.5;
+}
+
 .course-generation-page__error {
   margin: 0.75rem 0 0;
   color: var(--color-danger);

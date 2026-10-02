@@ -20,6 +20,9 @@
                 @if (profile.structuredOutput) {
                   · json_schema
                 }
+                @if (profile.contextLength !== null) {
+                  · контекст {{ profile.contextLength }}
+                }
               </span>
             </div>
             <div class="llm-profiles-editor__item-actions">

@@ -24,6 +24,7 @@ const SAVED_PROFILE: LlmProfile = {
   apiKey: 'k',
   model: 'm',
   structuredOutput: false,
+  contextLength: null,
 };
 
 const COURSE_ID = '11111111-1111-4111-8111-111111111111';
@@ -149,6 +150,51 @@ describe('CourseGenerationPage', () => {
     expect(text(fixture)).toContain('Context Length');
   });
 
+  it('warns when the largest stage prompt does not fit the profile Context Length', async () => {
+    await SettingsRepository.forDb(db).setLlmProfiles([{ ...SAVED_PROFILE, contextLength: 4096 }]);
+    const fixture = await createReadyPage(true);
+    await typeDescription(fixture, 'Курс');
+
+    const warning = root(fixture).querySelector('.course-generation-page__warning');
+    expect(warning?.textContent).toContain('не помещается в Context Length профиля (4096)');
+    expect(generateButton(fixture).disabled).toBe(false);
+  });
+
+  it('does not warn when Context Length is large enough or not set', async () => {
+    await SettingsRepository.forDb(db).setLlmProfiles([
+      { ...SAVED_PROFILE, contextLength: 131072 },
+      { ...SAVED_PROFILE, id: '550e8400-e29b-41d4-a716-446655440001', label: 'Unknown' },
+    ]);
+    const fixture = await createReadyPage(true);
+    await typeDescription(fixture, 'Курс');
+    expect(root(fixture).querySelector('.course-generation-page__warning')).toBeNull();
+
+    const select = root(fixture).querySelector('select') as HTMLSelectElement;
+    select.value = '550e8400-e29b-41d4-a716-446655440001';
+    select.dispatchEvent(new Event('change'));
+    await fixture.whenStable();
+    expect(root(fixture).querySelector('.course-generation-page__warning')).toBeNull();
+  });
+
+  it('warns from the Context Length typed into a new profile once it is valid', async () => {
+    const fixture = await createReadyPage(false);
+    await typeDescription(fixture, 'Курс');
+    const contextInput = root(fixture).querySelector(
+      '.llm-profile-fields__context-length',
+    ) as HTMLInputElement;
+    const typeContextLength = async (value: string): Promise<void> => {
+      contextInput.value = value;
+      contextInput.dispatchEvent(new Event('input'));
+      await fixture.whenStable();
+    };
+
+    await typeContextLength('4');
+    expect(root(fixture).querySelector('.course-generation-page__warning')).toBeNull();
+
+    await typeContextLength('4096');
+    expect(root(fixture).querySelector('.course-generation-page__warning')).not.toBeNull();
+  });
+
   it('disables generation until a description is entered', async () => {
     await SettingsRepository.forDb(db).setLlmProfiles([SAVED_PROFILE]);
     const fixture = await createReadyPage(true);
@@ -172,7 +218,7 @@ describe('CourseGenerationPage', () => {
     expect(input.profile).toEqual(SAVED_PROFILE);
     expect(input.description).toBe('Курс про regex');
     expect(input.schemas.outline.record).toEqual({ schemaVersion: 1, title: 'Schema' });
-    expect(input.schemas.moduleImport.text).toContain('"title": "Schema"');
+    expect(input.schemas.moduleImport.text).toBe('{"schemaVersion":1,"title":"Schema"}');
     expect(options?.signal).toBeInstanceOf(AbortSignal);
     expect(root(fixture).querySelector('a.course-generation-page__link')).toBeTruthy();
   });

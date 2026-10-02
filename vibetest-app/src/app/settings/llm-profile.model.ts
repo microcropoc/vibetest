@@ -6,7 +6,12 @@ export interface LlmProfile {
   readonly apiKey: string;
   readonly model: string;
   readonly structuredOutput: boolean;
+  /** Model context window in tokens, as configured in LM Studio; null when unknown. */
+  readonly contextLength: number | null;
 }
+
+export const MIN_LLM_CONTEXT_LENGTH = 512;
+export const MAX_LLM_CONTEXT_LENGTH = 2_000_000;
 
 export type LlmProfileDraft = Omit<LlmProfile, 'id'>;
 

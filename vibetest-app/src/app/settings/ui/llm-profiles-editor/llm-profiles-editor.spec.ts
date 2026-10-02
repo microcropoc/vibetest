@@ -11,6 +11,7 @@ const PROFILE: LlmProfile = {
   apiKey: 'sk-secret-1234',
   model: 'model-1',
   structuredOutput: true,
+  contextLength: 8192,
 };
 
 type Fixture = ComponentFixture<LlmProfilesEditorComponent>;
@@ -62,6 +63,53 @@ describe('LlmProfilesEditorComponent', () => {
     expect(text).toContain('1234');
     expect(text).not.toContain('sk-secret');
     expect(text).toContain('json_schema');
+    expect(text).toContain('контекст 8192');
+  });
+
+  it('saves Context Length as a number and clears it back to null', async () => {
+    buttonByText(fixture, 'Изменить').click();
+    await fixture.whenStable();
+    const contextInput = root(fixture).querySelector(
+      '.llm-profile-fields__context-length',
+    ) as HTMLInputElement;
+    expect(contextInput.value).toBe('8192');
+
+    contextInput.value = '32768';
+    contextInput.dispatchEvent(new Event('input'));
+    await fixture.whenStable();
+    buttonByText(fixture, 'Сохранить').click();
+    await fixture.whenStable();
+    expect(saved).toEqual([{ ...PROFILE, contextLength: 32768 }]);
+
+    fixture.componentRef.setInput('profiles', [saved[0]!]);
+    await fixture.whenStable();
+    buttonByText(fixture, 'Изменить').click();
+    await fixture.whenStable();
+    const clearedInput = root(fixture).querySelector(
+      '.llm-profile-fields__context-length',
+    ) as HTMLInputElement;
+    clearedInput.value = '';
+    clearedInput.dispatchEvent(new Event('input'));
+    await fixture.whenStable();
+    buttonByText(fixture, 'Сохранить').click();
+    await fixture.whenStable();
+    expect(saved[1]).toEqual({ ...PROFILE, contextLength: null });
+  });
+
+  it('rejects a Context Length below the minimum', async () => {
+    buttonByText(fixture, 'Изменить').click();
+    await fixture.whenStable();
+    const contextInput = root(fixture).querySelector(
+      '.llm-profile-fields__context-length',
+    ) as HTMLInputElement;
+    contextInput.value = '100';
+    contextInput.dispatchEvent(new Event('input'));
+    await fixture.whenStable();
+    buttonByText(fixture, 'Сохранить').click();
+    await fixture.whenStable();
+
+    expect(saved).toHaveLength(0);
+    expect(root(fixture).textContent).toContain('Поле «Context Length» должно быть целым числом');
   });
 
   it('emits a new profile from the add form', async () => {

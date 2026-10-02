@@ -12,6 +12,11 @@
     <p class="course-generation-page__status">
       Самый большой промт этапа ≈ {{ estimatedPromptTokens() }} токенов (Context Length в LM Studio должен быть больше, с запасом под ответ).
     </p>
+    @if (overflowContextLength(); as contextLength) {
+      <p class="course-generation-page__warning">
+        Промт этапа ≈{{ estimatedPromptTokens() }} токенов + ≈{{ responseTokenReserve }} на ответ не помещается в Context Length профиля ({{ contextLength }}). Увеличьте Context Length или выберите модель с бóльшим контекстом.
+      </p>
+    }
     @if (lastPromptTokens(); as promptTokens) {
       <p class="course-generation-page__status">Фактически в последнем промте: {{ promptTokens }} токенов (usage API).</p>
     }

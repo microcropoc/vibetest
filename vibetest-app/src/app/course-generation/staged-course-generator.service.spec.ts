@@ -27,6 +27,7 @@ const PROFILE: LlmProfile = {
   apiKey: 'k',
   model: 'm',
   structuredOutput: false,
+  contextLength: null,
 };
 
 const OUTLINE = outlineWithModules('Основы', 'Квантификаторы', 'Группы');

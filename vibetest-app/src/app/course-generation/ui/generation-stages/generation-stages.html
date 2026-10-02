@@ -1,0 +1,37 @@
+<section class="generation-stages" aria-label="Этапы генерации">
+  <h2 class="generation-stages__title">Этапы генерации</h2>
+  <ol class="generation-stages__list">
+    @for (stage of stages(); track stage.id) {
+      <li class="generation-stages__item" [class]="'generation-stages__item--' + stage.status">
+        <span class="generation-stages__label">{{ stage.label }}</span>
+        <span class="generation-stages__status">
+          {{ statusLabel(stage.status) }}
+          @if (stage.attemptLabel; as attemptLabel) {
+            ({{ attemptLabel }})
+          }
+        </span>
+      </li>
+    }
+  </ol>
+
+  @if (outline(); as plan) {
+    <details class="generation-stages__outline" open>
+      <summary>План курса: «{{ plan.title }}»</summary>
+      <ol class="generation-stages__modules">
+        @for (module of plan.modules; track $index) {
+          <li class="generation-stages__module">
+            <span class="generation-stages__module-title">{{ module.title }}</span>
+            <ul class="generation-stages__steps">
+              @for (step of module.steps; track $index) {
+                <li class="generation-stages__step">
+                  <code class="generation-stages__step-type">{{ step.type }}</code>
+                  {{ step.title }}
+                </li>
+              }
+            </ul>
+          </li>
+        }
+      </ol>
+    </details>
+  }
+</section>

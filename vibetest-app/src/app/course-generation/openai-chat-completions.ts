@@ -47,7 +47,11 @@ export type ChatCompletionFailure = {
   readonly kind: 'failure';
   readonly message: string;
   readonly promptTokens?: number;
+  /** Set when the model answered unusably; another attempt may succeed. */
+  readonly retryReason?: ChatCompletionRetryReason;
 };
+
+export type ChatCompletionRetryReason = 'truncated' | 'empty';
 
 export type ChatCompletionResult = ChatCompletionSuccess | ChatCompletionFailure;
 
@@ -108,12 +112,18 @@ export function parseChatCompletionResponseBody(
       message:
         'Ответ модели обрезан (finish_reason: length). Уменьшите курс или увеличьте лимит токенов.',
       promptTokens,
+      retryReason: 'truncated',
     };
   }
 
   const content = choice.message.content;
   if (content === null || content.trim().length === 0) {
-    return { kind: 'failure', message: 'Пустой текст в ответе модели.', promptTokens };
+    return {
+      kind: 'failure',
+      message: 'Пустой текст в ответе модели.',
+      promptTokens,
+      retryReason: 'empty',
+    };
   }
 
   return { kind: 'success', content, promptTokens };

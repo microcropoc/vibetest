@@ -1,7 +1,7 @@
-import type { CourseGenerationMessages } from '../prompt-generation/build-course-generation-prompt';
+import type { StagedGenerationMessages } from '../prompt-generation/build-staged-generation-messages';
 
 /** Rough token estimate for UI (chars / 3). */
-export function estimatePromptTokens(messages: CourseGenerationMessages): number {
+export function estimatePromptTokens(messages: StagedGenerationMessages): number {
   const chars = messages.system.length + messages.user.length;
   return Math.ceil(chars / 3);
 }

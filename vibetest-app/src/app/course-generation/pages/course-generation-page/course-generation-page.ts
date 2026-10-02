@@ -1,33 +1,44 @@
 import { Component, DestroyRef, computed, inject, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 
-import { CourseImportService } from '../../../courses/course-import.service';
-import {
-  formatImportIssue,
-  importStageLabel,
-} from '../../../courses/import-issue-view';
+import { formatImportIssue, importStageLabel } from '../../../courses/import-issue-view';
 import type { ImportIssue, ImportValidationStage } from '../../../courses/import-types';
+import { isPlainObject } from '../../../execution/is-plain-object';
 import {
   loadBundledCourseImportSchema,
+  loadBundledCourseOutlineSchema,
+  loadBundledModuleImportSchema,
   prettyPrintJson,
 } from '../../../info/bundled-course-schema';
-import { isPlainObject } from '../../../execution/is-plain-object';
-import { buildCourseGenerationMessages } from '../../../prompt-generation/build-course-generation-prompt';
-import { estimatePromptTokens } from '../../estimate-prompt-tokens';
-import { SettingsRepository } from '../../../storage/settings-repository';
-import type { LlmProfile } from '../../../settings/llm-profile.model';
+import {
+  buildFirstModuleCourseMessages,
+  buildOutlineMessages,
+} from '../../../prompt-generation/build-staged-generation-messages';
 import {
   emptyLlmProfileFieldsValue,
   llmProfileFieldsError,
   type LlmProfileFieldsValue,
 } from '../../../settings/llm-profile-fields-value';
+import type { LlmProfile } from '../../../settings/llm-profile.model';
 import { LlmProfileFieldsComponent } from '../../../settings/ui/llm-profile-fields/llm-profile-fields';
+import { profileFromFields, upsertLlmProfile } from '../../../settings/upsert-llm-profile';
+import { SettingsRepository } from '../../../storage/settings-repository';
+import type { CourseOutline } from '../../course-outline.model';
+import { estimatePromptTokens } from '../../estimate-prompt-tokens';
 import {
-  profileFromFields,
-  upsertLlmProfile,
-} from '../../../settings/upsert-llm-profile';
-import { LmStudioClient } from '../../lm-studio-client.service';
-import { prepareLlmImportText } from '../../prepare-llm-import-text';
+  buildGenerationStageViews,
+  generationStepLabel,
+  type GenerationAttempt,
+} from '../../generation-stage-view';
+import {
+  INITIAL_STAGED_GENERATION_STATE,
+  StagedCourseGenerator,
+  type GenerationSchema,
+  type GenerationStep,
+  type StagedGenerationOutcome,
+  type StagedGenerationState,
+} from '../../staged-course-generator.service';
+import { GenerationStages } from '../../ui/generation-stages/generation-stages';
 
 type ProfileMode = 'saved' | 'new';
 
@@ -35,20 +46,44 @@ type ProfileResolution =
   | { readonly ok: true; readonly profile: LlmProfile }
   | { readonly ok: false; readonly message: string };
 
+type GenerationSchemas = {
+  readonly outline: GenerationSchema;
+  readonly courseImport: GenerationSchema;
+  readonly moduleImport: GenerationSchema;
+};
+
+type GenerationFailure = {
+  readonly step: GenerationStep;
+  readonly message: string;
+  readonly stage: ImportValidationStage | null;
+  readonly issues: readonly ImportIssue[];
+  readonly rawResponse: string | null;
+};
+
+/** Stand-in plan for the token estimate before stage 1 has produced the real one. */
+const ESTIMATE_OUTLINE: CourseOutline = {
+  schemaVersion: 1,
+  title: '',
+  description: '',
+  modules: [{ title: '', summary: '', steps: [] }],
+};
+
+function generationSchema(schema: unknown): GenerationSchema {
+  return { text: prettyPrintJson(schema), record: isPlainObject(schema) ? schema : null };
+}
+
 @Component({
   selector: 'app-course-generation-page',
-  imports: [RouterLink, LlmProfileFieldsComponent],
+  imports: [RouterLink, LlmProfileFieldsComponent, GenerationStages],
   templateUrl: './course-generation-page.html',
   styleUrl: './course-generation-page.scss',
 })
 export class CourseGenerationPage {
   private readonly settings = inject(SettingsRepository);
-  private readonly lmStudio = inject(LmStudioClient);
-  private readonly importService = inject(CourseImportService);
+  private readonly generator = inject(StagedCourseGenerator);
 
   protected readonly schemaLoading = signal(true);
-  protected readonly schemaText = signal('');
-  protected readonly importSchemaRecord = signal<Record<string, unknown> | null>(null);
+  protected readonly schemas = signal<GenerationSchemas | null>(null);
   protected readonly schemaError = signal<string | null>(null);
   protected readonly lastPromptTokens = signal<number | null>(null);
 
@@ -60,11 +95,14 @@ export class CourseGenerationPage {
 
   protected readonly courseDescription = signal('');
   protected readonly generating = signal(false);
+  protected readonly generationState = signal<StagedGenerationState>(
+    INITIAL_STAGED_GENERATION_STATE,
+  );
+  protected readonly runningStep = signal<GenerationStep | null>(null);
+  protected readonly runningAttempt = signal<GenerationAttempt | null>(null);
+  protected readonly failure = signal<GenerationFailure | null>(null);
   protected readonly apiError = signal<string | null>(null);
-  protected readonly rawModelResponse = signal<string | null>(null);
-  protected readonly importIssues = signal<readonly ImportIssue[]>([]);
-  protected readonly importStage = signal<ImportValidationStage | null>(null);
-  protected readonly generatedCourseId = signal<string | null>(null);
+  protected readonly completed = signal(false);
 
   protected readonly formatIssue = formatImportIssue;
 
@@ -73,42 +111,70 @@ export class CourseGenerationPage {
   );
 
   protected readonly canGenerate = computed(
-    () => !this.generating() && this.schemaText().length > 0 && this.hasDescription(),
+    () => !this.generating() && this.schemas() !== null && this.hasDescription(),
   );
 
-  protected readonly stageHeading = computed((): string => {
-    const stage = this.importStage();
+  protected readonly canResume = computed(() => this.canGenerate() && this.failure() !== null);
+
+  protected readonly started = computed(
+    () => this.generating() || this.failure() !== null || this.generationState().outline !== null,
+  );
+
+  protected readonly stageViews = computed(() =>
+    buildGenerationStageViews(
+      this.generationState(),
+      this.runningStep(),
+      this.runningAttempt(),
+      this.failure()?.step ?? null,
+    ),
+  );
+
+  protected readonly generatedCourseId = computed(() => this.generationState().courseId);
+
+  protected readonly failureStageHeading = computed((): string => {
+    const stage = this.failure()?.stage;
     return stage ? importStageLabel(stage) : '';
   });
 
-  protected readonly generationMessages = computed(() =>
-    buildCourseGenerationMessages(this.courseDescription(), this.schemaText()),
-  );
-
-  protected readonly estimatedPromptTokens = computed(() =>
-    estimatePromptTokens(this.generationMessages()),
-  );
+  /** Largest stage prompt: stage 1 or stage 2 with the course-import schema. */
+  protected readonly estimatedPromptTokens = computed(() => {
+    const schemas = this.schemas();
+    if (schemas === null) {
+      return 0;
+    }
+    const description = this.courseDescription();
+    return Math.max(
+      estimatePromptTokens(buildOutlineMessages(description, schemas.outline.text)),
+      estimatePromptTokens(
+        buildFirstModuleCourseMessages(
+          description,
+          this.generationState().outline ?? ESTIMATE_OUTLINE,
+          schemas.courseImport.text,
+        ),
+      ),
+    );
+  });
 
   private abortController: AbortController | undefined;
 
   constructor() {
     inject(DestroyRef).onDestroy(() => this.abortController?.abort());
-    void this.loadSchema();
+    void this.loadSchemas();
     void this.loadProfiles();
   }
 
   protected onDescriptionInput(event: Event): void {
     const target = event.target;
-    if (!(target instanceof HTMLTextAreaElement)) {
+    if (!(target instanceof HTMLTextAreaElement) || this.generating()) {
       return;
     }
     this.courseDescription.set(target.value);
-    this.clearResult();
+    this.resetGeneration();
   }
 
   protected onProfileModeChange(mode: ProfileMode): void {
     this.profileMode.set(mode);
-    this.clearResult();
+    this.apiError.set(null);
   }
 
   protected onSelectedProfileChange(event: Event): void {
@@ -117,12 +183,12 @@ export class CourseGenerationPage {
       return;
     }
     this.selectedProfileId.set(target.value);
-    this.clearResult();
+    this.apiError.set(null);
   }
 
   protected onNewProfileFieldsChange(value: LlmProfileFieldsValue): void {
     this.newProfileFields.set(value);
-    this.clearResult();
+    this.apiError.set(null);
   }
 
   protected onSaveNewProfileChange(event: Event): void {
@@ -133,12 +199,29 @@ export class CourseGenerationPage {
     this.saveNewProfile.set(target.checked);
   }
 
-  protected async onGenerate(): Promise<void> {
-    if (!this.canGenerate()) {
+  protected onGenerate(): Promise<void> {
+    return this.runGeneration(true);
+  }
+
+  protected onResume(): Promise<void> {
+    return this.runGeneration(false);
+  }
+
+  protected onCancelGenerate(): void {
+    this.abortController?.abort();
+  }
+
+  private async runGeneration(fromScratch: boolean): Promise<void> {
+    const schemas = this.schemas();
+    if (!this.canGenerate() || schemas === null) {
       return;
     }
 
-    this.clearResult();
+    if (fromScratch) {
+      this.resetGeneration();
+    }
+    this.apiError.set(null);
+    this.failure.set(null);
     this.generating.set(true);
     const controller = new AbortController();
     this.abortController = controller;
@@ -150,72 +233,66 @@ export class CourseGenerationPage {
         return;
       }
 
-      const schemaRecord = this.importSchemaRecord();
-      const importSchema =
-        profileResult.profile.structuredOutput && schemaRecord !== null ? schemaRecord : undefined;
-      const messages = buildCourseGenerationMessages(this.courseDescription(), this.schemaText(), {
-        structuredOutput: importSchema !== undefined,
-      });
-      const completion = await this.lmStudio.complete(
-        profileResult.profile,
-        [
-          { role: 'system', content: messages.system },
-          { role: 'user', content: messages.user },
-        ],
+      const result = await this.generator.run(
+        this.generationState(),
+        { profile: profileResult.profile, description: this.courseDescription(), schemas },
         {
           signal: controller.signal,
-          importSchema,
+          callbacks: {
+            onAttempt: (step, attempt, maxAttempts) => {
+              this.runningStep.set(step);
+              this.runningAttempt.set({ attempt, maxAttempts });
+            },
+            onStateChange: (state) => this.generationState.set(state),
+            onPromptTokens: (promptTokens) => this.lastPromptTokens.set(promptTokens),
+          },
         },
       );
-
-      if (completion.promptTokens !== undefined) {
-        this.lastPromptTokens.set(completion.promptTokens);
-      }
-
-      if (completion.kind === 'failure') {
-        this.apiError.set(completion.message);
-        return;
-      }
-      if (controller.signal.aborted) {
-        this.apiError.set('Запрос отменён.');
-        return;
-      }
-
-      this.rawModelResponse.set(completion.content);
-
-      let importText: string;
-      try {
-        importText = prepareLlmImportText(completion.content);
-      } catch (err: unknown) {
-        this.apiError.set(
-          err instanceof Error ? err.message : 'Не удалось извлечь JSON из ответа.',
-        );
-        return;
-      }
-
-      const importResult = await this.importService.importCourseWithNewIds(importText, {
-        validatePracticeSteps: false,
-      });
-
-      if (!importResult.ok) {
-        this.importStage.set(importResult.stage);
-        this.importIssues.set(importResult.issues);
-        return;
-      }
-
-      this.generatedCourseId.set(importResult.courseId);
+      this.generationState.set(result.state);
+      this.applyOutcome(result.outcome, result.state);
     } catch {
-      this.apiError.set('Не удалось сохранить курс.');
+      this.apiError.set('Генерация прервана из-за непредвиденной ошибки.');
     } finally {
       this.generating.set(false);
+      this.runningStep.set(null);
+      this.runningAttempt.set(null);
       if (this.abortController === controller) {
         this.abortController = undefined;
       }
     }
   }
 
-  protected onCancelGenerate(): void {
-    this.abortController?.abort();
+  private applyOutcome(outcome: StagedGenerationOutcome, state: StagedGenerationState): void {
+    if (outcome.kind === 'done') {
+      this.completed.set(true);
+      return;
+    }
+    const label = generationStepLabel(outcome.step, state.outline);
+    if (outcome.kind === 'exhausted') {
+      this.failure.set({
+        step: outcome.step,
+        message: `Этап «${label}» не прошёл проверку после всех попыток.`,
+        stage: outcome.last.stage,
+        issues: outcome.last.issues,
+        rawResponse: outcome.last.rawResponse ?? null,
+      });
+      return;
+    }
+    this.failure.set({
+      step: outcome.step,
+      message: outcome.failure.message,
+      stage: null,
+      issues: [],
+      rawResponse: outcome.failure.rawResponse ?? null,
+    });
+  }
+
+  private resetGeneration(): void {
+    this.generationState.set(INITIAL_STAGED_GENERATION_STATE);
+    this.failure.set(null);
+    this.apiError.set(null);
+    this.completed.set(false);
+    this.lastPromptTokens.set(null);
   }
 
   private async resolveProfileForRequest(): Promise<ProfileResolution> {
@@ -252,29 +329,26 @@ export class CourseGenerationPage {
     return { ok: true, profile };
   }
 
-  private clearResult(): void {
-    this.apiError.set(null);
-    this.rawModelResponse.set(null);
-    this.importIssues.set([]);
-    this.importStage.set(null);
-    this.generatedCourseId.set(null);
-    this.lastPromptTokens.set(null);
-  }
-
-  private async loadSchema(): Promise<void> {
+  private async loadSchemas(): Promise<void> {
     this.schemaLoading.set(true);
     this.schemaError.set(null);
-    this.schemaText.set('');
-    this.importSchemaRecord.set(null);
+    this.schemas.set(null);
 
     try {
-      const schema = await loadBundledCourseImportSchema();
-      this.schemaText.set(prettyPrintJson(schema));
-      if (isPlainObject(schema)) {
-        this.importSchemaRecord.set(schema);
-      }
+      const [outline, courseImport, moduleImport] = await Promise.all([
+        loadBundledCourseOutlineSchema(),
+        loadBundledCourseImportSchema(),
+        loadBundledModuleImportSchema(),
+      ]);
+      this.schemas.set({
+        outline: generationSchema(outline),
+        courseImport: generationSchema(courseImport),
+        moduleImport: generationSchema(moduleImport),
+      });
     } catch {
-      this.schemaError.set('Не удалось загрузить course-import.schema.json.');
+      this.schemaError.set(
+        'Не удалось загрузить схемы генерации (course-outline, course-import, module-import).',
+      );
     } finally {
       this.schemaLoading.set(false);
     }

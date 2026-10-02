@@ -39,6 +39,25 @@ export async function loadBundledModuleImportSchema(
   return response.json();
 }
 
+const BUNDLED_COURSE_OUTLINE_SCHEMA_PATH = 'schemas/course-outline.schema.json';
+
+export function bundledCourseOutlineSchemaUrl(): string {
+  if (typeof document !== 'undefined' && document.baseURI) {
+    return new URL(BUNDLED_COURSE_OUTLINE_SCHEMA_PATH, document.baseURI).href;
+  }
+  return '/schemas/course-outline.schema.json';
+}
+
+export async function loadBundledCourseOutlineSchema(
+  fetchFn: typeof fetch = fetch,
+): Promise<unknown> {
+  const response = await fetchFn(bundledCourseOutlineSchemaUrl());
+  if (!response.ok) {
+    throw new Error(`Failed to load course outline schema (${response.status})`);
+  }
+  return response.json();
+}
+
 function errorMessageForModuleSchema(status: number): Error {
   return new Error(`Failed to load module import schema (${status})`);
 }

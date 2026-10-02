@@ -48,18 +48,28 @@ describe('openai-chat-completions', () => {
     expect(result).toEqual({ kind: 'success', content: '{"a":1}', promptTokens: 9000 });
   });
 
-  it('fails on length finish_reason', () => {
+  it('fails retryably on length finish_reason', () => {
     const result = parseChatCompletionResponseBody({
       choices: [{ message: { content: '{}' }, finish_reason: 'length' }],
     });
     expect(result.kind).toBe('failure');
+    expect(result.kind === 'failure' && result.retryReason).toBe('truncated');
   });
 
-  it('fails on empty content', () => {
+  it('fails retryably on empty content', () => {
     const result = parseChatCompletionResponseBody({
       choices: [{ message: { content: '  ' }, finish_reason: 'stop' }],
     });
-    expect(result).toEqual({ kind: 'failure', message: 'Пустой текст в ответе модели.' });
+    expect(result).toEqual({
+      kind: 'failure',
+      message: 'Пустой текст в ответе модели.',
+      retryReason: 'empty',
+    });
+  });
+
+  it('does not mark a malformed API body as retryable', () => {
+    const result = parseChatCompletionResponseBody({ choices: [] });
+    expect(result.kind === 'failure' && result.retryReason).toBeUndefined();
   });
 
   describe('postChatCompletion failures', () => {

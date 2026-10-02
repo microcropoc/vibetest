@@ -1,0 +1,67 @@
+.generation-stages {
+  margin: 1rem 0 0;
+  min-width: 0;
+}
+
+.generation-stages__title {
+  margin: 0 0 0.5rem;
+  font-size: 1rem;
+}
+
+.generation-stages__list {
+  margin: 0;
+  padding-left: 1.25rem;
+}
+
+.generation-stages__item {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem 0.75rem;
+  margin: 0 0 0.35rem;
+  line-height: 1.45;
+}
+
+.generation-stages__status {
+  color: var(--color-text-muted);
+}
+
+.generation-stages__item--running .generation-stages__status {
+  color: var(--color-accent);
+  font-weight: 600;
+}
+
+.generation-stages__item--done .generation-stages__status {
+  color: var(--color-success);
+}
+
+.generation-stages__item--failed .generation-stages__status {
+  color: var(--color-danger);
+  font-weight: 600;
+}
+
+.generation-stages__outline {
+  margin-top: 0.75rem;
+}
+
+.generation-stages__modules {
+  margin: 0.5rem 0 0;
+  padding-left: 1.25rem;
+}
+
+.generation-stages__module {
+  margin: 0 0 0.5rem;
+}
+
+.generation-stages__module-title {
+  font-weight: 600;
+}
+
+.generation-stages__steps {
+  margin: 0.25rem 0 0;
+  padding-left: 1.25rem;
+  color: var(--color-text-muted);
+}
+
+.generation-stages__step-type {
+  font-size: 0.875em;
+}

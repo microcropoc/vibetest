@@ -1,11 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import {
-  buildCourseGenerationMessages,
-  buildCourseGenerationPrompt,
-  FINAL_USER_REMINDER,
-  FINAL_USER_REMINDER_STRUCTURED,
-} from './build-course-generation-prompt';
+import { buildCourseGenerationPrompt } from './build-course-generation-prompt';
 
 describe('buildCourseGenerationPrompt', () => {
   const schemaSnippet = '{\n  "schemaVersion": 1\n}';
@@ -67,40 +62,5 @@ describe('buildCourseGenerationPrompt', () => {
 
     expect(prompt).toContain('описание не указано');
     expect(prompt).toContain(schemaSnippet);
-  });
-});
-
-describe('buildCourseGenerationMessages', () => {
-  const schemaSnippet = '{\n  "schemaVersion": 1\n}';
-
-  it('puts rules and schema in system and description plus reminder in user', () => {
-    const messages = buildCourseGenerationMessages('Курс про SQL', schemaSnippet);
-
-    expect(messages.system).toContain('import-DTO');
-    expect(messages.system).toContain(schemaSnippet);
-    expect(messages.system).not.toContain('Курс про SQL');
-    expect(messages.user).toContain('Курс про SQL');
-    expect(messages.user.endsWith(FINAL_USER_REMINDER)).toBe(true);
-  });
-
-  it('matches legacy single-string prompt content order', () => {
-    const legacy = buildCourseGenerationPrompt('Курс', schemaSnippet);
-    const messages = buildCourseGenerationMessages('Курс', schemaSnippet);
-    expect(`${messages.system}\n\n${messages.user}`).not.toEqual(legacy);
-    expect(legacy).toContain(messages.system.split('\n\nJSON Schema')[0]);
-  });
-
-  it('asks for raw JSON without a fence when structured output is on', () => {
-    const messages = buildCourseGenerationMessages('Курс', schemaSnippet, {
-      structuredOutput: true,
-    });
-
-    expect(messages.system).not.toContain('Первая строка ответа');
-    expect(messages.system).not.toContain('единственного ```json-блока');
-    expect(messages.system).not.toContain('в том же формате (```json');
-    expect(messages.system).toContain('без fenced-блока');
-    expect(messages.system).toContain('"$js"');
-    expect(messages.system).toContain(schemaSnippet);
-    expect(messages.user.endsWith(FINAL_USER_REMINDER_STRUCTURED)).toBe(true);
   });
 });

@@ -30,7 +30,7 @@ function jsonParseIssue(error: unknown): ImportIssue {
   return { path: 'json', message };
 }
 
-function zodIssues(error: ZodError): readonly ImportIssue[] {
+export function zodIssues(error: ZodError): readonly ImportIssue[] {
   return error.issues.map((issue) => ({
     path: issue.path.length > 0 ? issue.path.join('.') : '(root)',
     message: issue.message,

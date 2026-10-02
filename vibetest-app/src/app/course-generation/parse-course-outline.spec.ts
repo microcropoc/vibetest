@@ -2,7 +2,21 @@ import { describe, expect, it } from 'vitest';
 
 import { VALID_OUTLINE } from './__fixtures__/outline-fixtures';
 import type { CourseOutline } from './course-outline.model';
-import { parseCourseOutline, parseCourseOutlineText } from './parse-course-outline';
+import {
+  findOutlineStepTypeGaps,
+  parseCourseOutline,
+  parseCourseOutlineText,
+} from './parse-course-outline';
+
+const THEORY_ONLY_OUTLINE: CourseOutline = {
+  ...VALID_OUTLINE,
+  modules: [
+    {
+      ...VALID_OUTLINE.modules[0]!,
+      steps: [{ type: 'theory', title: 'Только теория', summary: 'Без svg и quiz' }],
+    },
+  ],
+};
 
 describe('parseCourseOutline', () => {
   it('accepts a valid outline', () => {
@@ -37,21 +51,21 @@ describe('parseCourseOutlineText', () => {
     expect(result.ok === false && result.issues[0]?.path).toBe('modules');
   });
 
-  it('requires theory, svg and quiz in every module', () => {
-    const outline: CourseOutline = {
-      ...VALID_OUTLINE,
-      modules: [
-        {
-          ...VALID_OUTLINE.modules[0]!,
-          steps: [{ type: 'theory', title: 'Только теория', summary: 'Без svg и quiz' }],
-        },
-      ],
-    };
-    const result = parseCourseOutlineText(JSON.stringify(outline));
-    expect(result.ok === false && result.stage).toBe('semantic');
-    expect(result.ok === false && result.issues.map((issue) => issue.message)).toEqual([
-      'В модуле «Основы» нет шага типа svg.',
-      'В модуле «Основы» нет шага типа quiz.',
+  it('accepts modules without svg and quiz steps', () => {
+    const result = parseCourseOutlineText(JSON.stringify(THEORY_ONLY_OUTLINE));
+    expect(result).toEqual({ ok: true, outline: THEORY_ONLY_OUTLINE });
+  });
+});
+
+describe('findOutlineStepTypeGaps', () => {
+  it('lists missing theory, svg and quiz steps per module', () => {
+    expect(findOutlineStepTypeGaps(THEORY_ONLY_OUTLINE)).toEqual([
+      { path: 'modules.0.steps', message: 'В модуле «Основы» нет шага типа svg.' },
+      { path: 'modules.0.steps', message: 'В модуле «Основы» нет шага типа quiz.' },
     ]);
+  });
+
+  it('returns nothing for a complete outline', () => {
+    expect(findOutlineStepTypeGaps(VALID_OUTLINE)).toEqual([]);
   });
 });

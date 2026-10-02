@@ -8,7 +8,7 @@ export type OutlineResponseResult =
   | { readonly kind: 'invalid'; readonly issues: readonly ImportIssue[] }
   | { readonly kind: 'valid'; readonly outline: CourseOutline };
 
-/** Pasted answer of an external chat (raw JSON or ```json fence) → outline, checked as in LM Studio generation. */
+/** Pasted answer of an external chat (raw JSON or ```json fence) → outline, checked as in LM Studio generation (JSON and schema). */
 export function parseOutlineResponse(text: string): OutlineResponseResult {
   if (text.trim().length === 0) {
     return { kind: 'empty' };

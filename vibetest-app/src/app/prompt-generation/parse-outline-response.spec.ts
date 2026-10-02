@@ -29,17 +29,19 @@ describe('parseOutlineResponse', () => {
     expect(result.issues[0]!.message).not.toContain('LM Studio');
   });
 
-  it('reports semantic issues of the outline', () => {
+  it('accepts an outline whose modules lack svg and quiz steps', () => {
     const outline = {
       ...OUTLINE,
       modules: [{ ...OUTLINE.modules[0]!, steps: OUTLINE.modules[0]!.steps.slice(0, 1) }],
     };
 
-    const result = parseOutlineResponse(JSON.stringify(outline));
+    expect(parseOutlineResponse(JSON.stringify(outline))).toEqual({ kind: 'valid', outline });
+  });
+
+  it('reports schema issues of the outline', () => {
+    const result = parseOutlineResponse(JSON.stringify({ ...OUTLINE, modules: [] }));
 
     expect(result.kind).toBe('invalid');
-    expect(result.kind === 'invalid' && result.issues.map((issue) => issue.message)).toContain(
-      'В модуле «Основы» нет шага типа svg.',
-    );
+    expect(result.kind === 'invalid' && result.issues[0]!.path).toBe('modules');
   });
 });

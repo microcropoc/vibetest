@@ -45,5 +45,24 @@ describe('GenerationStages', () => {
     expect(text).toContain('План курса: «Регулярные выражения»');
     expect(text).toContain('Группы');
     expect(text).toContain('Основы: схема');
+    expect(text).not.toContain('Предупреждения плана');
+  });
+
+  it('warns about modules without svg or quiz steps', async () => {
+    const outline = outlineWithModules('Основы');
+    const fixture = TestBed.createComponent(GenerationStages);
+    fixture.componentRef.setInput('stages', STAGES);
+    fixture.componentRef.setInput('outline', {
+      ...outline,
+      modules: [{ ...outline.modules[0]!, steps: outline.modules[0]!.steps.slice(0, 1) }],
+    });
+    await fixture.whenStable();
+
+    const warnings =
+      (fixture.nativeElement as HTMLElement).querySelector('.generation-stages__warnings')
+        ?.textContent ?? '';
+    expect(warnings).toContain('Предупреждения плана');
+    expect(warnings).toContain('В модуле «Основы» нет шага типа svg.');
+    expect(warnings).toContain('В модуле «Основы» нет шага типа quiz.');
   });
 });

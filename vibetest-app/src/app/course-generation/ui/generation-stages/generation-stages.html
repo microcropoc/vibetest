@@ -34,4 +34,15 @@
       </ol>
     </details>
   }
+
+  @if (outlineWarnings().length > 0) {
+    <div class="generation-stages__warnings" role="status">
+      <h3 class="generation-stages__warnings-title">Предупреждения плана</h3>
+      <ul class="generation-stages__warnings-list">
+        @for (warning of outlineWarnings(); track $index) {
+          <li>{{ warning }}</li>
+        }
+      </ul>
+    </div>
+  }
 </section>

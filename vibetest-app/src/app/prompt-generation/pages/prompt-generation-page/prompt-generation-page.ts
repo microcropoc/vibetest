@@ -3,6 +3,7 @@ import { Component, computed, signal } from '@angular/core';
 
 import type { CourseOutline } from '../../../course-generation/course-outline.model';
 import { generationStepLabel } from '../../../course-generation/generation-stage-view';
+import { findOutlineStepTypeGaps } from '../../../course-generation/parse-course-outline';
 import { formatImportIssue } from '../../../courses/import-issue-view';
 import type { ImportIssue } from '../../../courses/import-types';
 import {
@@ -76,6 +77,10 @@ export class PromptGenerationPage {
   protected readonly outlineIssues = computed<readonly ImportIssue[]>(() => {
     const result = this.outlineResult();
     return result.kind === 'invalid' ? result.issues : [];
+  });
+  protected readonly outlineWarnings = computed<readonly ImportIssue[]>(() => {
+    const outline = this.outline();
+    return outline === null ? [] : findOutlineStepTypeGaps(outline);
   });
   protected readonly outlineText = computed(() => {
     const outline = this.outline();

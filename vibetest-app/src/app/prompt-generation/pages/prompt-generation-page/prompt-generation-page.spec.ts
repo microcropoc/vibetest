@@ -172,19 +172,40 @@ describe('PromptGenerationPage', () => {
     await whenPageReady(fixture);
     await switchToStaged(fixture);
 
-    const broken = {
+    await typeInto(
+      fixture,
+      '.prompt-generation-page__outline-response',
+      JSON.stringify({ ...OUTLINE, modules: [] }),
+    );
+
+    expect(root(fixture).textContent).toContain('План не прошёл проверку');
+    expect(root(fixture).querySelector('.prompt-generation-page__issues')?.textContent).toContain(
+      'modules',
+    );
+    expect(stageButton(fixture, 'module-0')).toBeNull();
+  });
+
+  it('accepts an outline with missing step types and shows warnings', async () => {
+    const fixture = TestBed.createComponent(PromptGenerationPage);
+    await whenPageReady(fixture);
+    await switchToStaged(fixture);
+
+    const theoryOnly = {
       ...OUTLINE,
       modules: [{ ...OUTLINE.modules[0]!, steps: OUTLINE.modules[0]!.steps.slice(0, 1) }],
     };
     await typeInto(
       fixture,
       '.prompt-generation-page__outline-response',
-      JSON.stringify(broken),
+      JSON.stringify(theoryOnly),
     );
 
-    expect(root(fixture).textContent).toContain('План не прошёл проверку');
-    expect(root(fixture).textContent).toContain('В модуле «Основы» нет шага типа svg.');
-    expect(stageButton(fixture, 'module-0')).toBeNull();
+    const text = root(fixture).textContent ?? '';
+    expect(text).toContain('План принят: модулей — 1');
+    expect(text).toContain('Предупреждения плана');
+    expect(text).toContain('В модуле «Основы» нет шага типа svg.');
+    expect(text).not.toContain('План не прошёл проверку');
+    expect(stageButton(fixture, 'module-0')).not.toBeNull();
   });
 
   it('offers one prompt per outline module for a valid fenced answer', async () => {
@@ -202,6 +223,7 @@ describe('PromptGenerationPage', () => {
     expect(text).toContain('План принят: модулей — 3');
     expect(text).toContain('Курс и модуль 1: «Основы»');
     expect(text).toContain('Модуль 3 из 3: «Группы»');
+    expect(text).not.toContain('Предупреждения плана');
     expect(root(fixture).querySelectorAll('.prompt-generation-page__module-prompt').length).toBe(3);
 
     stageButton(fixture, 'module-0')!.click();

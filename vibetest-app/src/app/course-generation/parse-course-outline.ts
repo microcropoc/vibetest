@@ -4,7 +4,7 @@ import type { ImportIssue, ImportValidationStage } from '../courses/import-types
 import type { CourseOutline } from './course-outline.model';
 import { CourseOutlineSchema } from './generated/course-outline.zod';
 
-const REQUIRED_STEP_TYPES = ['theory', 'svg', 'quiz'] as const;
+const EXPECTED_STEP_TYPES = ['theory', 'svg', 'quiz'] as const;
 
 export type CourseOutlineParseResult =
   | { readonly ok: true; readonly outline: CourseOutline }
@@ -18,11 +18,11 @@ export function parseCourseOutline(value: unknown): CourseOutline {
   return CourseOutlineSchema.parse(value);
 }
 
-/** Every module must contain at least one theory, svg and quiz step. */
-export function validateCourseOutlineSemantics(outline: CourseOutline): readonly ImportIssue[] {
+/** Warnings, not errors: modules without a theory, svg or quiz step (import does not require them). */
+export function findOutlineStepTypeGaps(outline: CourseOutline): readonly ImportIssue[] {
   const issues: ImportIssue[] = [];
   outline.modules.forEach((module, index) => {
-    for (const type of REQUIRED_STEP_TYPES) {
+    for (const type of EXPECTED_STEP_TYPES) {
       if (!module.steps.some((step) => step.type === type)) {
         issues.push({
           path: `modules.${index}.steps`,
@@ -34,7 +34,7 @@ export function validateCourseOutlineSemantics(outline: CourseOutline): readonly
   return issues;
 }
 
-/** JSON text (already unwrapped from a fence) → outline, with Zod and semantic checks. */
+/** JSON text (already unwrapped from a fence) → outline; checks JSON and schema only. */
 export function parseCourseOutlineText(jsonText: string): CourseOutlineParseResult {
   let value: unknown;
   try {
@@ -47,11 +47,6 @@ export function parseCourseOutlineText(jsonText: string): CourseOutlineParseResu
   const result = CourseOutlineSchema.safeParse(value);
   if (!result.success) {
     return { ok: false, stage: 'zod', issues: zodIssues(result.error) };
-  }
-
-  const semanticIssues = validateCourseOutlineSemantics(result.data);
-  if (semanticIssues.length > 0) {
-    return { ok: false, stage: 'semantic', issues: semanticIssues };
   }
   return { ok: true, outline: result.data };
 }

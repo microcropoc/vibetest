@@ -104,6 +104,31 @@ describe('StagedCourseGenerator', () => {
     ]);
   });
 
+  it('accepts an outline without svg and quiz steps on the first attempt', async () => {
+    const theoryOnly = {
+      ...outlineWithModules('Основы'),
+      modules: [
+        {
+          ...outlineWithModules('Основы').modules[0]!,
+          steps: [{ type: 'theory', title: 'Только теория', summary: 'Без svg и quiz' }],
+        },
+      ],
+    };
+    complete
+      .mockResolvedValueOnce(success(theoryOnly))
+      .mockResolvedValueOnce(success(minimalValidImportJson()));
+    const attempts: [GenerationStep, number][] = [];
+
+    const result = await generator.run(INITIAL_STAGED_GENERATION_STATE, INPUT, {
+      callbacks: { onAttempt: (step, attempt) => attempts.push([step, attempt]) },
+    });
+
+    expect(result.outcome).toEqual({ kind: 'done' });
+    expect(result.state.outline).toEqual(theoryOnly);
+    expect(attempts.filter(([step]) => step.kind === 'outline')).toEqual([[{ kind: 'outline' }, 1]]);
+    expect(complete).toHaveBeenCalledTimes(2);
+  });
+
   it('retries an invalid module with the previous issues and reports attempts', async () => {
     complete
       .mockResolvedValueOnce(success(OUTLINE))

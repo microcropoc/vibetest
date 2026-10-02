@@ -4,6 +4,8 @@ import { outlineWithModules } from '../course-generation/__fixtures__/outline-fi
 
 import { finalUserReminder } from './build-course-generation-prompt';
 import {
+  OUTLINE_MODULE_EXAMPLE,
+  OUTLINE_SELF_CHECK,
   RETRY_NOTE_MAX_ISSUES,
   buildFirstModuleCourseMessages,
   buildModuleMessages,
@@ -27,6 +29,22 @@ describe('buildOutlineMessages', () => {
     expect(messages.system).not.toContain('Курс про regex');
     expect(messages.user).toContain('Курс про regex');
     expect(messages.user.endsWith(finalUserReminder('плана курса', false))).toBe(true);
+  });
+
+  it('shows a module example in system and a self-check before the reminder in user', () => {
+    const messages = buildOutlineMessages('Курс про regex', SCHEMA, {
+      retryIssues: [{ path: 'modules', message: 'Required' }],
+    });
+
+    expect(messages.system).toContain(OUTLINE_MODULE_EXAMPLE);
+    expect(messages.system).toContain('{"type": "svg", "title": "…", "summary": "…"}');
+    const checkAt = messages.user.indexOf(OUTLINE_SELF_CHECK);
+    const retryAt = messages.user.indexOf('Предыдущий ответ отклонён');
+    const reminderAt = messages.user.indexOf(finalUserReminder('плана курса', false));
+    expect(checkAt).toBeGreaterThan(messages.user.indexOf('Курс про regex'));
+    expect(checkAt).toBeLessThan(retryAt);
+    expect(retryAt).toBeLessThan(reminderAt);
+    expect(messages.user).not.toContain('шагов не меньше');
   });
 
   it('asks for raw JSON without a fence when structured output is on', () => {

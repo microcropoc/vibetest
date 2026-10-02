@@ -28,6 +28,17 @@ export type StagedGenerationMessagesOptions = {
 export const RETRY_NOTE_MAX_ISSUES = 10;
 
 const OUTLINE_LABEL = 'плана курса';
+
+export const OUTLINE_MODULE_EXAMPLE = `Пример одного модуля (пример структуры, не содержания):
+{"title": "…", "summary": "…", "steps": [
+  {"type": "theory", "title": "…", "summary": "…"},
+  {"type": "svg", "title": "…", "summary": "…"},
+  {"type": "theory", "title": "…", "summary": "…"},
+  {"type": "quiz", "title": "…", "summary": "…"}
+]}`;
+
+export const OUTLINE_SELF_CHECK =
+  'Перед ответом проверь каждый модуль: в steps есть type theory, svg и quiz.';
 const COURSE_LABEL = 'import-DTO';
 const MODULE_LABEL = 'module-import DTO';
 
@@ -110,6 +121,7 @@ export function buildOutlineMessages(
 - Размер: обычно 3–8 модулей и 4–10 шагов в модуле, если автор не просит иначе; каждый модуль потом генерируется одним ответом модели, поэтому не перегружай модуль.
 - Модули идут от простого к сложному; шаги внутри модуля — в порядке прохождения.
 - summary шага — о чём шаг, без самого содержимого: без текста теории, кода и вариантов ответа.`,
+        OUTLINE_MODULE_EXAMPLE,
         outputFormatInstruction(OUTLINE_LABEL, structuredOutput),
         `Требования к синтаксису JSON (строго):
 - Все строки — корректный JSON: экранируй символы " и \\; без буквальных переводов строк внутри строк.
@@ -120,7 +132,7 @@ ${jsonForbiddenSyntaxRule(structuredOutput)}`,
       outlineSchemaText,
     ),
     user: user(
-      [`Описание курса от автора:\n${authorDescriptionBlock(courseDescription)}`],
+      [`Описание курса от автора:\n${authorDescriptionBlock(courseDescription)}`, OUTLINE_SELF_CHECK],
       OUTLINE_LABEL,
       options,
     ),

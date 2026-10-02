@@ -109,6 +109,16 @@
               <summary>План принят: модулей — {{ plan.modules.length }}</summary>
               <pre class="prompt-generation-page__outline-pre">{{ outlineText() }}</pre>
             </details>
+            @if (outlineWarnings().length > 0) {
+              <div class="prompt-generation-page__warnings" role="status">
+                <p class="prompt-generation-page__warnings-title">Предупреждения плана:</p>
+                <ul class="prompt-generation-page__issues prompt-generation-page__issues--warning">
+                  @for (warning of outlineWarnings(); track warning.path + warning.message) {
+                    <li>{{ formatIssue(warning) }}</li>
+                  }
+                </ul>
+              </div>
+            }
           }
         </li>
 

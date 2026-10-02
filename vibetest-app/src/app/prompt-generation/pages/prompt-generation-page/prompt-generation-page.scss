@@ -145,6 +145,19 @@
   overflow-wrap: anywhere;
 }
 
+.prompt-generation-page__issues--warning {
+  color: var(--color-warning);
+}
+
+.prompt-generation-page__warnings {
+  margin-top: 0.75rem;
+}
+
+.prompt-generation-page__warnings-title {
+  margin: 0;
+  color: var(--color-warning);
+}
+
 .prompt-generation-page__outline-pre {
   margin: 0.5rem 0 0;
   padding: 0.75rem;

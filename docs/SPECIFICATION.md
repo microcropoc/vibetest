@@ -37,7 +37,7 @@ vibetest-app/
 │       ├── statistics/             # страница статистики
 │       ├── import/                 # страница импорта
 │       ├── info/                   # страница схемы
-│       ├── prompt-generation/      # промт для LLM (import-DTO)
+│       ├── prompt-generation/      # промты для LLM (одним промтом и по этапам)
 │       ├── course-generation/    # вызов LM Studio и импорт курса
 │       └── shared/                 # ui, build-info (generated), clipboard
 ```
@@ -310,11 +310,21 @@ Inline SVG (SMIL/CSS и т.п.); рендер SVG **без санитизаци�
 
 ### Инфо
 
-Просмотр формата для авторов: **bundled** [course-import.schema.json](./schemas/course-import.schema.json) и [module-import.schema.json](./schemas/module-import.schema.json) — форматированный JSON (read-only), import-DTO (без UUID и `createdAt` у курса; без `moduleId` / `stepId` у модуля). У каждой схемы кнопка **Копировать**. На MVP без отдельного UI-рендера полей. Канонический [course.schema.json](./schemas/course.schema.json) в UI не показывается.
+Просмотр формата для авторов: **bundled** [course-import.schema.json](./schemas/course-import.schema.json) и [module-import.schema.json](./schemas/module-import.schema.json) — форматированный JSON (read-only), import-DTO (без UUID и `createdAt` у курса; без `moduleId` / `stepId` у модуля). Третьим блоком — [course-outline.schema.json](./schemas/course-outline.schema.json) (план курса для поэтапной генерации, не импортируется). У каждой схемы кнопка **Копировать**. На MVP без отдельного UI-рендера полей. Канонический [course.schema.json](./schemas/course.schema.json) в UI не показывается.
 
 ### Генерация промта
 
-Поле **«Описание курса»** и кнопка **«Копировать в буфер обмена»**. В clipboard — промт для внешнего LLM: описание автора, инструкции (курс **на русском языке**; в **каждом** модуле шаги `theory`, `svg`, `quiz`; в **theory** программный код — Markdown fenced blocks с языком и структурированный текст; **читать `description` в приложенной схеме** и не выдумывать семантику полей; **ответ LLM** — один fenced-блок ` ```json ` с JSON **import-DTO** без UUID и `createdAt`; **экранирование** строк в JSON; **самопроверка** через `JSON.parse` и соответствие схеме) и полный текст bundled [course-import.schema.json](./schemas/course-import.schema.json).
+Поле **«Описание курса»** и переключатель режима **«Одним промтом»** (по умолчанию) | **«Поэтапно»**.
+
+**Одним промтом** — кнопка **«Копировать в буфер обмена»**. В clipboard — промт для внешнего LLM: описание автора, инструкции (курс **на русском языке**; в **каждом** модуле шаги `theory`, `svg`, `quiz`; в **theory** программный код — Markdown fenced blocks с языком и структурированный текст; **читать `description` в приложенной схеме** и не выдумывать семантику полей; **ответ LLM** — один fenced-блок ` ```json ` с JSON **import-DTO** без UUID и `createdAt`; **экранирование** строк в JSON; **самопроверка** через `JSON.parse` и соответствие схеме) и полный текст bundled [course-import.schema.json](./schemas/course-import.schema.json).
+
+**Поэтапно** — ручной вариант поэтапной генерации (см. **Генерация курса**), те же промты этапов, без structured output (ответ — блок ` ```json `). Каждый промт копируется одним текстом: сначала правила и схема этапа (system), затем данные этапа и финальное напоминание (user).
+
+1. **«Копировать промт плана»** (неактивна при пустом описании) — промт по [course-outline.schema.json](./schemas/course-outline.schema.json).
+2. Поле **«Ответ LLM с планом»**: сырой JSON или ответ с блоком ` ```json `; проверка как в генерации курса (схема плана и шаги `theory`, `svg`, `quiz` в каждом модуле). При ошибке — список проблем, при успехе — план и число модулей.
+3. При валидном плане — по кнопке на этап: **«Курс и модуль 1»** (ответ импортируется как курс на вкладке **Импорт**) и **«Модуль k из N»** (ответ импортируется как модуль в этот курс). Повторы с ошибками предыдущей попытки не формируются; план живёт, пока страница открыта. Ошибки разбора — без подсказки про Context Length LM Studio.
+
+Схемы грузятся независимо: без course-import страница показывает ошибку; без module-import или course-outline недоступен только режим «Поэтапно» (сообщение в нём), «Одним промтом» работает.
 
 ### Генерация курса
 

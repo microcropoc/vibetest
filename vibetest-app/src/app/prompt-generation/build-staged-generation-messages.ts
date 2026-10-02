@@ -40,6 +40,11 @@ export function retryNote(issues: readonly ImportIssue[]): string {
   );
 }
 
+/** One text for chat UIs without a system role: rules and schema first, stage data and reminder last. */
+export function joinStagedMessages(messages: StagedGenerationMessages): string {
+  return `${messages.system}\n\n${messages.user}`;
+}
+
 function stepLine(step: CourseOutlineModule['steps'][number], prefix: string): string {
   return `${prefix} [${step.type}] ${step.title} — ${step.summary}`;
 }

@@ -41,4 +41,13 @@ describe('prepareLlmImportText', () => {
       'не закрыт',
     );
   });
+
+  it('omits the LM Studio hint when contextHint is null', () => {
+    expect(() => prepareLlmImportText('Sorry, I cannot help', null)).toThrow(
+      /^Ответ не содержит JSON для импорта\.$/,
+    );
+    expect(() => prepareLlmImportText('Here:\n```json\n{"a":1}', null)).toThrow(
+      /^Блок ```json не закрыт — ответ обрезан\.$/,
+    );
+  });
 });

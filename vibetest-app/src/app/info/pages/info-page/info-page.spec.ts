@@ -2,6 +2,7 @@ import { TestBed, type ComponentFixture } from '@angular/core/testing';
 
 import {
   bundledCourseImportSchemaUrl,
+  bundledCourseOutlineSchemaUrl,
   bundledModuleImportSchemaUrl,
 } from '../../bundled-course-schema';
 
@@ -30,7 +31,9 @@ describe('InfoPage', () => {
         json: async () =>
           url.includes('module-import')
             ? { schemaVersion: 1, title: 'Module example' }
-            : { schemaVersion: 1, title: 'Course example' },
+            : url.includes('course-outline')
+              ? { schemaVersion: 1, title: 'Outline example' }
+              : { schemaVersion: 1, title: 'Course example' },
       }),
     );
     writeTextMock = vi.fn().mockResolvedValue(undefined);
@@ -46,19 +49,22 @@ describe('InfoPage', () => {
     vi.unstubAllGlobals();
   });
 
-  it('loads and displays both bundled import schemas', async () => {
+  it('loads and displays import schemas and the course outline schema', async () => {
     const fixture = TestBed.createComponent(InfoPage);
     await whenPageReady(fixture);
 
     expect(fetchMock).toHaveBeenCalledWith(bundledCourseImportSchemaUrl());
     expect(fetchMock).toHaveBeenCalledWith(bundledModuleImportSchemaUrl());
+    expect(fetchMock).toHaveBeenCalledWith(bundledCourseOutlineSchemaUrl());
     const root = fixture.nativeElement as HTMLElement;
     expect(root.textContent).toContain('course-import.schema.json');
     expect(root.textContent).toContain('module-import.schema.json');
+    expect(root.textContent).toContain('course-outline.schema.json');
     const blocks = root.querySelectorAll('.info-page__schema');
-    expect(blocks.length).toBe(2);
+    expect(blocks.length).toBe(3);
     expect(blocks[0]?.textContent).toContain('"title": "Course example"');
     expect(blocks[1]?.textContent).toContain('"title": "Module example"');
+    expect(blocks[2]?.textContent).toContain('"title": "Outline example"');
   });
 
   it('shows error when schema cannot be loaded', async () => {
@@ -68,7 +74,7 @@ describe('InfoPage', () => {
     const fixture = TestBed.createComponent(InfoPage);
     await whenPageReady(fixture);
 
-    expect(fixture.nativeElement.textContent).toContain('Не удалось загрузить схемы импорта.');
+    expect(fixture.nativeElement.textContent).toContain('Не удалось загрузить схемы.');
   });
 
   it('copies displayed course schema text to clipboard', async () => {
@@ -85,5 +91,20 @@ describe('InfoPage', () => {
       '{\n  "schemaVersion": 1,\n  "title": "Course example"\n}',
     );
     expect(fixture.nativeElement.textContent).toContain('Скопировано');
+  });
+
+  it('copies the course outline schema text to clipboard', async () => {
+    const fixture = TestBed.createComponent(InfoPage);
+    await whenPageReady(fixture);
+
+    const copyButtons = fixture.nativeElement.querySelectorAll(
+      '.info-page__copy',
+    ) as NodeListOf<HTMLButtonElement>;
+    copyButtons[2]!.click();
+    await fixture.whenStable();
+
+    expect(writeTextMock).toHaveBeenCalledWith(
+      '{\n  "schemaVersion": 1,\n  "title": "Outline example"\n}',
+    );
   });
 });

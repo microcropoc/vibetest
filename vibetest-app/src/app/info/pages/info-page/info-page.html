@@ -55,5 +55,31 @@
       </div>
       <pre class="info-page__schema" aria-readonly="true">{{ moduleSchemaText() }}</pre>
     </section>
+
+    <section class="info-page__block" aria-labelledby="info-outline-schema-heading">
+      <h2 id="info-outline-schema-heading" class="info-page__block-title">
+        course-outline.schema.json
+      </h2>
+      <p class="info-page__hint">
+        План курса для поэтапной генерации: модули и шаги без содержимого. Не импортируется.
+      </p>
+      <div class="info-page__toolbar">
+        <button type="button" class="info-page__copy" (click)="onCopyOutlineSchema()">
+          Копировать
+        </button>
+        @if (outlineCopyFeedback() === 'copied') {
+          <span class="info-page__copy-status" role="status">Скопировано</span>
+        } @else if (outlineCopyFeedback() === 'unavailable') {
+          <span class="info-page__copy-status info-page__copy-status--error" role="alert">
+            Копирование недоступно в этом браузере
+          </span>
+        } @else if (outlineCopyFeedback() === 'failed') {
+          <span class="info-page__copy-status info-page__copy-status--error" role="alert">
+            Не удалось скопировать
+          </span>
+        }
+      </div>
+      <pre class="info-page__schema" aria-readonly="true">{{ outlineSchemaText() }}</pre>
+    </section>
   }
 </section>

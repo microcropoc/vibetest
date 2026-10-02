@@ -9,6 +9,7 @@ import {
   buildModuleMessages,
   buildOutlineMessages,
   formatOutlineForPrompt,
+  joinStagedMessages,
   retryNote,
 } from './build-staged-generation-messages';
 
@@ -73,6 +74,17 @@ describe('buildModuleMessages', () => {
     expect(retryAt).toBeGreaterThan(0);
     expect(retryAt).toBeLessThan(reminderAt);
     expect(messages.user).toContain('- steps.0.title: Required');
+  });
+});
+
+describe('joinStagedMessages', () => {
+  it('puts system first and ends with the user reminder', () => {
+    const messages = buildOutlineMessages('Курс про regex', SCHEMA);
+    const text = joinStagedMessages(messages);
+
+    expect(text.startsWith(messages.system)).toBe(true);
+    expect(text.endsWith(messages.user)).toBe(true);
+    expect(text.endsWith(finalUserReminder('плана курса', false))).toBe(true);
   });
 });
 

@@ -2,6 +2,7 @@ import { Component, signal } from '@angular/core';
 
 import {
   loadBundledCourseImportSchema,
+  loadBundledCourseOutlineSchema,
   loadBundledModuleImportSchema,
   prettyPrintJson,
 } from '../../bundled-course-schema';
@@ -22,6 +23,8 @@ export class InfoPage {
   protected readonly errorMessage = signal<string | null>(null);
   protected readonly courseCopyFeedback = signal<CopyTextToClipboardResult | null>(null);
   protected readonly moduleCopyFeedback = signal<CopyTextToClipboardResult | null>(null);
+  protected readonly outlineSchemaText = signal('');
+  protected readonly outlineCopyFeedback = signal<CopyTextToClipboardResult | null>(null);
 
   constructor() {
     void this.loadSchemas();
@@ -36,6 +39,12 @@ export class InfoPage {
   protected async onCopyModuleSchema(): Promise<void> {
     await this.copySchema(this.moduleSchemaText(), (result) =>
       this.moduleCopyFeedback.set(result),
+    );
+  }
+
+  protected async onCopyOutlineSchema(): Promise<void> {
+    await this.copySchema(this.outlineSchemaText(), (result) =>
+      this.outlineCopyFeedback.set(result),
     );
   }
 
@@ -57,16 +66,20 @@ export class InfoPage {
     this.moduleSchemaText.set('');
     this.courseCopyFeedback.set(null);
     this.moduleCopyFeedback.set(null);
+    this.outlineSchemaText.set('');
+    this.outlineCopyFeedback.set(null);
 
     try {
-      const [courseSchema, moduleSchema] = await Promise.all([
+      const [courseSchema, moduleSchema, outlineSchema] = await Promise.all([
         loadBundledCourseImportSchema(),
         loadBundledModuleImportSchema(),
+        loadBundledCourseOutlineSchema(),
       ]);
       this.courseSchemaText.set(prettyPrintJson(courseSchema));
       this.moduleSchemaText.set(prettyPrintJson(moduleSchema));
+      this.outlineSchemaText.set(prettyPrintJson(outlineSchema));
     } catch {
-      this.errorMessage.set('Не удалось загрузить схемы импорта.');
+      this.errorMessage.set('Не удалось загрузить схемы.');
     } finally {
       this.loading.set(false);
     }

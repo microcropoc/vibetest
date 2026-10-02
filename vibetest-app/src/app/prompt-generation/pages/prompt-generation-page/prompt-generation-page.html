@@ -1,7 +1,8 @@
 <section class="prompt-generation-page">
   <h1 class="prompt-generation-page__title">Генерация промта</h1>
   <p class="prompt-generation-page__hint">
-    Опишите тему курса. Кнопка скопирует промт для LLM с правилами import-DTO и полной JSON Schema.
+    Опишите тему курса и скопируйте промт для LLM: весь курс одним промтом или по этапам, как при
+    генерации через LM Studio.
   </p>
 
   @if (loading()) {
@@ -9,6 +10,30 @@
   } @else if (errorMessage()) {
     <p class="prompt-generation-page__error" role="alert">{{ errorMessage() }}</p>
   } @else {
+    <fieldset class="prompt-generation-page__modes">
+      <legend class="prompt-generation-page__modes-legend">Режим</legend>
+      <label class="prompt-generation-page__mode">
+        <input
+          type="radio"
+          name="prompt-generation-mode"
+          value="single"
+          [checked]="mode() === 'single'"
+          (change)="onModeChange('single')"
+        />
+        Одним промтом
+      </label>
+      <label class="prompt-generation-page__mode">
+        <input
+          type="radio"
+          name="prompt-generation-mode"
+          value="staged"
+          [checked]="mode() === 'staged'"
+          (change)="onModeChange('staged')"
+        />
+        Поэтапно
+      </label>
+    </fieldset>
+
     <label class="prompt-generation-page__label">
       Описание курса
       <textarea
@@ -20,21 +45,115 @@
       ></textarea>
     </label>
 
-    <div class="prompt-generation-page__toolbar">
-      <button type="button" class="prompt-generation-page__copy" (click)="onCopyPrompt()">
-        Копировать в буфер обмена
-      </button>
-      @if (copyFeedback() === 'copied') {
-        <span class="prompt-generation-page__copy-status" role="status">Скопировано</span>
-      } @else if (copyFeedback() === 'unavailable') {
-        <span class="prompt-generation-page__copy-status prompt-generation-page__copy-status--error" role="alert">
-          Копирование недоступно в этом браузере
-        </span>
-      } @else if (copyFeedback() === 'failed') {
-        <span class="prompt-generation-page__copy-status prompt-generation-page__copy-status--error" role="alert">
-          Не удалось скопировать
-        </span>
-      }
-    </div>
+    @if (mode() === 'single') {
+      <p class="prompt-generation-page__hint">
+        Промт с правилами import-DTO и полной JSON Schema; ответ LLM — весь курс.
+      </p>
+      <div class="prompt-generation-page__toolbar">
+        <button type="button" class="prompt-generation-page__copy" (click)="onCopyPrompt()">
+          Копировать в буфер обмена
+        </button>
+        <ng-container
+          [ngTemplateOutlet]="copyStatus"
+          [ngTemplateOutletContext]="{ $implicit: copyResultFor(singleCopyKey) }"
+        />
+      </div>
+    } @else if (stagedErrorMessage(); as stagedError) {
+      <p class="prompt-generation-page__error" role="alert">{{ stagedError }}</p>
+    } @else {
+      <ol class="prompt-generation-page__stages">
+        <li class="prompt-generation-page__stage">
+          <h2 class="prompt-generation-page__stage-title">1. План курса</h2>
+          <p class="prompt-generation-page__stage-hint">
+            Промт по course-outline.schema.json: модули и шаги без содержимого. Ответ LLM вставьте
+            ниже.
+          </p>
+          <div class="prompt-generation-page__toolbar">
+            <button
+              type="button"
+              class="prompt-generation-page__copy"
+              data-stage="outline"
+              [disabled]="!hasDescription()"
+              (click)="onCopyOutlinePrompt()"
+            >
+              Копировать промт плана
+            </button>
+            <ng-container
+              [ngTemplateOutlet]="copyStatus"
+              [ngTemplateOutletContext]="{ $implicit: copyResultFor(outlineCopyKey) }"
+            />
+          </div>
+        </li>
+
+        <li class="prompt-generation-page__stage">
+          <h2 class="prompt-generation-page__stage-title">2. Ответ LLM с планом</h2>
+          <label class="prompt-generation-page__label">
+            JSON плана (можно целиком ответ с блоком ```json)
+            <textarea
+              class="prompt-generation-page__description prompt-generation-page__outline-response"
+              rows="8"
+              [value]="outlineResponse()"
+              (input)="onOutlineResponseInput($event)"
+            ></textarea>
+          </label>
+
+          @if (outlineIssues().length > 0) {
+            <p class="prompt-generation-page__error" role="alert">План не прошёл проверку:</p>
+            <ul class="prompt-generation-page__issues">
+              @for (issue of outlineIssues(); track issue.path + issue.message) {
+                <li>{{ formatIssue(issue) }}</li>
+              }
+            </ul>
+          } @else if (outline(); as plan) {
+            <details class="prompt-generation-page__outline">
+              <summary>План принят: модулей — {{ plan.modules.length }}</summary>
+              <pre class="prompt-generation-page__outline-pre">{{ outlineText() }}</pre>
+            </details>
+          }
+        </li>
+
+        @if (modulePrompts().length > 0) {
+          <li class="prompt-generation-page__stage">
+            <h2 class="prompt-generation-page__stage-title">3. Промты модулей по порядку</h2>
+            <ul class="prompt-generation-page__module-prompts">
+              @for (prompt of modulePrompts(); track prompt.key) {
+                <li class="prompt-generation-page__module-prompt">
+                  <span class="prompt-generation-page__module-label">{{ prompt.label }}</span>
+                  <span class="prompt-generation-page__stage-hint">{{ prompt.hint }}</span>
+                  <div class="prompt-generation-page__toolbar">
+                    <button
+                      type="button"
+                      class="prompt-generation-page__copy"
+                      [attr.data-stage]="prompt.key"
+                      (click)="onCopyModulePrompt(prompt)"
+                    >
+                      Копировать промт
+                    </button>
+                    <ng-container
+                      [ngTemplateOutlet]="copyStatus"
+                      [ngTemplateOutletContext]="{ $implicit: copyResultFor(prompt.key) }"
+                    />
+                  </div>
+                </li>
+              }
+            </ul>
+          </li>
+        }
+      </ol>
+    }
   }
 </section>
+
+<ng-template #copyStatus let-result>
+  @if (result === 'copied') {
+    <span class="prompt-generation-page__copy-status" role="status">Скопировано</span>
+  } @else if (result === 'unavailable') {
+    <span class="prompt-generation-page__copy-status prompt-generation-page__copy-status--error" role="alert">
+      Копирование недоступно в этом браузере
+    </span>
+  } @else if (result === 'failed') {
+    <span class="prompt-generation-page__copy-status prompt-generation-page__copy-status--error" role="alert">
+      Не удалось скопировать
+    </span>
+  }
+</ng-template>

@@ -1,7 +1,5 @@
 import { Injectable, inject } from '@angular/core';
 
-import { CourseImportService } from '../courses/course-import.service';
-import { parseImportCourseDtoText } from '../courses/import-parse';
 import {
   buildFirstModuleCourseMessages,
   buildModuleMessages,
@@ -15,7 +13,6 @@ import type { CourseOutline } from './course-outline.model';
 import { LmStudioClient } from './lm-studio-client.service';
 import type { ChatCompletionRetryReason } from './openai-chat-completions';
 import { parseCourseOutlineText } from './parse-course-outline';
-import { prepareLlmImportText } from './prepare-llm-import-text';
 import {
   CANCELLED,
   runWithRetry,
@@ -25,6 +22,12 @@ import {
   type AttemptOutcome,
   type RetryResult,
 } from './run-with-retry';
+import {
+  StagedStepAcceptor,
+  extractModelJson,
+  invalidJson,
+  type ModelText,
+} from './staged-step-acceptor.service';
 
 /** Progress that survives a failed run, so generation can resume from the failed step. */
 export type StagedGenerationState = {
@@ -87,8 +90,6 @@ export type StagedGenerationRunOptions = {
   readonly maxAttempts?: number;
 };
 
-type ModelText = { readonly kind: 'text'; readonly text: string; readonly rawResponse: string };
-
 /** Retry issues are read by the model, so they say what to change in the answer. */
 const RETRY_ISSUE_MESSAGES: Record<ChatCompletionRetryReason, string> = {
   truncated:
@@ -96,14 +97,10 @@ const RETRY_ISSUE_MESSAGES: Record<ChatCompletionRetryReason, string> = {
   empty: 'Ответ пустой. Выведи JSON.',
 };
 
-function invalidJson(message: string, rawResponse?: string): AttemptInvalid {
-  return { kind: 'invalid', stage: 'json', issues: [{ path: 'json', message }], rawResponse };
-}
-
 @Injectable({ providedIn: 'root' })
 export class StagedCourseGenerator {
   private readonly lmStudio = inject(LmStudioClient);
-  private readonly importService = inject(CourseImportService);
+  private readonly acceptor = inject(StagedStepAcceptor);
 
   async run(
     state: StagedGenerationState,
@@ -228,37 +225,7 @@ export class StagedCourseGenerator {
     if (response.kind !== 'text') {
       return response;
     }
-
-    const rawResponse = response.rawResponse;
-    const dto = parseImportCourseDtoText(response.text);
-    if (!dto.ok) {
-      return { kind: 'invalid', stage: dto.stage, issues: dto.issues, rawResponse };
-    }
-    if (dto.dto.modules.length !== 1) {
-      return {
-        kind: 'invalid',
-        stage: 'semantic',
-        issues: [
-          {
-            path: 'modules',
-            message: `Нужен ровно один модуль (первый из плана), получено ${dto.dto.modules.length}.`,
-          },
-        ],
-        rawResponse,
-      };
-    }
-
-    try {
-      const imported = await this.importService.importCourseWithNewIds(response.text, {
-        validatePracticeSteps: false,
-      });
-      if (!imported.ok) {
-        return { kind: 'invalid', stage: imported.stage, issues: imported.issues, rawResponse };
-      }
-      return { kind: 'ok', value: imported.courseId };
-    } catch {
-      return { kind: 'fatal', message: 'Не удалось сохранить курс.', rawResponse };
-    }
+    return this.acceptor.acceptFirstModule(response.text, response.rawResponse);
   }
 
   private async moduleAttempt(
@@ -282,27 +249,7 @@ export class StagedCourseGenerator {
     if (response.kind !== 'text') {
       return response;
     }
-
-    const rawResponse = response.rawResponse;
-    try {
-      const imported = await this.importService.importModule(response.text, {
-        courseId,
-        validatePracticeSteps: false,
-      });
-      if (imported.ok) {
-        return { kind: 'ok', value: imported.moduleId };
-      }
-      if (imported.stage === 'target') {
-        return {
-          kind: 'fatal',
-          message: 'Курс не найден — возможно, он удалён. Начните генерацию заново.',
-          rawResponse,
-        };
-      }
-      return { kind: 'invalid', stage: imported.stage, issues: imported.issues, rawResponse };
-    } catch {
-      return { kind: 'fatal', message: 'Не удалось сохранить модуль.', rawResponse };
-    }
+    return this.acceptor.acceptModule(response.text, courseId, response.rawResponse);
   }
 
   /** One chat request; returns extracted JSON text or an invalid/fatal outcome. */
@@ -341,17 +288,6 @@ export class StagedCourseGenerator {
         : { kind: 'fatal', message: completion.message };
     }
 
-    try {
-      return {
-        kind: 'text',
-        text: prepareLlmImportText(completion.content),
-        rawResponse: completion.content,
-      };
-    } catch (err: unknown) {
-      return invalidJson(
-        err instanceof Error ? err.message : 'Не удалось извлечь JSON из ответа.',
-        completion.content,
-      );
-    }
+    return extractModelJson(completion.content);
   }
 }

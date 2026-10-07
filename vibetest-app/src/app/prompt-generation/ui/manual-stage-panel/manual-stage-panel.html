@@ -1,0 +1,65 @@
+<section class="manual-stage-panel" [attr.aria-label]="label()">
+  <h3 class="manual-stage-panel__title">{{ label() }}</h3>
+  @if (hint(); as hintText) {
+    <p class="manual-stage-panel__hint">{{ hintText }}</p>
+  }
+
+  <div class="manual-stage-panel__toolbar">
+    <button
+      type="button"
+      class="manual-stage-panel__button manual-stage-panel__copy"
+      [disabled]="busy()"
+      (click)="copyPrompt.emit()"
+    >
+      {{ retry() ? 'Копировать промт с исправлениями' : 'Копировать промт' }}
+    </button>
+    @if (copyResult() === 'copied') {
+      <span class="manual-stage-panel__copy-status" role="status">Скопировано</span>
+    } @else if (copyResult() === 'unavailable') {
+      <span class="manual-stage-panel__copy-status manual-stage-panel__copy-status--error" role="alert">
+        Копирование недоступно в этом браузере
+      </span>
+    } @else if (copyResult() === 'failed') {
+      <span class="manual-stage-panel__copy-status manual-stage-panel__copy-status--error" role="alert">
+        Не удалось скопировать
+      </span>
+    }
+  </div>
+
+  <label class="manual-stage-panel__label">
+    Ответ LLM (можно целиком, с блоком ```json)
+    <textarea
+      class="manual-stage-panel__answer"
+      rows="8"
+      [value]="answer()"
+      [disabled]="busy()"
+      (input)="onAnswerInput($event)"
+    ></textarea>
+  </label>
+
+  <div class="manual-stage-panel__toolbar">
+    <button
+      type="button"
+      class="manual-stage-panel__button manual-stage-panel__accept"
+      [disabled]="busy() || !hasAnswer()"
+      (click)="accept.emit()"
+    >
+      {{ busy() ? 'Проверка…' : 'Проверить и сохранить' }}
+    </button>
+  </div>
+
+  @if (error(); as errorText) {
+    <p class="manual-stage-panel__error" role="alert">{{ errorText }}</p>
+  }
+  @if (issues().length > 0) {
+    <p class="manual-stage-panel__error" role="alert">Ответ не прошёл проверку:</p>
+    <ul class="manual-stage-panel__issues">
+      @for (issue of issues(); track issue.path + issue.message) {
+        <li>{{ formatIssue(issue) }}</li>
+      }
+    </ul>
+    <p class="manual-stage-panel__hint">
+      Скопируйте промт с исправлениями — в нём перечислены эти проблемы — и вставьте новый ответ.
+    </p>
+  }
+</section>

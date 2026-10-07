@@ -46,6 +46,30 @@ describe('SettingsRepository', () => {
     expect(row).toEqual(settingsRowForTheme('light'));
   });
 
+  it('persists, loads and clears manual staged progress', async () => {
+    db = createTestVibetestDb();
+    const repo = SettingsRepository.forDb(db);
+    expect(await repo.getManualStagedProgress()).toBeUndefined();
+
+    const progress = {
+      description: 'Курс',
+      outlineResponse: '{}',
+      courseId: '11111111-1111-4111-8111-111111111111',
+      nextModuleIndex: 1,
+    };
+    await repo.setManualStagedProgress(progress);
+    expect(await repo.getManualStagedProgress()).toEqual(progress);
+
+    await repo.clearManualStagedProgress();
+    expect(await repo.getManualStagedProgress()).toBeUndefined();
+  });
+
+  it('returns undefined for a broken manual staged progress row', async () => {
+    db = createTestVibetestDb();
+    await db.settings.put({ key: 'manualStagedProgress', value: { courseId: 42 } });
+    expect(await SettingsRepository.forDb(db).getManualStagedProgress()).toBeUndefined();
+  });
+
   it('returns empty llm profiles until saved', async () => {
     db = createTestVibetestDb();
     const repo = SettingsRepository.forDb(db);

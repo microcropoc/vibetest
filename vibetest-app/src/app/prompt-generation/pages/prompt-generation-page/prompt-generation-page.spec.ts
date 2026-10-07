@@ -1,6 +1,16 @@
 import { TestBed, type ComponentFixture } from '@angular/core/testing';
+import { provideRouter } from '@angular/router';
 
 import { outlineWithModules } from '../../../course-generation/__fixtures__/outline-fixtures';
+import { CourseImportService } from '../../../courses/course-import.service';
+import {
+  minimalValidImportJson,
+  minimalValidImportModuleJson,
+} from '../../../courses/__fixtures__/course-fixtures';
+import { CourseRepository } from '../../../storage/course-repository';
+import { SettingsRepository } from '../../../storage/settings-repository';
+import { createTestVibetestDb, destroyTestVibetestDb } from '../../../storage/test-db-harness';
+import type { VibetestDb } from '../../../storage/vibetest-db';
 import { buildCourseGenerationPrompt } from '../../build-course-generation-prompt';
 import {
   buildFirstModuleCourseMessages,
@@ -27,7 +37,7 @@ async function whenPageReady(fixture: ComponentFixture<PromptGenerationPage>): P
   for (let attempt = 0; attempt < 50; attempt += 1) {
     await fixture.whenStable();
     const text = (fixture.nativeElement as HTMLElement).textContent ?? '';
-    if (!text.includes('Загрузка схемы')) {
+    if (!text.includes('Загрузка')) {
       return;
     }
     await new Promise((resolve) => setTimeout(resolve, 0));
@@ -63,12 +73,69 @@ function stageButton(
   return root(fixture).querySelector(`button[data-stage="${stage}"]`);
 }
 
+function stagePanel(fixture: ComponentFixture<PromptGenerationPage>): HTMLElement | null {
+  return root(fixture).querySelector('app-manual-stage-panel');
+}
+
+function panelTitle(fixture: ComponentFixture<PromptGenerationPage>): string {
+  return root(fixture).querySelector('.manual-stage-panel__title')?.textContent?.trim() ?? '';
+}
+
+async function waitFor(
+  fixture: ComponentFixture<PromptGenerationPage>,
+  predicate: () => boolean | Promise<boolean>,
+): Promise<void> {
+  for (let attempt = 0; attempt < 100; attempt += 1) {
+    await fixture.whenStable();
+    if (await predicate()) {
+      return;
+    }
+    await new Promise((resolve) => setTimeout(resolve, 0));
+  }
+  throw new Error('Condition was not met');
+}
+
+async function copyStagePrompt(fixture: ComponentFixture<PromptGenerationPage>): Promise<void> {
+  (root(fixture).querySelector('.manual-stage-panel__copy') as HTMLButtonElement).click();
+  await fixture.whenStable();
+}
+
+/** Pastes an answer into the current stage panel and waits until the check finishes. */
+async function submitStageAnswer(
+  fixture: ComponentFixture<PromptGenerationPage>,
+  answer: string,
+): Promise<void> {
+  await typeInto(fixture, '.manual-stage-panel__answer', answer);
+  (root(fixture).querySelector('.manual-stage-panel__accept') as HTMLButtonElement).click();
+  await waitFor(
+    fixture,
+    () => root(fixture).querySelector('.manual-stage-panel__accept')?.textContent?.trim() !== 'Проверка…',
+  );
+}
+
+async function preparePlan(fixture: ComponentFixture<PromptGenerationPage>): Promise<void> {
+  await whenPageReady(fixture);
+  await switchToStaged(fixture);
+  await typeInto(fixture, '.prompt-generation-page__description', 'Курс про regex');
+  await typeInto(fixture, '.prompt-generation-page__outline-response', JSON.stringify(OUTLINE));
+}
+
+const COURSE_ANSWER = `Готово:\n\`\`\`json\n${JSON.stringify(minimalValidImportJson())}\n\`\`\``;
+
+function moduleAnswer(title: string): string {
+  return JSON.stringify({ ...minimalValidImportModuleJson(), title });
+}
+
 describe('PromptGenerationPage', () => {
+  let db: VibetestDb;
+  let settingsRepo: SettingsRepository;
   let fetchMock: ReturnType<typeof vi.fn>;
   let writeTextMock: ReturnType<typeof vi.fn>;
   let failingSchemas: readonly SchemaName[];
 
   beforeEach(async () => {
+    db = createTestVibetestDb();
+    settingsRepo = SettingsRepository.forDb(db);
     failingSchemas = [];
     fetchMock = vi.fn().mockImplementation((url: string) => {
       const name = SCHEMA_NAMES.find((candidate) => url.includes(candidate))!;
@@ -84,11 +151,27 @@ describe('PromptGenerationPage', () => {
 
     await TestBed.configureTestingModule({
       imports: [PromptGenerationPage],
+      providers: [
+        provideRouter([]),
+        { provide: SettingsRepository, useValue: settingsRepo },
+        { provide: CourseImportService, useValue: CourseImportService.forDb(db) },
+      ],
     }).compileComponents();
   });
 
-  afterEach(() => {
+  afterEach(async () => {
     vi.unstubAllGlobals();
+    await destroyTestVibetestDb(db);
+  });
+
+  it('does not store single-mode description without a staged plan', async () => {
+    const settings = SettingsRepository.forDb(db);
+    const fixture = TestBed.createComponent(PromptGenerationPage);
+    await whenPageReady(fixture);
+    await typeInto(fixture, '.prompt-generation-page__description', 'Курс про CSS');
+    await waitFor(fixture, async () => (await settings.getManualStagedProgress()) === undefined);
+
+    expect(await settings.getManualStagedProgress()).toBeUndefined();
   });
 
   it('copies built prompt with description and bundled schema', async () => {
@@ -182,7 +265,7 @@ describe('PromptGenerationPage', () => {
     expect(root(fixture).querySelector('.prompt-generation-page__issues')?.textContent).toContain(
       'modules',
     );
-    expect(stageButton(fixture, 'module-0')).toBeNull();
+    expect(stagePanel(fixture)).toBeNull();
   });
 
   it('accepts an outline with missing step types and shows warnings', async () => {
@@ -205,10 +288,10 @@ describe('PromptGenerationPage', () => {
     expect(text).toContain('Предупреждения плана');
     expect(text).toContain('В модуле «Основы» нет шага типа svg.');
     expect(text).not.toContain('План не прошёл проверку');
-    expect(stageButton(fixture, 'module-0')).not.toBeNull();
+    expect(stagePanel(fixture)).not.toBeNull();
   });
 
-  it('offers one prompt per outline module for a valid fenced answer', async () => {
+  it('shows the course stage for a valid fenced plan and copies its prompt', async () => {
     const fixture = TestBed.createComponent(PromptGenerationPage);
     await whenPageReady(fixture);
     await switchToStaged(fixture);
@@ -221,24 +304,170 @@ describe('PromptGenerationPage', () => {
 
     const text = root(fixture).textContent ?? '';
     expect(text).toContain('План принят: модулей — 3');
-    expect(text).toContain('Курс и модуль 1: «Основы»');
-    expect(text).toContain('Модуль 3 из 3: «Группы»');
+    expect(text).toContain('Модуль 3 из 3: «Группы» — ожидание');
     expect(text).not.toContain('Предупреждения плана');
-    expect(root(fixture).querySelectorAll('.prompt-generation-page__module-prompt').length).toBe(3);
+    expect(text).not.toContain('вкладке «Импорт»');
+    expect(panelTitle(fixture)).toBe('Курс и модуль 1: «Основы»');
 
-    stageButton(fixture, 'module-0')!.click();
-    await fixture.whenStable();
+    await copyStagePrompt(fixture);
     const coursePrompt = joinStagedMessages(
       buildFirstModuleCourseMessages('Курс про regex', OUTLINE, COURSE_IMPORT_SCHEMA),
     );
     expect(writeTextMock).toHaveBeenLastCalledWith(coursePrompt);
     expect(coursePrompt).toContain('"title": "course-import"');
+  });
 
-    stageButton(fixture, 'module-1')!.click();
-    await fixture.whenStable();
-    const modulePrompt = joinStagedMessages(buildModuleMessages(OUTLINE, 1, MODULE_IMPORT_SCHEMA));
-    expect(writeTextMock).toHaveBeenLastCalledWith(modulePrompt);
-    expect(modulePrompt).toContain('"title": "module-import"');
-    expect(modulePrompt).toContain('модуль 2 из 3: «Квантификаторы»');
+  it('saves the course from a pasted answer and moves on to module 2', async () => {
+    const fixture = TestBed.createComponent(PromptGenerationPage);
+    await preparePlan(fixture);
+
+    await submitStageAnswer(fixture, COURSE_ANSWER);
+
+    expect(panelTitle(fixture)).toBe('Модуль 2 из 3: «Квантификаторы»');
+    expect(root(fixture).textContent).toContain('Курс и модуль 1: «Основы» — готово');
+    const link = root(fixture).querySelector('a.prompt-generation-page__link') as HTMLAnchorElement;
+    const [course] = await CourseRepository.forDb(db).list();
+    expect(link.getAttribute('href')).toBe(`/courses/${course!.courseId}`);
+    expect(
+      (root(fixture).querySelector('.prompt-generation-page__description') as HTMLTextAreaElement)
+        .disabled,
+    ).toBe(true);
+    expect(
+      (root(fixture).querySelector('.prompt-generation-page__outline-response') as HTMLTextAreaElement)
+        .disabled,
+    ).toBe(true);
+    expect((root(fixture).querySelector('.manual-stage-panel__answer') as HTMLTextAreaElement).value).toBe('');
+
+    await copyStagePrompt(fixture);
+    expect(writeTextMock).toHaveBeenLastCalledWith(
+      joinStagedMessages(buildModuleMessages(OUTLINE, 1, MODULE_IMPORT_SCHEMA)),
+    );
+  });
+
+  it('lists problems of a rejected answer and copies the prompt with fixes', async () => {
+    const fixture = TestBed.createComponent(PromptGenerationPage);
+    await preparePlan(fixture);
+
+    await submitStageAnswer(fixture, 'Не могу помочь');
+
+    const text = root(fixture).textContent ?? '';
+    expect(text).toContain('Ответ не прошёл проверку');
+    const issues = root(fixture).querySelector('.manual-stage-panel__issues')?.textContent ?? '';
+    expect(issues).toContain('Ответ не содержит JSON для импорта.');
+    expect(issues).not.toContain('LM Studio');
+    expect(text).toContain('Курс и модуль 1: «Основы» — ошибка');
+    expect(panelTitle(fixture)).toBe('Курс и модуль 1: «Основы»');
+
+    await copyStagePrompt(fixture);
+    const copied = String(writeTextMock.mock.lastCall?.[0]);
+    expect(copied).toContain('Предыдущий ответ отклонён');
+    expect(copied).toContain('Ответ не содержит JSON для импорта.');
+    expect(await CourseRepository.forDb(db).list()).toEqual([]);
+  });
+
+  it('appends the modules in order until the course is complete', async () => {
+    const fixture = TestBed.createComponent(PromptGenerationPage);
+    await preparePlan(fixture);
+
+    await submitStageAnswer(fixture, COURSE_ANSWER);
+    await submitStageAnswer(fixture, moduleAnswer('Квантификаторы'));
+    expect(panelTitle(fixture)).toBe('Модуль 3 из 3: «Группы»');
+    await submitStageAnswer(fixture, moduleAnswer('Группы'));
+
+    expect(stagePanel(fixture)).toBeNull();
+    expect(root(fixture).textContent).toContain('Курс готов: все модули плана сохранены.');
+    const [course] = await CourseRepository.forDb(db).list();
+    expect(course?.modules.map((module) => module.title)).toEqual([
+      'Module 1',
+      'Квантификаторы',
+      'Группы',
+    ]);
+  });
+
+  it('keeps the course stage pending until its progress is written, without importing again', async () => {
+    const fixture = TestBed.createComponent(PromptGenerationPage);
+    await preparePlan(fixture);
+    const write = vi
+      .spyOn(settingsRepo, 'setManualStagedProgress')
+      .mockRejectedValueOnce(new Error('quota'));
+
+    await submitStageAnswer(fixture, COURSE_ANSWER);
+
+    const progressError = root(fixture).querySelector('.prompt-generation-page__progress-error');
+    expect(progressError?.textContent).toContain('прогресс не записан');
+    expect(stagePanel(fixture)).toBeNull();
+    expect(root(fixture).querySelector('.prompt-generation-page__pending')?.textContent).toContain(
+      'Курс и модуль 1: «Основы»',
+    );
+    expect(root(fixture).textContent).not.toContain('Курс и модуль 1: «Основы» — готово');
+    expect(await CourseRepository.forDb(db).list()).toHaveLength(1);
+
+    (root(fixture).querySelector('.prompt-generation-page__retry-progress') as HTMLButtonElement).click();
+    await waitFor(fixture, () => panelTitle(fixture) === 'Модуль 2 из 3: «Квантификаторы»');
+
+    expect(root(fixture).querySelector('.prompt-generation-page__progress-error')).toBeNull();
+    expect((await settingsRepo.getManualStagedProgress())?.nextModuleIndex).toBe(1);
+    expect(await CourseRepository.forDb(db).list()).toHaveLength(1);
+    expect(write).toHaveBeenCalledTimes(2);
+  });
+
+  it('shows a failed progress write of the last module instead of «Курс готов»', async () => {
+    const fixture = TestBed.createComponent(PromptGenerationPage);
+    await preparePlan(fixture);
+    await submitStageAnswer(fixture, COURSE_ANSWER);
+    await submitStageAnswer(fixture, moduleAnswer('Квантификаторы'));
+    vi.spyOn(settingsRepo, 'setManualStagedProgress').mockRejectedValueOnce(new Error('quota'));
+
+    await submitStageAnswer(fixture, moduleAnswer('Группы'));
+
+    expect(root(fixture).textContent).not.toContain('Курс готов');
+    expect(root(fixture).querySelector('.prompt-generation-page__progress-error')).not.toBeNull();
+    expect(root(fixture).querySelector('.prompt-generation-page__pending')?.textContent).toContain(
+      'Модуль 3 из 3: «Группы»',
+    );
+
+    (root(fixture).querySelector('.prompt-generation-page__retry-progress') as HTMLButtonElement).click();
+    await waitFor(fixture, () => (root(fixture).textContent ?? '').includes('Курс готов'));
+    const [course] = await CourseRepository.forDb(db).list();
+    expect(course?.modules).toHaveLength(3);
+  });
+
+  it('restores the progress when the page is opened again', async () => {
+    const settings = SettingsRepository.forDb(db);
+    const first = TestBed.createComponent(PromptGenerationPage);
+    await preparePlan(first);
+    await submitStageAnswer(first, COURSE_ANSWER);
+    await waitFor(first, async () => (await settings.getManualStagedProgress())?.nextModuleIndex === 1);
+    first.destroy();
+
+    const fixture = TestBed.createComponent(PromptGenerationPage);
+    await whenPageReady(fixture);
+    await waitFor(fixture, () => stagePanel(fixture) !== null);
+
+    expect((root(fixture).querySelector('input[value="staged"]') as HTMLInputElement).checked).toBe(true);
+    expect(
+      (root(fixture).querySelector('.prompt-generation-page__description') as HTMLTextAreaElement).value,
+    ).toBe('Курс про regex');
+    expect(panelTitle(fixture)).toBe('Модуль 2 из 3: «Квантификаторы»');
+    expect(root(fixture).querySelector('a.prompt-generation-page__link')).not.toBeNull();
+  });
+
+  it('starts over: clears the form and the stored progress, keeps the course', async () => {
+    const settings = SettingsRepository.forDb(db);
+    const fixture = TestBed.createComponent(PromptGenerationPage);
+    await preparePlan(fixture);
+    await submitStageAnswer(fixture, COURSE_ANSWER);
+
+    (root(fixture).querySelector('.prompt-generation-page__secondary') as HTMLButtonElement).click();
+    await waitFor(fixture, async () => (await settings.getManualStagedProgress()) === undefined);
+
+    const description = root(fixture).querySelector(
+      '.prompt-generation-page__description',
+    ) as HTMLTextAreaElement;
+    expect(description.value).toBe('');
+    expect(description.disabled).toBe(false);
+    expect(stagePanel(fixture)).toBeNull();
+    expect(root(fixture).querySelector('.prompt-generation-page__secondary')).toBeNull();
+    expect(await CourseRepository.forDb(db).list()).toHaveLength(1);
   });
 });

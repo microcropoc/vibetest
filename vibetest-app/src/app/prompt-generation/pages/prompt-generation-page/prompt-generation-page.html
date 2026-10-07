@@ -5,8 +5,8 @@
     генерации через LM Studio.
   </p>
 
-  @if (loading()) {
-    <p class="prompt-generation-page__status">Загрузка схемы…</p>
+  @if (!pageReady()) {
+    <p class="prompt-generation-page__status">Загрузка…</p>
   } @else if (errorMessage()) {
     <p class="prompt-generation-page__error" role="alert">{{ errorMessage() }}</p>
   } @else {
@@ -41,9 +41,16 @@
         rows="6"
         placeholder="Например: базовый курс по регулярным выражениям для начинающих"
         [value]="courseDescription()"
+        [disabled]="inputsLocked()"
         (input)="onDescriptionInput($event)"
       ></textarea>
     </label>
+    @if (inputsLocked()) {
+      <p class="prompt-generation-page__stage-hint">
+        Курс уже сохранён: описание и план менять нельзя. Чтобы начать другой курс, нажмите «Начать
+        заново» в поэтапном режиме.
+      </p>
+    }
 
     @if (mode() === 'single') {
       <p class="prompt-generation-page__hint">
@@ -93,6 +100,7 @@
               class="prompt-generation-page__description prompt-generation-page__outline-response"
               rows="8"
               [value]="outlineResponse()"
+              [disabled]="inputsLocked()"
               (input)="onOutlineResponseInput($event)"
             ></textarea>
           </label>
@@ -122,34 +130,88 @@
           }
         </li>
 
-        @if (modulePrompts().length > 0) {
+        @if (outline()) {
           <li class="prompt-generation-page__stage">
-            <h2 class="prompt-generation-page__stage-title">3. Промты модулей по порядку</h2>
-            <ul class="prompt-generation-page__module-prompts">
-              @for (prompt of modulePrompts(); track prompt.key) {
-                <li class="prompt-generation-page__module-prompt">
-                  <span class="prompt-generation-page__module-label">{{ prompt.label }}</span>
-                  <span class="prompt-generation-page__stage-hint">{{ prompt.hint }}</span>
-                  <div class="prompt-generation-page__toolbar">
-                    <button
-                      type="button"
-                      class="prompt-generation-page__copy"
-                      [attr.data-stage]="prompt.key"
-                      (click)="onCopyModulePrompt(prompt)"
-                    >
-                      Копировать промт
-                    </button>
-                    <ng-container
-                      [ngTemplateOutlet]="copyStatus"
-                      [ngTemplateOutletContext]="{ $implicit: copyResultFor(prompt.key) }"
-                    />
-                  </div>
+            <h2 class="prompt-generation-page__stage-title">3. Курс и модули</h2>
+            <p class="prompt-generation-page__stage-hint">
+              По очереди: скопируйте промт этапа, вставьте ответ LLM и сохраните. Курс с первым
+              модулем появится в списке курсов, остальные модули допишутся в него.
+            </p>
+            <ul class="prompt-generation-page__module-stages">
+              @for (stage of moduleStages(); track stage.id) {
+                <li
+                  class="prompt-generation-page__module-stage"
+                  [class.prompt-generation-page__module-stage--done]="stage.status === 'done'"
+                  [class.prompt-generation-page__module-stage--failed]="stage.status === 'failed'"
+                >
+                  {{ stage.label }} — {{ stageStatusLabels[stage.status] }}
                 </li>
               }
             </ul>
+            @if (courseId(); as savedCourseId) {
+              <a class="prompt-generation-page__link" [routerLink]="['/courses', savedCourseId]">
+                Открыть курс
+              </a>
+            }
+
+            @if (pendingProgress()) {
+              <p class="prompt-generation-page__stage-hint prompt-generation-page__pending">
+                Этап «{{ currentStepLabel() }}» сохранён в курсе; следующий этап откроется после
+                записи прогресса.
+              </p>
+            } @else if (currentStep()) {
+              <app-manual-stage-panel
+                [label]="currentStepLabel()"
+                [answer]="stageAnswer()"
+                [issues]="stageIssues()"
+                [error]="stageError()"
+                [busy]="accepting()"
+                [copyResult]="copyResultFor(stageCopyKey)"
+                (copyPrompt)="onCopyStagePrompt()"
+                (answerChange)="onStageAnswerChange($event)"
+                (accept)="onAcceptStage()"
+              />
+            } @else if (courseDone()) {
+              <p class="prompt-generation-page__success" role="status">
+                Курс готов: все модули плана сохранены.
+              </p>
+            }
           </li>
         }
       </ol>
+
+      @if (progressError(); as progressErr) {
+        <p class="prompt-generation-page__error prompt-generation-page__progress-error" role="alert">
+          {{ progressErr }}
+        </p>
+        @if (pendingProgress()) {
+          <div class="prompt-generation-page__toolbar">
+            <button
+              type="button"
+              class="prompt-generation-page__copy prompt-generation-page__retry-progress"
+              [disabled]="accepting()"
+              (click)="onRetryProgress()"
+            >
+              Повторить запись прогресса
+            </button>
+          </div>
+        }
+      }
+      @if (hasProgress()) {
+        <div class="prompt-generation-page__toolbar prompt-generation-page__restart">
+          <button
+            type="button"
+            class="prompt-generation-page__secondary"
+            [disabled]="accepting()"
+            (click)="onStartOver()"
+          >
+            Начать заново
+          </button>
+          <span class="prompt-generation-page__stage-hint">
+            Прогресс сохраняется в браузере; уже сохранённый курс останется в списке курсов.
+          </span>
+        </div>
+      }
     }
   }
 </section>

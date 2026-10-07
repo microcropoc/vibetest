@@ -13,6 +13,7 @@ import {
   createInProcessPracticeReferenceValidationDeps,
   runJavascriptReferenceSelfCheck,
   runRegexReferenceSelfCheck,
+  runSqliteReferenceSelfCheck,
 } from './practice-reference-in-process-runners.spec-helper';
 import { validatePracticeReferences } from './validate-practice-references';
 
@@ -57,10 +58,12 @@ function collectSvgIds(course: Course): readonly string[] {
   return ids;
 }
 
+function isPracticeStepType(step: Step): boolean {
+  return step.type === 'javascript' || step.type === 'sqlite' || step.type === 'regex';
+}
+
 function courseRequiresPracticeSteps(course: Course): boolean {
-  return course.modules.some((mod) =>
-    mod.steps.some((s) => s.type === 'javascript' || s.type === 'regex'),
-  );
+  return course.modules.some((mod) => mod.steps.some(isPracticeStepType));
 }
 
 function assertModuleShape(steps: readonly Step[], requirePractice: boolean): void {
@@ -68,7 +71,7 @@ function assertModuleShape(steps: readonly Step[], requirePractice: boolean): vo
   expect(steps[0]?.type).toBe('theory');
   expect(steps.some((s) => s.type === 'svg')).toBe(true);
   if (requirePractice) {
-    expect(steps.some((s) => s.type === 'javascript' || s.type === 'regex')).toBe(true);
+    expect(steps.some(isPracticeStepType)).toBe(true);
   }
   expect(steps.at(-1)?.type).toBe('quiz');
 }
@@ -116,6 +119,10 @@ describe('docs/courses sample courses', () => {
           }
           if (step.type === 'regex') {
             const result = await runRegexReferenceSelfCheck(step, step.content.starterCode);
+            expect(result.ok, label).toBe(false);
+          }
+          if (step.type === 'sqlite') {
+            const result = await runSqliteReferenceSelfCheck(step, step.content.starterCode);
             expect(result.ok, label).toBe(false);
           }
         }

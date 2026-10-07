@@ -110,6 +110,27 @@ describe('practiceFeedbackFromResult', () => {
       tests: { passed: 1, total: 4 },
     });
   });
+
+  it('passes the SQL result diff of the failed case to the view', () => {
+    const diff = {
+      user: { columns: ['id'], rows: [[2]], firstRow: 0, rowCount: 1 },
+      expected: { columns: ['id'], rows: [[1]], firstRow: 0, rowCount: 1 },
+    };
+    expect(
+      practiceFeedbackFromResult({
+        ok: false,
+        failedTestIndex: 0,
+        totalTests: 2,
+        message: 'Query results do not match',
+        details: { kind: 'sqlite', diff },
+      }),
+    ).toEqual({
+      kind: 'error',
+      message: 'Проверка 1 не пройдена: Query results do not match',
+      tests: { passed: 0, total: 2 },
+      sqlDiff: diff,
+    });
+  });
 });
 
 describe('practiceRuntimeErrorFeedback', () => {

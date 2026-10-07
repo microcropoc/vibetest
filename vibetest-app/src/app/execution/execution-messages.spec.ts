@@ -31,6 +31,45 @@ describe('execution message parse', () => {
       id: 'l',
     });
   });
+
+  it('parses sqliteInit with comparison options', () => {
+    const request = {
+      type: 'sqliteInit',
+      id: 'i',
+      wasmUrl: 'https://x.test/sql-wasm.wasm',
+      setup: '',
+      userQuery: 'SELECT 1',
+      referenceQuery: 'SELECT 1',
+      orderMatters: false,
+      checkColumnNames: true,
+      floatTolerance: 0.001,
+      checkQuery: 'SELECT * FROM t',
+    };
+    expect(parseExecutionRequest(request)).toEqual(request);
+  });
+
+  it('parses sqliteCaseResult with a result diff', () => {
+    const response = {
+      type: 'sqliteCaseResult',
+      id: 'c',
+      pass: false,
+      message: 'Row count differs: expected 1, got 0',
+      diff: {
+        user: { columns: ['id'], rows: [], firstRow: 0, rowCount: 0 },
+        expected: { columns: ['id'], rows: [[1, 'a', null]], firstRow: 0, rowCount: 1 },
+        userError: 'no such column: x',
+      },
+      userMs: 1,
+      referenceMs: 1,
+    };
+    expect(parseExecutionResponse(response)).toEqual(response);
+    expect(() =>
+      parseExecutionResponse({
+        ...response,
+        diff: { user: { columns: ['id'], rows: [[{}]], firstRow: 0, rowCount: 1 } },
+      }),
+    ).toThrow();
+  });
 });
 
 describe('requestIdFromUnknown', () => {

@@ -5,7 +5,10 @@ import { describe, expect, it } from 'vitest';
 
 import { parseImportCourseText } from './import-parse';
 import type { Course } from './course.model';
-import { createInProcessPracticeReferenceValidationDeps } from './practice-reference-in-process-runners.spec-helper';
+import {
+  createInProcessPracticeReferenceValidationDeps,
+  runSqliteReferenceSelfCheck,
+} from './practice-reference-in-process-runners.spec-helper';
 import { validatePracticeReferences } from './validate-practice-references';
 
 const practiceCheckRoot = join(process.cwd(), 'src', 'app', 'courses', '__fixtures__', 'practice-check');
@@ -60,6 +63,19 @@ describe('validatePracticeReferences', () => {
   it.each(listJsonFixtures('pass'))('passes fixture %s', async (_label, path) => {
     const issues = await validatePracticeReferences(courseFromFixturePath(path), deps);
     expect(issues).toEqual([]);
+  }, 60_000);
+
+  it('fails the starter code of every sqlite LeetCode-format fixture step', async () => {
+    const course = courseFromFixturePath(join(practiceCheckRoot, 'pass', 'sqlite-leetcode-format.json'));
+    const steps = course.modules.flatMap((module) => module.steps);
+    expect(steps.length).toBeGreaterThan(0);
+    for (const step of steps) {
+      if (step.type !== 'sqlite') {
+        throw new Error(`unexpected step type ${step.type}`);
+      }
+      const result = await runSqliteReferenceSelfCheck(step, step.content.starterCode);
+      expect(result.ok, step.title).toBe(false);
+    }
   }, 60_000);
 
   it.each(listJsonFixtures('fail'))('reports failure for fixture %s', async (label, path) => {

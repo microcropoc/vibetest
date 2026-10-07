@@ -1,5 +1,6 @@
 import type { Step } from '../courses/course.model';
 import { ExecutionTimeoutError } from '../execution/execution-errors';
+import type { SqliteCaseDiff } from '../execution/sqlite-result-table';
 
 import type { PracticeRunResult } from './step-engine/practice-run-result';
 import type { StepProgressSnapshot } from './step-engine/step-progress-snapshot';
@@ -21,6 +22,8 @@ export type PracticeFeedback = {
   readonly message: string;
   readonly tests: PracticeFeedbackTests;
   readonly timing?: PracticeFeedbackTiming;
+  /** SQL step: the student's and the expected result of the failed case. */
+  readonly sqlDiff?: SqliteCaseDiff;
 };
 
 export interface PracticeStepShellLabels {
@@ -153,9 +156,10 @@ export function practiceFeedbackFromResult(result: PracticeRunResult): PracticeF
       timing: { userMs: result.userMs, referenceMs: result.referenceMs },
     };
   }
-  return {
+  const feedback: PracticeFeedback = {
     kind: 'error',
     message: practiceFailureMessage(result),
     tests: { passed: result.failedTestIndex, total: result.totalTests },
   };
+  return result.details?.kind === 'sqlite' ? { ...feedback, sqlDiff: result.details.diff } : feedback;
 }

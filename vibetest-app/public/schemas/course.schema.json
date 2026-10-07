@@ -330,7 +330,7 @@
     },
     "sqliteContent": {
       "type": "object",
-      "description": "SQL-практика в sql.js: ученик пишет запрос; результат сравнивается с эталоном. setup — DDL (CREATE TABLE); начальные данные только в tests[].seed; reset не должен содержать INSERT/seed-DML.",
+      "description": "SQL-практика в sql.js (SQLite 3.49): ученик пишет SQL; результат сравнивается с эталоном на двух отдельных БД. setup — DDL (CREATE TABLE); начальные данные только в tests[].seed; reset не должен содержать INSERT/seed-DML. Порядок на тест-кейс: новая пустая БД (своя у ученика и у эталона) → setup → reset → seed → SQL ученика / эталона (можно несколько statement'ов через «;», в т.ч. CREATE TEMP TABLE, WITH, DML) → сравнение. Сравнивается результат ПОСЛЕДНЕГО statement'а, возвращающего колонки (SELECT, WITH … SELECT, PRAGMA, RETURNING); пустой результат сохраняет имена колонок. Если ни один statement колонок не возвращает — результат пустой. С checkQuery сравнивается не результат SQL, а результат checkQuery. Ячейки: INTEGER/REAL — числа, TEXT — строки, NULL — null, BLOB — строка X'HEX'. Целочисленное деление SQLite: 5/2 = 2 (для дробей — 5 * 1.0 / 2). Доступны REGEXP (JavaScript RegExp, регистрозависимый; X REGEXP P ≡ regexp(P, X); NULL → NULL), математика sqrt, power/pow, exp, ln, log (натуральный, как в MySQL), log10, log2, floor, ceil/ceiling, trunc, mod, sign, pi, тригонометрия; агрегаты median, stdev, variance, mode. Задачи-«функции» (LeetCode 177 «N-th Highest Salary» и т.п.): параметры кладутся в таблицу params (CREATE TABLE params(n INT) в setup, INSERT INTO params в seed каждого кейса), запрос читает их подзапросом (SELECT n FROM params).",
       "required": ["description", "starterCode", "referenceSolution", "setup", "orderMatters", "timeoutMs", "tests"],
       "additionalProperties": false,
       "properties": {
@@ -349,7 +349,7 @@
           "type": "string",
           "minLength": 1,
           "maxLength": 20000,
-          "description": "Эталонный SQL-запрос."
+          "description": "Эталонный SQL (один или несколько statement'ов); должен проходить все tests."
         },
         "setup": {
           "type": "string",
@@ -359,23 +359,39 @@
         "reset": {
           "type": "string",
           "maxLength": 20000,
-          "description": "SQL между тест-кейсами; без INSERT INTO seed-данных (seed только в tests[].seed)."
+          "description": "Необязательный SQL перед seed каждого кейса; без INSERT INTO seed-данных (seed только в tests[].seed). Каждый кейс и так начинается с новой БД (setup), поэтому таблицы, созданные или изменённые SQL ученика, в следующий кейс не попадают; reset обычно не нужен."
         },
         "orderMatters": {
           "type": "boolean",
-          "description": "true: порядок строк в результате SELECT важен при сравнении."
+          "description": "true: порядок строк важен (задачи с ORDER BY). false: строки сравниваются как мультимножество."
+        },
+        "checkColumnNames": {
+          "type": "boolean",
+          "description": "true: имена колонок результата должны совпадать с эталоном (без учёта регистра, по порядку) — для задач, где важны алиасы (AS). false/отсутствие: сравниваются только значения строк."
+        },
+        "floatTolerance": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1,
+          "description": "Допуск для числовых ячеек: |user − reference| ≤ floatTolerance считается равенством (для AVG, ROUND и деления). Отсутствие — точное сравнение. Текст и NULL всегда сравниваются точно."
+        },
+        "checkQuery": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 5000,
+          "description": "Проверочный SELECT для задач на изменение данных (DELETE/UPDATE/INSERT): после SQL ученика и эталона выполняется на каждой БД, сравниваются его результаты (с orderMatters / checkColumnNames / floatTolerance); собственный результат SQL ученика игнорируется. Пример: SELECT * FROM Person ORDER BY id."
         },
         "timeoutMs": {
           "type": "integer",
           "minimum": 100,
           "maximum": 30000,
-          "description": "Лимит времени на шаг (мс)."
+          "description": "Лимит времени на выполнение SQL всего шага (мс): все tests одним deadline. Загрузка движка в лимит не входит."
         },
         "tests": {
           "type": "array",
           "minItems": 1,
           "maxItems": 50,
-          "description": "Тест-кейсы с отдельным seed-DML на каждый.",
+          "description": "Тест-кейсы с отдельным seed-DML на каждый; первый кейс — пример из условия, далее граничные случаи (пустые таблицы, NULL, дубликаты, ничьи).",
           "items": {
             "type": "object",
             "required": ["seed"],
@@ -383,8 +399,8 @@
             "properties": {
               "seed": {
                 "type": "string",
-                "maxLength": 5000,
-                "description": "DML (INSERT и т.п.) для наполнения БД перед прогоном этого кейса."
+                "maxLength": 20000,
+                "description": "DML (INSERT и т.п.) для наполнения БД перед прогоном этого кейса (и параметры в params для задач-«функций»)."
               }
             }
           }

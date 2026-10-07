@@ -18,6 +18,11 @@ interface MockOptions {
   silentLoad?: boolean;
 }
 
+const mockDiff = {
+  user: { columns: ['id'], rows: [[2]], firstRow: 0, rowCount: 1 },
+  expected: { columns: ['id'], rows: [[1]], firstRow: 0, rowCount: 1 },
+};
+
 class ScriptableMockWorker {
   onmessage: ((event: MessageEvent<unknown>) => void) | null = null;
   onerror: ((event: ErrorEvent) => void) | null = null;
@@ -78,7 +83,14 @@ class ScriptableMockWorker {
     if (req.type === 'sqliteRunCase') {
       const index = Number.parseInt(req.id.split('-')[2] ?? '0', 10);
       if (index === this.options.failOnCase) {
-        reply({ type: 'sqliteCaseResult', pass: false, message: 'mock fail', userMs: 0, referenceMs: 0 });
+        reply({
+          type: 'sqliteCaseResult',
+          pass: false,
+          message: 'mock fail',
+          diff: mockDiff,
+          userMs: 0,
+          referenceMs: 0,
+        });
         return;
       }
       reply({ type: 'sqliteCaseResult', pass: true, userMs: 2, referenceMs: 1 });
@@ -140,7 +152,7 @@ describe('runSqlitePractice', () => {
     expect(mocks[0].terminated).toBe(false);
   });
 
-  it('fail-fast on first failing case', async () => {
+  it('fail-fast on first failing case and forwards the result diff', async () => {
     const { deps } = setup({ failOnCase: 1 });
     const result = await runSqlitePractice(sqliteStep, sqliteStep.content.starterCode, deps);
     expect(result).toEqual({
@@ -148,7 +160,37 @@ describe('runSqlitePractice', () => {
       failedTestIndex: 1,
       totalTests: 2,
       message: 'mock fail',
+      details: { kind: 'sqlite', diff: mockDiff },
     });
+  });
+
+  it('sends the comparison options of the step with init', async () => {
+    const { mocks, deps } = setup();
+    const posted: unknown[] = [];
+    const step: SqliteStep = {
+      ...sqliteStep,
+      content: {
+        ...sqliteStep.content,
+        checkColumnNames: true,
+        floatTolerance: 0.01,
+        checkQuery: 'SELECT * FROM users',
+      },
+    };
+    const run = runSqlitePractice(step, step.content.starterCode, deps);
+    const original = mocks[0].postMessage.bind(mocks[0]);
+    mocks[0].postMessage = (data: unknown) => {
+      posted.push(data);
+      original(data);
+    };
+    await run;
+    expect(posted).toContainEqual(
+      expect.objectContaining({
+        type: 'sqliteInit',
+        checkColumnNames: true,
+        floatTolerance: 0.01,
+        checkQuery: 'SELECT * FROM users',
+      }),
+    );
   });
 
   it('throws the engine load error as a start error, not a failed case', async () => {

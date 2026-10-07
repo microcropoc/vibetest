@@ -2,7 +2,11 @@ import { describe, expect, it } from 'vitest';
 
 import { outlineWithModules } from '../course-generation/__fixtures__/outline-fixtures';
 
-import { finalUserReminder } from './build-course-generation-prompt';
+import {
+  buildCourseGenerationPrompt,
+  finalUserReminder,
+  INSTRUCTION_SQLITE_PRACTICE,
+} from './build-course-generation-prompt';
 import {
   OUTLINE_MODULE_EXAMPLE,
   OUTLINE_SELF_CHECK,
@@ -80,6 +84,17 @@ describe('buildModuleMessages', () => {
     expect(messages.user).toContain('«Группы»');
     expect(messages.user).toContain('[quiz] Квантификаторы: тест');
     expect(messages.user.endsWith(finalUserReminder('module-import DTO', false))).toBe(true);
+  });
+
+  it('carries the SQL practice rules into course and module generation, not the outline', () => {
+    expect(buildModuleMessages(OUTLINE, 1, SCHEMA).system).toContain(INSTRUCTION_SQLITE_PRACTICE);
+    expect(buildFirstModuleCourseMessages('Курс', OUTLINE, SCHEMA).system).toContain(
+      INSTRUCTION_SQLITE_PRACTICE,
+    );
+    expect(buildOutlineMessages('Курс', SCHEMA).system).not.toContain(INSTRUCTION_SQLITE_PRACTICE);
+    expect(buildCourseGenerationPrompt('Курс', SCHEMA)).toContain(INSTRUCTION_SQLITE_PRACTICE);
+    expect(INSTRUCTION_SQLITE_PRACTICE).toContain('checkQuery');
+    expect(INSTRUCTION_SQLITE_PRACTICE).toContain('params');
   });
 
   it('adds retry issues before the final reminder', () => {

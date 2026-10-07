@@ -3,6 +3,7 @@ import { TestBed } from '@angular/core/testing';
 
 import type { PracticeCodeEditorLanguage } from '../code-editor/practice-code-editor-language';
 import { MarkdownContentComponent } from '../markdown-content/markdown-content';
+import { SqlResultDiffComponent } from '../sql-result-diff/sql-result-diff';
 import { PracticeStepShellComponent } from './practice-step-shell';
 
 @Component({
@@ -43,7 +44,7 @@ describe('PracticeStepShellComponent', () => {
       imports: [PracticeStepShellComponent],
     })
       .overrideComponent(PracticeStepShellComponent, {
-        set: { imports: [CodeEditorStub, MarkdownContentComponent] },
+        set: { imports: [CodeEditorStub, MarkdownContentComponent, SqlResultDiffComponent] },
       })
       .compileComponents();
   });
@@ -82,6 +83,35 @@ describe('PracticeStepShellComponent', () => {
     expect(fixture.nativeElement.textContent).toContain('Failed test');
     expect(fixture.nativeElement.textContent).toContain('Тесты: 0 из 2');
     expect(fixture.nativeElement.querySelector('.practice-step-shell__timing')).toBeNull();
+  });
+
+  it('shows the SQL result diff only when the feedback has one', async () => {
+    const fixture = TestBed.createComponent(PracticeStepShellComponent);
+    fixture.componentRef.setInput('step', javascriptStep);
+    fixture.componentRef.setInput('feedback', {
+      kind: 'error',
+      message: 'Проверка 1 не пройдена: Query results do not match',
+      tests: { passed: 0, total: 1 },
+    });
+    await fixture.whenStable();
+    expect(fixture.nativeElement.querySelector('app-sql-result-diff')).toBeNull();
+
+    fixture.componentRef.setInput('feedback', {
+      kind: 'error',
+      message: 'Проверка 1 не пройдена: Query results do not match',
+      tests: { passed: 0, total: 1 },
+      sqlDiff: {
+        user: { columns: ['id'], rows: [[2]], firstRow: 0, rowCount: 1 },
+        expected: { columns: ['id'], rows: [[1]], firstRow: 0, rowCount: 1 },
+      },
+    });
+    await fixture.whenStable();
+    const diff = fixture.nativeElement.querySelector('app-sql-result-diff') as HTMLElement | null;
+    expect(diff?.textContent).toContain('Ваш результат');
+    expect(diff?.textContent).toContain('Ожидается');
+    const status = fixture.nativeElement.querySelector('[role="status"]') as HTMLElement | null;
+    expect(status?.textContent).toContain('Тесты: 0 из 1');
+    expect(status?.contains(diff)).toBe(false);
   });
 
   it('shows timing on success feedback', async () => {

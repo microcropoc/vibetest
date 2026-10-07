@@ -1,0 +1,127 @@
+{
+  "schemaVersion": 1,
+  "title": "Practice check: SQLite LeetCode format",
+  "description": "Fixture for sqlite options: last result set, checkColumnNames, floatTolerance, checkQuery, REGEXP, params convention, math. Every starterCode must fail.",
+  "modules": [
+    {
+      "title": "SQL LeetCode format",
+      "steps": [
+        {
+          "type": "sqlite",
+          "title": "Second Highest Salary (temp table, NULL row)",
+          "content": {
+            "description": "Верните второй по величине уникальный оклад как `SecondHighestSalary`; если его нет — `NULL`.",
+            "setup": "CREATE TABLE Employee(id INT PRIMARY KEY, salary INT);",
+            "starterCode": "SELECT salary AS SecondHighestSalary FROM Employee ORDER BY salary DESC LIMIT 1 OFFSET 1;",
+            "referenceSolution": "CREATE TEMP TABLE distinct_salaries AS SELECT DISTINCT salary FROM Employee;\nSELECT (SELECT salary FROM distinct_salaries ORDER BY salary DESC LIMIT 1 OFFSET 1) AS SecondHighestSalary;",
+            "orderMatters": false,
+            "checkColumnNames": true,
+            "timeoutMs": 5000,
+            "tests": [
+              { "seed": "INSERT INTO Employee VALUES (1, 100), (2, 200), (3, 300);" },
+              { "seed": "INSERT INTO Employee VALUES (1, 100);" },
+              { "seed": "INSERT INTO Employee VALUES (1, 100), (2, 100);" }
+            ]
+          }
+        },
+        {
+          "type": "sqlite",
+          "title": "Combine Two Tables (column names)",
+          "content": {
+            "description": "Для каждого человека выведите `firstName`, `lastName`, `city`, `state`; адреса может не быть.",
+            "setup": "CREATE TABLE Person(personId INT PRIMARY KEY, lastName TEXT, firstName TEXT);\nCREATE TABLE Address(addressId INT PRIMARY KEY, personId INT, city TEXT, state TEXT);",
+            "starterCode": "SELECT p.firstName AS first_name, p.lastName, a.city, a.state FROM Person p LEFT JOIN Address a ON p.personId = a.personId;",
+            "referenceSolution": "SELECT p.firstName, p.lastName, a.city, a.state FROM Person p LEFT JOIN Address a ON p.personId = a.personId;",
+            "orderMatters": false,
+            "checkColumnNames": true,
+            "timeoutMs": 5000,
+            "tests": [
+              { "seed": "INSERT INTO Person VALUES (1, 'Wang', 'Allen'), (2, 'Alice', 'Bob');\nINSERT INTO Address VALUES (1, 2, 'New York City', 'New York'), (2, 3, 'Leetcode', 'California');" }
+            ]
+          }
+        },
+        {
+          "type": "sqlite",
+          "title": "Average Price (floatTolerance)",
+          "content": {
+            "description": "Средняя цена каждого товара как `average_price`.",
+            "setup": "CREATE TABLE Sales(product_id INT, price INT);",
+            "starterCode": "SELECT product_id, SUM(price) / COUNT(*) AS average_price FROM Sales GROUP BY product_id;",
+            "referenceSolution": "SELECT product_id, ROUND(AVG(price * 1.0), 4) AS average_price FROM Sales GROUP BY product_id;",
+            "orderMatters": false,
+            "floatTolerance": 0.001,
+            "timeoutMs": 5000,
+            "tests": [
+              { "seed": "INSERT INTO Sales VALUES (1, 1), (1, 1), (1, 2), (2, 10), (2, 15);" }
+            ]
+          }
+        },
+        {
+          "type": "sqlite",
+          "title": "Delete Duplicate Emails (checkQuery)",
+          "content": {
+            "description": "Удалите дубликаты email, оставив строку с наименьшим `id`.",
+            "setup": "CREATE TABLE Person(id INT PRIMARY KEY, email TEXT);",
+            "starterCode": "SELECT * FROM Person;",
+            "referenceSolution": "DELETE FROM Person WHERE id NOT IN (SELECT MIN(id) FROM Person GROUP BY email);",
+            "checkQuery": "SELECT id, email FROM Person ORDER BY id;",
+            "orderMatters": true,
+            "timeoutMs": 5000,
+            "tests": [
+              { "seed": "INSERT INTO Person VALUES (1, 'john@example.com'), (2, 'bob@example.com'), (3, 'john@example.com');" },
+              { "seed": "INSERT INTO Person VALUES (1, 'a@b.c');" }
+            ]
+          }
+        },
+        {
+          "type": "sqlite",
+          "title": "Patients With a Condition (REGEXP)",
+          "content": {
+            "description": "Пациенты, у которых есть код, начинающийся с `DIAB1` (коды разделены пробелами).",
+            "setup": "CREATE TABLE Patients(patient_id INT PRIMARY KEY, patient_name TEXT, conditions TEXT);",
+            "starterCode": "SELECT patient_id, patient_name, conditions FROM Patients WHERE conditions LIKE '%DIAB1%';",
+            "referenceSolution": "SELECT patient_id, patient_name, conditions FROM Patients WHERE conditions REGEXP '(^| )DIAB1';",
+            "orderMatters": false,
+            "timeoutMs": 5000,
+            "tests": [
+              { "seed": "INSERT INTO Patients VALUES (1, 'Daniel', 'YFEV COUGH'), (2, 'Alice', ''), (3, 'Bob', 'DIAB100 MYOP'), (4, 'George', 'ACNE DIAB100'), (5, 'Alain', 'DIAB201'), (6, 'Zed', 'SADIAB100');" }
+            ]
+          }
+        },
+        {
+          "type": "sqlite",
+          "title": "Nth Highest Salary (params convention)",
+          "content": {
+            "description": "Верните N-й по величине уникальный оклад как `getNthHighestSalary`; N лежит в таблице `params(n)`.",
+            "setup": "CREATE TABLE Employee(id INT PRIMARY KEY, salary INT);\nCREATE TABLE params(n INT);",
+            "starterCode": "SELECT MAX(salary) AS getNthHighestSalary FROM Employee;",
+            "referenceSolution": "SELECT (SELECT DISTINCT salary FROM Employee ORDER BY salary DESC LIMIT 1 OFFSET (SELECT n - 1 FROM params)) AS getNthHighestSalary;",
+            "orderMatters": false,
+            "checkColumnNames": true,
+            "timeoutMs": 5000,
+            "tests": [
+              { "seed": "INSERT INTO Employee VALUES (1, 100), (2, 200), (3, 300);\nINSERT INTO params VALUES (2);" },
+              { "seed": "INSERT INTO Employee VALUES (1, 100);\nINSERT INTO params VALUES (2);" }
+            ]
+          }
+        },
+        {
+          "type": "sqlite",
+          "title": "Shortest Distance in a Plane (math)",
+          "content": {
+            "description": "Кратчайшее расстояние между двумя разными точками, округлённое до 2 знаков, как `shortest`.",
+            "setup": "CREATE TABLE Point2D(x INT, y INT);",
+            "starterCode": "SELECT 0 AS shortest;",
+            "referenceSolution": "SELECT ROUND(MIN(SQRT(POW(a.x - b.x, 2) + POW(a.y - b.y, 2))), 2) AS shortest FROM Point2D a JOIN Point2D b ON a.x <> b.x OR a.y <> b.y;",
+            "orderMatters": false,
+            "floatTolerance": 0.001,
+            "timeoutMs": 5000,
+            "tests": [
+              { "seed": "INSERT INTO Point2D VALUES (-1, -1), (0, 0), (-1, -2);" }
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

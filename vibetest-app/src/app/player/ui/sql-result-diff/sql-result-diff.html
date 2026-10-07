@@ -1,0 +1,49 @@
+<div class="sql-result-diff">
+  @for (side of sides(); track side.key) {
+    <section class="sql-result-diff__side" [attr.data-side]="side.key">
+      <h3 class="sql-result-diff__title">{{ side.title }}</h3>
+      @if (side.error) {
+        <p class="sql-result-diff__error">Ошибка SQL: {{ side.error }}</p>
+      } @else if (side.table; as table) {
+        @if (table.columns.length === 0) {
+          <p class="sql-result-diff__empty">Запрос не вернул таблицу.</p>
+        } @else {
+          <div class="sql-result-diff__scroll" role="region" [attr.aria-label]="side.title" tabindex="0">
+            <table class="sql-result-diff__table">
+              <thead>
+                <tr>
+                  <th class="sql-result-diff__row-number" scope="col">№</th>
+                  @for (column of table.columns; track $index) {
+                    <th scope="col">{{ column }}</th>
+                  }
+                </tr>
+              </thead>
+              <tbody>
+                @for (row of table.rows; track $index) {
+                  <tr [class.sql-result-diff__row--mismatch]="table.firstRow + $index === mismatchRow()">
+                    <td class="sql-result-diff__row-number">{{ table.firstRow + $index + 1 }}</td>
+                    @for (cell of row; track $index) {
+                      <td [class.sql-result-diff__cell--null]="cell === null">{{ formatCell(cell) }}</td>
+                    }
+                  </tr>
+                } @empty {
+                  <tr>
+                    <td class="sql-result-diff__no-rows" [attr.colspan]="table.columns.length + 1">Нет строк</td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+          @if (table.firstRow > 0 || table.rowCount > table.firstRow + table.rows.length) {
+            <p class="sql-result-diff__truncated">
+              Показаны строки {{ table.firstRow + 1 }}–{{ table.firstRow + table.rows.length }} из
+              {{ table.rowCount }}.
+            </p>
+          }
+        }
+      } @else {
+        <p class="sql-result-diff__empty">Нет данных.</p>
+      }
+    </section>
+  }
+</div>

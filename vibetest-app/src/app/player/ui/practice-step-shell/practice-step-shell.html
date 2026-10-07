@@ -27,24 +27,28 @@
       class="practice-step-shell__result"
       [class.practice-step-shell__result--success]="result.kind === 'success'"
       [class.practice-step-shell__result--error]="result.kind === 'error'"
-      role="status"
     >
-      <p class="practice-step-shell__result-message">{{ result.message }}</p>
-      <p class="practice-step-shell__stats">
-        Тесты: {{ result.tests.passed }} из {{ result.tests.total }}
-      </p>
-      @if (timingLabels(); as timing) {
-        <dl class="practice-step-shell__timing">
-          <div class="practice-step-shell__timing-row">
-            <dt>Ваше решение</dt>
-            <dd>{{ timing.user }}</dd>
-          </div>
-          <div class="practice-step-shell__timing-row">
-            <dt>Эталон</dt>
-            <dd>{{ timing.reference }}</dd>
-          </div>
-        </dl>
-        <p class="practice-step-shell__timing-compare">{{ timing.comparison }}</p>
+      <div class="practice-step-shell__result-summary" role="status">
+        <p class="practice-step-shell__result-message">{{ result.message }}</p>
+        <p class="practice-step-shell__stats">
+          Тесты: {{ result.tests.passed }} из {{ result.tests.total }}
+        </p>
+        @if (timingLabels(); as timing) {
+          <dl class="practice-step-shell__timing">
+            <div class="practice-step-shell__timing-row">
+              <dt>Ваше решение</dt>
+              <dd>{{ timing.user }}</dd>
+            </div>
+            <div class="practice-step-shell__timing-row">
+              <dt>Эталон</dt>
+              <dd>{{ timing.reference }}</dd>
+            </div>
+          </dl>
+          <p class="practice-step-shell__timing-compare">{{ timing.comparison }}</p>
+        }
+      </div>
+      @if (result.sqlDiff; as diff) {
+        <app-sql-result-diff [diff]="diff" />
       }
     </div>
   } @else if (showFailure()) {

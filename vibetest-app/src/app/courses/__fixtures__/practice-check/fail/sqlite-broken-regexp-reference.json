@@ -1,0 +1,25 @@
+{
+  "schemaVersion": 1,
+  "title": "Practice check fail: SQLite REGEXP",
+  "description": "referenceSolution uses an invalid REGEXP pattern, so the reference self-check fails.",
+  "modules": [
+    {
+      "title": "SQL",
+      "steps": [
+        {
+          "type": "sqlite",
+          "title": "Match names",
+          "content": {
+            "description": "Names starting with A.",
+            "setup": "CREATE TABLE users(name TEXT);",
+            "starterCode": "",
+            "referenceSolution": "SELECT name FROM users WHERE name REGEXP '^(A';",
+            "orderMatters": false,
+            "timeoutMs": 5000,
+            "tests": [{ "seed": "INSERT INTO users VALUES ('Anna');" }]
+          }
+        }
+      ]
+    }
+  ]
+}

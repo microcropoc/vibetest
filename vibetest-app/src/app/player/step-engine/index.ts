@@ -79,7 +79,7 @@ export {
 
 export {
   applySqlitePracticeResult,
-  compareSqliteResultRows,
+  compareSqliteResultTables,
   createSqliteStepEngine,
   runSqlitePractice,
   sqliteStepEngine,

@@ -116,6 +116,9 @@ export async function runSqlitePractice(
         userQuery,
         referenceQuery: content.referenceSolution,
         orderMatters: content.orderMatters,
+        checkColumnNames: content.checkColumnNames,
+        floatTolerance: content.floatTolerance,
+        checkQuery: content.checkQuery,
       },
       remainingMs(deadlineMs),
     );
@@ -148,7 +151,12 @@ export async function runSqlitePractice(
       }
       timing.add({ userMs: response.userMs, referenceMs: response.referenceMs });
       if (!response.pass) {
-        return practiceRunFailure(i, totalTests, response.message ?? 'Test case failed');
+        return practiceRunFailure(
+          i,
+          totalTests,
+          response.message ?? 'Test case failed',
+          response.diff === undefined ? undefined : { kind: 'sqlite', diff: response.diff },
+        );
       }
     }
 

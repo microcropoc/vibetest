@@ -85,6 +85,29 @@ const sqliteInitSchema = z
     userQuery: z.string(),
     referenceQuery: z.string(),
     orderMatters: z.boolean(),
+    checkColumnNames: z.boolean().optional(),
+    floatTolerance: z.number().min(0).optional(),
+    checkQuery: z.string().optional(),
+  })
+  .strict();
+
+const sqliteCellSchema = z.union([z.number(), z.string(), z.null()]);
+
+const sqliteResultPreviewSchema = z
+  .object({
+    columns: z.array(z.string()),
+    rows: z.array(z.array(sqliteCellSchema)),
+    firstRow: z.number().int().min(0),
+    rowCount: z.number().int().min(0),
+  })
+  .strict();
+
+const sqliteCaseDiffSchema = z
+  .object({
+    user: sqliteResultPreviewSchema.optional(),
+    expected: sqliteResultPreviewSchema.optional(),
+    userError: z.string().optional(),
+    mismatchRow: z.number().int().min(0).optional(),
   })
   .strict();
 
@@ -187,9 +210,8 @@ export const ExecutionResponseSchema = z.discriminatedUnion('type', [
       type: z.literal('sqliteCaseResult'),
       id: messageIdSchema,
       pass: z.boolean(),
-      userRows: z.array(z.string()).optional(),
-      referenceRows: z.array(z.string()).optional(),
       message: z.string().optional(),
+      diff: sqliteCaseDiffSchema.optional(),
       userMs: z.number().min(0),
       referenceMs: z.number().min(0),
     })

@@ -3,7 +3,6 @@ import type { SqlJsStatic } from 'sql.js';
 import { parseExecutionRequest, requestIdFromUnknown } from './execution-messages';
 import { loadSqlJs } from './sqlite-engine';
 import {
-  closeSqlitePracticeSession,
   openSqlitePracticeSession,
   runSqlitePracticeCase,
   type SqlitePracticeSession,
@@ -55,16 +54,16 @@ async function handleMessage(event: MessageEvent<unknown>): Promise<void> {
         if (SQL === undefined) {
           break;
         }
-        if (session !== undefined) {
-          closeSqlitePracticeSession(session);
-          session = undefined;
-        }
+        session = undefined;
         try {
           session = openSqlitePracticeSession(SQL, {
             setup: request.setup,
             userQuery: request.userQuery,
             referenceQuery: request.referenceQuery,
             orderMatters: request.orderMatters,
+            checkColumnNames: request.checkColumnNames,
+            floatTolerance: request.floatTolerance,
+            checkQuery: request.checkQuery,
           });
         } catch (error: unknown) {
           const message = error instanceof Error ? error.message : 'Setup SQL failed';
@@ -92,9 +91,8 @@ async function handleMessage(event: MessageEvent<unknown>): Promise<void> {
           type: 'sqliteCaseResult',
           id: request.id,
           pass: outcome.pass,
-          userRows: outcome.userRows === undefined ? undefined : [...outcome.userRows],
-          referenceRows: outcome.referenceRows === undefined ? undefined : [...outcome.referenceRows],
           message: outcome.message,
+          diff: outcome.diff,
           userMs: outcome.userMs,
           referenceMs: outcome.referenceMs,
         });

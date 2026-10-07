@@ -14,7 +14,6 @@ import type { RegexPracticeResult } from '../player/step-engine/regex/regex-prac
 import type { RegexStep } from '../player/step-engine/regex/regex-step-engine';
 import { loadSqlJs } from '../execution/sqlite-engine';
 import {
-  closeSqlitePracticeSession,
   openSqlitePracticeSession,
   runSqlitePracticeCase,
   type SqlitePracticeSession,
@@ -136,27 +135,31 @@ export async function runSqliteReferenceSelfCheck(
       userQuery,
       referenceQuery: content.referenceSolution,
       orderMatters: content.orderMatters,
+      checkColumnNames: content.checkColumnNames,
+      floatTolerance: content.floatTolerance,
+      checkQuery: content.checkQuery,
     });
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : 'Setup SQL failed';
     return practiceRunFailure(0, totalTests, message);
   }
 
-  try {
-    for (let i = 0; i < content.tests.length; i += 1) {
-      const outcome = runSqlitePracticeCase(session, {
-        seed: content.tests[i].seed,
-        userReset: content.reset,
-        referenceReset: content.reset,
-      });
-      if (!outcome.pass) {
-        return practiceRunFailure(i, totalTests, outcome.message ?? 'Test case failed');
-      }
+  for (let i = 0; i < content.tests.length; i += 1) {
+    const outcome = runSqlitePracticeCase(session, {
+      seed: content.tests[i].seed,
+      userReset: content.reset,
+      referenceReset: content.reset,
+    });
+    if (!outcome.pass) {
+      return practiceRunFailure(
+        i,
+        totalTests,
+        outcome.message ?? 'Test case failed',
+        outcome.diff === undefined ? undefined : { kind: 'sqlite', diff: outcome.diff },
+      );
     }
-    return practiceRunSuccess(totalTests, REFERENCE_SELF_CHECK_TIMINGS);
-  } finally {
-    closeSqlitePracticeSession(session);
   }
+  return practiceRunSuccess(totalTests, REFERENCE_SELF_CHECK_TIMINGS);
 }
 
 export function createInProcessPracticeReferenceValidationDeps(): PracticeReferenceValidationDeps {

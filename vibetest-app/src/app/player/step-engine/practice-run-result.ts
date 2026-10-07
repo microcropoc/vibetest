@@ -1,3 +1,8 @@
+import type { SqliteCaseDiff } from '../../execution/sqlite-result-table';
+
+/** Step-specific explanation of a failed case, shown next to the message. */
+export type PracticeFailureDetails = { readonly kind: 'sqlite'; readonly diff: SqliteCaseDiff };
+
 export type PracticeRunResult =
   | {
       readonly ok: true;
@@ -10,6 +15,7 @@ export type PracticeRunResult =
       readonly failedTestIndex: number;
       readonly totalTests: number;
       readonly message: string;
+      readonly details?: PracticeFailureDetails;
     };
 
 export type PracticeCaseTimings = {
@@ -40,8 +46,11 @@ export function practiceRunFailure(
   failedTestIndex: number,
   totalTests: number,
   message: string,
+  details?: PracticeFailureDetails,
 ): Extract<PracticeRunResult, { ok: false }> {
-  return { ok: false, failedTestIndex, totalTests, message };
+  return details === undefined
+    ? { ok: false, failedTestIndex, totalTests, message }
+    : { ok: false, failedTestIndex, totalTests, message, details };
 }
 
 export function practiceRunSuccess(

@@ -1,0 +1,26 @@
+{
+  "schemaVersion": 1,
+  "title": "Practice check fail: SQLite checkQuery",
+  "description": "checkQuery reads a missing table, so the reference self-check fails.",
+  "modules": [
+    {
+      "title": "SQL",
+      "steps": [
+        {
+          "type": "sqlite",
+          "title": "Delete rows",
+          "content": {
+            "description": "Delete all rows.",
+            "setup": "CREATE TABLE Person(id INT);",
+            "starterCode": "",
+            "referenceSolution": "DELETE FROM Person;",
+            "checkQuery": "SELECT id FROM People;",
+            "orderMatters": false,
+            "timeoutMs": 5000,
+            "tests": [{ "seed": "INSERT INTO Person VALUES (1);" }]
+          }
+        }
+      ]
+    }
+  ]
+}

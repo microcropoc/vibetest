@@ -5,6 +5,7 @@ import type { ImportIssue } from '../courses/import-types';
 import {
   INSTRUCTION_MARKDOWN,
   INSTRUCTION_SEMANTICS,
+  INSTRUCTION_SQLITE_PRACTICE,
   authorDescriptionBlock,
   finalUserReminder,
   jsonForbiddenSyntaxRule,
@@ -158,6 +159,7 @@ export function buildFirstModuleCourseMessages(
 - В modules ровно один модуль — первый модуль плана; его title и шаги (типы, названия, порядок) — по плану.
 - Формат — import-DTO: schemaVersion равен 1, без полей courseId, moduleId, stepId и createdAt.`,
         INSTRUCTION_MARKDOWN,
+        INSTRUCTION_SQLITE_PRACTICE,
         outputFormatInstruction(COURSE_LABEL, structuredOutput),
         jsonSyntaxInstruction(structuredOutput),
         selfCheckInstruction('course-import.schema.json', structuredOutput),
@@ -196,6 +198,7 @@ export function buildModuleMessages(
 - Не повторяй материал других модулей плана.
 - Формат — module-import DTO: schemaVersion равен 1, без полей moduleId и stepId.`,
         INSTRUCTION_MARKDOWN,
+        INSTRUCTION_SQLITE_PRACTICE,
         outputFormatInstruction(MODULE_LABEL, structuredOutput),
         jsonSyntaxInstruction(structuredOutput),
         selfCheckInstruction('module-import.schema.json', structuredOutput),

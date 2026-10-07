@@ -1,0 +1,84 @@
+.sql-result-diff {
+  display: grid;
+  gap: 0.75rem;
+  margin-top: 0.75rem;
+  min-width: 0;
+}
+
+.sql-result-diff__side {
+  min-width: 0;
+}
+
+.sql-result-diff__title {
+  margin: 0 0 0.35rem;
+  font-size: 0.9375rem;
+  font-weight: 600;
+}
+
+.sql-result-diff__scroll {
+  max-width: 100%;
+  max-height: 18rem;
+  overflow: auto;
+  border: 1px solid var(--color-border-strong);
+  border-radius: 4px;
+  background: var(--color-bg);
+  color: var(--color-text);
+}
+
+.sql-result-diff__table {
+  border-collapse: collapse;
+  font-family: monospace;
+  font-size: 0.8125rem;
+  white-space: nowrap;
+}
+
+.sql-result-diff__table th,
+.sql-result-diff__table td {
+  padding: 0.25rem 0.6rem;
+  border-bottom: 1px solid var(--color-border);
+  text-align: left;
+}
+
+.sql-result-diff__table th {
+  position: sticky;
+  top: 0;
+  background: var(--color-bg-muted);
+  font-weight: 600;
+}
+
+.sql-result-diff__table .sql-result-diff__row-number {
+  color: var(--color-text-subtle);
+  text-align: right;
+}
+
+.sql-result-diff__row--mismatch td {
+  background: var(--color-error-bg);
+  color: var(--color-error-text);
+  font-weight: 600;
+}
+
+.sql-result-diff__cell--null,
+.sql-result-diff__no-rows {
+  color: var(--color-text-subtle);
+  font-style: italic;
+}
+
+.sql-result-diff__error {
+  margin: 0;
+  font-family: monospace;
+  font-size: 0.8125rem;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.sql-result-diff__empty,
+.sql-result-diff__truncated {
+  margin: 0.25rem 0 0;
+  font-size: 0.8125rem;
+}
+
+@media (min-width: 48rem) {
+  .sql-result-diff {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}

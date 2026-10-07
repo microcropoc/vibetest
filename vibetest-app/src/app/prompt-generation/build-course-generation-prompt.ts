@@ -19,6 +19,13 @@ export const INSTRUCTION_MARKDOWN = `Markdown в текстовых полях �
 - Не вставляй сырой HTML в Markdown-поля: литеральные угловые скобки и HTML-теги — только внутри inline code или fenced-блоков.
 - Regex-паттерны, SQL, фрагменты с символами *, _, \\ — оборачивай в inline code или fenced-блок, иначе Markdown изменит текст (например a\\.b без backticks станет a.b).`;
 
+export const INSTRUCTION_SQLITE_PRACTICE = `SQL-практика (шаги sqlite; движок — SQLite в браузере, не MySQL):
+- SQL в диалекте SQLite: strftime/date вместо DATE_FORMAT, IFNULL/COALESCE, || или concat; целочисленное деление 5/2 = 2 — для дробей умножай на 1.0.
+- setup — только CREATE TABLE; данные — в tests[].seed каждого кейса; первый кейс — пример из условия, далее граничные случаи (пустые таблицы, NULL, дубликаты, ничьи).
+- orderMatters: true только если условие требует порядок (ORDER BY); имена колонок важны (AS из условия) — checkColumnNames: true; AVG, деление, ROUND — floatTolerance (например 0.00001); задачи DELETE/UPDATE/INSERT — checkQuery: SELECT изменённой таблицы с ORDER BY.
+- Задача-«функция» с параметром (N-й по величине и т.п.): таблица params(n INT) в setup, INSERT INTO params в seed кейса, запрос читает (SELECT n FROM params).
+- starterCode — заготовка, которая не проходит тесты; referenceSolution проходит все tests.`;
+
 /** `objectLabel` names the expected JSON object, e.g. `import-DTO`. */
 export function outputFormatInstruction(objectLabel: string, structuredOutput: boolean): string {
   if (structuredOutput) {
@@ -86,6 +93,7 @@ export function buildCourseGenerationPrompt(
     INSTRUCTION_SEMANTICS,
     INSTRUCTION_CONTENT,
     INSTRUCTION_MARKDOWN,
+    INSTRUCTION_SQLITE_PRACTICE,
     outputFormatInstruction('import-DTO', false),
     jsonSyntaxInstruction(false),
     selfCheckInstruction('course-import.schema.json', false),

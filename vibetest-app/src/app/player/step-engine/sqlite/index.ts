@@ -1,8 +1,12 @@
 export {
-  compareSqliteResultRows,
-  collectRowsFromExecResults,
-  serializeSqlRow,
-} from '../../../execution/sqlite-result-rows';
+  compareSqliteResultTables,
+  previewSqliteResultTable,
+  sqliteCellFromValue,
+  type SqliteCaseDiff,
+  type SqliteCell,
+  type SqliteResultPreview,
+  type SqliteResultTable,
+} from '../../../execution/sqlite-result-table';
 export {
   runSqlitePractice,
   SQLITE_ENGINE_LOAD_TIMEOUT_MS,

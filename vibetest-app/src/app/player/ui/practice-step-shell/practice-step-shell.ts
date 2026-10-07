@@ -2,6 +2,7 @@ import { Component, computed, input, output } from '@angular/core';
 
 import { CodeEditor } from '../code-editor/code-editor';
 import { MarkdownContentComponent } from '../markdown-content/markdown-content';
+import { SqlResultDiffComponent } from '../sql-result-diff/sql-result-diff';
 import type { PracticeCodeEditorLanguage } from '../code-editor/practice-code-editor-language';
 import {
   formatPracticeDurationMs,
@@ -13,7 +14,7 @@ import {
 
 @Component({
   selector: 'app-practice-step-shell',
-  imports: [CodeEditor, MarkdownContentComponent],
+  imports: [CodeEditor, MarkdownContentComponent, SqlResultDiffComponent],
   templateUrl: './practice-step-shell.html',
   styleUrl: './practice-step-shell.scss',
 })

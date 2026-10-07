@@ -1,0 +1,122 @@
+{
+  "schemaVersion": 1,
+  "title": "Фильтрация и сортировка: WHERE, ORDER BY, LIMIT",
+  "steps": [
+    {
+      "type": "theory",
+      "title": "WHERE: условия отбора",
+      "content": "## Операторы в WHERE\n\n```sql\nSELECT name FROM employees WHERE salary >= 100000;\nSELECT name FROM employees WHERE department <> 'IT';          -- или !=\nSELECT name FROM employees WHERE department IN ('IT', 'HR');\nSELECT name FROM employees WHERE salary BETWEEN 90000 AND 150000; -- границы ВКЛЮЧЕНЫ\nSELECT name FROM employees WHERE name LIKE 'А%';               -- % — любая строка, _ — один символ\nSELECT name FROM employees WHERE name GLOB '[АБ]*';            -- шаблон в стиле shell, с учётом регистра\n```\n\n- `LIKE` в SQLite **не различает регистр** для латиницы (`'ABC' LIKE 'abc'` → 1), но различает для кириллицы. `GLOB` всегда чувствителен к регистру.\n- Логика: `NOT` > `AND` > `OR` по приоритету. **`AND` связывает сильнее `OR`**:\n\n```sql\n-- читается как: department = 'IT' OR (department = 'Sales' AND salary > 100000)\nWHERE department = 'IT' OR department = 'Sales' AND salary > 100000\n-- то, что обычно имели в виду:\nWHERE (department = 'IT' OR department = 'Sales') AND salary > 100000\n```\n\nСтавьте скобки всегда, когда смешиваете `AND` и `OR`.\n\n## Логический порядок выполнения\n\n`FROM` → `WHERE` → `GROUP BY` → `HAVING` → `SELECT` → `DISTINCT` → `ORDER BY` → `LIMIT`.\n\nПоэтому псевдоним из `SELECT` нельзя использовать в `WHERE` по стандарту. SQLite это прощает, но переносимый код так не пишут."
+    },
+    {
+      "type": "svg",
+      "title": "Схема: порядок выполнения запроса",
+      "content": {
+        "caption": "Пишем `SELECT … FROM … WHERE … ORDER BY … LIMIT`, а выполняется в другом порядке",
+        "description": "WHERE фильтрует строки до SELECT; ORDER BY и LIMIT применяются к уже готовому результату.",
+        "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 320 70\" width=\"100%\" role=\"img\" aria-label=\"Порядок выполнения SELECT\"><rect id=\"sq02-from\" x=\"4\" y=\"20\" width=\"46\" height=\"26\" rx=\"4\" fill=\"#f5f5f5\" stroke=\"#9e9e9e\"/><text x=\"27\" y=\"35.666666666666664\" text-anchor=\"middle\" font-size=\"8\" fill=\"#424242\">FROM</text><line x1=\"50\" y1=\"33\" x2=\"58\" y2=\"33\" stroke=\"#757575\" stroke-width=\"1.2\"/><polygon points=\"58,33 53.5,35.2 53.5,30.8\" fill=\"#757575\"/><rect id=\"sq02-where\" x=\"58\" y=\"20\" width=\"46\" height=\"26\" rx=\"4\" fill=\"#e3f2fd\" stroke=\"#1565c0\"/><text x=\"81\" y=\"35.666666666666664\" text-anchor=\"middle\" font-size=\"8\" fill=\"#0d47a1\">WHERE</text><line x1=\"104\" y1=\"33\" x2=\"112\" y2=\"33\" stroke=\"#757575\" stroke-width=\"1.2\"/><polygon points=\"112,33 107.5,35.2 107.5,30.8\" fill=\"#757575\"/><rect id=\"sq02-group\" x=\"112\" y=\"20\" width=\"46\" height=\"26\" rx=\"4\" fill=\"#f5f5f5\" stroke=\"#9e9e9e\"/><text x=\"135\" y=\"30.833333333333332\" text-anchor=\"middle\" font-size=\"7\" fill=\"#424242\">GROUP BY</text><text x=\"135\" y=\"39.83333333333333\" text-anchor=\"middle\" font-size=\"7\" fill=\"#424242\">HAVING</text><line x1=\"158\" y1=\"33\" x2=\"166\" y2=\"33\" stroke=\"#757575\" stroke-width=\"1.2\"/><polygon points=\"166,33 161.5,35.2 161.5,30.8\" fill=\"#757575\"/><rect id=\"sq02-select\" x=\"166\" y=\"20\" width=\"46\" height=\"26\" rx=\"4\" fill=\"#fff9c4\" stroke=\"#f9a825\"/><text x=\"189\" y=\"30.833333333333332\" text-anchor=\"middle\" font-size=\"7\" fill=\"#e65100\">SELECT</text><text x=\"189\" y=\"39.83333333333333\" text-anchor=\"middle\" font-size=\"7\" fill=\"#e65100\">DISTINCT</text><line x1=\"212\" y1=\"33\" x2=\"220\" y2=\"33\" stroke=\"#757575\" stroke-width=\"1.2\"/><polygon points=\"220,33 215.5,35.2 215.5,30.8\" fill=\"#757575\"/><rect id=\"sq02-order\" x=\"220\" y=\"20\" width=\"46\" height=\"26\" rx=\"4\" fill=\"#e8f5e9\" stroke=\"#2e7d32\"/><text x=\"243\" y=\"35.333333333333336\" text-anchor=\"middle\" font-size=\"7\" fill=\"#1b5e20\">ORDER BY</text><line x1=\"266\" y1=\"33\" x2=\"274\" y2=\"33\" stroke=\"#757575\" stroke-width=\"1.2\"/><polygon points=\"274,33 269.5,35.2 269.5,30.8\" fill=\"#757575\"/><rect id=\"sq02-limit\" x=\"274\" y=\"20\" width=\"42\" height=\"26\" rx=\"4\" fill=\"#e8f5e9\" stroke=\"#2e7d32\"/><text x=\"295\" y=\"35.666666666666664\" text-anchor=\"middle\" font-size=\"8\" fill=\"#1b5e20\">LIMIT</text><text x=\"160\" y=\"62\" text-anchor=\"middle\" font-size=\"7\" fill=\"#555\">строки отфильтрованы до вычисления столбцов результата</text></svg>"
+      }
+    },
+    {
+      "type": "theory",
+      "title": "ORDER BY, LIMIT, DISTINCT",
+      "content": "## Сортировка\n\n```sql\nSELECT name, salary FROM employees\nORDER BY salary DESC, name ASC;   -- несколько ключей: сначала по зарплате, при равенстве — по имени\n```\n\n- По умолчанию `ASC`. `NULL` в SQLite при `ASC` идут **первыми**; можно явно: `ORDER BY salary NULLS LAST`.\n- Без `ORDER BY` порядок строк **не гарантирован** — даже если «обычно» совпадает с порядком вставки.\n- Если нужен детерминированный порядок, добавьте уникальный ключ последним (`…, id`).\n\n## LIMIT и OFFSET\n\n```sql\nSELECT name FROM employees ORDER BY salary DESC LIMIT 3;          -- топ-3\nSELECT name FROM employees ORDER BY id LIMIT 10 OFFSET 20;        -- третья страница по 10\n```\n\n`LIMIT` без `ORDER BY` возвращает «какие-то» строки — почти всегда это ошибка.\n\n## DISTINCT\n\n`SELECT DISTINCT department FROM employees;` — уникальные значения (уникальность по **всем** выбранным столбцам). `NULL` считается одним значением."
+    },
+    {
+      "type": "sqlite",
+      "title": "Практика: приоритет AND и OR",
+      "content": {
+        "description": "Найдите сотрудников отделов **IT** или **Sales** с зарплатой **от 100 000 до 200 000 включительно**. Выведите `name`.\n\n```sql\nCREATE TABLE employees(\n  id INTEGER PRIMARY KEY,\n  name TEXT NOT NULL,\n  department TEXT,\n  salary INTEGER,\n  manager_id INTEGER,\n  hired_at TEXT\n);\n```\n\nПорядок строк не важен.",
+        "setup": "CREATE TABLE employees(\n  id INTEGER PRIMARY KEY,\n  name TEXT NOT NULL,\n  department TEXT,\n  salary INTEGER,\n  manager_id INTEGER,\n  hired_at TEXT\n);",
+        "starterCode": "SELECT name FROM employees\nWHERE department = 'IT' OR department = 'Sales' AND salary BETWEEN 100000 AND 200000;",
+        "referenceSolution": "SELECT name FROM employees\nWHERE department IN ('IT', 'Sales') AND salary BETWEEN 100000 AND 200000;",
+        "orderMatters": false,
+        "timeoutMs": 5000,
+        "tests": [
+          {
+            "seed": "INSERT INTO employees(id, name, department, salary, manager_id, hired_at) VALUES\n  (1, 'Анна', 'IT', 250000, NULL, '2019-03-01'),\n  (2, 'Борис', 'IT', 180000, 1, '2020-07-15'),\n  (3, 'Вера', 'Sales', 120000, 1, '2021-01-10'),\n  (4, 'Глеб', 'Sales', 90000, 3, '2022-05-20'),\n  (5, 'Дина', 'HR', 150000, 1, '2018-11-11'),\n  (6, 'Егор', 'IT', 95000, 2, '2023-02-01');"
+          },
+          {
+            "seed": "INSERT INTO employees(id, name, department, salary, manager_id, hired_at) VALUES\n  (1, 'Жанна', 'Sales', 200000, NULL, '2017-01-01'),\n  (2, 'Зоя', 'IT', 210000, 1, '2018-01-01'),\n  (3, 'Иван', 'Sales', 100000, 1, '2019-01-01'),\n  (4, 'Кира', 'IT', 100000, 2, '2020-01-01'),\n  (5, 'Лев', 'Finance', 160000, 1, '2021-01-01');"
+          }
+        ]
+      }
+    },
+    {
+      "type": "sqlite",
+      "title": "Практика: топ-3 по зарплате",
+      "content": {
+        "description": "Выведите **трёх** самых высокооплачиваемых сотрудников: `name`, `salary`.\n\nСортировка: по зарплате **по убыванию**, при равной зарплате — по имени **по возрастанию**. Порядок строк проверяется.",
+        "setup": "CREATE TABLE employees(\n  id INTEGER PRIMARY KEY,\n  name TEXT NOT NULL,\n  department TEXT,\n  salary INTEGER,\n  manager_id INTEGER,\n  hired_at TEXT\n);",
+        "starterCode": "SELECT name, salary FROM employees ORDER BY salary LIMIT 3;",
+        "referenceSolution": "SELECT name, salary FROM employees ORDER BY salary DESC, name ASC LIMIT 3;",
+        "orderMatters": true,
+        "timeoutMs": 5000,
+        "tests": [
+          {
+            "seed": "INSERT INTO employees(id, name, department, salary, manager_id, hired_at) VALUES\n  (1, 'Анна', 'IT', 250000, NULL, '2019-03-01'),\n  (2, 'Борис', 'IT', 180000, 1, '2020-07-15'),\n  (3, 'Вера', 'Sales', 120000, 1, '2021-01-10'),\n  (4, 'Глеб', 'Sales', 90000, 3, '2022-05-20'),\n  (5, 'Дина', 'HR', 150000, 1, '2018-11-11'),\n  (6, 'Егор', 'IT', 95000, 2, '2023-02-01');"
+          },
+          {
+            "seed": "INSERT INTO employees(id, name, department, salary, manager_id, hired_at) VALUES\n  (1, 'Жанна', 'Sales', 200000, NULL, '2017-01-01'),\n  (2, 'Зоя', 'IT', 210000, 1, '2018-01-01'),\n  (3, 'Иван', 'Sales', 100000, 1, '2019-01-01'),\n  (4, 'Кира', 'IT', 100000, 2, '2020-01-01'),\n  (5, 'Лев', 'Finance', 160000, 1, '2021-01-01');"
+          },
+          {
+            "seed": "INSERT INTO employees(id, name, department, salary) VALUES\n  (1, 'Олег', 'IT', 100000), (2, 'Нина', 'IT', 100000), (3, 'Петр', 'IT', 100000), (4, 'Маша', 'IT', 100000);"
+          }
+        ]
+      }
+    },
+    {
+      "type": "sqlite",
+      "title": "Практика: список отделов",
+      "content": {
+        "description": "Выведите **уникальные** названия отделов (`department`), отсортированные по алфавиту. Сотрудников без отдела (`NULL`) не учитывайте.\n\nПорядок строк проверяется.",
+        "setup": "CREATE TABLE employees(\n  id INTEGER PRIMARY KEY,\n  name TEXT NOT NULL,\n  department TEXT,\n  salary INTEGER,\n  manager_id INTEGER,\n  hired_at TEXT\n);",
+        "starterCode": "SELECT department FROM employees ORDER BY department;",
+        "referenceSolution": "SELECT DISTINCT department FROM employees WHERE department IS NOT NULL ORDER BY department;",
+        "orderMatters": true,
+        "timeoutMs": 5000,
+        "tests": [
+          {
+            "seed": "INSERT INTO employees(id, name, department, salary, manager_id, hired_at) VALUES\n  (1, 'Анна', 'IT', 250000, NULL, '2019-03-01'),\n  (2, 'Борис', 'IT', 180000, 1, '2020-07-15'),\n  (3, 'Вера', 'Sales', 120000, 1, '2021-01-10'),\n  (4, 'Глеб', 'Sales', 90000, 3, '2022-05-20'),\n  (5, 'Дина', 'HR', 150000, 1, '2018-11-11'),\n  (6, 'Егор', 'IT', 95000, 2, '2023-02-01');"
+          },
+          {
+            "seed": "INSERT INTO employees(id, name, department, salary) VALUES\n  (1, 'Рита', NULL, 50000), (2, 'Сеня', 'Ops', 60000), (3, 'Таня', 'Ops', 70000), (4, 'Ульяна', 'Dev', 80000);"
+          }
+        ]
+      }
+    },
+    {
+      "type": "quiz",
+      "title": "Проверка: BETWEEN",
+      "content": {
+        "question": "Какие значения `salary` пройдут условие **`salary BETWEEN 100 AND 200`**?",
+        "options": [
+          "`100`",
+          "`150`",
+          "`200`",
+          "`201`"
+        ],
+        "correctIndices": [
+          0,
+          1,
+          2
+        ]
+      }
+    },
+    {
+      "type": "quiz",
+      "title": "Итоговый тест модуля",
+      "content": {
+        "question": "Как SQLite прочитает условие **`a = 1 OR b = 2 AND c = 3`**?",
+        "options": [
+          "`(a = 1 OR b = 2) AND c = 3`",
+          "`a = 1 OR (b = 2 AND c = 3)`",
+          "Как ошибку: нужны скобки",
+          "Слева направо, без приоритетов"
+        ],
+        "correctIndices": [
+          1
+        ]
+      }
+    }
+  ]
+}

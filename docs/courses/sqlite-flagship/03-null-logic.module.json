@@ -1,0 +1,113 @@
+{
+  "schemaVersion": 1,
+  "title": "NULL и трёхзначная логика",
+  "steps": [
+    {
+      "type": "theory",
+      "title": "NULL — это «неизвестно»",
+      "content": "## Три значения истинности\n\n`NULL` означает «значение неизвестно». Любое сравнение с `NULL` даёт **`NULL`** (не `TRUE` и не `FALSE`):\n\n```sql\nSELECT NULL = NULL;      -- NULL\nSELECT NULL <> 1;        -- NULL\nSELECT NULL + 1;         -- NULL\nSELECT 1 IN (NULL, 2);   -- NULL\n```\n\n**`WHERE` пропускает только строки, где условие — `TRUE`**. Строки с результатом `NULL` отбрасываются так же, как с `FALSE`.\n\n## Как правильно проверять\n\n| Нужно | Пишем | Не пишем |\n|------|-------|----------|\n| значение отсутствует | `email IS NULL` | `email = NULL` |\n| значение есть | `email IS NOT NULL` | `email <> NULL` |\n| «различаются, с учётом NULL» | `a IS NOT b` (или `a IS DISTINCT FROM b`) | `a <> b` |\n\nВ SQLite `IS` / `IS NOT` работают для любых значений: `NULL IS NULL` → 1, `1 IS NOT NULL` → 1, `'x' IS 'x'` → 1.\n\n## Функции для NULL\n\n- `COALESCE(a, b, c)` — первое не-`NULL` значение.\n- `IFNULL(a, b)` — то же для двух аргументов (SQLite/MySQL).\n- `NULLIF(a, b)` — `NULL`, если `a = b`, иначе `a`. Классика: `x / NULLIF(y, 0)`.\n\n## NULL в агрегатах\n\n`COUNT(*)` считает строки, `COUNT(email)` — только не-`NULL` значения. `SUM`, `AVG`, `MIN`, `MAX` пропускают `NULL`."
+    },
+    {
+      "type": "svg",
+      "title": "Схема: таблица истинности AND / OR",
+      "content": {
+        "caption": "Трёхзначная логика: `TRUE`, `FALSE`, `NULL` (неизвестно)",
+        "description": "FALSE AND что угодно = FALSE; TRUE OR что угодно = TRUE; в остальных случаях с NULL результат NULL.",
+        "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 300 120\" width=\"100%\" role=\"img\" aria-label=\"Таблица истинности с NULL\"><text x=\"70\" y=\"12\" text-anchor=\"middle\" font-size=\"9\" font-weight=\"600\" fill=\"#0d47a1\">AND</text><text x=\"225\" y=\"12\" text-anchor=\"middle\" font-size=\"9\" font-weight=\"600\" fill=\"#0d47a1\">OR</text><text x=\"22\" y=\"32\" text-anchor=\"middle\" font-size=\"8\" font-weight=\"600\" fill=\"#424242\"></text><text x=\"54\" y=\"32\" text-anchor=\"middle\" font-size=\"8\" font-weight=\"600\" fill=\"#424242\">T</text><text x=\"86\" y=\"32\" text-anchor=\"middle\" font-size=\"8\" font-weight=\"600\" fill=\"#424242\">F</text><text x=\"118\" y=\"32\" text-anchor=\"middle\" font-size=\"8\" font-weight=\"600\" fill=\"#424242\">N</text><text x=\"22\" y=\"54\" text-anchor=\"middle\" font-size=\"8\" font-weight=\"600\" fill=\"#424242\">T</text><rect id=\"sq03-and-1-1\" x=\"40\" y=\"42\" width=\"28\" height=\"18\" rx=\"4\" fill=\"#e8f5e9\" stroke=\"#2e7d32\"/><text x=\"54\" y=\"53.666666666666664\" text-anchor=\"middle\" font-size=\"8\" fill=\"#1b5e20\">T</text><rect id=\"sq03-and-1-2\" x=\"72\" y=\"42\" width=\"28\" height=\"18\" rx=\"4\" fill=\"#ffebee\" stroke=\"#c62828\"/><text x=\"86\" y=\"53.666666666666664\" text-anchor=\"middle\" font-size=\"8\" fill=\"#b71c1c\">F</text><rect id=\"sq03-and-1-3\" x=\"104\" y=\"42\" width=\"28\" height=\"18\" rx=\"4\" fill=\"#f5f5f5\" stroke=\"#9e9e9e\"/><text x=\"118\" y=\"53.666666666666664\" text-anchor=\"middle\" font-size=\"8\" fill=\"#424242\">N</text><text x=\"22\" y=\"76\" text-anchor=\"middle\" font-size=\"8\" font-weight=\"600\" fill=\"#424242\">F</text><rect id=\"sq03-and-2-1\" x=\"40\" y=\"64\" width=\"28\" height=\"18\" rx=\"4\" fill=\"#ffebee\" stroke=\"#c62828\"/><text x=\"54\" y=\"75.66666666666667\" text-anchor=\"middle\" font-size=\"8\" fill=\"#b71c1c\">F</text><rect id=\"sq03-and-2-2\" x=\"72\" y=\"64\" width=\"28\" height=\"18\" rx=\"4\" fill=\"#ffebee\" stroke=\"#c62828\"/><text x=\"86\" y=\"75.66666666666667\" text-anchor=\"middle\" font-size=\"8\" fill=\"#b71c1c\">F</text><rect id=\"sq03-and-2-3\" x=\"104\" y=\"64\" width=\"28\" height=\"18\" rx=\"4\" fill=\"#ffebee\" stroke=\"#c62828\"/><text x=\"118\" y=\"75.66666666666667\" text-anchor=\"middle\" font-size=\"8\" fill=\"#b71c1c\">F</text><text x=\"22\" y=\"98\" text-anchor=\"middle\" font-size=\"8\" font-weight=\"600\" fill=\"#424242\">N</text><rect id=\"sq03-and-3-1\" x=\"40\" y=\"86\" width=\"28\" height=\"18\" rx=\"4\" fill=\"#f5f5f5\" stroke=\"#9e9e9e\"/><text x=\"54\" y=\"97.66666666666667\" text-anchor=\"middle\" font-size=\"8\" fill=\"#424242\">N</text><rect id=\"sq03-and-3-2\" x=\"72\" y=\"86\" width=\"28\" height=\"18\" rx=\"4\" fill=\"#ffebee\" stroke=\"#c62828\"/><text x=\"86\" y=\"97.66666666666667\" text-anchor=\"middle\" font-size=\"8\" fill=\"#b71c1c\">F</text><rect id=\"sq03-and-3-3\" x=\"104\" y=\"86\" width=\"28\" height=\"18\" rx=\"4\" fill=\"#f5f5f5\" stroke=\"#9e9e9e\"/><text x=\"118\" y=\"97.66666666666667\" text-anchor=\"middle\" font-size=\"8\" fill=\"#424242\">N</text><text x=\"178\" y=\"32\" text-anchor=\"middle\" font-size=\"8\" font-weight=\"600\" fill=\"#424242\"></text><text x=\"210\" y=\"32\" text-anchor=\"middle\" font-size=\"8\" font-weight=\"600\" fill=\"#424242\">T</text><text x=\"242\" y=\"32\" text-anchor=\"middle\" font-size=\"8\" font-weight=\"600\" fill=\"#424242\">F</text><text x=\"274\" y=\"32\" text-anchor=\"middle\" font-size=\"8\" font-weight=\"600\" fill=\"#424242\">N</text><text x=\"178\" y=\"54\" text-anchor=\"middle\" font-size=\"8\" font-weight=\"600\" fill=\"#424242\">T</text><rect id=\"sq03-or-1-1\" x=\"196\" y=\"42\" width=\"28\" height=\"18\" rx=\"4\" fill=\"#e8f5e9\" stroke=\"#2e7d32\"/><text x=\"210\" y=\"53.666666666666664\" text-anchor=\"middle\" font-size=\"8\" fill=\"#1b5e20\">T</text><rect id=\"sq03-or-1-2\" x=\"228\" y=\"42\" width=\"28\" height=\"18\" rx=\"4\" fill=\"#e8f5e9\" stroke=\"#2e7d32\"/><text x=\"242\" y=\"53.666666666666664\" text-anchor=\"middle\" font-size=\"8\" fill=\"#1b5e20\">T</text><rect id=\"sq03-or-1-3\" x=\"260\" y=\"42\" width=\"28\" height=\"18\" rx=\"4\" fill=\"#e8f5e9\" stroke=\"#2e7d32\"/><text x=\"274\" y=\"53.666666666666664\" text-anchor=\"middle\" font-size=\"8\" fill=\"#1b5e20\">T</text><text x=\"178\" y=\"76\" text-anchor=\"middle\" font-size=\"8\" font-weight=\"600\" fill=\"#424242\">F</text><rect id=\"sq03-or-2-1\" x=\"196\" y=\"64\" width=\"28\" height=\"18\" rx=\"4\" fill=\"#e8f5e9\" stroke=\"#2e7d32\"/><text x=\"210\" y=\"75.66666666666667\" text-anchor=\"middle\" font-size=\"8\" fill=\"#1b5e20\">T</text><rect id=\"sq03-or-2-2\" x=\"228\" y=\"64\" width=\"28\" height=\"18\" rx=\"4\" fill=\"#ffebee\" stroke=\"#c62828\"/><text x=\"242\" y=\"75.66666666666667\" text-anchor=\"middle\" font-size=\"8\" fill=\"#b71c1c\">F</text><rect id=\"sq03-or-2-3\" x=\"260\" y=\"64\" width=\"28\" height=\"18\" rx=\"4\" fill=\"#f5f5f5\" stroke=\"#9e9e9e\"/><text x=\"274\" y=\"75.66666666666667\" text-anchor=\"middle\" font-size=\"8\" fill=\"#424242\">N</text><text x=\"178\" y=\"98\" text-anchor=\"middle\" font-size=\"8\" font-weight=\"600\" fill=\"#424242\">N</text><rect id=\"sq03-or-3-1\" x=\"196\" y=\"86\" width=\"28\" height=\"18\" rx=\"4\" fill=\"#e8f5e9\" stroke=\"#2e7d32\"/><text x=\"210\" y=\"97.66666666666667\" text-anchor=\"middle\" font-size=\"8\" fill=\"#1b5e20\">T</text><rect id=\"sq03-or-3-2\" x=\"228\" y=\"86\" width=\"28\" height=\"18\" rx=\"4\" fill=\"#f5f5f5\" stroke=\"#9e9e9e\"/><text x=\"242\" y=\"97.66666666666667\" text-anchor=\"middle\" font-size=\"8\" fill=\"#424242\">N</text><rect id=\"sq03-or-3-3\" x=\"260\" y=\"86\" width=\"28\" height=\"18\" rx=\"4\" fill=\"#f5f5f5\" stroke=\"#9e9e9e\"/><text x=\"274\" y=\"97.66666666666667\" text-anchor=\"middle\" font-size=\"8\" fill=\"#424242\">N</text><text x=\"150\" y=\"116\" text-anchor=\"middle\" font-size=\"7\" fill=\"#555\">T = TRUE, F = FALSE, N = NULL; WHERE оставляет только T</text></svg>"
+      }
+    },
+    {
+      "type": "sqlite",
+      "title": "Практика: клиенты без email",
+      "content": {
+        "description": "Выведите имена (`name`) клиентов, у которых **не указан email**.\n\n```sql\nCREATE TABLE customers(\n  id INTEGER PRIMARY KEY,\n  name TEXT NOT NULL,\n  email TEXT,\n  phone TEXT\n);\n```",
+        "setup": "CREATE TABLE customers(\n  id INTEGER PRIMARY KEY,\n  name TEXT NOT NULL,\n  email TEXT,\n  phone TEXT\n);",
+        "starterCode": "SELECT name FROM customers WHERE email = NULL;",
+        "referenceSolution": "SELECT name FROM customers WHERE email IS NULL;",
+        "orderMatters": false,
+        "timeoutMs": 5000,
+        "tests": [
+          {
+            "seed": "INSERT INTO customers(id, name, email, phone) VALUES\n  (1, 'Алиса', 'alice@example.com', '+7 900 000-00-01'),\n  (2, 'Богдан', NULL, '+7 900 000-00-02'),\n  (3, 'Валя', NULL, NULL),\n  (4, 'Гоша', 'gosha@example.com', NULL);"
+          },
+          {
+            "seed": "INSERT INTO customers(id, name, email, phone) VALUES\n  (1, 'Даша', NULL, '+7 911 111-11-11'),\n  (2, 'Ефим', 'efim@example.com', '+7 922 222-22-22');"
+          }
+        ]
+      }
+    },
+    {
+      "type": "sqlite",
+      "title": "Практика: контакт для связи",
+      "content": {
+        "description": "Для каждого клиента выведите:\n\n- `name`;\n- `contact` — email, если он есть; иначе телефон; если нет ни того, ни другого — строка `'нет контакта'`.\n\nИмена столбцов проверяются.",
+        "setup": "CREATE TABLE customers(\n  id INTEGER PRIMARY KEY,\n  name TEXT NOT NULL,\n  email TEXT,\n  phone TEXT\n);",
+        "starterCode": "SELECT name, email AS contact FROM customers;",
+        "referenceSolution": "SELECT name, COALESCE(email, phone, 'нет контакта') AS contact FROM customers;",
+        "orderMatters": false,
+        "checkColumnNames": true,
+        "timeoutMs": 5000,
+        "tests": [
+          {
+            "seed": "INSERT INTO customers(id, name, email, phone) VALUES\n  (1, 'Алиса', 'alice@example.com', '+7 900 000-00-01'),\n  (2, 'Богдан', NULL, '+7 900 000-00-02'),\n  (3, 'Валя', NULL, NULL),\n  (4, 'Гоша', 'gosha@example.com', NULL);"
+          },
+          {
+            "seed": "INSERT INTO customers(id, name, email, phone) VALUES\n  (1, 'Даша', NULL, '+7 911 111-11-11'),\n  (2, 'Ефим', 'efim@example.com', '+7 922 222-22-22');"
+          }
+        ]
+      }
+    },
+    {
+      "type": "sqlite",
+      "title": "Практика: что действительно изменилось",
+      "content": {
+        "description": "В журнале `changes` хранятся старое и новое значение поля. Выведите `id` записей, где значение **действительно изменилось** — в том числе когда одно из значений `NULL`, а другое нет. Если оба `NULL` — изменения нет.\n\n```sql\nCREATE TABLE changes(\n  id INTEGER PRIMARY KEY,\n  field TEXT NOT NULL,\n  old_value TEXT,\n  new_value TEXT\n);\n```",
+        "setup": "CREATE TABLE changes(\n  id INTEGER PRIMARY KEY,\n  field TEXT NOT NULL,\n  old_value TEXT,\n  new_value TEXT\n);",
+        "starterCode": "SELECT id FROM changes WHERE old_value <> new_value;",
+        "referenceSolution": "SELECT id FROM changes WHERE old_value IS NOT new_value;",
+        "orderMatters": false,
+        "timeoutMs": 5000,
+        "tests": [
+          {
+            "seed": "INSERT INTO changes(id, field, old_value, new_value) VALUES\n  (1, 'email', 'a@x.ru', 'b@x.ru'),\n  (2, 'email', NULL, 'c@x.ru'),\n  (3, 'phone', '123', NULL),\n  (4, 'phone', NULL, NULL),\n  (5, 'city', 'Омск', 'Омск');"
+          },
+          {
+            "seed": "INSERT INTO changes(id, field, old_value, new_value) VALUES\n  (1, 'city', 'Тула', 'Тверь'),\n  (2, 'city', 'Тула', 'Тула');"
+          }
+        ]
+      }
+    },
+    {
+      "type": "quiz",
+      "title": "Проверка: NOT IN и NULL",
+      "content": {
+        "question": "Что вернёт **`SELECT 1 NOT IN (NULL, 2);`**?",
+        "options": [
+          "`1` (TRUE)",
+          "`0` (FALSE)",
+          "`NULL`",
+          "Ошибку"
+        ],
+        "correctIndices": [
+          2
+        ]
+      }
+    },
+    {
+      "type": "quiz",
+      "title": "Итоговый тест модуля",
+      "content": {
+        "question": "В таблице 10 строк, у 3 из них `email IS NULL`. Что вернут **`COUNT(*)`** и **`COUNT(email)`**?",
+        "options": [
+          "10 и 10",
+          "10 и 7",
+          "7 и 7",
+          "7 и 10"
+        ],
+        "correctIndices": [
+          1
+        ]
+      }
+    }
+  ]
+}

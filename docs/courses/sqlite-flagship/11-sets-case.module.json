@@ -1,0 +1,118 @@
+{
+  "schemaVersion": 1,
+  "title": "Множества и CASE",
+  "steps": [
+    {
+      "type": "theory",
+      "title": "UNION, INTERSECT, EXCEPT",
+      "content": "## Операции над результатами\n\nДва `SELECT` с **одинаковым числом столбцов** можно объединить:\n\n| Оператор | Результат | Дубликаты |\n|----------|-----------|-----------|\n| `UNION` | строки из обоих | убираются |\n| `UNION ALL` | строки из обоих | **остаются** (и это быстрее) |\n| `INTERSECT` | строки, которые есть в обоих | убираются |\n| `EXCEPT` | строки первого, которых нет во втором | убираются |\n\n```sql\nSELECT email FROM customers\nUNION\nSELECT email FROM subscribers\nORDER BY email;          -- ORDER BY и LIMIT — один раз, в конце, ко всему результату\n```\n\n- Имена столбцов берутся из **первого** запроса.\n- `NULL` при сравнении в `UNION`/`INTERSECT`/`EXCEPT` считается равным `NULL` (в отличие от `=`).\n- В MySQL `INTERSECT` и `EXCEPT` появились только в 8.0.31; в Oracle `EXCEPT` называется `MINUS`."
+    },
+    {
+      "type": "svg",
+      "title": "Схема: операции над множествами",
+      "content": {
+        "caption": "UNION — всё; INTERSECT — общее; EXCEPT — только из первого",
+        "description": "A = первый SELECT, B = второй. UNION убирает дубликаты, UNION ALL — нет.",
+        "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 320 90\" width=\"100%\" role=\"img\" aria-label=\"UNION, INTERSECT, EXCEPT\"><circle id=\"sq11-u-a\" cx=\"40\" cy=\"40\" r=\"22\" fill=\"#1565c0\" fill-opacity=\"0.35\" stroke=\"#1565c0\"/><circle id=\"sq11-u-b\" cx=\"64\" cy=\"40\" r=\"22\" fill=\"#2e7d32\" fill-opacity=\"0.35\" stroke=\"#2e7d32\"/><text x=\"52\" y=\"80\" text-anchor=\"middle\" font-size=\"8\" font-weight=\"600\" fill=\"#555\">UNION</text><circle id=\"sq11-i-a\" cx=\"140\" cy=\"40\" r=\"22\" fill=\"#1565c0\" fill-opacity=\"0.35\" stroke=\"#1565c0\"/><circle id=\"sq11-i-b\" cx=\"164\" cy=\"40\" r=\"22\" fill=\"#2e7d32\" fill-opacity=\"0.35\" stroke=\"#2e7d32\"/><path d=\"M152,22 A22,22 0 0,1 152,58 A22,22 0 0,1 152,22\" fill=\"#f9a825\" fill-opacity=\"0.8\"/><text x=\"152\" y=\"80\" text-anchor=\"middle\" font-size=\"8\" font-weight=\"600\" fill=\"#555\">INTERSECT</text><circle id=\"sq11-e-a\" cx=\"240\" cy=\"40\" r=\"22\" fill=\"#f9a825\" fill-opacity=\"0.8\" stroke=\"#1565c0\"/><circle id=\"sq11-e-b\" cx=\"264\" cy=\"40\" r=\"22\" fill=\"#fff\" stroke=\"#2e7d32\"/><text x=\"252\" y=\"80\" text-anchor=\"middle\" font-size=\"8\" font-weight=\"600\" fill=\"#555\">A EXCEPT B</text><text x=\"30\" y=\"14\" text-anchor=\"middle\" font-size=\"8\" fill=\"#1565c0\">A</text><text x=\"76\" y=\"14\" text-anchor=\"middle\" font-size=\"8\" fill=\"#2e7d32\">B</text></svg>"
+      }
+    },
+    {
+      "type": "theory",
+      "title": "CASE: условия в выражениях",
+      "content": "## Две формы\n\n```sql\n-- searched CASE: условия проверяются СВЕРХУ ВНИЗ, побеждает первое истинное\nSELECT name,\n  CASE\n    WHEN salary >= 200000 THEN 'high'\n    WHEN salary >= 100000 THEN 'mid'\n    ELSE 'low'\n  END AS grade\nFROM employees;\n\n-- simple CASE: сравнение одного выражения со значениями\nSELECT CASE status WHEN 'paid' THEN 'Оплачен' WHEN 'new' THEN 'Новый' ELSE '?' END FROM orders;\n```\n\n- Без `ELSE` несовпадение даёт `NULL`.\n- `CASE x WHEN NULL` **никогда** не срабатывает (это `x = NULL`) — пишите `CASE WHEN x IS NULL …`.\n- `iif(cond, a, b)` — короткая форма в SQLite (и `IF` в MySQL).\n\n## Где применять\n\n- Категории и подписи в `SELECT`.\n- **Пользовательский порядок**: `ORDER BY CASE status WHEN 'new' THEN 1 WHEN 'paid' THEN 2 ELSE 3 END`.\n- **Сводная таблица (pivot)**: `SUM(CASE WHEN month = '01' THEN amount ELSE 0 END) AS jan`."
+    },
+    {
+      "type": "sqlite",
+      "title": "Практика: все адреса для рассылки",
+      "content": {
+        "description": "Соберите **уникальные** email из двух таблиц — клиентов и подписчиков. Один столбец `email`.\n\n```sql\nCREATE TABLE customers(id INTEGER PRIMARY KEY, name TEXT NOT NULL, email TEXT NOT NULL);\nCREATE TABLE subscribers(id INTEGER PRIMARY KEY, email TEXT NOT NULL);\n```",
+        "setup": "CREATE TABLE customers(id INTEGER PRIMARY KEY, name TEXT NOT NULL, email TEXT NOT NULL);\nCREATE TABLE subscribers(id INTEGER PRIMARY KEY, email TEXT NOT NULL);",
+        "starterCode": "SELECT email FROM customers\nUNION ALL\nSELECT email FROM subscribers;",
+        "referenceSolution": "SELECT email FROM customers\nUNION\nSELECT email FROM subscribers;",
+        "orderMatters": false,
+        "timeoutMs": 5000,
+        "tests": [
+          {
+            "seed": "INSERT INTO customers VALUES (1, 'Алиса', 'a@x.ru'), (2, 'Богдан', 'b@x.ru');\nINSERT INTO subscribers VALUES (1, 'b@x.ru'), (2, 'c@x.ru'), (3, 'c@x.ru');"
+          },
+          {
+            "seed": "INSERT INTO customers VALUES (1, 'Вера', 'v@x.ru');"
+          }
+        ]
+      }
+    },
+    {
+      "type": "sqlite",
+      "title": "Практика: товары без продаж",
+      "content": {
+        "description": "Выведите `id` товаров, которые **ни разу не продавались** (нет в `order_items`). Используйте `EXCEPT`.\n\n```sql\nCREATE TABLE products(id INTEGER PRIMARY KEY, name TEXT NOT NULL);\nCREATE TABLE order_items(order_id INTEGER NOT NULL, product_id INTEGER NOT NULL, qty INTEGER NOT NULL);\n```",
+        "setup": "CREATE TABLE products(id INTEGER PRIMARY KEY, name TEXT NOT NULL);\nCREATE TABLE order_items(order_id INTEGER NOT NULL, product_id INTEGER NOT NULL, qty INTEGER NOT NULL);",
+        "starterCode": "SELECT id FROM products;",
+        "referenceSolution": "SELECT id FROM products\nEXCEPT\nSELECT product_id FROM order_items;",
+        "orderMatters": false,
+        "timeoutMs": 5000,
+        "tests": [
+          {
+            "seed": "INSERT INTO products VALUES (1, 'Чай'), (2, 'Кофе'), (3, 'Какао'), (4, 'Сахар');\nINSERT INTO order_items VALUES (100, 2, 1), (101, 2, 3), (101, 4, 1);"
+          },
+          {
+            "seed": "INSERT INTO products VALUES (1, 'Мёд');\nINSERT INTO order_items VALUES (1, 1, 2);"
+          }
+        ]
+      }
+    },
+    {
+      "type": "sqlite",
+      "title": "Практика: грейды сотрудников",
+      "content": {
+        "description": "Выведите `name` и `grade`:\n\n- `'high'` — зарплата **от 200 000**;\n- `'mid'` — **от 100 000** (и меньше 200 000);\n- `'low'` — меньше 100 000;\n- `'unknown'` — зарплата не указана (`NULL`).\n\nИмена столбцов проверяются.\n\n```sql\nCREATE TABLE employees(\n  id INTEGER PRIMARY KEY,\n  name TEXT NOT NULL,\n  department TEXT,\n  salary INTEGER,\n  manager_id INTEGER,\n  hired_at TEXT\n);\n```",
+        "setup": "CREATE TABLE employees(\n  id INTEGER PRIMARY KEY,\n  name TEXT NOT NULL,\n  department TEXT,\n  salary INTEGER,\n  manager_id INTEGER,\n  hired_at TEXT\n);",
+        "starterCode": "SELECT name,\n  CASE\n    WHEN salary >= 100000 THEN 'mid'\n    WHEN salary >= 200000 THEN 'high'\n    ELSE 'low'\n  END AS grade\nFROM employees;",
+        "referenceSolution": "SELECT name,\n  CASE\n    WHEN salary IS NULL THEN 'unknown'\n    WHEN salary >= 200000 THEN 'high'\n    WHEN salary >= 100000 THEN 'mid'\n    ELSE 'low'\n  END AS grade\nFROM employees;",
+        "orderMatters": false,
+        "checkColumnNames": true,
+        "timeoutMs": 5000,
+        "tests": [
+          {
+            "seed": "INSERT INTO employees(id, name, salary) VALUES\n  (1, 'Анна', 250000), (2, 'Борис', 200000), (3, 'Вера', 150000), (4, 'Глеб', 99999), (5, 'Дина', NULL);"
+          },
+          {
+            "seed": "INSERT INTO employees(id, name, salary) VALUES (1, 'Егор', 100000);"
+          }
+        ]
+      }
+    },
+    {
+      "type": "quiz",
+      "title": "Проверка: UNION и UNION ALL",
+      "content": {
+        "question": "В первом запросе строки `1, 2, 2`, во втором — `2, 3`. Сколько строк вернёт **`UNION ALL`**, а сколько **`UNION`**?",
+        "options": [
+          "5 и 3",
+          "5 и 5",
+          "3 и 3",
+          "4 и 3"
+        ],
+        "correctIndices": [
+          0
+        ]
+      }
+    },
+    {
+      "type": "quiz",
+      "title": "Итоговый тест модуля",
+      "content": {
+        "question": "Что вернёт `CASE WHEN x > 10 THEN 'big' END`, если `x = 5`?",
+        "options": [
+          "`'big'`",
+          "`''` (пустая строка)",
+          "`NULL`",
+          "Ошибку: нет ELSE"
+        ],
+        "correctIndices": [
+          2
+        ]
+      }
+    }
+  ]
+}

@@ -1,0 +1,94 @@
+{
+  "schemaVersion": 1,
+  "title": "CTE: WITH",
+  "steps": [
+    {
+      "type": "theory",
+      "title": "Общие табличные выражения",
+      "content": "## WITH — именованный подзапрос\n\n```sql\nWITH paid AS (\n  SELECT customer_id, SUM(amount) AS total\n  FROM orders\n  WHERE status = 'paid'\n  GROUP BY customer_id\n)\nSELECT c.name, p.total\nFROM paid AS p\nJOIN customers AS c ON c.id = p.customer_id\nWHERE p.total > (SELECT AVG(total) FROM paid);   -- CTE можно использовать несколько раз\n```\n\n## Несколько CTE подряд\n\n```sql\nWITH\n  dept AS (SELECT department, SUM(salary) AS payroll FROM employees GROUP BY department),\n  company AS (SELECT SUM(payroll) AS payroll FROM dept)   -- ссылается на предыдущий CTE\nSELECT d.department, ROUND(100.0 * d.payroll / c.payroll, 1) AS share_pct\nFROM dept AS d CROSS JOIN company AS c;\n```\n\n## Зачем\n\n- **Читаемость**: запрос читается сверху вниз как цепочка шагов, а не матрёшка подзапросов.\n- **Повторное использование** одного промежуточного результата.\n- **Рекурсия** (следующий модуль).\n\nCTE живёт только в пределах **одного** запроса. Нужно на несколько запросов — временная таблица `CREATE TEMP TABLE … AS SELECT …`.\n\nОптимизатор SQLite может «встроить» CTE как подзапрос или вычислить один раз; подсказки — `AS MATERIALIZED` / `AS NOT MATERIALIZED`.\n\n`WITH` можно ставить и перед `INSERT`, `UPDATE`, `DELETE`."
+    },
+    {
+      "type": "svg",
+      "title": "Схема: цепочка CTE",
+      "content": {
+        "caption": "Каждый CTE — шаг конвейера; финальный SELECT собирает результат",
+        "description": "dept считает фонд по отделам, company — по компании из dept, итог — доля каждого отдела.",
+        "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 300 80\" width=\"100%\" role=\"img\" aria-label=\"Цепочка CTE\"><rect id=\"sq12-src\" x=\"6\" y=\"26\" width=\"60\" height=\"28\" rx=\"4\" fill=\"#f5f5f5\" stroke=\"#9e9e9e\"/><text x=\"36\" y=\"42.666666666666664\" text-anchor=\"middle\" font-size=\"8\" fill=\"#424242\">employees</text><line x1=\"66\" y1=\"40\" x2=\"82\" y2=\"40\" stroke=\"#757575\" stroke-width=\"1.2\"/><polygon points=\"82,40 77.5,42.2 77.5,37.8\" fill=\"#757575\"/><rect id=\"sq12-dept\" x=\"82\" y=\"26\" width=\"64\" height=\"28\" rx=\"4\" fill=\"#e3f2fd\" stroke=\"#1565c0\"/><text x=\"114\" y=\"37.833333333333336\" text-anchor=\"middle\" font-size=\"7\" fill=\"#0d47a1\">dept</text><text x=\"114\" y=\"46.833333333333336\" text-anchor=\"middle\" font-size=\"7\" fill=\"#0d47a1\">SUM по отделу</text><line x1=\"146\" y1=\"40\" x2=\"162\" y2=\"40\" stroke=\"#757575\" stroke-width=\"1.2\"/><polygon points=\"162,40 157.5,42.2 157.5,37.8\" fill=\"#757575\"/><rect id=\"sq12-company\" x=\"162\" y=\"6\" width=\"64\" height=\"28\" rx=\"4\" fill=\"#fff9c4\" stroke=\"#f9a825\"/><text x=\"194\" y=\"17.833333333333332\" text-anchor=\"middle\" font-size=\"7\" fill=\"#e65100\">company</text><text x=\"194\" y=\"26.833333333333332\" text-anchor=\"middle\" font-size=\"7\" fill=\"#e65100\">SUM по dept</text><line x1=\"146\" y1=\"44\" x2=\"238\" y2=\"56\" stroke=\"#757575\" stroke-width=\"1.2\"/><polygon points=\"238,56 233.3,57.6 233.8,53.3\" fill=\"#757575\"/><line x1=\"226\" y1=\"20\" x2=\"240\" y2=\"40\" stroke=\"#757575\" stroke-width=\"1.2\"/><polygon points=\"240,40 235.6,37.6 239.2,35.1\" fill=\"#757575\"/><rect id=\"sq12-final\" x=\"238\" y=\"40\" width=\"56\" height=\"28\" rx=\"4\" fill=\"#e8f5e9\" stroke=\"#2e7d32\"/><text x=\"266\" y=\"51.833333333333336\" text-anchor=\"middle\" font-size=\"7\" fill=\"#1b5e20\">SELECT</text><text x=\"266\" y=\"60.833333333333336\" text-anchor=\"middle\" font-size=\"7\" fill=\"#1b5e20\">доля %</text><text x=\"150\" y=\"76\" text-anchor=\"middle\" font-size=\"7\" font-family=\"ui-monospace, monospace\" fill=\"#555\">WITH dept AS (…), company AS (…) SELECT …</text></svg>"
+      }
+    },
+    {
+      "type": "sqlite",
+      "title": "Практика: клиенты выше среднего",
+      "content": {
+        "description": "Посчитайте для каждого клиента сумму **оплаченных** заказов (`status = 'paid'`). Выведите имена (`name`) клиентов, у которых эта сумма **больше средней суммы по клиентам с оплатами**.\n\n```sql\nCREATE TABLE customers(\n  id INTEGER PRIMARY KEY,\n  name TEXT NOT NULL,\n  city TEXT\n);\nCREATE TABLE orders(\n  id INTEGER PRIMARY KEY,\n  customer_id INTEGER REFERENCES customers(id),\n  status TEXT NOT NULL,   -- 'paid' | 'cancelled' | 'new'\n  amount REAL NOT NULL\n);\n```",
+        "setup": "CREATE TABLE customers(\n  id INTEGER PRIMARY KEY,\n  name TEXT NOT NULL,\n  city TEXT\n);\nCREATE TABLE orders(\n  id INTEGER PRIMARY KEY,\n  customer_id INTEGER REFERENCES customers(id),\n  status TEXT NOT NULL,   -- 'paid' | 'cancelled' | 'new'\n  amount REAL NOT NULL\n);",
+        "starterCode": "SELECT c.name\nFROM customers AS c\nJOIN orders AS o ON o.customer_id = c.id\nWHERE o.status = 'paid' AND o.amount > (SELECT AVG(amount) FROM orders);",
+        "referenceSolution": "WITH paid AS (\n  SELECT customer_id, SUM(amount) AS total\n  FROM orders\n  WHERE status = 'paid' AND customer_id IS NOT NULL\n  GROUP BY customer_id\n)\nSELECT c.name\nFROM paid AS p\nJOIN customers AS c ON c.id = p.customer_id\nWHERE p.total > (SELECT AVG(total) FROM paid);",
+        "orderMatters": false,
+        "timeoutMs": 5000,
+        "tests": [
+          {
+            "seed": "INSERT INTO customers(id, name, city) VALUES (1, 'Алиса', NULL), (2, 'Богдан', NULL), (3, 'Валя', NULL), (4, 'Гоша', NULL);\nINSERT INTO orders(id, customer_id, status, amount) VALUES\n  (1, 1, 'paid', 100), (2, 1, 'paid', 100), (3, 1, 'paid', 100),\n  (4, 2, 'paid', 250),\n  (5, 3, 'paid', 50), (6, 3, 'cancelled', 1000),\n  (7, 4, 'new', 500);"
+          },
+          {
+            "seed": "INSERT INTO customers(id, name, city) VALUES (1, 'Даша', NULL), (2, 'Ефим', NULL);\nINSERT INTO orders(id, customer_id, status, amount) VALUES (1, 1, 'paid', 10), (2, 2, 'paid', 30);"
+          }
+        ]
+      }
+    },
+    {
+      "type": "sqlite",
+      "title": "Практика: доля отдела в фонде оплаты",
+      "content": {
+        "description": "Для каждого отдела выведите:\n\n- `department`;\n- `share_pct` — доля фонда оплаты отдела (сумма `salary`) в фонде всей компании, **в процентах**, округлённая до 1 знака: `33.3`.\n\nИмена столбцов проверяются (допуск 0.05).\n\n```sql\nCREATE TABLE employees(\n  id INTEGER PRIMARY KEY,\n  name TEXT NOT NULL,\n  department TEXT,\n  salary INTEGER,\n  manager_id INTEGER,\n  hired_at TEXT\n);\n```",
+        "setup": "CREATE TABLE employees(\n  id INTEGER PRIMARY KEY,\n  name TEXT NOT NULL,\n  department TEXT,\n  salary INTEGER,\n  manager_id INTEGER,\n  hired_at TEXT\n);",
+        "starterCode": "WITH dept AS (SELECT department, SUM(salary) AS payroll FROM employees GROUP BY department),\n     company AS (SELECT SUM(payroll) AS payroll FROM dept)\nSELECT d.department, 100 * d.payroll / c.payroll AS share_pct\nFROM dept AS d CROSS JOIN company AS c;",
+        "referenceSolution": "WITH dept AS (SELECT department, SUM(salary) AS payroll FROM employees GROUP BY department),\n     company AS (SELECT SUM(payroll) AS payroll FROM dept)\nSELECT d.department, ROUND(100.0 * d.payroll / c.payroll, 1) AS share_pct\nFROM dept AS d CROSS JOIN company AS c;",
+        "orderMatters": false,
+        "checkColumnNames": true,
+        "floatTolerance": 0.05,
+        "timeoutMs": 5000,
+        "tests": [
+          {
+            "seed": "INSERT INTO employees(id, name, department, salary) VALUES\n  (1, 'Анна', 'IT', 100000), (2, 'Борис', 'Sales', 100000), (3, 'Вера', 'HR', 100000);"
+          },
+          {
+            "seed": "INSERT INTO employees(id, name, department, salary) VALUES\n  (1, 'Глеб', 'IT', 70000), (2, 'Дина', 'IT', 50000), (3, 'Егор', 'Ops', 80000);"
+          }
+        ]
+      }
+    },
+    {
+      "type": "quiz",
+      "title": "Проверка: область видимости CTE",
+      "content": {
+        "question": "Можно ли использовать CTE из одного запроса в следующем запросе той же сессии?",
+        "options": [
+          "Да, до конца сессии",
+          "Нет: CTE живёт в пределах одного запроса",
+          "Только если он MATERIALIZED",
+          "Только в транзакции"
+        ],
+        "correctIndices": [
+          1
+        ]
+      }
+    },
+    {
+      "type": "quiz",
+      "title": "Итоговый тест модуля",
+      "content": {
+        "question": "Что верно для `WITH a AS (…), b AS (SELECT … FROM a) SELECT … FROM b`?",
+        "options": [
+          "Ошибка: CTE не может ссылаться на другой CTE",
+          "CTE `b` может использовать `a`, объявленный раньше",
+          "`a` выполнится дважды обязательно",
+          "Финальный SELECT не может обращаться к `a`"
+        ],
+        "correctIndices": [
+          1
+        ]
+      }
+    }
+  ]
+}

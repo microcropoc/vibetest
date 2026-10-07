@@ -1,0 +1,116 @@
+{
+  "schemaVersion": 1,
+  "title": "Рекурсивные CTE",
+  "steps": [
+    {
+      "type": "theory",
+      "title": "WITH RECURSIVE",
+      "content": "## Устройство\n\n```sql\nWITH RECURSIVE counter(n) AS (\n  SELECT 1                    -- якорь: стартовые строки\n  UNION ALL\n  SELECT n + 1 FROM counter   -- рекурсивная часть: видит строки предыдущего шага\n  WHERE n < 5                 -- условие остановки\n)\nSELECT n FROM counter;        -- 1, 2, 3, 4, 5\n```\n\nАлгоритм: выполнить якорь → результат положить в «очередь» → для строк очереди выполнить рекурсивную часть → новые строки снова в очередь → пока очередь не пуста.\n\n**Остановка**: рекурсивная часть должна когда-то вернуть 0 строк — через `WHERE` или исчерпание данных. Подстраховка: `LIMIT` в финальном `SELECT` или счётчик глубины.\n\n## Генерация рядов\n\n```sql\nWITH RECURSIVE days(day) AS (\n  SELECT '2024-03-01'\n  UNION ALL\n  SELECT date(day, '+1 day') FROM days WHERE day < '2024-03-07'\n)\nSELECT d.day, COUNT(o.id) AS orders\nFROM days AS d\nLEFT JOIN orders AS o ON date(o.ordered_at) = d.day\nGROUP BY d.day;      -- дни без заказов тоже попадут, с нулём\n```\n\n## Обход иерархии\n\n```sql\nWITH RECURSIVE sub(id, name, level) AS (\n  SELECT id, name, 1 FROM employees WHERE manager_id = 1   -- прямые подчинённые\n  UNION ALL\n  SELECT e.id, e.name, s.level + 1\n  FROM employees AS e JOIN sub AS s ON e.manager_id = s.id   -- их подчинённые\n)\nSELECT name, level FROM sub;\n```\n\nВ рекурсивной части можно накапливать **путь**: `s.path || ' > ' || e.name`.\n\n**Циклы** в данных (A → B → A) с `UNION ALL` дают бесконечную рекурсию. Защита: `UNION` (убирает повторы строк целиком), ограничение глубины `WHERE level < 100` или проверка `instr(path, …)`."
+    },
+    {
+      "type": "svg",
+      "title": "Схема: рекурсия по уровням",
+      "content": {
+        "caption": "Якорь даёт уровень 1, каждая итерация — следующий уровень, пока строки не кончатся",
+        "description": "Подчинённые Анны: Борис и Дина (1), Вера и Егор (2), Глеб (3). Жора — в другой ветке и не попадает.",
+        "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 300 120\" width=\"100%\" role=\"img\" aria-label=\"Обход иерархии рекурсивным CTE\"><rect id=\"sq13-root\" x=\"115\" y=\"6\" width=\"70\" height=\"20\" rx=\"4\" fill=\"#fff9c4\" stroke=\"#f9a825\"/><text x=\"150\" y=\"18.333333333333332\" text-anchor=\"middle\" font-size=\"7\" fill=\"#e65100\">Анна (id 1)</text><rect id=\"sq13-l1a\" x=\"50\" y=\"40\" width=\"70\" height=\"20\" rx=\"4\" fill=\"#e3f2fd\" stroke=\"#1565c0\"/><text x=\"85\" y=\"52.333333333333336\" text-anchor=\"middle\" font-size=\"7\" fill=\"#0d47a1\">Борис · 1</text><rect id=\"sq13-l1b\" x=\"180\" y=\"40\" width=\"70\" height=\"20\" rx=\"4\" fill=\"#e3f2fd\" stroke=\"#1565c0\"/><text x=\"215\" y=\"52.333333333333336\" text-anchor=\"middle\" font-size=\"7\" fill=\"#0d47a1\">Дина · 1</text><rect id=\"sq13-l2a\" x=\"50\" y=\"70\" width=\"70\" height=\"20\" rx=\"4\" fill=\"#e8f5e9\" stroke=\"#2e7d32\"/><text x=\"85\" y=\"82.33333333333333\" text-anchor=\"middle\" font-size=\"7\" fill=\"#1b5e20\">Вера · 2</text><rect id=\"sq13-l2b\" x=\"180\" y=\"70\" width=\"70\" height=\"20\" rx=\"4\" fill=\"#e8f5e9\" stroke=\"#2e7d32\"/><text x=\"215\" y=\"82.33333333333333\" text-anchor=\"middle\" font-size=\"7\" fill=\"#1b5e20\">Егор · 2</text><rect id=\"sq13-l3\" x=\"50\" y=\"98\" width=\"70\" height=\"18\" rx=\"4\" fill=\"#f3e5f5\" stroke=\"#6a1b9a\"/><text x=\"85\" y=\"109.33333333333333\" text-anchor=\"middle\" font-size=\"7\" fill=\"#4a148c\">Глеб · 3</text><line x1=\"140\" y1=\"26\" x2=\"95\" y2=\"40\" stroke=\"#757575\" stroke-width=\"1.2\"/><polygon points=\"95,40 98.7,36.6 99.9,40.7\" fill=\"#757575\"/><line x1=\"160\" y1=\"26\" x2=\"205\" y2=\"40\" stroke=\"#757575\" stroke-width=\"1.2\"/><polygon points=\"205,40 200.1,40.7 201.3,36.6\" fill=\"#757575\"/><line x1=\"85\" y1=\"60\" x2=\"85\" y2=\"70\" stroke=\"#757575\" stroke-width=\"1.2\"/><polygon points=\"85,70 82.8,65.5 87.2,65.5\" fill=\"#757575\"/><line x1=\"215\" y1=\"60\" x2=\"215\" y2=\"70\" stroke=\"#757575\" stroke-width=\"1.2\"/><polygon points=\"215,70 212.8,65.5 217.2,65.5\" fill=\"#757575\"/><line x1=\"85\" y1=\"90\" x2=\"85\" y2=\"98\" stroke=\"#757575\" stroke-width=\"1.2\"/><polygon points=\"85,98 82.8,93.5 87.2,93.5\" fill=\"#757575\"/><text x=\"10\" y=\"50\" text-anchor=\"start\" font-size=\"7\" fill=\"#555\">якорь</text><text x=\"260\" y=\"82\" text-anchor=\"start\" font-size=\"7\" fill=\"#555\">итерации</text></svg>"
+      }
+    },
+    {
+      "type": "sqlite",
+      "title": "Практика: заказы по дням без пропусков",
+      "content": {
+        "description": "Выведите число заказов за **каждый** день с `2024-03-01` по `2024-03-07` включительно — **в том числе дни без заказов** (с нулём):\n\n- `day` — `'YYYY-MM-DD'`;\n- `orders` — число заказов в этот день.\n\nОтсортируйте по дню. Порядок строк и имена столбцов проверяются.\n\n```sql\nCREATE TABLE orders(\n  id INTEGER PRIMARY KEY,\n  ordered_at TEXT NOT NULL,   -- 'YYYY-MM-DD HH:MM:SS'\n  amount REAL NOT NULL\n);\n```",
+        "setup": "CREATE TABLE orders(\n  id INTEGER PRIMARY KEY,\n  ordered_at TEXT NOT NULL,   -- 'YYYY-MM-DD HH:MM:SS'\n  amount REAL NOT NULL\n);",
+        "starterCode": "SELECT date(ordered_at) AS day, COUNT(*) AS orders\nFROM orders\nWHERE ordered_at >= '2024-03-01' AND ordered_at < '2024-03-08'\nGROUP BY day\nORDER BY day;",
+        "referenceSolution": "WITH RECURSIVE days(day) AS (\n  SELECT '2024-03-01'\n  UNION ALL\n  SELECT date(day, '+1 day') FROM days WHERE day < '2024-03-07'\n)\nSELECT d.day, COUNT(o.id) AS orders\nFROM days AS d\nLEFT JOIN orders AS o ON date(o.ordered_at) = d.day\nGROUP BY d.day\nORDER BY d.day;",
+        "orderMatters": true,
+        "checkColumnNames": true,
+        "timeoutMs": 5000,
+        "tests": [
+          {
+            "seed": "INSERT INTO orders(id, ordered_at, amount) VALUES\n  (1, '2024-03-01 09:00:00', 10),\n  (2, '2024-03-01 18:00:00', 20),\n  (3, '2024-03-04 12:00:00', 30),\n  (4, '2024-03-07 23:59:59', 40),\n  (5, '2024-03-08 00:00:00', 50),\n  (6, '2024-02-29 10:00:00', 60);"
+          },
+          {
+            "seed": ""
+          }
+        ]
+      }
+    },
+    {
+      "type": "sqlite",
+      "title": "Практика: все подчинённые",
+      "content": {
+        "description": "Выведите **всех** подчинённых сотрудника с `id = 1` — прямых и косвенных, на любой глубине:\n\n- `name`;\n- `level` — `1` для прямых подчинённых, `2` для их подчинённых и т. д.\n\nИмена столбцов проверяются, порядок строк — нет.\n\n```sql\nCREATE TABLE employees(\n  id INTEGER PRIMARY KEY,\n  name TEXT NOT NULL,\n  department TEXT,\n  salary INTEGER,\n  manager_id INTEGER,\n  hired_at TEXT\n);\n```",
+        "setup": "CREATE TABLE employees(\n  id INTEGER PRIMARY KEY,\n  name TEXT NOT NULL,\n  department TEXT,\n  salary INTEGER,\n  manager_id INTEGER,\n  hired_at TEXT\n);",
+        "starterCode": "SELECT name, 1 AS level FROM employees WHERE manager_id = 1;",
+        "referenceSolution": "WITH RECURSIVE sub(id, name, level) AS (\n  SELECT id, name, 1 FROM employees WHERE manager_id = 1\n  UNION ALL\n  SELECT e.id, e.name, s.level + 1\n  FROM employees AS e\n  JOIN sub AS s ON e.manager_id = s.id\n)\nSELECT name, level FROM sub;",
+        "orderMatters": false,
+        "checkColumnNames": true,
+        "timeoutMs": 5000,
+        "tests": [
+          {
+            "seed": "INSERT INTO employees(id, name, department, salary, manager_id) VALUES\n  (1, 'Анна', 'CEO', 500000, NULL),\n  (2, 'Борис', 'IT', 300000, 1),\n  (3, 'Вера', 'IT', 200000, 2),\n  (4, 'Глеб', 'IT', 150000, 3),\n  (5, 'Дина', 'Sales', 250000, 1),\n  (6, 'Егор', 'Sales', 120000, 5),\n  (7, 'Жора', 'Ops', 100000, NULL);"
+          },
+          {
+            "seed": "INSERT INTO employees(id, name, department, salary, manager_id) VALUES\n  (1, 'Зоя', 'CEO', 400000, NULL),\n  (2, 'Иван', 'IT', 200000, 1),\n  (3, 'Кира', 'IT', 150000, 2),\n  (4, 'Лев', 'IT', 100000, 3),\n  (5, 'Мира', 'IT', 90000, 4);"
+          }
+        ]
+      }
+    },
+    {
+      "type": "sqlite",
+      "title": "Практика: путь от корня",
+      "content": {
+        "description": "Для каждого сотрудника, у которого цепочка руководителей доходит до «корня» (`manager_id IS NULL`), выведите:\n\n- `name`;\n- `path` — имена от корня до сотрудника через `' > '`: `'Анна > Борис > Вера'`. Для самого корня — просто его имя.\n\nИмена столбцов проверяются.",
+        "setup": "CREATE TABLE employees(\n  id INTEGER PRIMARY KEY,\n  name TEXT NOT NULL,\n  department TEXT,\n  salary INTEGER,\n  manager_id INTEGER,\n  hired_at TEXT\n);",
+        "starterCode": "SELECT name, name AS path FROM employees;",
+        "referenceSolution": "WITH RECURSIVE tree(id, name, path) AS (\n  SELECT id, name, name FROM employees WHERE manager_id IS NULL\n  UNION ALL\n  SELECT e.id, e.name, t.path || ' > ' || e.name\n  FROM employees AS e\n  JOIN tree AS t ON e.manager_id = t.id\n)\nSELECT name, path FROM tree;",
+        "orderMatters": false,
+        "checkColumnNames": true,
+        "timeoutMs": 5000,
+        "tests": [
+          {
+            "seed": "INSERT INTO employees(id, name, department, salary, manager_id) VALUES\n  (1, 'Анна', 'CEO', 500000, NULL),\n  (2, 'Борис', 'IT', 300000, 1),\n  (3, 'Вера', 'IT', 200000, 2),\n  (4, 'Глеб', 'IT', 150000, 3),\n  (5, 'Дина', 'Sales', 250000, 1),\n  (6, 'Егор', 'Sales', 120000, 5),\n  (7, 'Жора', 'Ops', 100000, NULL);"
+          },
+          {
+            "seed": "INSERT INTO employees(id, name, department, salary, manager_id) VALUES\n  (1, 'Зоя', 'CEO', 400000, NULL),\n  (2, 'Иван', 'IT', 200000, 1),\n  (3, 'Кира', 'IT', 150000, 2),\n  (4, 'Лев', 'IT', 100000, 3),\n  (5, 'Мира', 'IT', 90000, 4);"
+          }
+        ]
+      }
+    },
+    {
+      "type": "quiz",
+      "title": "Проверка: остановка рекурсии",
+      "content": {
+        "question": "Когда прекращается выполнение рекурсивного CTE?",
+        "options": [
+          "После 100 итераций",
+          "Когда рекурсивная часть на очередном шаге не вернула ни одной строки",
+          "Когда якорь вернул NULL",
+          "Когда встречается UNION ALL"
+        ],
+        "correctIndices": [
+          1
+        ]
+      }
+    },
+    {
+      "type": "quiz",
+      "title": "Итоговый тест модуля",
+      "content": {
+        "question": "Как защититься от бесконечной рекурсии при циклах в иерархии?",
+        "options": [
+          "Ограничить глубину условием `WHERE level < N` в рекурсивной части",
+          "Заменить `UNION ALL` на `UNION`, если повторяются строки целиком",
+          "Добавить ORDER BY в якорь",
+          "Использовать LEFT JOIN вместо JOIN"
+        ],
+        "correctIndices": [
+          0,
+          1
+        ]
+      }
+    }
+  ]
+}

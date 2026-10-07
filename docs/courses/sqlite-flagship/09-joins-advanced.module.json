@@ -1,0 +1,116 @@
+{
+  "schemaVersion": 1,
+  "title": "JOIN: RIGHT, FULL, self и anti-join",
+  "steps": [
+    {
+      "type": "theory",
+      "title": "Остальные виды соединений",
+      "content": "## RIGHT и FULL OUTER JOIN\n\nС **SQLite 3.39** поддерживаются оба (в MySQL FULL JOIN нет до сих пор):\n\n```sql\nSELECT a.sku, b.sku FROM warehouse_a a RIGHT JOIN warehouse_b b ON a.sku = b.sku; -- все из b\nSELECT a.sku, b.sku FROM warehouse_a a FULL JOIN  warehouse_b b ON a.sku = b.sku; -- все из обеих\n```\n\n`RIGHT JOIN` = `LEFT JOIN` с переставленными таблицами. В `FULL JOIN` ключ берут из той стороны, где он есть: `COALESCE(a.sku, b.sku) AS sku`.\n\n## CROSS JOIN\n\n`FROM sizes CROSS JOIN colors` — все комбинации (декартово произведение): 3 × 4 = 12 строк. Полезно для сеток «каждый день × каждый товар».\n\n## Self-join\n\nТаблица соединяется **сама с собой** под разными псевдонимами — так ходят по иерархии:\n\n```sql\nSELECT e.name AS employee, m.name AS manager\nFROM employees AS e\nLEFT JOIN employees AS m ON m.id = e.manager_id;  -- LEFT: у директора менеджера нет\n```\n\n## Semi-join и anti-join\n\n- «Клиенты, у которых **есть** заказы» — semi-join: `EXISTS` / `IN` (следующий модуль).\n- «Клиенты **без** заказов» — anti-join:\n\n```sql\nSELECT c.name\nFROM customers c\nLEFT JOIN orders o ON o.customer_id = c.id\nWHERE o.id IS NULL;     -- пары не нашлось\n```\n\nПроверяйте на `IS NULL` столбец, который **не может** быть `NULL` при найденной паре (первичный ключ).\n\n## Соединение по неравенству\n\nУсловие в `ON` — любое: `ON e.salary > m.salary`, `ON d.day BETWEEN p.start_day AND p.end_day`."
+    },
+    {
+      "type": "svg",
+      "title": "Схема: self-join по manager_id",
+      "content": {
+        "caption": "Одна таблица под двумя псевдонимами: `e` — сотрудник, `m` — его руководитель",
+        "description": "e.manager_id = m.id. У директора manager_id IS NULL — в INNER JOIN он пропадёт, в LEFT JOIN останется с manager = NULL.",
+        "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 300 120\" width=\"100%\" role=\"img\" aria-label=\"Self-join сотрудников\"><rect id=\"sq09-ceo\" x=\"120\" y=\"8\" width=\"60\" height=\"22\" rx=\"4\" fill=\"#fff9c4\" stroke=\"#f9a825\"/><text x=\"150\" y=\"16.833333333333332\" text-anchor=\"middle\" font-size=\"7\" fill=\"#e65100\">Анна</text><text x=\"150\" y=\"25.833333333333332\" text-anchor=\"middle\" font-size=\"7\" fill=\"#e65100\">manager: NULL</text><rect id=\"sq09-boris\" x=\"40\" y=\"50\" width=\"60\" height=\"22\" rx=\"4\" fill=\"#e3f2fd\" stroke=\"#1565c0\"/><text x=\"70\" y=\"58.833333333333336\" text-anchor=\"middle\" font-size=\"7\" fill=\"#0d47a1\">Борис</text><text x=\"70\" y=\"67.83333333333334\" text-anchor=\"middle\" font-size=\"7\" fill=\"#0d47a1\">manager: 1</text><rect id=\"sq09-gleb\" x=\"200\" y=\"50\" width=\"60\" height=\"22\" rx=\"4\" fill=\"#e3f2fd\" stroke=\"#1565c0\"/><text x=\"230\" y=\"58.833333333333336\" text-anchor=\"middle\" font-size=\"7\" fill=\"#0d47a1\">Глеб</text><text x=\"230\" y=\"67.83333333333334\" text-anchor=\"middle\" font-size=\"7\" fill=\"#0d47a1\">manager: 1</text><rect id=\"sq09-vera\" x=\"10\" y=\"92\" width=\"60\" height=\"22\" rx=\"4\" fill=\"#f5f5f5\" stroke=\"#9e9e9e\"/><text x=\"40\" y=\"100.83333333333333\" text-anchor=\"middle\" font-size=\"7\" fill=\"#424242\">Вера</text><text x=\"40\" y=\"109.83333333333333\" text-anchor=\"middle\" font-size=\"7\" fill=\"#424242\">manager: 2</text><rect id=\"sq09-dina\" x=\"170\" y=\"92\" width=\"60\" height=\"22\" rx=\"4\" fill=\"#f5f5f5\" stroke=\"#9e9e9e\"/><text x=\"200\" y=\"100.83333333333333\" text-anchor=\"middle\" font-size=\"7\" fill=\"#424242\">Дина</text><text x=\"200\" y=\"109.83333333333333\" text-anchor=\"middle\" font-size=\"7\" fill=\"#424242\">manager: 4</text><rect id=\"sq09-egor\" x=\"236\" y=\"92\" width=\"60\" height=\"22\" rx=\"4\" fill=\"#f5f5f5\" stroke=\"#9e9e9e\"/><text x=\"266\" y=\"100.83333333333333\" text-anchor=\"middle\" font-size=\"7\" fill=\"#424242\">Егор</text><text x=\"266\" y=\"109.83333333333333\" text-anchor=\"middle\" font-size=\"7\" fill=\"#424242\">manager: 4</text><line x1=\"70\" y1=\"50\" x2=\"130\" y2=\"30\" stroke=\"#757575\" stroke-width=\"1.2\"/><polygon points=\"130,30 126.4,33.5 125.0,29.4\" fill=\"#757575\"/><line x1=\"230\" y1=\"50\" x2=\"170\" y2=\"30\" stroke=\"#757575\" stroke-width=\"1.2\"/><polygon points=\"170,30 175.0,29.4 173.6,33.5\" fill=\"#757575\"/><line x1=\"40\" y1=\"92\" x2=\"60\" y2=\"72\" stroke=\"#757575\" stroke-width=\"1.2\"/><polygon points=\"60,72 58.4,76.7 55.3,73.6\" fill=\"#757575\"/><line x1=\"200\" y1=\"92\" x2=\"220\" y2=\"72\" stroke=\"#757575\" stroke-width=\"1.2\"/><polygon points=\"220,72 218.4,76.7 215.3,73.6\" fill=\"#757575\"/><line x1=\"266\" y1=\"92\" x2=\"245\" y2=\"72\" stroke=\"#757575\" stroke-width=\"1.2\"/><polygon points=\"245,72 249.8,73.5 246.8,76.7\" fill=\"#757575\"/><text x=\"150\" y=\"82\" text-anchor=\"middle\" font-size=\"7\" fill=\"#555\">стрелка: e → m</text></svg>"
+      }
+    },
+    {
+      "type": "sqlite",
+      "title": "Практика: сотрудник и руководитель",
+      "content": {
+        "description": "Для **каждого** сотрудника выведите `employee` (его имя) и `manager` (имя руководителя; `NULL`, если руководителя нет).\n\nИмена столбцов проверяются.\n\n```sql\nCREATE TABLE employees(\n  id INTEGER PRIMARY KEY,\n  name TEXT NOT NULL,\n  department TEXT,\n  salary INTEGER,\n  manager_id INTEGER,\n  hired_at TEXT\n);\n```",
+        "setup": "CREATE TABLE employees(\n  id INTEGER PRIMARY KEY,\n  name TEXT NOT NULL,\n  department TEXT,\n  salary INTEGER,\n  manager_id INTEGER,\n  hired_at TEXT\n);",
+        "starterCode": "SELECT e.name AS employee, m.name AS manager\nFROM employees AS e\nJOIN employees AS m ON m.id = e.manager_id;",
+        "referenceSolution": "SELECT e.name AS employee, m.name AS manager\nFROM employees AS e\nLEFT JOIN employees AS m ON m.id = e.manager_id;",
+        "orderMatters": false,
+        "checkColumnNames": true,
+        "timeoutMs": 5000,
+        "tests": [
+          {
+            "seed": "INSERT INTO employees(id, name, department, salary, manager_id) VALUES\n  (1, 'Анна', 'IT', 300000, NULL),\n  (2, 'Борис', 'IT', 200000, 1),\n  (3, 'Вера', 'IT', 210000, 2),\n  (4, 'Глеб', 'Sales', 150000, 1),\n  (5, 'Дина', 'Sales', 160000, 4),\n  (6, 'Егор', 'Sales', 90000, 4);"
+          },
+          {
+            "seed": "INSERT INTO employees(id, name, department, salary, manager_id) VALUES\n  (1, 'Жанна', 'HR', 100000, NULL),\n  (2, 'Зоя', 'HR', 100000, 1),\n  (3, 'Иван', 'HR', 120000, NULL);"
+          }
+        ]
+      }
+    },
+    {
+      "type": "sqlite",
+      "title": "Практика: получают больше руководителя",
+      "content": {
+        "description": "Классика LeetCode (181): выведите имена сотрудников, которые получают **строго больше** своего руководителя. Столбец — `Employee`.\n\nИмена столбцов проверяются.",
+        "setup": "CREATE TABLE employees(\n  id INTEGER PRIMARY KEY,\n  name TEXT NOT NULL,\n  department TEXT,\n  salary INTEGER,\n  manager_id INTEGER,\n  hired_at TEXT\n);",
+        "starterCode": "SELECT name AS Employee FROM employees WHERE salary > 150000;",
+        "referenceSolution": "SELECT e.name AS Employee\nFROM employees AS e\nJOIN employees AS m ON m.id = e.manager_id\nWHERE e.salary > m.salary;",
+        "orderMatters": false,
+        "checkColumnNames": true,
+        "timeoutMs": 5000,
+        "tests": [
+          {
+            "seed": "INSERT INTO employees(id, name, department, salary, manager_id) VALUES\n  (1, 'Анна', 'IT', 300000, NULL),\n  (2, 'Борис', 'IT', 200000, 1),\n  (3, 'Вера', 'IT', 210000, 2),\n  (4, 'Глеб', 'Sales', 150000, 1),\n  (5, 'Дина', 'Sales', 160000, 4),\n  (6, 'Егор', 'Sales', 90000, 4);"
+          },
+          {
+            "seed": "INSERT INTO employees(id, name, department, salary, manager_id) VALUES\n  (1, 'Жанна', 'HR', 100000, NULL),\n  (2, 'Зоя', 'HR', 100000, 1),\n  (3, 'Иван', 'HR', 120000, NULL);"
+          }
+        ]
+      }
+    },
+    {
+      "type": "sqlite",
+      "title": "Практика: сверка двух складов",
+      "content": {
+        "description": "Сверьте остатки двух складов. Выведите **все** артикулы, которые есть хотя бы на одном складе:\n\n- `sku`;\n- `qty_a` — остаток на складе A (`NULL`, если артикула там нет);\n- `qty_b` — остаток на складе B (`NULL`, если нет).\n\nИмена столбцов проверяются.\n\n```sql\nCREATE TABLE warehouse_a(sku TEXT PRIMARY KEY, qty INTEGER NOT NULL);\nCREATE TABLE warehouse_b(sku TEXT PRIMARY KEY, qty INTEGER NOT NULL);\n```",
+        "setup": "CREATE TABLE warehouse_a(sku TEXT PRIMARY KEY, qty INTEGER NOT NULL);\nCREATE TABLE warehouse_b(sku TEXT PRIMARY KEY, qty INTEGER NOT NULL);",
+        "starterCode": "SELECT a.sku, a.qty AS qty_a, b.qty AS qty_b\nFROM warehouse_a AS a\nLEFT JOIN warehouse_b AS b ON b.sku = a.sku;",
+        "referenceSolution": "SELECT COALESCE(a.sku, b.sku) AS sku, a.qty AS qty_a, b.qty AS qty_b\nFROM warehouse_a AS a\nFULL JOIN warehouse_b AS b ON b.sku = a.sku;",
+        "orderMatters": false,
+        "checkColumnNames": true,
+        "timeoutMs": 5000,
+        "tests": [
+          {
+            "seed": "INSERT INTO warehouse_a VALUES ('A-1', 5), ('A-2', 0), ('C-3', 7);\nINSERT INTO warehouse_b VALUES ('A-1', 2), ('B-9', 4);"
+          },
+          {
+            "seed": "INSERT INTO warehouse_b VALUES ('X-1', 1), ('X-2', 2);"
+          }
+        ]
+      }
+    },
+    {
+      "type": "quiz",
+      "title": "Проверка: CROSS JOIN",
+      "content": {
+        "question": "Сколько строк вернёт `SELECT * FROM sizes CROSS JOIN colors`, если в `sizes` 3 строки, а в `colors` — 4?",
+        "options": [
+          "4",
+          "7",
+          "12",
+          "3"
+        ],
+        "correctIndices": [
+          2
+        ]
+      }
+    },
+    {
+      "type": "quiz",
+      "title": "Итоговый тест модуля",
+      "content": {
+        "question": "Какие запросы находят клиентов **без** заказов (учтите, что `orders.customer_id` бывает NULL)?",
+        "options": [
+          "`… LEFT JOIN orders o ON o.customer_id = c.id WHERE o.id IS NULL`",
+          "`… WHERE NOT EXISTS (SELECT 1 FROM orders o WHERE o.customer_id = c.id)`",
+          "`… WHERE c.id NOT IN (SELECT customer_id FROM orders)`",
+          "`… JOIN orders o ON o.customer_id <> c.id`"
+        ],
+        "correctIndices": [
+          0,
+          1
+        ]
+      }
+    }
+  ]
+}

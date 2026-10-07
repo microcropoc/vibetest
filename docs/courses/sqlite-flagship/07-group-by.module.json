@@ -1,0 +1,115 @@
+{
+  "schemaVersion": 1,
+  "title": "Группировка: GROUP BY и HAVING",
+  "steps": [
+    {
+      "type": "theory",
+      "title": "GROUP BY и HAVING",
+      "content": "## Группы\n\n`GROUP BY` делит строки на группы с одинаковыми значениями ключа; агрегаты считаются **внутри каждой группы**:\n\n```sql\nSELECT department, COUNT(*) AS employees, AVG(salary) AS avg_salary\nFROM employees\nGROUP BY department;\n```\n\nПравило: в `SELECT` — только **ключи группировки** и **агрегаты**.\n\n## Ловушка SQLite: «голые» столбцы\n\nSQLite разрешает `SELECT department, name, MAX(salary) … GROUP BY department`. PostgreSQL выдаст ошибку, MySQL — тоже (режим `ONLY_FULL_GROUP_BY`). В SQLite `name` возьмётся из строки с максимумом **только** для одиночного `MAX`/`MIN`; в остальных случаях — из произвольной строки группы. Не полагайтесь на это в переносимом коде.\n\n## WHERE или HAVING\n\n- `WHERE` фильтрует **строки до** группировки — агрегаты в нём недоступны.\n- `HAVING` фильтрует **группы после** — по агрегатам.\n\n```sql\nSELECT department, AVG(salary) AS avg_salary\nFROM employees\nWHERE hired_at >= '2020-01-01'   -- какие строки попадут в группы\nGROUP BY department\nHAVING COUNT(*) >= 2             -- какие группы останутся\nORDER BY avg_salary DESC;\n```\n\n## Группировка по выражению\n\n`GROUP BY strftime('%Y-%m', ordered_at)` — помесячно. SQLite (и PostgreSQL, MySQL) разрешают ссылку на псевдоним: `GROUP BY month`.\n\nГрупп **без строк** не бывает: месяц без заказов в результат не попадёт. Как заполнить пропуски, покажем в модуле про рекурсивные CTE."
+    },
+    {
+      "type": "svg",
+      "title": "Схема: строки → группы → HAVING",
+      "content": {
+        "caption": "WHERE режет строки, GROUP BY собирает группы, HAVING режет группы",
+        "description": "После GROUP BY каждая группа — одна строка результата; HAVING видит агрегаты групп.",
+        "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 320 120\" width=\"100%\" role=\"img\" aria-label=\"GROUP BY и HAVING\"><rect id=\"sq07-rows\" x=\"6\" y=\"10\" width=\"64\" height=\"77\" rx=\"3\" fill=\"#fff\" stroke=\"#1565c0\"/><rect x=\"6\" y=\"10\" width=\"64\" height=\"11\" rx=\"3\" fill=\"#e3f2fd\" stroke=\"#1565c0\"/><text x=\"38\" y=\"18\" text-anchor=\"middle\" font-size=\"7\" font-weight=\"600\" fill=\"#0d47a1\">employees</text><text x=\"22\" y=\"29\" text-anchor=\"middle\" font-size=\"6.5\" font-family=\"ui-monospace, monospace\" font-weight=\"600\" fill=\"#0d47a1\">dept</text><text x=\"54\" y=\"29\" text-anchor=\"middle\" font-size=\"6.5\" font-family=\"ui-monospace, monospace\" font-weight=\"600\" fill=\"#0d47a1\">salary</text><text x=\"22\" y=\"40\" text-anchor=\"middle\" font-size=\"6.5\" font-family=\"ui-monospace, monospace\" fill=\"#333\">IT</text><text x=\"54\" y=\"40\" text-anchor=\"middle\" font-size=\"6.5\" font-family=\"ui-monospace, monospace\" fill=\"#333\">250</text><text x=\"22\" y=\"51\" text-anchor=\"middle\" font-size=\"6.5\" font-family=\"ui-monospace, monospace\" fill=\"#333\">Sales</text><text x=\"54\" y=\"51\" text-anchor=\"middle\" font-size=\"6.5\" font-family=\"ui-monospace, monospace\" fill=\"#333\">120</text><text x=\"22\" y=\"62\" text-anchor=\"middle\" font-size=\"6.5\" font-family=\"ui-monospace, monospace\" fill=\"#333\">IT</text><text x=\"54\" y=\"62\" text-anchor=\"middle\" font-size=\"6.5\" font-family=\"ui-monospace, monospace\" fill=\"#333\">180</text><text x=\"22\" y=\"73\" text-anchor=\"middle\" font-size=\"6.5\" font-family=\"ui-monospace, monospace\" fill=\"#333\">HR</text><text x=\"54\" y=\"73\" text-anchor=\"middle\" font-size=\"6.5\" font-family=\"ui-monospace, monospace\" fill=\"#333\">160</text><text x=\"22\" y=\"84\" text-anchor=\"middle\" font-size=\"6.5\" font-family=\"ui-monospace, monospace\" fill=\"#333\">Sales</text><text x=\"54\" y=\"84\" text-anchor=\"middle\" font-size=\"6.5\" font-family=\"ui-monospace, monospace\" fill=\"#333\">90</text><line x1=\"72\" y1=\"50\" x2=\"96\" y2=\"50\" stroke=\"#757575\" stroke-width=\"1.2\"/><polygon points=\"96,50 91.5,52.2 91.5,47.8\" fill=\"#757575\"/><text x=\"84\" y=\"44\" text-anchor=\"middle\" font-size=\"6.5\" fill=\"#555\">GROUP BY</text><rect id=\"sq07-g-it\" x=\"100\" y=\"14\" width=\"70\" height=\"22\" rx=\"4\" fill=\"#e3f2fd\" stroke=\"#1565c0\"/><text x=\"135\" y=\"27.333333333333332\" text-anchor=\"middle\" font-size=\"7\" fill=\"#0d47a1\">IT: 250, 180</text><rect id=\"sq07-g-sales\" x=\"100\" y=\"42\" width=\"70\" height=\"22\" rx=\"4\" fill=\"#e3f2fd\" stroke=\"#1565c0\"/><text x=\"135\" y=\"55.333333333333336\" text-anchor=\"middle\" font-size=\"7\" fill=\"#0d47a1\">Sales: 120, 90</text><rect id=\"sq07-g-hr\" x=\"100\" y=\"70\" width=\"70\" height=\"22\" rx=\"4\" fill=\"#e3f2fd\" stroke=\"#1565c0\"/><text x=\"135\" y=\"83.33333333333333\" text-anchor=\"middle\" font-size=\"7\" fill=\"#0d47a1\">HR: 160</text><line x1=\"172\" y1=\"50\" x2=\"196\" y2=\"50\" stroke=\"#757575\" stroke-width=\"1.2\"/><polygon points=\"196,50 191.5,52.2 191.5,47.8\" fill=\"#757575\"/><text x=\"184\" y=\"44\" text-anchor=\"middle\" font-size=\"6.5\" fill=\"#555\">HAVING</text><text x=\"184\" y=\"60\" text-anchor=\"middle\" font-size=\"6.5\" fill=\"#555\">COUNT ≥ 2</text><rect id=\"sq07-res\" x=\"200\" y=\"26\" width=\"108\" height=\"44\" rx=\"3\" fill=\"#fff\" stroke=\"#2e7d32\"/><rect x=\"200\" y=\"26\" width=\"108\" height=\"11\" rx=\"3\" fill=\"#e8f5e9\" stroke=\"#2e7d32\"/><text x=\"254\" y=\"34\" text-anchor=\"middle\" font-size=\"7\" font-weight=\"600\" fill=\"#1b5e20\">результат</text><text x=\"218\" y=\"45\" text-anchor=\"middle\" font-size=\"6.5\" font-family=\"ui-monospace, monospace\" font-weight=\"600\" fill=\"#1b5e20\">dept</text><text x=\"254\" y=\"45\" text-anchor=\"middle\" font-size=\"6.5\" font-family=\"ui-monospace, monospace\" font-weight=\"600\" fill=\"#1b5e20\">cnt</text><text x=\"290\" y=\"45\" text-anchor=\"middle\" font-size=\"6.5\" font-family=\"ui-monospace, monospace\" font-weight=\"600\" fill=\"#1b5e20\">avg</text><text x=\"218\" y=\"56\" text-anchor=\"middle\" font-size=\"6.5\" font-family=\"ui-monospace, monospace\" fill=\"#333\">IT</text><text x=\"254\" y=\"56\" text-anchor=\"middle\" font-size=\"6.5\" font-family=\"ui-monospace, monospace\" fill=\"#333\">2</text><text x=\"290\" y=\"56\" text-anchor=\"middle\" font-size=\"6.5\" font-family=\"ui-monospace, monospace\" fill=\"#333\">215</text><text x=\"218\" y=\"67\" text-anchor=\"middle\" font-size=\"6.5\" font-family=\"ui-monospace, monospace\" fill=\"#333\">Sales</text><text x=\"254\" y=\"67\" text-anchor=\"middle\" font-size=\"6.5\" font-family=\"ui-monospace, monospace\" fill=\"#333\">2</text><text x=\"290\" y=\"67\" text-anchor=\"middle\" font-size=\"6.5\" font-family=\"ui-monospace, monospace\" fill=\"#333\">105</text><text x=\"160\" y=\"114\" text-anchor=\"middle\" font-size=\"7\" fill=\"#555\">группа HR отброшена HAVING</text></svg>"
+      }
+    },
+    {
+      "type": "sqlite",
+      "title": "Практика: статистика по отделам",
+      "content": {
+        "description": "Для каждого отдела выведите:\n\n- `department`;\n- `employees` — число сотрудников;\n- `max_salary` — максимальная зарплата.\n\nИмена столбцов проверяются, порядок строк — нет.\n\n```sql\nCREATE TABLE employees(\n  id INTEGER PRIMARY KEY,\n  name TEXT NOT NULL,\n  department TEXT,\n  salary INTEGER,\n  manager_id INTEGER,\n  hired_at TEXT\n);\n```",
+        "setup": "CREATE TABLE employees(\n  id INTEGER PRIMARY KEY,\n  name TEXT NOT NULL,\n  department TEXT,\n  salary INTEGER,\n  manager_id INTEGER,\n  hired_at TEXT\n);",
+        "starterCode": "SELECT department, COUNT(*) AS employees, MAX(salary) AS max_salary FROM employees;",
+        "referenceSolution": "SELECT department, COUNT(*) AS employees, MAX(salary) AS max_salary\nFROM employees\nGROUP BY department;",
+        "orderMatters": false,
+        "checkColumnNames": true,
+        "timeoutMs": 5000,
+        "tests": [
+          {
+            "seed": "INSERT INTO employees(id, name, department, salary) VALUES\n  (1, 'Анна', 'IT', 250000),\n  (2, 'Борис', 'IT', 180000),\n  (3, 'Вера', 'Sales', 120000),\n  (4, 'Глеб', 'Sales', 90000),\n  (5, 'Дина', 'HR', 160000),\n  (6, 'Егор', 'IT', 95000),\n  (7, 'Жора', 'Sales', 300000);"
+          },
+          {
+            "seed": "INSERT INTO employees(id, name, department, salary) VALUES\n  (1, 'Зина', 'Finance', 151000),\n  (2, 'Игорь', 'Finance', 149500),\n  (3, 'Карл', 'Legal', 400000);"
+          }
+        ]
+      }
+    },
+    {
+      "type": "sqlite",
+      "title": "Практика: богатые отделы",
+      "content": {
+        "description": "Выведите `department` отделов, где **не меньше двух** сотрудников и **средняя** зарплата **больше 150 000**.",
+        "setup": "CREATE TABLE employees(\n  id INTEGER PRIMARY KEY,\n  name TEXT NOT NULL,\n  department TEXT,\n  salary INTEGER,\n  manager_id INTEGER,\n  hired_at TEXT\n);",
+        "starterCode": "SELECT department FROM employees WHERE salary > 150000 GROUP BY department HAVING COUNT(*) >= 2;",
+        "referenceSolution": "SELECT department FROM employees GROUP BY department HAVING COUNT(*) >= 2 AND AVG(salary) > 150000;",
+        "orderMatters": false,
+        "timeoutMs": 5000,
+        "tests": [
+          {
+            "seed": "INSERT INTO employees(id, name, department, salary) VALUES\n  (1, 'Анна', 'IT', 250000),\n  (2, 'Борис', 'IT', 180000),\n  (3, 'Вера', 'Sales', 120000),\n  (4, 'Глеб', 'Sales', 90000),\n  (5, 'Дина', 'HR', 160000),\n  (6, 'Егор', 'IT', 95000),\n  (7, 'Жора', 'Sales', 300000);"
+          },
+          {
+            "seed": "INSERT INTO employees(id, name, department, salary) VALUES\n  (1, 'Зина', 'Finance', 151000),\n  (2, 'Игорь', 'Finance', 149500),\n  (3, 'Карл', 'Legal', 400000);"
+          }
+        ]
+      }
+    },
+    {
+      "type": "sqlite",
+      "title": "Практика: выручка по месяцам",
+      "content": {
+        "description": "Посчитайте выручку по месяцам **только по оплаченным** заказам (`status = 'paid'`):\n\n- `month` — в формате `'YYYY-MM'`;\n- `revenue` — сумма `amount`.\n\nОтсортируйте по месяцу. Порядок строк и имена столбцов проверяются.\n\n```sql\nCREATE TABLE orders(\n  id INTEGER PRIMARY KEY,\n  customer_id INTEGER,\n  ordered_at TEXT NOT NULL,\n  status TEXT NOT NULL,\n  amount REAL NOT NULL\n);\n```",
+        "setup": "CREATE TABLE orders(\n  id INTEGER PRIMARY KEY,\n  customer_id INTEGER,\n  ordered_at TEXT NOT NULL,\n  status TEXT NOT NULL,\n  amount REAL NOT NULL\n);",
+        "starterCode": "SELECT strftime('%Y-%m', ordered_at) AS month, SUM(amount) AS revenue\nFROM orders\nGROUP BY month\nORDER BY month;",
+        "referenceSolution": "SELECT strftime('%Y-%m', ordered_at) AS month, SUM(amount) AS revenue\nFROM orders\nWHERE status = 'paid'\nGROUP BY month\nORDER BY month;",
+        "orderMatters": true,
+        "checkColumnNames": true,
+        "floatTolerance": 0.001,
+        "timeoutMs": 5000,
+        "tests": [
+          {
+            "seed": "INSERT INTO orders(id, customer_id, ordered_at, status, amount) VALUES\n  (1, 1, '2024-01-05 10:00:00', 'paid', 100),\n  (2, 2, '2024-01-20 11:00:00', 'cancelled', 999),\n  (3, 1, '2024-02-02 09:00:00', 'paid', 50),\n  (4, 3, '2024-02-28 23:00:00', 'paid', 70),\n  (5, 3, '2024-03-01 00:10:00', 'new', 10);"
+          },
+          {
+            "seed": "INSERT INTO orders(id, customer_id, ordered_at, status, amount) VALUES\n  (1, 9, '2023-12-31 23:59:59', 'paid', 10),\n  (2, 9, '2024-01-01 00:00:00', 'paid', 20);"
+          }
+        ]
+      }
+    },
+    {
+      "type": "quiz",
+      "title": "Проверка: WHERE и HAVING",
+      "content": {
+        "question": "Где можно отфильтровать по **`AVG(salary) > 100000`**?",
+        "options": [
+          "Только в `WHERE`",
+          "Только в `HAVING`",
+          "И в `WHERE`, и в `HAVING`",
+          "Только в подзапросе"
+        ],
+        "correctIndices": [
+          1
+        ]
+      }
+    },
+    {
+      "type": "quiz",
+      "title": "Итоговый тест модуля",
+      "content": {
+        "question": "В феврале не было заказов. Попадёт ли строка `2024-02` в результат `GROUP BY strftime('%Y-%m', ordered_at)`?",
+        "options": [
+          "Да, с `COUNT(*) = 0`",
+          "Да, с `NULL` в агрегатах",
+          "Нет: группы без строк не создаются",
+          "Только с `HAVING COUNT(*) >= 0`"
+        ],
+        "correctIndices": [
+          2
+        ]
+      }
+    }
+  ]
+}

@@ -1,0 +1,142 @@
+{
+  "schemaVersion": 1,
+  "title": "Оконные функции: смещения и рамки",
+  "steps": [
+    {
+      "type": "theory",
+      "title": "LAG, LEAD, накопительные суммы и рамки",
+      "content": "## Соседние строки\n\n```sql\nSELECT day, revenue,\n       LAG(revenue)       OVER (ORDER BY day) AS prev,      -- предыдущая строка (NULL у первой)\n       LAG(revenue, 1, 0) OVER (ORDER BY day) AS prev_or_0, -- смещение и значение по умолчанию\n       LEAD(revenue)      OVER (ORDER BY day) AS next\nFROM daily_revenue;\n```\n\n## Агрегат по рамке\n\nС `ORDER BY` внутри `OVER` агрегаты становятся **накопительными**:\n\n```sql\nSUM(revenue) OVER (ORDER BY day)                                        -- нарастающий итог\nAVG(revenue) OVER (ORDER BY day ROWS BETWEEN 2 PRECEDING AND CURRENT ROW) -- скользящее среднее за 3 строки\nSUM(revenue) OVER ()                                                    -- итог по всем строкам\n```\n\n**Рамка** (frame) — какие строки окна участвуют в расчёте для текущей:\n\n- `ROWS BETWEEN n PRECEDING AND CURRENT ROW` — физически `n` строк назад;\n- `RANGE …` — по значению ключа сортировки: строки с **равным** ключом идут вместе;\n- **по умолчанию** при наличии `ORDER BY`: `RANGE BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW`.\n\nИз-за `RANGE` по умолчанию нарастающий итог по неуникальному ключу «прыгает»: все строки с одинаковой датой получат одну и ту же сумму. Для построчного итога пишите `ROWS UNBOUNDED PRECEDING`.\n\n## Ловушка LAST_VALUE\n\n`LAST_VALUE(x) OVER (ORDER BY d)` с рамкой по умолчанию возвращает **текущую** строку (рамка заканчивается на ней). Нужно: `ROWS BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING`.\n\n## Ещё функции\n\n`FIRST_VALUE`, `NTH_VALUE(x, n)`, `NTILE(n)` (разбить на n корзин), `PERCENT_RANK()`, `CUME_DIST()`. Именованное окно: `… OVER w … WINDOW w AS (PARTITION BY a ORDER BY b)`."
+    },
+    {
+      "type": "svg",
+      "title": "Схема: рамка скользящего среднего",
+      "content": {
+        "caption": "`ROWS BETWEEN 2 PRECEDING AND CURRENT ROW` — окно из трёх строк сдвигается вместе с текущей",
+        "description": "Для 04 марта среднее считается по 02, 03 и 04: (150 + 90 + 200) / 3 = 146.67. У первых строк рамка короче.",
+        "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 320 90\" width=\"100%\" role=\"img\" aria-label=\"Скользящая рамка из трёх строк\"><rect id=\"sq15-d0\" x=\"10\" y=\"30\" width=\"44\" height=\"30\" rx=\"4\" fill=\"#f5f5f5\" stroke=\"#9e9e9e\"/><text x=\"32\" y=\"42.833333333333336\" text-anchor=\"middle\" font-size=\"7\" fill=\"#424242\">03-01</text><text x=\"32\" y=\"51.833333333333336\" text-anchor=\"middle\" font-size=\"7\" fill=\"#424242\">100</text><rect id=\"sq15-d1\" x=\"60\" y=\"30\" width=\"44\" height=\"30\" rx=\"4\" fill=\"#e3f2fd\" stroke=\"#1565c0\"/><text x=\"82\" y=\"42.833333333333336\" text-anchor=\"middle\" font-size=\"7\" fill=\"#0d47a1\">03-02</text><text x=\"82\" y=\"51.833333333333336\" text-anchor=\"middle\" font-size=\"7\" fill=\"#0d47a1\">150</text><rect id=\"sq15-d2\" x=\"110\" y=\"30\" width=\"44\" height=\"30\" rx=\"4\" fill=\"#e3f2fd\" stroke=\"#1565c0\"/><text x=\"132\" y=\"42.833333333333336\" text-anchor=\"middle\" font-size=\"7\" fill=\"#0d47a1\">03-03</text><text x=\"132\" y=\"51.833333333333336\" text-anchor=\"middle\" font-size=\"7\" fill=\"#0d47a1\">90</text><rect id=\"sq15-d3\" x=\"160\" y=\"30\" width=\"44\" height=\"30\" rx=\"4\" fill=\"#fff9c4\" stroke=\"#f9a825\"/><text x=\"182\" y=\"42.833333333333336\" text-anchor=\"middle\" font-size=\"7\" fill=\"#e65100\">03-04</text><text x=\"182\" y=\"51.833333333333336\" text-anchor=\"middle\" font-size=\"7\" fill=\"#e65100\">200</text><rect id=\"sq15-d4\" x=\"210\" y=\"30\" width=\"44\" height=\"30\" rx=\"4\" fill=\"#f5f5f5\" stroke=\"#9e9e9e\"/><text x=\"232\" y=\"42.833333333333336\" text-anchor=\"middle\" font-size=\"7\" fill=\"#424242\">03-05</text><text x=\"232\" y=\"51.833333333333336\" text-anchor=\"middle\" font-size=\"7\" fill=\"#424242\">200</text><rect id=\"sq15-d5\" x=\"260\" y=\"30\" width=\"44\" height=\"30\" rx=\"4\" fill=\"#f5f5f5\" stroke=\"#9e9e9e\"/><text x=\"282\" y=\"42.833333333333336\" text-anchor=\"middle\" font-size=\"7\" fill=\"#424242\">03-06</text><text x=\"282\" y=\"51.833333333333336\" text-anchor=\"middle\" font-size=\"7\" fill=\"#424242\">50</text><rect x=\"56\" y=\"24\" width=\"148\" height=\"42\" rx=\"6\" fill=\"none\" stroke=\"#e65100\" stroke-width=\"1.5\" stroke-dasharray=\"4 2\"/><text x=\"130\" y=\"18\" text-anchor=\"middle\" font-size=\"7\" fill=\"#e65100\">рамка для 03-04</text><text x=\"160\" y=\"82\" text-anchor=\"middle\" font-size=\"7\" font-family=\"ui-monospace, monospace\" fill=\"#555\">AVG = (150 + 90 + 200) / 3 = 146.67</text></svg>"
+      }
+    },
+    {
+      "type": "sqlite",
+      "title": "Практика: изменение к предыдущему дню",
+      "content": {
+        "description": "Выведите `day`, `revenue` и `diff` — разницу с выручкой **предыдущего** дня (`NULL` для первого дня).\n\nОтсортируйте по дню. Порядок и имена столбцов проверяются.\n\n```sql\nCREATE TABLE daily_revenue(\n  day TEXT PRIMARY KEY,   -- 'YYYY-MM-DD', дни без пропусков\n  revenue REAL NOT NULL\n);\n```",
+        "setup": "CREATE TABLE daily_revenue(\n  day TEXT PRIMARY KEY,   -- 'YYYY-MM-DD', дни без пропусков\n  revenue REAL NOT NULL\n);",
+        "starterCode": "SELECT day, revenue, revenue - revenue AS diff FROM daily_revenue ORDER BY day;",
+        "referenceSolution": "SELECT day, revenue, revenue - LAG(revenue) OVER (ORDER BY day) AS diff\nFROM daily_revenue\nORDER BY day;",
+        "orderMatters": true,
+        "checkColumnNames": true,
+        "floatTolerance": 0.001,
+        "timeoutMs": 5000,
+        "tests": [
+          {
+            "seed": "INSERT INTO daily_revenue(day, revenue) VALUES\n  ('2024-03-01', 100),\n  ('2024-03-02', 150),\n  ('2024-03-03', 90),\n  ('2024-03-04', 200),\n  ('2024-03-05', 200),\n  ('2024-03-06', 50);"
+          },
+          {
+            "seed": "INSERT INTO daily_revenue(day, revenue) VALUES\n  ('2024-05-10', 10),\n  ('2024-05-11', 20);"
+          }
+        ]
+      }
+    },
+    {
+      "type": "sqlite",
+      "title": "Практика: нарастающий итог",
+      "content": {
+        "description": "Выведите `day`, `revenue` и `running_total` — сумму выручки **с первого дня по текущий** включительно.\n\nОтсортируйте по дню. Порядок и имена столбцов проверяются.",
+        "setup": "CREATE TABLE daily_revenue(\n  day TEXT PRIMARY KEY,   -- 'YYYY-MM-DD', дни без пропусков\n  revenue REAL NOT NULL\n);",
+        "starterCode": "SELECT day, revenue, SUM(revenue) OVER () AS running_total FROM daily_revenue ORDER BY day;",
+        "referenceSolution": "SELECT day, revenue,\n       SUM(revenue) OVER (ORDER BY day ROWS UNBOUNDED PRECEDING) AS running_total\nFROM daily_revenue\nORDER BY day;",
+        "orderMatters": true,
+        "checkColumnNames": true,
+        "floatTolerance": 0.001,
+        "timeoutMs": 5000,
+        "tests": [
+          {
+            "seed": "INSERT INTO daily_revenue(day, revenue) VALUES\n  ('2024-03-01', 100),\n  ('2024-03-02', 150),\n  ('2024-03-03', 90),\n  ('2024-03-04', 200),\n  ('2024-03-05', 200),\n  ('2024-03-06', 50);"
+          },
+          {
+            "seed": "INSERT INTO daily_revenue(day, revenue) VALUES\n  ('2024-05-10', 10),\n  ('2024-05-11', 20);"
+          }
+        ]
+      }
+    },
+    {
+      "type": "sqlite",
+      "title": "Практика: скользящее среднее за 3 дня",
+      "content": {
+        "description": "Выведите `day` и `ma3` — среднюю выручку за **текущий и два предыдущих** дня, округлённую до 2 знаков. Для первых дней — среднее по тем дням, что есть.\n\nОтсортируйте по дню. Порядок и имена столбцов проверяются (допуск 0.01).",
+        "setup": "CREATE TABLE daily_revenue(\n  day TEXT PRIMARY KEY,   -- 'YYYY-MM-DD', дни без пропусков\n  revenue REAL NOT NULL\n);",
+        "starterCode": "SELECT day,\n       ROUND(AVG(revenue) OVER (ORDER BY day ROWS BETWEEN 3 PRECEDING AND CURRENT ROW), 2) AS ma3\nFROM daily_revenue\nORDER BY day;",
+        "referenceSolution": "SELECT day,\n       ROUND(AVG(revenue) OVER (ORDER BY day ROWS BETWEEN 2 PRECEDING AND CURRENT ROW), 2) AS ma3\nFROM daily_revenue\nORDER BY day;",
+        "orderMatters": true,
+        "checkColumnNames": true,
+        "floatTolerance": 0.01,
+        "timeoutMs": 5000,
+        "tests": [
+          {
+            "seed": "INSERT INTO daily_revenue(day, revenue) VALUES\n  ('2024-03-01', 100),\n  ('2024-03-02', 150),\n  ('2024-03-03', 90),\n  ('2024-03-04', 200),\n  ('2024-03-05', 200),\n  ('2024-03-06', 50);"
+          },
+          {
+            "seed": "INSERT INTO daily_revenue(day, revenue) VALUES\n  ('2024-05-10', 10),\n  ('2024-05-11', 20);"
+          }
+        ]
+      }
+    },
+    {
+      "type": "sqlite",
+      "title": "Практика: три подряд",
+      "content": {
+        "description": "LeetCode 180: найдите числа, которые встречаются в `logs` **не меньше трёх раз подряд** (по возрастанию `id`, `id` идут без пропусков). Каждое число — один раз, столбец `ConsecutiveNums`.\n\nИмена столбцов проверяются.\n\n```sql\nCREATE TABLE logs(\n  id INTEGER PRIMARY KEY,\n  num INTEGER NOT NULL\n);\n```",
+        "setup": "CREATE TABLE logs(\n  id INTEGER PRIMARY KEY,\n  num INTEGER NOT NULL\n);",
+        "starterCode": "SELECT num AS ConsecutiveNums FROM logs GROUP BY num HAVING COUNT(*) >= 3;",
+        "referenceSolution": "SELECT DISTINCT num AS ConsecutiveNums\nFROM (\n  SELECT num,\n         LAG(num) OVER (ORDER BY id) AS prev_num,\n         LEAD(num) OVER (ORDER BY id) AS next_num\n  FROM logs\n)\nWHERE num = prev_num AND num = next_num;",
+        "orderMatters": false,
+        "checkColumnNames": true,
+        "timeoutMs": 5000,
+        "tests": [
+          {
+            "seed": "INSERT INTO logs(id, num) VALUES (1, 1), (2, 1), (3, 1), (4, 2), (5, 1), (6, 2), (7, 2);"
+          },
+          {
+            "seed": "INSERT INTO logs(id, num) VALUES (1, 3), (2, 3), (3, 3), (4, 3), (5, 4), (6, 4), (7, 4);"
+          },
+          {
+            "seed": "INSERT INTO logs(id, num) VALUES (1, 5), (2, 6), (3, 5), (4, 5);"
+          }
+        ]
+      }
+    },
+    {
+      "type": "quiz",
+      "title": "Проверка: рамка по умолчанию",
+      "content": {
+        "question": "Какая рамка у `SUM(x) OVER (ORDER BY d)`, если рамка не указана явно?",
+        "options": [
+          "`ROWS BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING`",
+          "`RANGE BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW`",
+          "`ROWS BETWEEN 1 PRECEDING AND CURRENT ROW`",
+          "Только текущая строка"
+        ],
+        "correctIndices": [
+          1
+        ]
+      }
+    },
+    {
+      "type": "quiz",
+      "title": "Итоговый тест модуля",
+      "content": {
+        "question": "Что вернёт `LAG(revenue) OVER (ORDER BY day)` для самой первой строки?",
+        "options": [
+          "`0`",
+          "`NULL`",
+          "Значение последней строки",
+          "Ошибку"
+        ],
+        "correctIndices": [
+          1
+        ]
+      }
+    }
+  ]
+}

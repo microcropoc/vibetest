@@ -1,0 +1,116 @@
+{
+  "schemaVersion": 1,
+  "title": "JOIN: INNER и LEFT",
+  "steps": [
+    {
+      "type": "theory",
+      "title": "Соединение таблиц",
+      "content": "## Связи и ключи\n\n`orders.customer_id` ссылается на `customers.id`: у клиента может быть много заказов (связь **1:N**). `JOIN` склеивает строки двух таблиц по условию.\n\n## INNER JOIN\n\n```sql\nSELECT o.id, c.name, o.amount\nFROM orders AS o\nJOIN customers AS c ON c.id = o.customer_id;   -- JOIN = INNER JOIN\n```\n\nОстаются только **пары, где условие истинно**. Заказ без клиента (`customer_id IS NULL`) и клиент без заказов в результат не попадут.\n\nПсевдонимы таблиц (`o`, `c`) обязательны, когда имена столбцов совпадают (`id` есть в обеих).\n\n## LEFT JOIN\n\n```sql\nSELECT c.name, o.id AS order_id\nFROM customers AS c\nLEFT JOIN orders AS o ON o.customer_id = c.id;\n```\n\nКаждая строка **левой** таблицы остаётся; если пары нет — столбцы правой будут `NULL`.\n\n## Три классические ошибки\n\n1. **`COUNT(*)` после LEFT JOIN**: клиент без заказов даёт одну строку с `NULL` → `COUNT(*) = 1`. Считайте `COUNT(o.id)`.\n2. **Фильтр правой таблицы в WHERE**: `LEFT JOIN orders o … WHERE o.status = 'paid'` отбрасывает строки с `NULL` — LEFT JOIN превращается в INNER. Условие на правую таблицу ставьте **в ON**: `ON o.customer_id = c.id AND o.status = 'paid'`.\n3. **Размножение строк**: JOIN 1:N повторяет строку «одной» стороны для каждой пары — `SUM` по ней посчитается несколько раз.\n\n`USING (col)` — краткая запись `ON a.col = b.col`, если столбец называется одинаково."
+    },
+    {
+      "type": "svg",
+      "title": "Схема: INNER и LEFT JOIN",
+      "content": {
+        "caption": "INNER — только пары; LEFT — все строки слева, справа `NULL`, если пары нет",
+        "description": "Клиент Гоша без заказов исчезает в INNER JOIN и остаётся в LEFT JOIN с NULL в столбцах заказа.",
+        "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 330 130\" width=\"100%\" role=\"img\" aria-label=\"INNER и LEFT JOIN\"><rect id=\"sq08-c\" x=\"6\" y=\"10\" width=\"68\" height=\"55\" rx=\"3\" fill=\"#fff\" stroke=\"#1565c0\"/><rect x=\"6\" y=\"10\" width=\"68\" height=\"11\" rx=\"3\" fill=\"#e3f2fd\" stroke=\"#1565c0\"/><text x=\"40\" y=\"18\" text-anchor=\"middle\" font-size=\"7\" font-weight=\"600\" fill=\"#0d47a1\">customers</text><text x=\"23\" y=\"29\" text-anchor=\"middle\" font-size=\"6.5\" font-family=\"ui-monospace, monospace\" font-weight=\"600\" fill=\"#0d47a1\">id</text><text x=\"57\" y=\"29\" text-anchor=\"middle\" font-size=\"6.5\" font-family=\"ui-monospace, monospace\" font-weight=\"600\" fill=\"#0d47a1\">name</text><text x=\"23\" y=\"40\" text-anchor=\"middle\" font-size=\"6.5\" font-family=\"ui-monospace, monospace\" fill=\"#333\">1</text><text x=\"57\" y=\"40\" text-anchor=\"middle\" font-size=\"6.5\" font-family=\"ui-monospace, monospace\" fill=\"#333\">Алиса</text><text x=\"23\" y=\"51\" text-anchor=\"middle\" font-size=\"6.5\" font-family=\"ui-monospace, monospace\" fill=\"#333\">2</text><text x=\"57\" y=\"51\" text-anchor=\"middle\" font-size=\"6.5\" font-family=\"ui-monospace, monospace\" fill=\"#333\">Богдан</text><text x=\"23\" y=\"62\" text-anchor=\"middle\" font-size=\"6.5\" font-family=\"ui-monospace, monospace\" fill=\"#333\">4</text><text x=\"57\" y=\"62\" text-anchor=\"middle\" font-size=\"6.5\" font-family=\"ui-monospace, monospace\" fill=\"#333\">Гоша</text><rect id=\"sq08-o\" x=\"6\" y=\"72\" width=\"68\" height=\"55\" rx=\"3\" fill=\"#fff\" stroke=\"#f9a825\"/><rect x=\"6\" y=\"72\" width=\"68\" height=\"11\" rx=\"3\" fill=\"#fff9c4\" stroke=\"#f9a825\"/><text x=\"40\" y=\"80\" text-anchor=\"middle\" font-size=\"7\" font-weight=\"600\" fill=\"#e65100\">orders</text><text x=\"23\" y=\"91\" text-anchor=\"middle\" font-size=\"6.5\" font-family=\"ui-monospace, monospace\" font-weight=\"600\" fill=\"#e65100\">id</text><text x=\"57\" y=\"91\" text-anchor=\"middle\" font-size=\"6.5\" font-family=\"ui-monospace, monospace\" font-weight=\"600\" fill=\"#e65100\">cust</text><text x=\"23\" y=\"102\" text-anchor=\"middle\" font-size=\"6.5\" font-family=\"ui-monospace, monospace\" fill=\"#333\">10</text><text x=\"57\" y=\"102\" text-anchor=\"middle\" font-size=\"6.5\" font-family=\"ui-monospace, monospace\" fill=\"#333\">1</text><text x=\"23\" y=\"113\" text-anchor=\"middle\" font-size=\"6.5\" font-family=\"ui-monospace, monospace\" fill=\"#333\">12</text><text x=\"57\" y=\"113\" text-anchor=\"middle\" font-size=\"6.5\" font-family=\"ui-monospace, monospace\" fill=\"#333\">2</text><text x=\"23\" y=\"124\" text-anchor=\"middle\" font-size=\"6.5\" font-family=\"ui-monospace, monospace\" fill=\"#333\">13</text><text x=\"57\" y=\"124\" text-anchor=\"middle\" font-size=\"6.5\" font-family=\"ui-monospace, monospace\" fill=\"#333\">1</text><line x1=\"78\" y1=\"40\" x2=\"110\" y2=\"30\" stroke=\"#757575\" stroke-width=\"1.2\"/><polygon points=\"110,30 106.4,33.4 105.1,29.3\" fill=\"#757575\"/><line x1=\"78\" y1=\"95\" x2=\"110\" y2=\"90\" stroke=\"#757575\" stroke-width=\"1.2\"/><polygon points=\"110,90 105.9,92.8 105.2,88.5\" fill=\"#757575\"/><text x=\"120\" y=\"18\" text-anchor=\"start\" font-size=\"7\" font-weight=\"600\" fill=\"#555\">INNER JOIN</text><rect id=\"sq08-inner\" x=\"120\" y=\"22\" width=\"80\" height=\"55\" rx=\"3\" fill=\"#fff\" stroke=\"#2e7d32\"/><rect x=\"120\" y=\"22\" width=\"80\" height=\"11\" rx=\"3\" fill=\"#e8f5e9\" stroke=\"#2e7d32\"/><text x=\"160\" y=\"30\" text-anchor=\"middle\" font-size=\"7\" font-weight=\"600\" fill=\"#1b5e20\"></text><text x=\"140\" y=\"41\" text-anchor=\"middle\" font-size=\"6.5\" font-family=\"ui-monospace, monospace\" font-weight=\"600\" fill=\"#1b5e20\">name</text><text x=\"180\" y=\"41\" text-anchor=\"middle\" font-size=\"6.5\" font-family=\"ui-monospace, monospace\" font-weight=\"600\" fill=\"#1b5e20\">order</text><text x=\"140\" y=\"52\" text-anchor=\"middle\" font-size=\"6.5\" font-family=\"ui-monospace, monospace\" fill=\"#333\">Алиса</text><text x=\"180\" y=\"52\" text-anchor=\"middle\" font-size=\"6.5\" font-family=\"ui-monospace, monospace\" fill=\"#333\">10</text><text x=\"140\" y=\"63\" text-anchor=\"middle\" font-size=\"6.5\" font-family=\"ui-monospace, monospace\" fill=\"#333\">Алиса</text><text x=\"180\" y=\"63\" text-anchor=\"middle\" font-size=\"6.5\" font-family=\"ui-monospace, monospace\" fill=\"#333\">13</text><text x=\"140\" y=\"74\" text-anchor=\"middle\" font-size=\"6.5\" font-family=\"ui-monospace, monospace\" fill=\"#333\">Богдан</text><text x=\"180\" y=\"74\" text-anchor=\"middle\" font-size=\"6.5\" font-family=\"ui-monospace, monospace\" fill=\"#333\">12</text><text x=\"222\" y=\"18\" text-anchor=\"start\" font-size=\"7\" font-weight=\"600\" fill=\"#555\">LEFT JOIN</text><rect id=\"sq08-left\" x=\"222\" y=\"22\" width=\"80\" height=\"66\" rx=\"3\" fill=\"#fff\" stroke=\"#2e7d32\"/><rect x=\"222\" y=\"22\" width=\"80\" height=\"11\" rx=\"3\" fill=\"#e8f5e9\" stroke=\"#2e7d32\"/><text x=\"262\" y=\"30\" text-anchor=\"middle\" font-size=\"7\" font-weight=\"600\" fill=\"#1b5e20\"></text><text x=\"242\" y=\"41\" text-anchor=\"middle\" font-size=\"6.5\" font-family=\"ui-monospace, monospace\" font-weight=\"600\" fill=\"#1b5e20\">name</text><text x=\"282\" y=\"41\" text-anchor=\"middle\" font-size=\"6.5\" font-family=\"ui-monospace, monospace\" font-weight=\"600\" fill=\"#1b5e20\">order</text><text x=\"242\" y=\"52\" text-anchor=\"middle\" font-size=\"6.5\" font-family=\"ui-monospace, monospace\" fill=\"#333\">Алиса</text><text x=\"282\" y=\"52\" text-anchor=\"middle\" font-size=\"6.5\" font-family=\"ui-monospace, monospace\" fill=\"#333\">10</text><text x=\"242\" y=\"63\" text-anchor=\"middle\" font-size=\"6.5\" font-family=\"ui-monospace, monospace\" fill=\"#333\">Алиса</text><text x=\"282\" y=\"63\" text-anchor=\"middle\" font-size=\"6.5\" font-family=\"ui-monospace, monospace\" fill=\"#333\">13</text><text x=\"242\" y=\"74\" text-anchor=\"middle\" font-size=\"6.5\" font-family=\"ui-monospace, monospace\" fill=\"#333\">Богдан</text><text x=\"282\" y=\"74\" text-anchor=\"middle\" font-size=\"6.5\" font-family=\"ui-monospace, monospace\" fill=\"#333\">12</text><rect x=\"223\" y=\"77\" width=\"78\" height=\"11\" fill=\"#fff59d\"/><text x=\"242\" y=\"85\" text-anchor=\"middle\" font-size=\"6.5\" font-family=\"ui-monospace, monospace\" fill=\"#333\">Гоша</text><text x=\"282\" y=\"85\" text-anchor=\"middle\" font-size=\"6.5\" font-family=\"ui-monospace, monospace\" fill=\"#9e9e9e\">NULL</text><text x=\"250\" y=\"120\" text-anchor=\"middle\" font-size=\"7\" fill=\"#555\">Гоша: пары нет → NULL</text></svg>"
+      }
+    },
+    {
+      "type": "sqlite",
+      "title": "Практика: заказы с именами клиентов",
+      "content": {
+        "description": "Выведите для каждого заказа, у которого есть клиент: `order_id` (id заказа), `name` (имя клиента), `amount`.\n\nИмена столбцов проверяются.\n\n```sql\nCREATE TABLE customers(\n  id INTEGER PRIMARY KEY,\n  name TEXT NOT NULL,\n  city TEXT\n);\nCREATE TABLE orders(\n  id INTEGER PRIMARY KEY,\n  customer_id INTEGER REFERENCES customers(id),\n  status TEXT NOT NULL,   -- 'paid' | 'cancelled' | 'new'\n  amount REAL NOT NULL\n);\n```",
+        "setup": "CREATE TABLE customers(\n  id INTEGER PRIMARY KEY,\n  name TEXT NOT NULL,\n  city TEXT\n);\nCREATE TABLE orders(\n  id INTEGER PRIMARY KEY,\n  customer_id INTEGER REFERENCES customers(id),\n  status TEXT NOT NULL,   -- 'paid' | 'cancelled' | 'new'\n  amount REAL NOT NULL\n);",
+        "starterCode": "SELECT id AS order_id, customer_id AS name, amount FROM orders;",
+        "referenceSolution": "SELECT o.id AS order_id, c.name, o.amount\nFROM orders AS o\nJOIN customers AS c ON c.id = o.customer_id;",
+        "orderMatters": false,
+        "checkColumnNames": true,
+        "timeoutMs": 5000,
+        "tests": [
+          {
+            "seed": "INSERT INTO customers(id, name, city) VALUES\n  (1, 'Алиса', 'Москва'),\n  (2, 'Богдан', 'Казань'),\n  (3, 'Валя', 'Москва'),\n  (4, 'Гоша', NULL);\nINSERT INTO orders(id, customer_id, status, amount) VALUES\n  (10, 1, 'paid', 500),\n  (11, 1, 'cancelled', 200),\n  (12, 2, 'new', 150),\n  (13, 1, 'paid', 50),\n  (14, 3, 'cancelled', 999);"
+          },
+          {
+            "seed": "INSERT INTO customers(id, name, city) VALUES\n  (1, 'Даша', 'Омск'),\n  (2, 'Ефим', 'Омск');\nINSERT INTO orders(id, customer_id, status, amount) VALUES\n  (1, 2, 'paid', 10),\n  (2, 2, 'paid', 20),\n  (3, NULL, 'paid', 30);"
+          }
+        ]
+      }
+    },
+    {
+      "type": "sqlite",
+      "title": "Практика: число заказов у каждого клиента",
+      "content": {
+        "description": "Для **каждого** клиента (включая тех, у кого нет заказов) выведите `name` и `orders` — число его заказов (любого статуса).\n\nИмена столбцов проверяются.",
+        "setup": "CREATE TABLE customers(\n  id INTEGER PRIMARY KEY,\n  name TEXT NOT NULL,\n  city TEXT\n);\nCREATE TABLE orders(\n  id INTEGER PRIMARY KEY,\n  customer_id INTEGER REFERENCES customers(id),\n  status TEXT NOT NULL,   -- 'paid' | 'cancelled' | 'new'\n  amount REAL NOT NULL\n);",
+        "starterCode": "SELECT c.name, COUNT(*) AS orders\nFROM customers AS c\nLEFT JOIN orders AS o ON o.customer_id = c.id\nGROUP BY c.id;",
+        "referenceSolution": "SELECT c.name, COUNT(o.id) AS orders\nFROM customers AS c\nLEFT JOIN orders AS o ON o.customer_id = c.id\nGROUP BY c.id;",
+        "orderMatters": false,
+        "checkColumnNames": true,
+        "timeoutMs": 5000,
+        "tests": [
+          {
+            "seed": "INSERT INTO customers(id, name, city) VALUES\n  (1, 'Алиса', 'Москва'),\n  (2, 'Богдан', 'Казань'),\n  (3, 'Валя', 'Москва'),\n  (4, 'Гоша', NULL);\nINSERT INTO orders(id, customer_id, status, amount) VALUES\n  (10, 1, 'paid', 500),\n  (11, 1, 'cancelled', 200),\n  (12, 2, 'new', 150),\n  (13, 1, 'paid', 50),\n  (14, 3, 'cancelled', 999);"
+          },
+          {
+            "seed": "INSERT INTO customers(id, name, city) VALUES\n  (1, 'Даша', 'Омск'),\n  (2, 'Ефим', 'Омск');\nINSERT INTO orders(id, customer_id, status, amount) VALUES\n  (1, 2, 'paid', 10),\n  (2, 2, 'paid', 20),\n  (3, NULL, 'paid', 30);"
+          }
+        ]
+      }
+    },
+    {
+      "type": "sqlite",
+      "title": "Практика: оплаченная сумма, включая нули",
+      "content": {
+        "description": "Для **каждого** клиента выведите `name` и `paid_total` — сумму его заказов со статусом `'paid'`. Клиенты без оплаченных заказов должны остаться с `paid_total = 0`.\n\nИмена столбцов проверяются.",
+        "setup": "CREATE TABLE customers(\n  id INTEGER PRIMARY KEY,\n  name TEXT NOT NULL,\n  city TEXT\n);\nCREATE TABLE orders(\n  id INTEGER PRIMARY KEY,\n  customer_id INTEGER REFERENCES customers(id),\n  status TEXT NOT NULL,   -- 'paid' | 'cancelled' | 'new'\n  amount REAL NOT NULL\n);",
+        "starterCode": "SELECT c.name, COALESCE(SUM(o.amount), 0) AS paid_total\nFROM customers AS c\nLEFT JOIN orders AS o ON o.customer_id = c.id\nWHERE o.status = 'paid'\nGROUP BY c.id;",
+        "referenceSolution": "SELECT c.name, COALESCE(SUM(o.amount), 0) AS paid_total\nFROM customers AS c\nLEFT JOIN orders AS o ON o.customer_id = c.id AND o.status = 'paid'\nGROUP BY c.id;",
+        "orderMatters": false,
+        "checkColumnNames": true,
+        "floatTolerance": 0.001,
+        "timeoutMs": 5000,
+        "tests": [
+          {
+            "seed": "INSERT INTO customers(id, name, city) VALUES\n  (1, 'Алиса', 'Москва'),\n  (2, 'Богдан', 'Казань'),\n  (3, 'Валя', 'Москва'),\n  (4, 'Гоша', NULL);\nINSERT INTO orders(id, customer_id, status, amount) VALUES\n  (10, 1, 'paid', 500),\n  (11, 1, 'cancelled', 200),\n  (12, 2, 'new', 150),\n  (13, 1, 'paid', 50),\n  (14, 3, 'cancelled', 999);"
+          },
+          {
+            "seed": "INSERT INTO customers(id, name, city) VALUES\n  (1, 'Даша', 'Омск'),\n  (2, 'Ефим', 'Омск');\nINSERT INTO orders(id, customer_id, status, amount) VALUES\n  (1, 2, 'paid', 10),\n  (2, 2, 'paid', 20),\n  (3, NULL, 'paid', 30);"
+          }
+        ]
+      }
+    },
+    {
+      "type": "quiz",
+      "title": "Проверка: COUNT после LEFT JOIN",
+      "content": {
+        "question": "У клиента нет заказов. Что вернёт для него `COUNT(*)` и `COUNT(o.id)` в запросе `customers c LEFT JOIN orders o … GROUP BY c.id`?",
+        "options": [
+          "0 и 0",
+          "1 и 0",
+          "1 и 1",
+          "0 и NULL"
+        ],
+        "correctIndices": [
+          1
+        ]
+      }
+    },
+    {
+      "type": "quiz",
+      "title": "Итоговый тест модуля",
+      "content": {
+        "question": "Что происходит с запросом `customers c LEFT JOIN orders o ON o.customer_id = c.id WHERE o.status = 'paid'`?",
+        "options": [
+          "Клиенты без оплаченных заказов останутся с NULL",
+          "Он ведёт себя как INNER JOIN: строки с `o.status IS NULL` отброшены WHERE",
+          "Ошибка: WHERE нельзя после LEFT JOIN",
+          "Фильтр применится только к правой таблице, левая не пострадает"
+        ],
+        "correctIndices": [
+          1
+        ]
+      }
+    }
+  ]
+}

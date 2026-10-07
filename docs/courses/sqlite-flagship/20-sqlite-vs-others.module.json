@@ -1,0 +1,116 @@
+{
+  "schemaVersion": 1,
+  "title": "SQLite, MySQL и PostgreSQL",
+  "steps": [
+    {
+      "type": "theory",
+      "title": "Главные различия диалектов",
+      "content": "## Сводная таблица\n\n| Тема | SQLite | MySQL 8 | PostgreSQL |\n|------|--------|---------|------------|\n| Типизация | динамическая (affinity), `STRICT` по желанию | строгая (в нестрогом режиме — тихие приведения) | строгая |\n| `7 / 2` | `3` | `3.5000` (`DIV` — нацело) | `3` |\n| Склейка строк | `\\|\\|`, `concat()` | `CONCAT()`; `\\|\\|` — это **OR** (по умолчанию) | `\\|\\|`, `concat()` |\n| Автоинкремент | `INTEGER PRIMARY KEY` | `AUTO_INCREMENT` | `GENERATED … AS IDENTITY` / `SERIAL` |\n| Boolean | `0` / `1` | `TINYINT(1)` | настоящий `boolean` |\n| Даты | `date()`, `strftime()` | `DATE_FORMAT()`, `DATE_ADD()` | `to_char()`, `interval` |\n| UPSERT | `ON CONFLICT … DO UPDATE` | `ON DUPLICATE KEY UPDATE` | `ON CONFLICT … DO UPDATE` |\n| `RETURNING` | да (3.35+) | нет | да |\n| `FULL JOIN` | да (3.39+) | нет | да |\n| Поиск без регистра | `LIKE` (латиница), `COLLATE NOCASE` | зависит от collation (обычно без регистра) | `ILIKE`, `lower()` |\n| `GROUP BY` | «голые» столбцы разрешены | `ONLY_FULL_GROUP_BY` | строго |\n| Идентификаторы | `\"name\"` (и `[name]`, `` `name` ``) | `` `name` `` | `\"name\"` |\n| Пагинация | `LIMIT n OFFSET m` | `LIMIT m, n` / `LIMIT n OFFSET m` | `LIMIT` / `FETCH FIRST n ROWS ONLY` |\n\n## Переносимые приёмы\n\n- `COALESCE` вместо `IFNULL`/`ISNULL`/`NVL`; `CASE` вместо `IF()`/`iif()`.\n- Явный `CAST` и `* 1.0` там, где нужна дробь.\n- Стандартные `JOIN … ON`, CTE, оконные функции — есть во всех трёх.\n- Сравнение без регистра — `lower(a) = lower(b)` (для кириллицы в SQLite не работает: `lower` знает только ASCII).\n- Даты храните в ISO-8601, а функции дат держите в одном слое — их придётся переписывать."
+    },
+    {
+      "type": "svg",
+      "title": "Схема: одна задача — три диалекта",
+      "content": {
+        "caption": "Ядро SQL общее; различаются типы, функции, UPSERT и мелкие операторы",
+        "description": "Таблица — шпаргалка по самым частым местам, где запрос перестаёт переноситься.",
+        "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 330 120\" width=\"100%\" role=\"img\" aria-label=\"Сравнение SQLite, MySQL и PostgreSQL\"><rect id=\"sq20-h1\" x=\"70\" y=\"4\" width=\"82\" height=\"14\" rx=\"4\" fill=\"#e3f2fd\" stroke=\"#1565c0\"/><text x=\"111\" y=\"13.333333333333334\" text-anchor=\"middle\" font-size=\"7\" fill=\"#0d47a1\">SQLite</text><rect id=\"sq20-h2\" x=\"156\" y=\"4\" width=\"82\" height=\"14\" rx=\"4\" fill=\"#fff9c4\" stroke=\"#f9a825\"/><text x=\"197\" y=\"13.333333333333334\" text-anchor=\"middle\" font-size=\"7\" fill=\"#e65100\">MySQL</text><rect id=\"sq20-h3\" x=\"242\" y=\"4\" width=\"82\" height=\"14\" rx=\"4\" fill=\"#f3e5f5\" stroke=\"#6a1b9a\"/><text x=\"283\" y=\"13.333333333333334\" text-anchor=\"middle\" font-size=\"7\" fill=\"#4a148c\">PostgreSQL</text><text x=\"34\" y=\"30\" text-anchor=\"middle\" font-size=\"6.5\" font-weight=\"600\" fill=\"#424242\">Типы</text><text x=\"111\" y=\"30\" text-anchor=\"middle\" font-size=\"6.5\" font-family=\"ui-monospace, monospace\" fill=\"#333\">динамические</text><text x=\"197\" y=\"30\" text-anchor=\"middle\" font-size=\"6.5\" font-family=\"ui-monospace, monospace\" fill=\"#333\">строгие</text><text x=\"283\" y=\"30\" text-anchor=\"middle\" font-size=\"6.5\" font-family=\"ui-monospace, monospace\" fill=\"#333\">строгие*</text><text x=\"34\" y=\"43\" text-anchor=\"middle\" font-size=\"6.5\" font-weight=\"600\" fill=\"#424242\">7 / 2</text><text x=\"111\" y=\"43\" text-anchor=\"middle\" font-size=\"6.5\" font-family=\"ui-monospace, monospace\" fill=\"#333\">3</text><text x=\"197\" y=\"43\" text-anchor=\"middle\" font-size=\"6.5\" font-family=\"ui-monospace, monospace\" fill=\"#333\">3.5000</text><text x=\"283\" y=\"43\" text-anchor=\"middle\" font-size=\"6.5\" font-family=\"ui-monospace, monospace\" fill=\"#333\">3</text><text x=\"34\" y=\"56\" text-anchor=\"middle\" font-size=\"6.5\" font-weight=\"600\" fill=\"#424242\">Склейка</text><text x=\"111\" y=\"56\" text-anchor=\"middle\" font-size=\"6.5\" font-family=\"ui-monospace, monospace\" fill=\"#333\">a || b</text><text x=\"197\" y=\"56\" text-anchor=\"middle\" font-size=\"6.5\" font-family=\"ui-monospace, monospace\" fill=\"#333\">CONCAT(a, b)</text><text x=\"283\" y=\"56\" text-anchor=\"middle\" font-size=\"6.5\" font-family=\"ui-monospace, monospace\" fill=\"#333\">a || b</text><text x=\"34\" y=\"69\" text-anchor=\"middle\" font-size=\"6.5\" font-weight=\"600\" fill=\"#424242\">UPSERT</text><text x=\"111\" y=\"69\" text-anchor=\"middle\" font-size=\"6.5\" font-family=\"ui-monospace, monospace\" fill=\"#333\">ON CONFLICT</text><text x=\"197\" y=\"69\" text-anchor=\"middle\" font-size=\"6.5\" font-family=\"ui-monospace, monospace\" fill=\"#333\">ON DUPLICATE KEY</text><text x=\"283\" y=\"69\" text-anchor=\"middle\" font-size=\"6.5\" font-family=\"ui-monospace, monospace\" fill=\"#333\">ON CONFLICT</text><text x=\"34\" y=\"82\" text-anchor=\"middle\" font-size=\"6.5\" font-weight=\"600\" fill=\"#424242\">RETURNING</text><text x=\"111\" y=\"82\" text-anchor=\"middle\" font-size=\"6.5\" font-family=\"ui-monospace, monospace\" fill=\"#333\">да</text><text x=\"197\" y=\"82\" text-anchor=\"middle\" font-size=\"6.5\" font-family=\"ui-monospace, monospace\" fill=\"#333\">нет</text><text x=\"283\" y=\"82\" text-anchor=\"middle\" font-size=\"6.5\" font-family=\"ui-monospace, monospace\" fill=\"#333\">да</text><text x=\"34\" y=\"95\" text-anchor=\"middle\" font-size=\"6.5\" font-weight=\"600\" fill=\"#424242\">FULL JOIN</text><text x=\"111\" y=\"95\" text-anchor=\"middle\" font-size=\"6.5\" font-family=\"ui-monospace, monospace\" fill=\"#333\">да (3.39+)</text><text x=\"197\" y=\"95\" text-anchor=\"middle\" font-size=\"6.5\" font-family=\"ui-monospace, monospace\" fill=\"#333\">нет</text><text x=\"283\" y=\"95\" text-anchor=\"middle\" font-size=\"6.5\" font-family=\"ui-monospace, monospace\" fill=\"#333\">да</text><text x=\"34\" y=\"108\" text-anchor=\"middle\" font-size=\"6.5\" font-weight=\"600\" fill=\"#424242\">Без регистра</text><text x=\"111\" y=\"108\" text-anchor=\"middle\" font-size=\"6.5\" font-family=\"ui-monospace, monospace\" fill=\"#333\">LIKE (ASCII)</text><text x=\"197\" y=\"108\" text-anchor=\"middle\" font-size=\"6.5\" font-family=\"ui-monospace, monospace\" fill=\"#333\">по collation</text><text x=\"283\" y=\"108\" text-anchor=\"middle\" font-size=\"6.5\" font-family=\"ui-monospace, monospace\" fill=\"#333\">ILIKE</text><text x=\"165\" y=\"118\" text-anchor=\"middle\" font-size=\"6\" fill=\"#555\">* PostgreSQL: строгие типы; MySQL в нестрогом режиме приводит молча</text></svg>"
+      }
+    },
+    {
+      "type": "sqlite",
+      "title": "Практика: отчёт по месяцам без DATE_FORMAT",
+      "content": {
+        "description": "Коллега принёс запрос из MySQL. Перепишите его для SQLite: выручка по месяцам, `month` в формате `'YYYY-MM'` и `revenue`, по возрастанию месяца.\n\nПорядок строк и имена столбцов проверяются.\n\n```sql\nCREATE TABLE orders(\n  id INTEGER PRIMARY KEY,\n  ordered_at TEXT NOT NULL,   -- 'YYYY-MM-DD HH:MM:SS'\n  amount REAL NOT NULL\n);\n```",
+        "setup": "CREATE TABLE orders(\n  id INTEGER PRIMARY KEY,\n  ordered_at TEXT NOT NULL,   -- 'YYYY-MM-DD HH:MM:SS'\n  amount REAL NOT NULL\n);",
+        "starterCode": "SELECT DATE_FORMAT(ordered_at, '%Y-%m') AS month, SUM(amount) AS revenue\nFROM orders\nGROUP BY month\nORDER BY month;",
+        "referenceSolution": "SELECT strftime('%Y-%m', ordered_at) AS month, SUM(amount) AS revenue\nFROM orders\nGROUP BY month\nORDER BY month;",
+        "orderMatters": true,
+        "checkColumnNames": true,
+        "floatTolerance": 0.001,
+        "timeoutMs": 5000,
+        "tests": [
+          {
+            "seed": "INSERT INTO orders(id, ordered_at, amount) VALUES\n  (1, '2024-01-15 10:00:00', 100),\n  (2, '2024-01-31 23:59:59', 50),\n  (3, '2024-02-01 00:00:00', 70);"
+          },
+          {
+            "seed": "INSERT INTO orders(id, ordered_at, amount) VALUES (1, '2023-12-01 00:00:00', 1);"
+          }
+        ]
+      }
+    },
+    {
+      "type": "sqlite",
+      "title": "Практика: логин без учёта регистра",
+      "content": {
+        "description": "Запрос из PostgreSQL: `SELECT id FROM users WHERE login ILIKE 'admin'`. В SQLite `ILIKE` нет. Найдите `id` пользователей, чей логин равен `admin` **без учёта регистра** (`Admin`, `ADMIN` подходят, `administrator` — нет).\n\n```sql\nCREATE TABLE users(\n  id INTEGER PRIMARY KEY,\n  login TEXT NOT NULL\n);\n```",
+        "setup": "CREATE TABLE users(\n  id INTEGER PRIMARY KEY,\n  login TEXT NOT NULL\n);",
+        "starterCode": "SELECT id FROM users WHERE login ILIKE 'admin';",
+        "referenceSolution": "SELECT id FROM users WHERE lower(login) = 'admin';",
+        "orderMatters": false,
+        "timeoutMs": 5000,
+        "tests": [
+          {
+            "seed": "INSERT INTO users(id, login) VALUES (1, 'admin'), (2, 'Admin'), (3, 'ADMIN'), (4, 'administrator'), (5, 'root');"
+          },
+          {
+            "seed": "INSERT INTO users(id, login) VALUES (1, 'guest');"
+          }
+        ]
+      }
+    },
+    {
+      "type": "sqlite",
+      "title": "Практика: счётчик просмотров без ON DUPLICATE KEY",
+      "content": {
+        "description": "MySQL-запрос `INSERT INTO page_views(page, views) VALUES ('/home', 1) ON DUPLICATE KEY UPDATE views = views + 1` в SQLite не работает. Перепишите его: учесть **один** просмотр страницы `'/home'` — создать строку с `1` или увеличить счётчик.\n\nПроверяется: `SELECT page, views FROM page_views ORDER BY page`.\n\n```sql\nCREATE TABLE page_views(\n  page TEXT PRIMARY KEY,\n  views INTEGER NOT NULL\n);\n```",
+        "setup": "CREATE TABLE page_views(\n  page TEXT PRIMARY KEY,\n  views INTEGER NOT NULL\n);",
+        "starterCode": "INSERT INTO page_views(page, views) VALUES ('/home', 1)\nON DUPLICATE KEY UPDATE views = views + 1;",
+        "referenceSolution": "INSERT INTO page_views(page, views) VALUES ('/home', 1)\nON CONFLICT(page) DO UPDATE SET views = views + 1;",
+        "orderMatters": true,
+        "checkQuery": "SELECT page, views FROM page_views ORDER BY page;",
+        "timeoutMs": 5000,
+        "tests": [
+          {
+            "seed": "INSERT INTO page_views(page, views) VALUES ('/home', 41), ('/about', 3);"
+          },
+          {
+            "seed": ""
+          }
+        ]
+      }
+    },
+    {
+      "type": "quiz",
+      "title": "Проверка: оператор ||",
+      "content": {
+        "question": "Что по умолчанию означает **`'a' || 'b'`** в MySQL?",
+        "options": [
+          "Склейку строк: `'ab'`",
+          "Логическое ИЛИ",
+          "Синтаксическую ошибку",
+          "То же, что `CONCAT_WS`"
+        ],
+        "correctIndices": [
+          1
+        ]
+      }
+    },
+    {
+      "type": "quiz",
+      "title": "Итоговый тест модуля",
+      "content": {
+        "question": "В каких СУБД есть `INSERT … RETURNING`?",
+        "options": [
+          "SQLite (3.35+)",
+          "PostgreSQL",
+          "MySQL 8",
+          "Во всех трёх"
+        ],
+        "correctIndices": [
+          0,
+          1
+        ]
+      }
+    }
+  ]
+}

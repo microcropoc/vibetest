@@ -1,0 +1,5 @@
+{
+  "schemaVersion": 1,
+  "title": "SQL на SQLite",
+  "description": "Практический курс SQL на SQLite: от SELECT и NULL до оконных функций, рекурсивных CTE, DML, индексов и JSON. Каждый модуль — теория (Markdown), SVG-схема, SQL-задачи с автопроверкой в браузере (sql.js, SQLite 3.49) и quiz. Отдельный модуль — отличия SQLite от MySQL и PostgreSQL."
+}

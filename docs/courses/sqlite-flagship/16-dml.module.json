@@ -1,0 +1,120 @@
+{
+  "schemaVersion": 1,
+  "title": "Изменение данных: INSERT, UPDATE, DELETE, UPSERT",
+  "steps": [
+    {
+      "type": "theory",
+      "title": "INSERT, UPDATE, DELETE",
+      "content": "## INSERT\n\n```sql\nINSERT INTO employees(name, department, salary) VALUES ('Анна', 'IT', 200000);\nINSERT INTO employees(name, salary) VALUES ('Борис', 1), ('Вера', 2);       -- несколько строк\nINSERT INTO archive(id, amount) SELECT id, amount FROM orders WHERE status = 'cancelled';\n```\n\nВсегда перечисляйте столбцы — запрос не сломается, когда в таблицу добавят новый.\n\n## UPDATE и DELETE\n\n```sql\nUPDATE employees SET salary = salary + 5000 WHERE department = 'IT';\nUPDATE orders SET status = 'paid', amount = amount * 0.9 WHERE id = 10;\nDELETE FROM orders WHERE status = 'cancelled';\n```\n\n**Без `WHERE` изменятся все строки.** Перед `UPDATE`/`DELETE` полезно выполнить тот же `WHERE` в `SELECT`.\n\n`UPDATE … FROM` (SQLite 3.33+, как в PostgreSQL) — обновление по данным другой таблицы:\n\n```sql\nUPDATE products SET price = n.price FROM new_prices AS n WHERE n.id = products.id;\n```\n\n## RETURNING\n\nSQLite 3.35+ (и PostgreSQL) возвращают изменённые строки: `DELETE FROM orders WHERE … RETURNING id;`. В MySQL `RETURNING` нет.\n\n## Как проверяются задачи на изменение\n\nЗадача задаёт **проверочный запрос** (`checkQuery`): после вашего SQL и эталона он выполняется на обеих БД, и сравнивается **его** результат — то есть итоговое состояние таблиц. Что вернул ваш собственный запрос, не важно."
+    },
+    {
+      "type": "theory",
+      "title": "UPSERT и INSERT OR …",
+      "content": "## UPSERT: вставить или обновить\n\n```sql\nINSERT INTO stock(sku, qty) VALUES ('A-1', 5)\nON CONFLICT(sku) DO UPDATE SET qty = qty + excluded.qty;   -- excluded — строка, которую пытались вставить\n\nINSERT INTO stock(sku, qty) VALUES ('A-1', 5)\nON CONFLICT(sku) DO NOTHING;                                -- молча пропустить\n```\n\nСинтаксис как в PostgreSQL. В MySQL — `ON DUPLICATE KEY UPDATE qty = qty + VALUES(qty)`.\n\n**Ловушка парсера**: в `INSERT … SELECT … ON CONFLICT` SQLite может принять `ON` за часть `JOIN`. Добавьте `WHERE true`:\n\n```sql\nINSERT INTO stock(sku, qty)\nSELECT sku, qty FROM incoming WHERE true\nON CONFLICT(sku) DO UPDATE SET qty = qty + excluded.qty;\n```\n\n## INSERT OR REPLACE / IGNORE\n\n- `INSERT OR IGNORE` — пропустить строку при нарушении ограничения.\n- `INSERT OR REPLACE` (`REPLACE INTO`) — **удалить** конфликтующую строку и вставить новую. Столбцы, не указанные в INSERT, получат значения **по умолчанию**, сработают триггеры удаления и `ON DELETE CASCADE`. Это не «обновление»!"
+    },
+    {
+      "type": "svg",
+      "title": "Схема: UPSERT",
+      "content": {
+        "caption": "`ON CONFLICT(key)`: нет ключа — вставка; есть — `DO UPDATE` или `DO NOTHING`",
+        "description": "excluded.qty — значение из вставляемой строки, qty — текущее значение в таблице.",
+        "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 300 100\" width=\"100%\" role=\"img\" aria-label=\"Ветвление UPSERT\"><rect id=\"sq16-ins\" x=\"8\" y=\"36\" width=\"70\" height=\"28\" rx=\"4\" fill=\"#e3f2fd\" stroke=\"#1565c0\"/><text x=\"43\" y=\"47.833333333333336\" text-anchor=\"middle\" font-size=\"7\" fill=\"#0d47a1\">INSERT</text><text x=\"43\" y=\"56.833333333333336\" text-anchor=\"middle\" font-size=\"7\" fill=\"#0d47a1\">('A-1', 5)</text><line x1=\"78\" y1=\"50\" x2=\"100\" y2=\"50\" stroke=\"#757575\" stroke-width=\"1.2\"/><polygon points=\"100,50 95.5,52.2 95.5,47.8\" fill=\"#757575\"/><rect id=\"sq16-q\" x=\"100\" y=\"34\" width=\"70\" height=\"32\" rx=\"4\" fill=\"#fff9c4\" stroke=\"#f9a825\"/><text x=\"135\" y=\"47.833333333333336\" text-anchor=\"middle\" font-size=\"7\" fill=\"#e65100\">ключ</text><text x=\"135\" y=\"56.833333333333336\" text-anchor=\"middle\" font-size=\"7\" fill=\"#e65100\">уже есть?</text><line x1=\"170\" y1=\"42\" x2=\"196\" y2=\"22\" stroke=\"#757575\" stroke-width=\"1.2\"/><polygon points=\"196,22 193.8,26.5 191.1,23.0\" fill=\"#757575\"/><line x1=\"170\" y1=\"58\" x2=\"196\" y2=\"78\" stroke=\"#757575\" stroke-width=\"1.2\"/><polygon points=\"196,78 191.1,77.0 193.8,73.5\" fill=\"#757575\"/><rect id=\"sq16-new\" x=\"196\" y=\"8\" width=\"98\" height=\"26\" rx=\"4\" fill=\"#e8f5e9\" stroke=\"#2e7d32\"/><text x=\"245\" y=\"23.333333333333332\" text-anchor=\"middle\" font-size=\"7\" fill=\"#1b5e20\">нет → новая строка</text><rect id=\"sq16-upd\" x=\"196\" y=\"66\" width=\"98\" height=\"26\" rx=\"4\" fill=\"#f3e5f5\" stroke=\"#6a1b9a\"/><text x=\"245\" y=\"81.33333333333333\" text-anchor=\"middle\" font-size=\"7\" fill=\"#4a148c\">да → qty + excluded.qty</text><text x=\"183\" y=\"32\" text-anchor=\"middle\" font-size=\"6.5\" fill=\"#555\">нет</text><text x=\"183\" y=\"76\" text-anchor=\"middle\" font-size=\"6.5\" fill=\"#555\">да</text></svg>"
+      }
+    },
+    {
+      "type": "sqlite",
+      "title": "Практика: повышение в IT",
+      "content": {
+        "description": "Повысьте зарплату всем сотрудникам отдела **IT** на **5000**. Остальных не трогайте.\n\nПроверяется итоговое состояние: `SELECT id, salary FROM employees ORDER BY id`.\n\n```sql\nCREATE TABLE employees(\n  id INTEGER PRIMARY KEY,\n  name TEXT NOT NULL,\n  department TEXT,\n  salary INTEGER,\n  manager_id INTEGER,\n  hired_at TEXT\n);\n```",
+        "setup": "CREATE TABLE employees(\n  id INTEGER PRIMARY KEY,\n  name TEXT NOT NULL,\n  department TEXT,\n  salary INTEGER,\n  manager_id INTEGER,\n  hired_at TEXT\n);",
+        "starterCode": "UPDATE employees SET salary = salary + 5000;",
+        "referenceSolution": "UPDATE employees SET salary = salary + 5000 WHERE department = 'IT';",
+        "orderMatters": true,
+        "checkQuery": "SELECT id, salary FROM employees ORDER BY id;",
+        "timeoutMs": 5000,
+        "tests": [
+          {
+            "seed": "INSERT INTO employees(id, name, department, salary) VALUES\n  (1, 'Анна', 'IT', 200000),\n  (2, 'Борис', 'Sales', 100000),\n  (3, 'Вера', 'IT', 150000),\n  (4, 'Глеб', NULL, 80000);"
+          },
+          {
+            "seed": "INSERT INTO employees(id, name, department, salary) VALUES\n  (1, 'Дина', 'HR', 90000);"
+          }
+        ]
+      }
+    },
+    {
+      "type": "sqlite",
+      "title": "Практика: приход товара",
+      "content": {
+        "description": "На склад пришла поставка (`incoming`). Добавьте её в `stock`:\n\n- артикул уже есть — **прибавьте** количество к текущему;\n- артикула нет — вставьте новую строку.\n\nСтолбец `updated_by` у существующих строк должен **сохраниться**.\n\nПроверяется: `SELECT sku, qty, updated_by FROM stock ORDER BY sku`.\n\n```sql\nCREATE TABLE stock(sku TEXT PRIMARY KEY, qty INTEGER NOT NULL, updated_by TEXT NOT NULL DEFAULT 'system');\nCREATE TABLE incoming(sku TEXT PRIMARY KEY, qty INTEGER NOT NULL);\n```",
+        "setup": "CREATE TABLE stock(sku TEXT PRIMARY KEY, qty INTEGER NOT NULL, updated_by TEXT NOT NULL DEFAULT 'system');\nCREATE TABLE incoming(sku TEXT PRIMARY KEY, qty INTEGER NOT NULL);",
+        "starterCode": "INSERT OR REPLACE INTO stock(sku, qty) SELECT sku, qty FROM incoming;",
+        "referenceSolution": "INSERT INTO stock(sku, qty)\nSELECT sku, qty FROM incoming WHERE true\nON CONFLICT(sku) DO UPDATE SET qty = qty + excluded.qty;",
+        "orderMatters": true,
+        "checkQuery": "SELECT sku, qty, updated_by FROM stock ORDER BY sku;",
+        "timeoutMs": 5000,
+        "tests": [
+          {
+            "seed": "INSERT INTO stock(sku, qty, updated_by) VALUES ('A-1', 10, 'anna'), ('B-2', 0, 'boris');\nINSERT INTO incoming(sku, qty) VALUES ('A-1', 5), ('C-3', 7);"
+          },
+          {
+            "seed": "INSERT INTO incoming(sku, qty) VALUES ('Z-9', 1);"
+          }
+        ]
+      }
+    },
+    {
+      "type": "sqlite",
+      "title": "Практика: архив отменённых заказов",
+      "content": {
+        "description": "Перенесите отменённые заказы (`status = 'cancelled'`) в `orders_archive` (все столбцы) и удалите их из `orders`. Понадобятся два запроса через `;`.\n\nПроверяется содержимое обеих таблиц.\n\n```sql\nCREATE TABLE orders(id INTEGER PRIMARY KEY, status TEXT NOT NULL, amount REAL NOT NULL);\nCREATE TABLE orders_archive(id INTEGER PRIMARY KEY, status TEXT NOT NULL, amount REAL NOT NULL);\n```",
+        "setup": "CREATE TABLE orders(id INTEGER PRIMARY KEY, status TEXT NOT NULL, amount REAL NOT NULL);\nCREATE TABLE orders_archive(id INTEGER PRIMARY KEY, status TEXT NOT NULL, amount REAL NOT NULL);",
+        "starterCode": "DELETE FROM orders WHERE status = 'cancelled';",
+        "referenceSolution": "INSERT INTO orders_archive(id, status, amount)\nSELECT id, status, amount FROM orders WHERE status = 'cancelled';\nDELETE FROM orders WHERE status = 'cancelled';",
+        "orderMatters": true,
+        "checkQuery": "SELECT 'orders' AS tbl, id, status FROM orders\nUNION ALL\nSELECT 'archive', id, status FROM orders_archive\nORDER BY tbl, id;",
+        "timeoutMs": 5000,
+        "tests": [
+          {
+            "seed": "INSERT INTO orders(id, status, amount) VALUES (1, 'paid', 10), (2, 'cancelled', 20), (3, 'new', 30), (4, 'cancelled', 40);\nINSERT INTO orders_archive(id, status, amount) VALUES (100, 'cancelled', 1);"
+          },
+          {
+            "seed": "INSERT INTO orders(id, status, amount) VALUES (1, 'paid', 5);"
+          }
+        ]
+      }
+    },
+    {
+      "type": "quiz",
+      "title": "Проверка: INSERT OR REPLACE",
+      "content": {
+        "question": "Что делает `INSERT OR REPLACE` при конфликте по первичному ключу?",
+        "options": [
+          "Обновляет только указанные столбцы существующей строки",
+          "Удаляет старую строку и вставляет новую; неуказанные столбцы получают значения по умолчанию",
+          "Пропускает вставку",
+          "Выдаёт ошибку"
+        ],
+        "correctIndices": [
+          1
+        ]
+      }
+    },
+    {
+      "type": "quiz",
+      "title": "Итоговый тест модуля",
+      "content": {
+        "question": "Как в UPSERT сослаться на значение, которое **пытались вставить**?",
+        "options": [
+          "`new.qty`",
+          "`excluded.qty`",
+          "`VALUES(qty)`",
+          "`inserted.qty`"
+        ],
+        "correctIndices": [
+          1
+        ]
+      }
+    }
+  ]
+}

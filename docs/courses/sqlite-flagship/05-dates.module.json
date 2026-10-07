@@ -1,0 +1,113 @@
+{
+  "schemaVersion": 1,
+  "title": "Даты и время",
+  "steps": [
+    {
+      "type": "theory",
+      "title": "Даты в SQLite — это строки и числа",
+      "content": "## Отдельного типа DATE нет\n\nДату хранят одним из способов:\n\n- **TEXT** в ISO-8601: `'2024-03-15'`, `'2024-03-15 14:30:00'` — самый частый и читаемый;\n- **INTEGER** — Unix time (секунды с 1970-01-01);\n- **REAL** — юлианский день.\n\nISO-строки **сортируются и сравниваются как даты**, потому что идут от года к секунде: `'2024-03-09' < '2024-03-10'`.\n\n## Функции\n\n```sql\nSELECT date('2024-03-15 14:30:00');               -- '2024-03-15'\nSELECT datetime('2024-03-15', '+1 day', '+2 hours'); -- '2024-03-16 02:00:00'\nSELECT strftime('%Y-%m', '2024-03-15');           -- '2024-03'\nSELECT strftime('%w', '2024-03-10');              -- '0' — воскресенье (0..6), ТЕКСТ\nSELECT julianday('2024-03-10') - julianday('2024-03-01'); -- 9.0 — разница в днях\nSELECT unixepoch('2024-01-01');                   -- 1704067200\nSELECT date('2024-03-15', 'start of month');      -- '2024-03-01'\nSELECT date('2024-03-15', 'start of month', '+1 month', '-1 day'); -- последний день месяца\n```\n\nФорматы `strftime`: `%Y` год, `%m` месяц, `%d` день, `%H:%M:%S` время, `%w` день недели, `%j` день года.\n\n## Ловушки\n\n- **`strftime` возвращает текст**: `strftime('%w', d) = 0` никогда не истинно — сравнивайте с `'0'` или делайте `CAST(... AS INTEGER)`.\n- **Границы периода со временем**: `ordered_at BETWEEN '2024-03-01' AND '2024-03-31'` **не включит** `'2024-03-31 18:45:00'` — эта строка больше `'2024-03-31'`. Надёжно: полуинтервал `>= '2024-03-01' AND < '2024-04-01'`.\n- **Переполнение месяца**: `date('2024-01-31', '+1 month')` → `'2024-03-02'`.\n- `'now'` зависит от часов машины и в UTC — в задачах курса не используется.\n- Строки нельзя вычитать как даты: `'2024-03-10' - '2024-03-01'` → `0` (SQLite берёт числовой префикс `2024`)."
+    },
+    {
+      "type": "svg",
+      "title": "Схема: полуинтервал для месяца",
+      "content": {
+        "caption": "Месяц = `[2024-03-01, 2024-04-01)` — правая граница **не включается**",
+        "description": "BETWEEN '2024-03-01' AND '2024-03-31' теряет заказы 31 марта после полуночи: '2024-03-31 18:45:00' > '2024-03-31'.",
+        "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 300 90\" width=\"100%\" role=\"img\" aria-label=\"Полуинтервал дат\"><line x1=\"20\" y1=\"45\" x2=\"280\" y2=\"45\" stroke=\"#9e9e9e\" stroke-width=\"1.5\"/><rect id=\"sq05-start\" x=\"30\" y=\"20\" width=\"70\" height=\"18\" rx=\"4\" fill=\"#e8f5e9\" stroke=\"#2e7d32\"/><text x=\"65\" y=\"31.333333333333332\" text-anchor=\"middle\" font-size=\"7\" font-family=\"ui-monospace, monospace\" fill=\"#1b5e20\">2024-03-01</text><rect id=\"sq05-end\" x=\"200\" y=\"20\" width=\"70\" height=\"18\" rx=\"4\" fill=\"#ffebee\" stroke=\"#c62828\"/><text x=\"235\" y=\"31.333333333333332\" text-anchor=\"middle\" font-size=\"7\" font-family=\"ui-monospace, monospace\" fill=\"#b71c1c\">2024-04-01</text><circle cx=\"65\" cy=\"45\" r=\"4\" fill=\"#2e7d32\"/><circle cx=\"235\" cy=\"45\" r=\"4\" fill=\"#fff\" stroke=\"#c62828\" stroke-width=\"1.5\"/><rect x=\"65\" y=\"42\" width=\"170\" height=\"6\" fill=\"#a5d6a7\" opacity=\"0.6\"/><rect id=\"sq05-late\" x=\"150\" y=\"56\" width=\"78\" height=\"18\" rx=\"4\" fill=\"#fff9c4\" stroke=\"#f9a825\"/><text x=\"189\" y=\"67.33333333333333\" text-anchor=\"middle\" font-size=\"7\" font-family=\"ui-monospace, monospace\" fill=\"#e65100\">03-31 18:45</text><line x1=\"189\" y1=\"56\" x2=\"200\" y2=\"48\" stroke=\"#757575\" stroke-width=\"1.2\"/><polygon points=\"200,48 197.6,52.4 195.1,48.9\" fill=\"#757575\"/><text x=\"150\" y=\"86\" text-anchor=\"middle\" font-size=\"7\" fill=\"#555\">&gt;= начало AND &lt; начало следующего месяца</text></svg>"
+      }
+    },
+    {
+      "type": "sqlite",
+      "title": "Практика: заказы за март",
+      "content": {
+        "description": "Выведите `id` всех заказов, сделанных в **марте 2024 года** (по `ordered_at`, с учётом времени).\n\n```sql\nCREATE TABLE orders(\n  id INTEGER PRIMARY KEY,\n  customer_id INTEGER,\n  ordered_at TEXT NOT NULL,   -- 'YYYY-MM-DD HH:MM:SS'\n  delivered_at TEXT,          -- 'YYYY-MM-DD' или NULL\n  amount REAL NOT NULL\n);\n```",
+        "setup": "CREATE TABLE orders(\n  id INTEGER PRIMARY KEY,\n  customer_id INTEGER,\n  ordered_at TEXT NOT NULL,   -- 'YYYY-MM-DD HH:MM:SS'\n  delivered_at TEXT,          -- 'YYYY-MM-DD' или NULL\n  amount REAL NOT NULL\n);",
+        "starterCode": "SELECT id FROM orders WHERE ordered_at BETWEEN '2024-03-01' AND '2024-03-31';",
+        "referenceSolution": "SELECT id FROM orders WHERE ordered_at >= '2024-03-01' AND ordered_at < '2024-04-01';",
+        "orderMatters": false,
+        "timeoutMs": 5000,
+        "tests": [
+          {
+            "seed": "INSERT INTO orders(id, customer_id, ordered_at, delivered_at, amount) VALUES\n  (1, 1, '2024-02-29 23:59:59', '2024-03-04', 1200),\n  (2, 2, '2024-03-01 00:00:00', '2024-03-05', 300),\n  (3, 1, '2024-03-09 12:30:00', '2024-03-10', 450),\n  (4, 3, '2024-03-10 08:15:00', NULL, 990),\n  (5, 2, '2024-03-31 18:45:00', '2024-04-02', 150),\n  (6, 3, '2024-04-01 00:00:01', '2024-04-03', 700);"
+          },
+          {
+            "seed": "INSERT INTO orders(id, customer_id, ordered_at, delivered_at, amount) VALUES\n  (1, 5, '2024-03-16 10:00:00', '2024-03-20', 100),\n  (2, 5, '2024-03-18 10:00:00', '2024-03-18', 200),\n  (3, 6, '2023-03-16 10:00:00', '2023-03-30', 300);"
+          }
+        ]
+      }
+    },
+    {
+      "type": "sqlite",
+      "title": "Практика: срок доставки",
+      "content": {
+        "description": "Для доставленных заказов (`delivered_at IS NOT NULL`) выведите:\n\n- `id`;\n- `days` — сколько **полных календарных дней** прошло от даты заказа до даты доставки (время заказа не учитывайте: заказ `'2024-02-29 23:59:59'` с доставкой `'2024-03-04'` → `4`).\n\nИмена столбцов проверяются.",
+        "setup": "CREATE TABLE orders(\n  id INTEGER PRIMARY KEY,\n  customer_id INTEGER,\n  ordered_at TEXT NOT NULL,   -- 'YYYY-MM-DD HH:MM:SS'\n  delivered_at TEXT,          -- 'YYYY-MM-DD' или NULL\n  amount REAL NOT NULL\n);",
+        "starterCode": "SELECT id, delivered_at - ordered_at AS days FROM orders WHERE delivered_at IS NOT NULL;",
+        "referenceSolution": "SELECT id, CAST(julianday(delivered_at) - julianday(date(ordered_at)) AS INTEGER) AS days\nFROM orders\nWHERE delivered_at IS NOT NULL;",
+        "orderMatters": false,
+        "checkColumnNames": true,
+        "timeoutMs": 5000,
+        "tests": [
+          {
+            "seed": "INSERT INTO orders(id, customer_id, ordered_at, delivered_at, amount) VALUES\n  (1, 1, '2024-02-29 23:59:59', '2024-03-04', 1200),\n  (2, 2, '2024-03-01 00:00:00', '2024-03-05', 300),\n  (3, 1, '2024-03-09 12:30:00', '2024-03-10', 450),\n  (4, 3, '2024-03-10 08:15:00', NULL, 990),\n  (5, 2, '2024-03-31 18:45:00', '2024-04-02', 150),\n  (6, 3, '2024-04-01 00:00:01', '2024-04-03', 700);"
+          },
+          {
+            "seed": "INSERT INTO orders(id, customer_id, ordered_at, delivered_at, amount) VALUES\n  (1, 5, '2024-03-16 10:00:00', '2024-03-20', 100),\n  (2, 5, '2024-03-18 10:00:00', '2024-03-18', 200),\n  (3, 6, '2023-03-16 10:00:00', '2023-03-30', 300);"
+          }
+        ]
+      }
+    },
+    {
+      "type": "sqlite",
+      "title": "Практика: заказы в выходные",
+      "content": {
+        "description": "Выведите `id` заказов, сделанных в **субботу или воскресенье**.\n\nПодсказка: `strftime('%w', …)` возвращает **текст** от `'0'` (воскресенье) до `'6'` (суббота).",
+        "setup": "CREATE TABLE orders(\n  id INTEGER PRIMARY KEY,\n  customer_id INTEGER,\n  ordered_at TEXT NOT NULL,   -- 'YYYY-MM-DD HH:MM:SS'\n  delivered_at TEXT,          -- 'YYYY-MM-DD' или NULL\n  amount REAL NOT NULL\n);",
+        "starterCode": "SELECT id FROM orders WHERE strftime('%w', ordered_at) IN (0, 6);",
+        "referenceSolution": "SELECT id FROM orders WHERE strftime('%w', ordered_at) IN ('0', '6');",
+        "orderMatters": false,
+        "timeoutMs": 5000,
+        "tests": [
+          {
+            "seed": "INSERT INTO orders(id, customer_id, ordered_at, delivered_at, amount) VALUES\n  (1, 1, '2024-02-29 23:59:59', '2024-03-04', 1200),\n  (2, 2, '2024-03-01 00:00:00', '2024-03-05', 300),\n  (3, 1, '2024-03-09 12:30:00', '2024-03-10', 450),\n  (4, 3, '2024-03-10 08:15:00', NULL, 990),\n  (5, 2, '2024-03-31 18:45:00', '2024-04-02', 150),\n  (6, 3, '2024-04-01 00:00:01', '2024-04-03', 700);"
+          },
+          {
+            "seed": "INSERT INTO orders(id, customer_id, ordered_at, delivered_at, amount) VALUES\n  (1, 5, '2024-03-16 10:00:00', '2024-03-20', 100),\n  (2, 5, '2024-03-18 10:00:00', '2024-03-18', 200),\n  (3, 6, '2023-03-16 10:00:00', '2023-03-30', 300);"
+          }
+        ]
+      }
+    },
+    {
+      "type": "quiz",
+      "title": "Проверка: переполнение месяца",
+      "content": {
+        "question": "Что вернёт **`date('2024-01-31', '+1 month')`**?",
+        "options": [
+          "`'2024-02-29'`",
+          "`'2024-02-31'`",
+          "`'2024-03-02'`",
+          "`NULL`"
+        ],
+        "correctIndices": [
+          2
+        ]
+      }
+    },
+    {
+      "type": "quiz",
+      "title": "Итоговый тест модуля",
+      "content": {
+        "question": "Почему условие **`ordered_at <= '2024-03-31'`** может потерять заказы 31 марта?",
+        "options": [
+          "Строка `'2024-03-31 10:00:00'` больше `'2024-03-31'` при сравнении строк",
+          "SQLite не умеет сравнивать даты",
+          "Нужно писать `DATE` перед литералом",
+          "Оператор `<=` не работает с текстом"
+        ],
+        "correctIndices": [
+          0
+        ]
+      }
+    }
+  ]
+}

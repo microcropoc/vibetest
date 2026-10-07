@@ -11,6 +11,7 @@
 | [csharp-concurrency-primitives.json](./csharp-concurrency-primitives.json) | **C#: примитивы асинхронности и конкурентности** — 15 модулей (theory, svg, quiz), .NET 8, подготовка к лайвкодингу Ozon |
 | [ozon-csharp-livecoding.json](./ozon-csharp-livecoding.json) | **Лайвкодинг в Ozon на C#** — 25 модулей (intro + 24 дня: Enrichment … Outbox), theory, svg, quiz, решения .NET 8 |
 | [csharp-ozon-interview.json](./csharp-ozon-interview.json) | **C# для опытного разработчика: собеседование в Ozon** — 21 модуль (intro + 20 тем: CLR … архитектура), theory, svg, вопросы с собеседования, quiz, .NET 8 |
+| [sqlite-flagship.json](./sqlite-flagship.json) | **SQL на SQLite** — 20 модулей (theory, svg, sqlite, quiz): SELECT … оконные функции, CTE, DML/UPSERT, DDL, индексы и EXPLAIN QUERY PLAN, транзакции, JSON, отличия от MySQL/PostgreSQL; 61 задача в формате LeetCode |
 
 ## Исходники и сборка
 
@@ -21,6 +22,7 @@
 - [csharp-concurrency-primitives/](./csharp-concurrency-primitives/)
 - [ozon-csharp-livecoding/](./ozon-csharp-livecoding/)
 - [csharp-ozon-interview/](./csharp-ozon-interview/)
+- [sqlite-flagship/](./sqlite-flagship/)
 
 - `course.json` — заголовок и описание курса
 - `NN-slug.module.json` — один модуль ([module-import.schema.json](../schemas/module-import.schema.json))

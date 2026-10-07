@@ -1,0 +1,115 @@
+{
+  "schemaVersion": 1,
+  "title": "Оконные функции: ранжирование",
+  "steps": [
+    {
+      "type": "theory",
+      "title": "OVER, PARTITION BY и ранги",
+      "content": "## Окно вместо группы\n\nАгрегат с `GROUP BY` сворачивает строки. **Оконная функция** считает по набору строк («окну»), но **оставляет каждую строку**:\n\n```sql\nSELECT name, department, salary,\n       AVG(salary) OVER (PARTITION BY department) AS dept_avg,  -- среднее по отделу в каждой строке\n       salary - AVG(salary) OVER (PARTITION BY department) AS diff\nFROM employees;\n```\n\n- `PARTITION BY` — на какие части делить строки (как `GROUP BY`, но без сворачивания). Без него окно — весь результат.\n- `ORDER BY` внутри `OVER` — порядок строк **в окне** (нужен для рангов и накопительных сумм).\n\n## Ранжирующие функции\n\n| salary | `ROW_NUMBER()` | `RANK()` | `DENSE_RANK()` |\n|--------|------|------|------|\n| 300 | 1 | 1 | 1 |\n| 300 | 2 | 1 | 1 |\n| 200 | 3 | **3** | **2** |\n| 150 | 4 | 4 | 3 |\n\n- `ROW_NUMBER` — сквозная нумерация; при равенстве порядок произвольный (добавьте уникальный ключ в `ORDER BY`).\n- `RANK` — равным одинаковый ранг, затем **пропуск**.\n- `DENSE_RANK` — без пропусков.\n\n## Окно нельзя использовать в WHERE\n\nОконные функции вычисляются **после** `WHERE`/`GROUP BY`/`HAVING`. Фильтр по рангу — через подзапрос или CTE:\n\n```sql\nWITH ranked AS (\n  SELECT name, department, salary,\n         ROW_NUMBER() OVER (PARTITION BY department ORDER BY salary DESC, id) AS rn\n  FROM employees\n)\nSELECT name, department, salary FROM ranked WHERE rn <= 2;   -- топ-2 в каждом отделе\n```\n\nВ Snowflake/DuckDB для этого есть `QUALIFY`, в SQLite и PostgreSQL — нет."
+    },
+    {
+      "type": "svg",
+      "title": "Схема: окна по отделам",
+      "content": {
+        "caption": "`PARTITION BY department ORDER BY salary DESC` — ранги считаются отдельно в каждом отделе",
+        "description": "Строки не сворачиваются: у каждого сотрудника свой ранг внутри отдела. RANK пропускает 2 после двух первых мест, DENSE_RANK — нет.",
+        "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 320 120\" width=\"100%\" role=\"img\" aria-label=\"Ранги в окнах по отделам\"><rect id=\"sq14-it\" x=\"10\" y=\"8\" width=\"144\" height=\"66\" rx=\"3\" fill=\"#fff\" stroke=\"#1565c0\"/><rect x=\"10\" y=\"8\" width=\"144\" height=\"11\" rx=\"3\" fill=\"#e3f2fd\" stroke=\"#1565c0\"/><text x=\"82\" y=\"16\" text-anchor=\"middle\" font-size=\"7\" font-weight=\"600\" fill=\"#0d47a1\">IT</text><text x=\"28\" y=\"27\" text-anchor=\"middle\" font-size=\"6.5\" font-family=\"ui-monospace, monospace\" font-weight=\"600\" fill=\"#0d47a1\">name</text><text x=\"64\" y=\"27\" text-anchor=\"middle\" font-size=\"6.5\" font-family=\"ui-monospace, monospace\" font-weight=\"600\" fill=\"#0d47a1\">salary</text><text x=\"100\" y=\"27\" text-anchor=\"middle\" font-size=\"6.5\" font-family=\"ui-monospace, monospace\" font-weight=\"600\" fill=\"#0d47a1\">RANK</text><text x=\"136\" y=\"27\" text-anchor=\"middle\" font-size=\"6.5\" font-family=\"ui-monospace, monospace\" font-weight=\"600\" fill=\"#0d47a1\">DENSE</text><text x=\"28\" y=\"38\" text-anchor=\"middle\" font-size=\"6.5\" font-family=\"ui-monospace, monospace\" fill=\"#333\">Анна</text><text x=\"64\" y=\"38\" text-anchor=\"middle\" font-size=\"6.5\" font-family=\"ui-monospace, monospace\" fill=\"#333\">300</text><text x=\"100\" y=\"38\" text-anchor=\"middle\" font-size=\"6.5\" font-family=\"ui-monospace, monospace\" fill=\"#333\">1</text><text x=\"136\" y=\"38\" text-anchor=\"middle\" font-size=\"6.5\" font-family=\"ui-monospace, monospace\" fill=\"#333\">1</text><text x=\"28\" y=\"49\" text-anchor=\"middle\" font-size=\"6.5\" font-family=\"ui-monospace, monospace\" fill=\"#333\">Борис</text><text x=\"64\" y=\"49\" text-anchor=\"middle\" font-size=\"6.5\" font-family=\"ui-monospace, monospace\" fill=\"#333\">300</text><text x=\"100\" y=\"49\" text-anchor=\"middle\" font-size=\"6.5\" font-family=\"ui-monospace, monospace\" fill=\"#333\">1</text><text x=\"136\" y=\"49\" text-anchor=\"middle\" font-size=\"6.5\" font-family=\"ui-monospace, monospace\" fill=\"#333\">1</text><rect x=\"11\" y=\"52\" width=\"142\" height=\"11\" fill=\"#fff59d\"/><text x=\"28\" y=\"60\" text-anchor=\"middle\" font-size=\"6.5\" font-family=\"ui-monospace, monospace\" fill=\"#333\">Вера</text><text x=\"64\" y=\"60\" text-anchor=\"middle\" font-size=\"6.5\" font-family=\"ui-monospace, monospace\" fill=\"#333\">200</text><text x=\"100\" y=\"60\" text-anchor=\"middle\" font-size=\"6.5\" font-family=\"ui-monospace, monospace\" fill=\"#333\">3</text><text x=\"136\" y=\"60\" text-anchor=\"middle\" font-size=\"6.5\" font-family=\"ui-monospace, monospace\" fill=\"#333\">2</text><text x=\"28\" y=\"71\" text-anchor=\"middle\" font-size=\"6.5\" font-family=\"ui-monospace, monospace\" fill=\"#333\">Глеб</text><text x=\"64\" y=\"71\" text-anchor=\"middle\" font-size=\"6.5\" font-family=\"ui-monospace, monospace\" fill=\"#333\">150</text><text x=\"100\" y=\"71\" text-anchor=\"middle\" font-size=\"6.5\" font-family=\"ui-monospace, monospace\" fill=\"#333\">4</text><text x=\"136\" y=\"71\" text-anchor=\"middle\" font-size=\"6.5\" font-family=\"ui-monospace, monospace\" fill=\"#333\">3</text><rect id=\"sq14-sales\" x=\"170\" y=\"8\" width=\"144\" height=\"44\" rx=\"3\" fill=\"#fff\" stroke=\"#2e7d32\"/><rect x=\"170\" y=\"8\" width=\"144\" height=\"11\" rx=\"3\" fill=\"#e8f5e9\" stroke=\"#2e7d32\"/><text x=\"242\" y=\"16\" text-anchor=\"middle\" font-size=\"7\" font-weight=\"600\" fill=\"#1b5e20\">Sales</text><text x=\"188\" y=\"27\" text-anchor=\"middle\" font-size=\"6.5\" font-family=\"ui-monospace, monospace\" font-weight=\"600\" fill=\"#1b5e20\">name</text><text x=\"224\" y=\"27\" text-anchor=\"middle\" font-size=\"6.5\" font-family=\"ui-monospace, monospace\" font-weight=\"600\" fill=\"#1b5e20\">salary</text><text x=\"260\" y=\"27\" text-anchor=\"middle\" font-size=\"6.5\" font-family=\"ui-monospace, monospace\" font-weight=\"600\" fill=\"#1b5e20\">RANK</text><text x=\"296\" y=\"27\" text-anchor=\"middle\" font-size=\"6.5\" font-family=\"ui-monospace, monospace\" font-weight=\"600\" fill=\"#1b5e20\">DENSE</text><text x=\"188\" y=\"38\" text-anchor=\"middle\" font-size=\"6.5\" font-family=\"ui-monospace, monospace\" fill=\"#333\">Егор</text><text x=\"224\" y=\"38\" text-anchor=\"middle\" font-size=\"6.5\" font-family=\"ui-monospace, monospace\" fill=\"#333\">120</text><text x=\"260\" y=\"38\" text-anchor=\"middle\" font-size=\"6.5\" font-family=\"ui-monospace, monospace\" fill=\"#333\">1</text><text x=\"296\" y=\"38\" text-anchor=\"middle\" font-size=\"6.5\" font-family=\"ui-monospace, monospace\" fill=\"#333\">1</text><text x=\"188\" y=\"49\" text-anchor=\"middle\" font-size=\"6.5\" font-family=\"ui-monospace, monospace\" fill=\"#333\">Жора</text><text x=\"224\" y=\"49\" text-anchor=\"middle\" font-size=\"6.5\" font-family=\"ui-monospace, monospace\" fill=\"#333\">90</text><text x=\"260\" y=\"49\" text-anchor=\"middle\" font-size=\"6.5\" font-family=\"ui-monospace, monospace\" fill=\"#333\">2</text><text x=\"296\" y=\"49\" text-anchor=\"middle\" font-size=\"6.5\" font-family=\"ui-monospace, monospace\" fill=\"#333\">2</text><text x=\"160\" y=\"112\" text-anchor=\"middle\" font-size=\"7\" fill=\"#555\">нумерация начинается заново в каждом окне (partition)</text></svg>"
+      }
+    },
+    {
+      "type": "sqlite",
+      "title": "Практика: ранг зарплаты в отделе",
+      "content": {
+        "description": "Выведите `name`, `department`, `salary` и `salary_rank` — место зарплаты внутри отдела **по убыванию**, где равные зарплаты получают **одинаковое** место, а следующее место идёт **без пропуска** (`1, 1, 2`).\n\nИмена столбцов проверяются.\n\n```sql\nCREATE TABLE employees(\n  id INTEGER PRIMARY KEY,\n  name TEXT NOT NULL,\n  department TEXT,\n  salary INTEGER,\n  manager_id INTEGER,\n  hired_at TEXT\n);\n```",
+        "setup": "CREATE TABLE employees(\n  id INTEGER PRIMARY KEY,\n  name TEXT NOT NULL,\n  department TEXT,\n  salary INTEGER,\n  manager_id INTEGER,\n  hired_at TEXT\n);",
+        "starterCode": "SELECT name, department, salary,\n       RANK() OVER (PARTITION BY department ORDER BY salary DESC) AS salary_rank\nFROM employees;",
+        "referenceSolution": "SELECT name, department, salary,\n       DENSE_RANK() OVER (PARTITION BY department ORDER BY salary DESC) AS salary_rank\nFROM employees;",
+        "orderMatters": false,
+        "checkColumnNames": true,
+        "timeoutMs": 5000,
+        "tests": [
+          {
+            "seed": "INSERT INTO employees(id, name, department, salary) VALUES\n  (1, 'Анна', 'IT', 300000),\n  (2, 'Борис', 'IT', 300000),\n  (3, 'Вера', 'IT', 200000),\n  (4, 'Глеб', 'IT', 150000),\n  (5, 'Дина', 'IT', 100000),\n  (6, 'Егор', 'Sales', 120000),\n  (7, 'Жора', 'Sales', 90000);"
+          },
+          {
+            "seed": "INSERT INTO employees(id, name, department, salary) VALUES\n  (1, 'Зоя', 'HR', 100000),\n  (2, 'Иван', 'HR', 100000),\n  (3, 'Кира', 'HR', 100000),\n  (4, 'Лев', 'HR', 90000),\n  (5, 'Мира', 'Ops', 70000);"
+          }
+        ]
+      }
+    },
+    {
+      "type": "sqlite",
+      "title": "Практика: топ-3 зарплаты в отделе",
+      "content": {
+        "description": "LeetCode 185: в каждом отделе найдите сотрудников, чья зарплата входит в **три наибольших уникальных** зарплаты отдела. Выведите `Department`, `Employee`, `Salary`.\n\nПример: зарплаты отдела `300, 300, 200, 150, 100` → подходят все, кроме `100`.\n\nИмена столбцов проверяются.",
+        "setup": "CREATE TABLE employees(\n  id INTEGER PRIMARY KEY,\n  name TEXT NOT NULL,\n  department TEXT,\n  salary INTEGER,\n  manager_id INTEGER,\n  hired_at TEXT\n);",
+        "starterCode": "WITH ranked AS (\n  SELECT department, name, salary,\n         ROW_NUMBER() OVER (PARTITION BY department ORDER BY salary DESC) AS rn\n  FROM employees\n)\nSELECT department AS Department, name AS Employee, salary AS Salary\nFROM ranked\nWHERE rn <= 3;",
+        "referenceSolution": "WITH ranked AS (\n  SELECT department, name, salary,\n         DENSE_RANK() OVER (PARTITION BY department ORDER BY salary DESC) AS rnk\n  FROM employees\n)\nSELECT department AS Department, name AS Employee, salary AS Salary\nFROM ranked\nWHERE rnk <= 3;",
+        "orderMatters": false,
+        "checkColumnNames": true,
+        "timeoutMs": 5000,
+        "tests": [
+          {
+            "seed": "INSERT INTO employees(id, name, department, salary) VALUES\n  (1, 'Анна', 'IT', 300000),\n  (2, 'Борис', 'IT', 300000),\n  (3, 'Вера', 'IT', 200000),\n  (4, 'Глеб', 'IT', 150000),\n  (5, 'Дина', 'IT', 100000),\n  (6, 'Егор', 'Sales', 120000),\n  (7, 'Жора', 'Sales', 90000);"
+          },
+          {
+            "seed": "INSERT INTO employees(id, name, department, salary) VALUES\n  (1, 'Зоя', 'HR', 100000),\n  (2, 'Иван', 'HR', 100000),\n  (3, 'Кира', 'HR', 100000),\n  (4, 'Лев', 'HR', 90000),\n  (5, 'Мира', 'Ops', 70000);"
+          }
+        ]
+      }
+    },
+    {
+      "type": "sqlite",
+      "title": "Практика: последний заказ клиента",
+      "content": {
+        "description": "Для каждого клиента выведите его **последний** заказ: `customer_id`, `order_id`, `ordered_at`. Если два заказа сделаны в одну и ту же секунду — последним считается заказ с **большим `id`**.\n\nИмена столбцов проверяются.\n\n```sql\nCREATE TABLE orders(\n  id INTEGER PRIMARY KEY,\n  customer_id INTEGER NOT NULL,\n  ordered_at TEXT NOT NULL,\n  amount REAL NOT NULL\n);\n```",
+        "setup": "CREATE TABLE orders(\n  id INTEGER PRIMARY KEY,\n  customer_id INTEGER NOT NULL,\n  ordered_at TEXT NOT NULL,\n  amount REAL NOT NULL\n);",
+        "starterCode": "SELECT customer_id, MIN(id) AS order_id, MAX(ordered_at) AS ordered_at\nFROM orders\nGROUP BY customer_id;",
+        "referenceSolution": "WITH ranked AS (\n  SELECT customer_id, id, ordered_at,\n         ROW_NUMBER() OVER (PARTITION BY customer_id ORDER BY ordered_at DESC, id DESC) AS rn\n  FROM orders\n)\nSELECT customer_id, id AS order_id, ordered_at\nFROM ranked\nWHERE rn = 1;",
+        "orderMatters": false,
+        "checkColumnNames": true,
+        "timeoutMs": 5000,
+        "tests": [
+          {
+            "seed": "INSERT INTO orders(id, customer_id, ordered_at, amount) VALUES\n  (1, 1, '2024-03-01 10:00:00', 100),\n  (2, 1, '2024-03-05 09:00:00', 50),\n  (3, 2, '2024-02-01 12:00:00', 70),\n  (4, 1, '2024-03-02 11:00:00', 10),\n  (5, 3, '2024-03-03 08:00:00', 5),\n  (6, 3, '2024-03-03 08:00:00', 6);"
+          },
+          {
+            "seed": "INSERT INTO orders(id, customer_id, ordered_at, amount) VALUES (9, 4, '2024-01-01 00:00:00', 1);"
+          }
+        ]
+      }
+    },
+    {
+      "type": "quiz",
+      "title": "Проверка: RANK и DENSE_RANK",
+      "content": {
+        "question": "Зарплаты по убыванию: `500, 400, 400, 300`. Какой ранг получит `300` в **`RANK()`** и в **`DENSE_RANK()`**?",
+        "options": [
+          "4 и 3",
+          "3 и 3",
+          "4 и 4",
+          "3 и 4"
+        ],
+        "correctIndices": [
+          0
+        ]
+      }
+    },
+    {
+      "type": "quiz",
+      "title": "Итоговый тест модуля",
+      "content": {
+        "question": "Почему `SELECT … WHERE ROW_NUMBER() OVER (…) = 1` не работает?",
+        "options": [
+          "Оконные функции вычисляются после WHERE — фильтровать нужно во внешнем запросе или CTE",
+          "ROW_NUMBER не поддерживается в SQLite",
+          "Нужно писать HAVING вместо WHERE",
+          "В OVER обязательно PARTITION BY"
+        ],
+        "correctIndices": [
+          0
+        ]
+      }
+    }
+  ]
+}

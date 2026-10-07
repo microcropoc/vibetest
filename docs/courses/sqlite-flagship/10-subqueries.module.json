@@ -1,0 +1,139 @@
+{
+  "schemaVersion": 1,
+  "title": "Подзапросы и EXISTS",
+  "steps": [
+    {
+      "type": "theory",
+      "title": "Запрос внутри запроса",
+      "content": "## Скалярный подзапрос\n\nВозвращает **одно значение** — его можно ставить везде, где нужно выражение:\n\n```sql\nSELECT name FROM employees\nWHERE salary > (SELECT AVG(salary) FROM employees);\n```\n\nЕсли подзапрос вернул 0 строк — значение `NULL`. Если больше одной — SQLite молча возьмёт **первую** (PostgreSQL выдаст ошибку).\n\n## IN и подзапрос-таблица\n\n```sql\nSELECT name FROM customers WHERE id IN (SELECT customer_id FROM orders WHERE status = 'paid');\n\nSELECT department, avg_salary\nFROM (SELECT department, AVG(salary) AS avg_salary FROM employees GROUP BY department) AS d\nWHERE avg_salary > 100000;          -- подзапрос во FROM — «производная таблица»\n```\n\n## Коррелированный подзапрос\n\nСсылается на столбцы **внешнего** запроса и логически выполняется **для каждой строки**:\n\n```sql\nSELECT e.name\nFROM employees AS e\nWHERE e.salary > (SELECT AVG(x.salary) FROM employees AS x WHERE x.department = e.department);\n```\n\n## EXISTS / NOT EXISTS\n\n`EXISTS (подзапрос)` — истина, если подзапрос вернул **хоть одну** строку; что именно выбрано — неважно (`SELECT 1`).\n\n## Ловушка NOT IN\n\n```sql\n-- если среди orders.customer_id есть NULL, результат ПУСТОЙ:\nSELECT name FROM customers WHERE id NOT IN (SELECT customer_id FROM orders);\n```\n\n`3 NOT IN (1, NULL)` = `3 <> 1 AND 3 <> NULL` = `TRUE AND NULL` = `NULL`. Для «нет пары» используйте **`NOT EXISTS`** или anti-join — они с `NULL` работают правильно."
+    },
+    {
+      "type": "svg",
+      "title": "Схема: коррелированный подзапрос",
+      "content": {
+        "caption": "Для каждой строки внешнего запроса подзапрос считается **со значениями этой строки**",
+        "description": "e.department подставляется в подзапрос: средняя зарплата считается по отделу текущего сотрудника.",
+        "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 300 110\" width=\"100%\" role=\"img\" aria-label=\"Коррелированный подзапрос\"><rect id=\"sq10-outer\" x=\"10\" y=\"30\" width=\"90\" height=\"46\" rx=\"4\" fill=\"#e3f2fd\" stroke=\"#1565c0\"/><text x=\"55\" y=\"46.333333333333336\" text-anchor=\"middle\" font-size=\"7\" fill=\"#0d47a1\">внешний запрос</text><text x=\"55\" y=\"55.333333333333336\" text-anchor=\"middle\" font-size=\"7\" fill=\"#0d47a1\">строка e:</text><text x=\"55\" y=\"64.33333333333334\" text-anchor=\"middle\" font-size=\"7\" fill=\"#0d47a1\">dept = 'IT'</text><line x1=\"100\" y1=\"45\" x2=\"160\" y2=\"45\" stroke=\"#757575\" stroke-width=\"1.2\"/><polygon points=\"160,45 155.5,47.2 155.5,42.8\" fill=\"#757575\"/><text x=\"130\" y=\"39\" text-anchor=\"middle\" font-size=\"7\" font-family=\"ui-monospace, monospace\" fill=\"#555\">e.department</text><rect id=\"sq10-inner\" x=\"160\" y=\"26\" width=\"130\" height=\"34\" rx=\"4\" fill=\"#fff9c4\" stroke=\"#f9a825\"/><text x=\"225\" y=\"40.833333333333336\" text-anchor=\"middle\" font-size=\"7\" font-family=\"ui-monospace, monospace\" fill=\"#e65100\">SELECT AVG(salary)</text><text x=\"225\" y=\"49.833333333333336\" text-anchor=\"middle\" font-size=\"7\" font-family=\"ui-monospace, monospace\" fill=\"#e65100\">WHERE dept = 'IT'</text><line x1=\"225\" y1=\"60\" x2=\"225\" y2=\"82\" stroke=\"#757575\" stroke-width=\"1.2\"/><polygon points=\"225,82 222.8,77.5 227.2,77.5\" fill=\"#757575\"/><line x1=\"225\" y1=\"90\" x2=\"100\" y2=\"66\" stroke=\"#757575\" stroke-width=\"1.2\"/><polygon points=\"100,66 104.8,64.7 104.0,69.0\" fill=\"#757575\"/><rect id=\"sq10-avg\" x=\"190\" y=\"82\" width=\"70\" height=\"20\" rx=\"4\" fill=\"#e8f5e9\" stroke=\"#2e7d32\"/><text x=\"225\" y=\"94.33333333333333\" text-anchor=\"middle\" font-size=\"7\" fill=\"#1b5e20\">AVG = 200000</text><text x=\"130\" y=\"104\" text-anchor=\"middle\" font-size=\"7\" fill=\"#555\">сравнение salary &gt; AVG для этой строки</text></svg>"
+      }
+    },
+    {
+      "type": "sqlite",
+      "title": "Практика: выше средней по компании",
+      "content": {
+        "description": "Выведите имена сотрудников (`name`), чья зарплата **больше средней по всей компании**.\n\n```sql\nCREATE TABLE employees(\n  id INTEGER PRIMARY KEY,\n  name TEXT NOT NULL,\n  department TEXT,\n  salary INTEGER,\n  manager_id INTEGER,\n  hired_at TEXT\n);\n```",
+        "setup": "CREATE TABLE employees(\n  id INTEGER PRIMARY KEY,\n  name TEXT NOT NULL,\n  department TEXT,\n  salary INTEGER,\n  manager_id INTEGER,\n  hired_at TEXT\n);",
+        "starterCode": "SELECT name FROM employees WHERE salary > (SELECT MIN(salary) FROM employees);",
+        "referenceSolution": "SELECT name FROM employees WHERE salary > (SELECT AVG(salary) FROM employees);",
+        "orderMatters": false,
+        "timeoutMs": 5000,
+        "tests": [
+          {
+            "seed": "INSERT INTO employees(id, name, department, salary) VALUES\n  (1, 'Анна', 'IT', 300000),\n  (2, 'Борис', 'IT', 200000),\n  (3, 'Вера', 'IT', 100000),\n  (4, 'Глеб', 'Sales', 90000),\n  (5, 'Дина', 'Sales', 150000),\n  (6, 'Егор', 'HR', 80000);"
+          },
+          {
+            "seed": "INSERT INTO employees(id, name, department, salary) VALUES\n  (1, 'Жанна', 'Ops', 100000),\n  (2, 'Зоя', 'Ops', 100000),\n  (3, 'Иван', 'Ops', 130000),\n  (4, 'Кира', 'Dev', 50000);"
+          }
+        ]
+      }
+    },
+    {
+      "type": "sqlite",
+      "title": "Практика: выше средней по отделу",
+      "content": {
+        "description": "Выведите `name` и `department` сотрудников, чья зарплата **больше средней по их отделу**.",
+        "setup": "CREATE TABLE employees(\n  id INTEGER PRIMARY KEY,\n  name TEXT NOT NULL,\n  department TEXT,\n  salary INTEGER,\n  manager_id INTEGER,\n  hired_at TEXT\n);",
+        "starterCode": "SELECT name, department FROM employees WHERE salary > (SELECT AVG(salary) FROM employees);",
+        "referenceSolution": "SELECT e.name, e.department\nFROM employees AS e\nWHERE e.salary > (SELECT AVG(x.salary) FROM employees AS x WHERE x.department = e.department);",
+        "orderMatters": false,
+        "timeoutMs": 5000,
+        "tests": [
+          {
+            "seed": "INSERT INTO employees(id, name, department, salary) VALUES\n  (1, 'Анна', 'IT', 300000),\n  (2, 'Борис', 'IT', 200000),\n  (3, 'Вера', 'IT', 100000),\n  (4, 'Глеб', 'Sales', 90000),\n  (5, 'Дина', 'Sales', 150000),\n  (6, 'Егор', 'HR', 80000);"
+          },
+          {
+            "seed": "INSERT INTO employees(id, name, department, salary) VALUES\n  (1, 'Жанна', 'Ops', 100000),\n  (2, 'Зоя', 'Ops', 100000),\n  (3, 'Иван', 'Ops', 130000),\n  (4, 'Кира', 'Dev', 50000);"
+          }
+        ]
+      }
+    },
+    {
+      "type": "sqlite",
+      "title": "Практика: клиенты без заказов",
+      "content": {
+        "description": "Выведите имена клиентов, у которых **нет ни одного** заказа. В `orders.customer_id` встречается `NULL` (заказ без клиента).\n\n```sql\nCREATE TABLE customers(\n  id INTEGER PRIMARY KEY,\n  name TEXT NOT NULL,\n  city TEXT\n);\nCREATE TABLE orders(\n  id INTEGER PRIMARY KEY,\n  customer_id INTEGER REFERENCES customers(id),\n  status TEXT NOT NULL,   -- 'paid' | 'cancelled' | 'new'\n  amount REAL NOT NULL\n);\n```",
+        "setup": "CREATE TABLE customers(\n  id INTEGER PRIMARY KEY,\n  name TEXT NOT NULL,\n  city TEXT\n);\nCREATE TABLE orders(\n  id INTEGER PRIMARY KEY,\n  customer_id INTEGER REFERENCES customers(id),\n  status TEXT NOT NULL,   -- 'paid' | 'cancelled' | 'new'\n  amount REAL NOT NULL\n);",
+        "starterCode": "SELECT name FROM customers WHERE id NOT IN (SELECT customer_id FROM orders);",
+        "referenceSolution": "SELECT c.name\nFROM customers AS c\nWHERE NOT EXISTS (SELECT 1 FROM orders AS o WHERE o.customer_id = c.id);",
+        "orderMatters": false,
+        "timeoutMs": 5000,
+        "tests": [
+          {
+            "seed": "INSERT INTO customers(id, name, city) VALUES\n  (1, 'Алиса', 'Москва'),\n  (2, 'Богдан', 'Казань'),\n  (3, 'Валя', 'Москва'),\n  (4, 'Гоша', NULL);\nINSERT INTO orders(id, customer_id, status, amount) VALUES\n  (10, 1, 'paid', 500),\n  (11, 1, 'cancelled', 200),\n  (12, 2, 'new', 150),\n  (13, 1, 'paid', 50),\n  (14, 3, 'cancelled', 999);"
+          },
+          {
+            "seed": "INSERT INTO customers(id, name, city) VALUES\n  (1, 'Даша', 'Омск'),\n  (2, 'Ефим', 'Омск');\nINSERT INTO orders(id, customer_id, status, amount) VALUES\n  (1, 2, 'paid', 10),\n  (2, 2, 'paid', 20),\n  (3, NULL, 'paid', 30);"
+          },
+          {
+            "seed": "INSERT INTO customers(id, name, city) VALUES (1, 'Жора', NULL), (2, 'Зина', NULL);\nINSERT INTO orders(id, customer_id, status, amount) VALUES (1, 1, 'new', 5);"
+          }
+        ]
+      }
+    },
+    {
+      "type": "sqlite",
+      "title": "Практика: вторая по величине зарплата",
+      "content": {
+        "description": "LeetCode 176: выведите **вторую по величине уникальную** зарплату в столбце `SecondHighestSalary`. Если такой нет — результат должен быть **одной строкой с `NULL`**, а не пустой таблицей.\n\nИмена столбцов проверяются.",
+        "setup": "CREATE TABLE employees(\n  id INTEGER PRIMARY KEY,\n  name TEXT NOT NULL,\n  department TEXT,\n  salary INTEGER,\n  manager_id INTEGER,\n  hired_at TEXT\n);",
+        "starterCode": "SELECT salary AS SecondHighestSalary FROM employees ORDER BY salary DESC LIMIT 1 OFFSET 1;",
+        "referenceSolution": "SELECT (\n  SELECT DISTINCT salary FROM employees ORDER BY salary DESC LIMIT 1 OFFSET 1\n) AS SecondHighestSalary;",
+        "orderMatters": false,
+        "checkColumnNames": true,
+        "timeoutMs": 5000,
+        "tests": [
+          {
+            "seed": "INSERT INTO employees(id, name, department, salary) VALUES\n  (1, 'Анна', 'IT', 300000),\n  (2, 'Борис', 'IT', 200000),\n  (3, 'Вера', 'IT', 100000),\n  (4, 'Глеб', 'Sales', 90000),\n  (5, 'Дина', 'Sales', 150000),\n  (6, 'Егор', 'HR', 80000);"
+          },
+          {
+            "seed": "INSERT INTO employees(id, name, department, salary) VALUES (1, 'Лев', 'IT', 100), (2, 'Мира', 'IT', 100), (3, 'Нил', 'IT', 50);"
+          },
+          {
+            "seed": "INSERT INTO employees(id, name, department, salary) VALUES (1, 'Оля', 'IT', 100);"
+          }
+        ]
+      }
+    },
+    {
+      "type": "quiz",
+      "title": "Проверка: EXISTS",
+      "content": {
+        "question": "Что вернёт `EXISTS (SELECT NULL FROM orders WHERE customer_id = 1)`, если у клиента 1 есть заказы?",
+        "options": [
+          "`NULL`, ведь выбран NULL",
+          "`1` (истина): важен факт наличия строк",
+          "`0`",
+          "Ошибку"
+        ],
+        "correctIndices": [
+          1
+        ]
+      }
+    },
+    {
+      "type": "quiz",
+      "title": "Итоговый тест модуля",
+      "content": {
+        "question": "Почему `id NOT IN (SELECT customer_id FROM orders)` может вернуть пустой результат?",
+        "options": [
+          "Если в подзапросе есть `NULL`, условие для каждой строки становится `NULL`",
+          "NOT IN не работает с подзапросами в SQLite",
+          "Подзапрос выполняется только один раз",
+          "Нужен DISTINCT в подзапросе"
+        ],
+        "correctIndices": [
+          0
+        ]
+      }
+    }
+  ]
+}

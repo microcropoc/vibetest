@@ -1,0 +1,114 @@
+{
+  "schemaVersion": 1,
+  "title": "Строки",
+  "steps": [
+    {
+      "type": "theory",
+      "title": "Строковые функции SQLite",
+      "content": "## Склейка и длина\n\n```sql\nSELECT first_name || ' ' || last_name AS full_name FROM users;  -- || — конкатенация\nSELECT concat(first_name, ' ', last_name);   -- то же (SQLite 3.44+), NULL превращает в ''\nSELECT length('привет');                     -- 6 — символы, не байты\n```\n\n`'a' || NULL` → `NULL`: один `NULL` «съедает» всю строку. Для подстраховки — `COALESCE(x, '')`.\n\n## Поиск и вырезание\n\n| Функция | Пример | Результат |\n|---------|--------|-----------|\n| `substr(s, start, len)` | `substr('hello', 2, 3)` | `'ell'` (позиции с **1**) |\n| `substr(s, -n)` | `substr('hello', -3)` | `'llo'` — с конца |\n| `instr(s, sub)` | `instr('a@b.ru', '@')` | `2` (0 — не найдено) |\n| `replace(s, a, b)` | `replace('a-b-c', '-', '')` | `'abc'` |\n| `trim / ltrim / rtrim` | `trim('  x  ')` | `'x'` |\n| `upper / lower` | `upper('abc')` | `'ABC'` — **только латиница**: `upper('ё')` → `'ё'` |\n| `printf / format` | `format('%05d', 42)` | `'00042'` |\n\n## Сравнение по шаблону\n\n- `LIKE`: `%` и `_`; без учёта регистра для латиницы.\n- `GLOB`: `*`, `?`, `[a-z]`; с учётом регистра.\n- `REGEXP`: в стандартном SQLite **нет реализации** — её добавляет приложение. В этом курсе `x REGEXP 'шаблон'` работает с синтаксисом JavaScript RegExp и **учитывает регистр**.\n\nДля сравнения без регистра: `name = 'abc' COLLATE NOCASE` или `lower(name) = 'abc'` (оба — только для латиницы)."
+    },
+    {
+      "type": "svg",
+      "title": "Схема: позиции в substr",
+      "content": {
+        "caption": "`substr` считает с **1**; отрицательный start — от конца строки",
+        "description": "substr('sqlite', 2, 3) → 'qli'; substr('sqlite', -4) → 'lite'; instr('sqlite', 'l') → 3.",
+        "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 280 96\" width=\"100%\" role=\"img\" aria-label=\"Позиции символов для substr\"><rect id=\"sq04-ch-0\" x=\"50\" y=\"30\" width=\"26\" height=\"24\" rx=\"4\" fill=\"#e3f2fd\" stroke=\"#1565c0\"/><text x=\"63\" y=\"45.333333333333336\" text-anchor=\"middle\" font-size=\"10\" font-family=\"ui-monospace, monospace\" fill=\"#0d47a1\">s</text><rect id=\"sq04-ch-1\" x=\"80\" y=\"30\" width=\"26\" height=\"24\" rx=\"4\" fill=\"#fff9c4\" stroke=\"#f9a825\"/><text x=\"93\" y=\"45.333333333333336\" text-anchor=\"middle\" font-size=\"10\" font-family=\"ui-monospace, monospace\" fill=\"#e65100\">q</text><rect id=\"sq04-ch-2\" x=\"110\" y=\"30\" width=\"26\" height=\"24\" rx=\"4\" fill=\"#fff9c4\" stroke=\"#f9a825\"/><text x=\"123\" y=\"45.333333333333336\" text-anchor=\"middle\" font-size=\"10\" font-family=\"ui-monospace, monospace\" fill=\"#e65100\">l</text><rect id=\"sq04-ch-3\" x=\"140\" y=\"30\" width=\"26\" height=\"24\" rx=\"4\" fill=\"#fff9c4\" stroke=\"#f9a825\"/><text x=\"153\" y=\"45.333333333333336\" text-anchor=\"middle\" font-size=\"10\" font-family=\"ui-monospace, monospace\" fill=\"#e65100\">i</text><rect id=\"sq04-ch-4\" x=\"170\" y=\"30\" width=\"26\" height=\"24\" rx=\"4\" fill=\"#e3f2fd\" stroke=\"#1565c0\"/><text x=\"183\" y=\"45.333333333333336\" text-anchor=\"middle\" font-size=\"10\" font-family=\"ui-monospace, monospace\" fill=\"#0d47a1\">t</text><rect id=\"sq04-ch-5\" x=\"200\" y=\"30\" width=\"26\" height=\"24\" rx=\"4\" fill=\"#e3f2fd\" stroke=\"#1565c0\"/><text x=\"213\" y=\"45.333333333333336\" text-anchor=\"middle\" font-size=\"10\" font-family=\"ui-monospace, monospace\" fill=\"#0d47a1\">e</text><text x=\"63\" y=\"24\" text-anchor=\"middle\" font-size=\"7\" fill=\"#1565c0\">1</text><text x=\"93\" y=\"24\" text-anchor=\"middle\" font-size=\"7\" fill=\"#1565c0\">2</text><text x=\"123\" y=\"24\" text-anchor=\"middle\" font-size=\"7\" fill=\"#1565c0\">3</text><text x=\"153\" y=\"24\" text-anchor=\"middle\" font-size=\"7\" fill=\"#1565c0\">4</text><text x=\"183\" y=\"24\" text-anchor=\"middle\" font-size=\"7\" fill=\"#1565c0\">5</text><text x=\"213\" y=\"24\" text-anchor=\"middle\" font-size=\"7\" fill=\"#1565c0\">6</text><text x=\"63\" y=\"66\" text-anchor=\"middle\" font-size=\"7\" fill=\"#c62828\">-6</text><text x=\"93\" y=\"66\" text-anchor=\"middle\" font-size=\"7\" fill=\"#c62828\">-5</text><text x=\"123\" y=\"66\" text-anchor=\"middle\" font-size=\"7\" fill=\"#c62828\">-4</text><text x=\"153\" y=\"66\" text-anchor=\"middle\" font-size=\"7\" fill=\"#c62828\">-3</text><text x=\"183\" y=\"66\" text-anchor=\"middle\" font-size=\"7\" fill=\"#c62828\">-2</text><text x=\"213\" y=\"66\" text-anchor=\"middle\" font-size=\"7\" fill=\"#c62828\">-1</text><text x=\"30\" y=\"24\" text-anchor=\"end\" font-size=\"7\" fill=\"#555\">с 1:</text><text x=\"30\" y=\"66\" text-anchor=\"end\" font-size=\"7\" fill=\"#555\">с конца:</text><text x=\"140\" y=\"86\" text-anchor=\"middle\" font-size=\"8\" font-family=\"ui-monospace, monospace\" fill=\"#e65100\">substr('sqlite', 2, 3) = 'qli'</text></svg>"
+      }
+    },
+    {
+      "type": "sqlite",
+      "title": "Практика: полное имя и домен",
+      "content": {
+        "description": "Выведите для каждого пользователя:\n\n- `full_name` — имя и фамилия через пробел: `'Анна Петрова'`;\n- `domain` — часть email **после** `@`.\n\nИмена столбцов проверяются.\n\n```sql\nCREATE TABLE users(\n  id INTEGER PRIMARY KEY,\n  first_name TEXT NOT NULL,\n  last_name TEXT NOT NULL,\n  email TEXT NOT NULL,\n  card TEXT\n);\n```",
+        "setup": "CREATE TABLE users(\n  id INTEGER PRIMARY KEY,\n  first_name TEXT NOT NULL,\n  last_name TEXT NOT NULL,\n  email TEXT NOT NULL,\n  card TEXT\n);",
+        "starterCode": "SELECT first_name AS full_name, email AS domain FROM users;",
+        "referenceSolution": "SELECT first_name || ' ' || last_name AS full_name, substr(email, instr(email, '@') + 1) AS domain FROM users;",
+        "orderMatters": false,
+        "checkColumnNames": true,
+        "timeoutMs": 5000,
+        "tests": [
+          {
+            "seed": "INSERT INTO users(id, first_name, last_name, email, card) VALUES\n  (1, 'Анна', 'Петрова', 'anna@mail.ru', '4276123412341234'),\n  (2, 'Илья', 'Смирнов', 'ilya.s@yandex.ru', '5469000011112222'),\n  (3, 'Ольга', 'Ким', 'olga@corp.example.com', NULL);"
+          },
+          {
+            "seed": "INSERT INTO users(id, first_name, last_name, email, card) VALUES\n  (7, 'Марк', 'Ли', 'mark@gmail.com', '2200333344445555');"
+          }
+        ]
+      }
+    },
+    {
+      "type": "sqlite",
+      "title": "Практика: маска карты",
+      "content": {
+        "description": "Выведите `id` и `masked` — номер карты в виде `'**** 1234'` (четыре звёздочки, пробел, **последние 4 цифры**). Пользователей без карты (`card IS NULL`) не выводите.\n\nИмена столбцов проверяются.",
+        "setup": "CREATE TABLE users(\n  id INTEGER PRIMARY KEY,\n  first_name TEXT NOT NULL,\n  last_name TEXT NOT NULL,\n  email TEXT NOT NULL,\n  card TEXT\n);",
+        "starterCode": "SELECT id, '**** ' || substr(card, 1, 4) AS masked FROM users;",
+        "referenceSolution": "SELECT id, '**** ' || substr(card, -4) AS masked FROM users WHERE card IS NOT NULL;",
+        "orderMatters": false,
+        "checkColumnNames": true,
+        "timeoutMs": 5000,
+        "tests": [
+          {
+            "seed": "INSERT INTO users(id, first_name, last_name, email, card) VALUES\n  (1, 'Анна', 'Петрова', 'anna@mail.ru', '4276123412341234'),\n  (2, 'Илья', 'Смирнов', 'ilya.s@yandex.ru', '5469000011112222'),\n  (3, 'Ольга', 'Ким', 'olga@corp.example.com', NULL);"
+          },
+          {
+            "seed": "INSERT INTO users(id, first_name, last_name, email, card) VALUES\n  (7, 'Марк', 'Ли', 'mark@gmail.com', '2200333344445555');"
+          }
+        ]
+      }
+    },
+    {
+      "type": "sqlite",
+      "title": "Практика: артикулы по REGEXP",
+      "content": {
+        "description": "Корректный артикул (`code`) — **три заглавные латинские буквы**, дефис и **четыре цифры**: `ABC-1234`. Ничего лишнего в начале и конце.\n\nВыведите `id` товаров с корректным артикулом. Используйте `REGEXP` (синтаксис JavaScript, с учётом регистра).\n\n```sql\nCREATE TABLE products(\n  id INTEGER PRIMARY KEY,\n  code TEXT NOT NULL,\n  name TEXT NOT NULL\n);\n```",
+        "setup": "CREATE TABLE products(\n  id INTEGER PRIMARY KEY,\n  code TEXT NOT NULL,\n  name TEXT NOT NULL\n);",
+        "starterCode": "SELECT id FROM products WHERE code LIKE '___-____';",
+        "referenceSolution": "SELECT id FROM products WHERE code REGEXP '^[A-Z]{3}-[0-9]{4}$';",
+        "orderMatters": false,
+        "timeoutMs": 5000,
+        "tests": [
+          {
+            "seed": "INSERT INTO products(id, code, name) VALUES\n  (1, 'ABC-1234', 'Ручка'),\n  (2, 'abc-1234', 'Карандаш'),\n  (3, 'AB-12345', 'Ластик'),\n  (4, 'XYZ-12a4', 'Линейка'),\n  (5, 'QWE-0001', 'Тетрадь'),\n  (6, ' QWE-0001', 'Скрепки');"
+          },
+          {
+            "seed": "INSERT INTO products(id, code, name) VALUES\n  (1, 'MNO-9999', 'Степлер'),\n  (2, 'MNO-999', 'Кнопки');"
+          }
+        ]
+      }
+    },
+    {
+      "type": "quiz",
+      "title": "Проверка: substr",
+      "content": {
+        "question": "Что вернёт **`substr('database', -4)`**?",
+        "options": [
+          "`'data'`",
+          "`'base'`",
+          "`'abase'`",
+          "`NULL`"
+        ],
+        "correctIndices": [
+          1
+        ]
+      }
+    },
+    {
+      "type": "quiz",
+      "title": "Итоговый тест модуля",
+      "content": {
+        "question": "Чему равно **`'Привет, ' || NULL`** в SQLite?",
+        "options": [
+          "`'Привет, '`",
+          "`'Привет, NULL'`",
+          "`NULL`",
+          "Ошибка типов"
+        ],
+        "correctIndices": [
+          2
+        ]
+      }
+    }
+  ]
+}

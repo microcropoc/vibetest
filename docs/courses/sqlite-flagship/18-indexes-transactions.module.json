@@ -1,0 +1,118 @@
+{
+  "schemaVersion": 1,
+  "title": "Индексы, план запроса и транзакции",
+  "steps": [
+    {
+      "type": "theory",
+      "title": "Индексы и EXPLAIN QUERY PLAN",
+      "content": "## Что такое индекс\n\nИндекс — отдельное **B-дерево**, где значения столбцов отсортированы и указывают на строки таблицы. Поиск по нему — `O(log n)` вместо полного просмотра.\n\n```sql\nCREATE INDEX idx_orders_customer_date ON orders(customer_id, ordered_at);\nCREATE UNIQUE INDEX idx_users_email ON users(email);\nCREATE INDEX idx_users_email_lower ON users(lower(email));            -- по выражению\nCREATE INDEX idx_orders_open ON orders(ordered_at) WHERE status = 'new'; -- частичный\nDROP INDEX idx_orders_open;\n```\n\n`PRIMARY KEY` и `UNIQUE` создают индекс автоматически.\n\n## Когда индекс используется\n\n- Равенство и диапазон: `WHERE customer_id = ? AND ordered_at >= ?`.\n- **Правило левого префикса** для составного `(a, b, c)`: работает для `a`, `a+b`, `a+b+c`; не помогает для одного `b`. Порядок: сначала столбцы с **равенством**, затем столбец с **диапазоном**.\n- `ORDER BY` по столбцам индекса — без отдельной сортировки.\n- **Покрывающий индекс**: все нужные запросу столбцы есть в индексе — таблицу можно не читать.\n\nИндекс **не** используется, если столбец обёрнут функцией (`WHERE lower(email) = ?` при индексе по `email`) — нужен индекс по выражению. `LIKE 'abc%'` использует индекс только при подходящей collation.\n\n## План запроса\n\n```sql\nEXPLAIN QUERY PLAN SELECT * FROM orders WHERE customer_id = 7;\n-- SCAN orders                                     ← полный просмотр\n-- SEARCH orders USING INDEX idx_orders_customer_date (customer_id=?) ← поиск по индексу\n```\n\n`ANALYZE` собирает статистику для выбора индексов. Каждый индекс замедляет `INSERT`/`UPDATE` и занимает место — индексируйте под реальные запросы."
+    },
+    {
+      "type": "theory",
+      "title": "Транзакции",
+      "content": "## BEGIN / COMMIT / ROLLBACK\n\n```sql\nBEGIN;\nUPDATE accounts SET balance = balance - 300 WHERE id = 1;\nUPDATE accounts SET balance = balance + 300 WHERE id = 2;\nCOMMIT;          -- или ROLLBACK — отменить всё с BEGIN\n```\n\nБез явного `BEGIN` каждый запрос — отдельная транзакция (autocommit). Явная транзакция даёт **атомарность** (всё или ничего) и сильно ускоряет массовые вставки.\n\n- `SAVEPOINT s; … ROLLBACK TO s; RELEASE s;` — вложенные точки отката.\n- SQLite: **один писатель** в момент времени, изоляция — serializable. Режим `PRAGMA journal_mode = WAL` позволяет читателям не блокироваться писателем.\n- `BEGIN IMMEDIATE` сразу берёт блокировку на запись — меньше ошибок `database is locked` при конкуренции.\n\n## Условие внутри транзакции\n\nВ чистом SQL нет `IF`, но можно сделать изменение условным:\n\n```sql\nBEGIN;\nUPDATE accounts SET balance = balance - 300 WHERE id = 1 AND balance >= 300;\nUPDATE accounts SET balance = balance + 300 WHERE id = 2 AND changes() = 1;  -- changes(): строк изменил предыдущий запрос\nCOMMIT;\n```\n\nВ приложении то же делают проверкой числа изменённых строк и `ROLLBACK`."
+    },
+    {
+      "type": "svg",
+      "title": "Схема: SCAN и SEARCH",
+      "content": {
+        "caption": "Без индекса — просмотр всех строк; с индексом — спуск по B-дереву к нужным",
+        "description": "EXPLAIN QUERY PLAN показывает SCAN (полный просмотр) или SEARCH … USING INDEX (поиск по индексу).",
+        "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 320 110\" width=\"100%\" role=\"img\" aria-label=\"SCAN и SEARCH\"><text x=\"70\" y=\"12\" text-anchor=\"middle\" font-size=\"8\" font-family=\"ui-monospace, monospace\" font-weight=\"600\" fill=\"#555\">SCAN orders</text><rect id=\"sq18-row0\" x=\"10\" y=\"24\" width=\"13\" height=\"13\" rx=\"4\" fill=\"#f5f5f5\" stroke=\"#9e9e9e\"/><text x=\"16.5\" y=\"33.166666666666664\" text-anchor=\"middle\" font-size=\"8\" fill=\"#424242\"></text><rect id=\"sq18-row1\" x=\"25\" y=\"24\" width=\"13\" height=\"13\" rx=\"4\" fill=\"#f5f5f5\" stroke=\"#9e9e9e\"/><text x=\"31.5\" y=\"33.166666666666664\" text-anchor=\"middle\" font-size=\"8\" fill=\"#424242\"></text><rect id=\"sq18-row2\" x=\"40\" y=\"24\" width=\"13\" height=\"13\" rx=\"4\" fill=\"#f5f5f5\" stroke=\"#9e9e9e\"/><text x=\"46.5\" y=\"33.166666666666664\" text-anchor=\"middle\" font-size=\"8\" fill=\"#424242\"></text><rect id=\"sq18-row3\" x=\"55\" y=\"24\" width=\"13\" height=\"13\" rx=\"4\" fill=\"#f5f5f5\" stroke=\"#9e9e9e\"/><text x=\"61.5\" y=\"33.166666666666664\" text-anchor=\"middle\" font-size=\"8\" fill=\"#424242\"></text><rect id=\"sq18-row4\" x=\"70\" y=\"24\" width=\"13\" height=\"13\" rx=\"4\" fill=\"#f5f5f5\" stroke=\"#9e9e9e\"/><text x=\"76.5\" y=\"33.166666666666664\" text-anchor=\"middle\" font-size=\"8\" fill=\"#424242\"></text><rect id=\"sq18-row5\" x=\"85\" y=\"24\" width=\"13\" height=\"13\" rx=\"4\" fill=\"#fff9c4\" stroke=\"#f9a825\"/><text x=\"91.5\" y=\"33.166666666666664\" text-anchor=\"middle\" font-size=\"8\" fill=\"#e65100\"></text><rect id=\"sq18-row6\" x=\"100\" y=\"24\" width=\"13\" height=\"13\" rx=\"4\" fill=\"#f5f5f5\" stroke=\"#9e9e9e\"/><text x=\"106.5\" y=\"33.166666666666664\" text-anchor=\"middle\" font-size=\"8\" fill=\"#424242\"></text><rect id=\"sq18-row7\" x=\"115\" y=\"24\" width=\"13\" height=\"13\" rx=\"4\" fill=\"#f5f5f5\" stroke=\"#9e9e9e\"/><text x=\"121.5\" y=\"33.166666666666664\" text-anchor=\"middle\" font-size=\"8\" fill=\"#424242\"></text><line x1=\"10\" y1=\"48\" x2=\"128\" y2=\"48\" stroke=\"#c62828\" stroke-width=\"1.2\"/><polygon points=\"128,48 123.5,50.2 123.5,45.8\" fill=\"#c62828\"/><text x=\"70\" y=\"60\" text-anchor=\"middle\" font-size=\"7\" fill=\"#555\">читаем все строки</text><text x=\"240\" y=\"12\" text-anchor=\"middle\" font-size=\"8\" font-family=\"ui-monospace, monospace\" font-weight=\"600\" fill=\"#555\">SEARCH USING INDEX</text><rect id=\"sq18-root\" x=\"222\" y=\"20\" width=\"36\" height=\"16\" rx=\"4\" fill=\"#e3f2fd\" stroke=\"#1565c0\"/><text x=\"240\" y=\"30.333333333333332\" text-anchor=\"middle\" font-size=\"7\" fill=\"#0d47a1\">50</text><rect id=\"sq18-l\" x=\"186\" y=\"50\" width=\"36\" height=\"16\" rx=\"4\" fill=\"#e3f2fd\" stroke=\"#1565c0\"/><text x=\"204\" y=\"60.333333333333336\" text-anchor=\"middle\" font-size=\"7\" fill=\"#0d47a1\">20</text><rect id=\"sq18-r\" x=\"258\" y=\"50\" width=\"36\" height=\"16\" rx=\"4\" fill=\"#e3f2fd\" stroke=\"#1565c0\"/><text x=\"276\" y=\"60.333333333333336\" text-anchor=\"middle\" font-size=\"7\" fill=\"#0d47a1\">80</text><rect id=\"sq18-leaf\" x=\"240\" y=\"80\" width=\"36\" height=\"16\" rx=\"4\" fill=\"#fff9c4\" stroke=\"#f9a825\"/><text x=\"258\" y=\"90.33333333333333\" text-anchor=\"middle\" font-size=\"7\" fill=\"#e65100\">61</text><line x1=\"240\" y1=\"36\" x2=\"204\" y2=\"50\" stroke=\"#757575\" stroke-width=\"1.2\"/><polygon points=\"204,50 207.4,46.3 209.0,50.4\" fill=\"#757575\"/><line x1=\"240\" y1=\"36\" x2=\"276\" y2=\"50\" stroke=\"#2e7d32\" stroke-width=\"1.2\"/><polygon points=\"276,50 271.0,50.4 272.6,46.3\" fill=\"#2e7d32\"/><line x1=\"276\" y1=\"66\" x2=\"258\" y2=\"80\" stroke=\"#2e7d32\" stroke-width=\"1.2\"/><polygon points=\"258,80 260.2,75.5 262.9,79.0\" fill=\"#2e7d32\"/><text x=\"160\" y=\"104\" text-anchor=\"middle\" font-size=\"7\" fill=\"#555\">O(n) против O(log n)</text></svg>"
+      }
+    },
+    {
+      "type": "sqlite",
+      "title": "Практика: составной индекс",
+      "content": {
+        "description": "Частый запрос:\n\n```sql\nSELECT * FROM orders WHERE customer_id = ? AND ordered_at >= ? ORDER BY ordered_at;\n```\n\nСоздайте **один** индекс, который лучше всего его обслуживает (имя любое).\n\nПроверяются ведущие столбцы индекса — те, по которым идут поиск и сортировка (`pragma_index_info`). Дополнительные столбцы в конце, например чтобы индекс стал покрывающим, допускаются.\n\n```sql\nCREATE TABLE orders(\n  id INTEGER PRIMARY KEY,\n  customer_id INTEGER NOT NULL,\n  ordered_at TEXT NOT NULL,\n  amount REAL NOT NULL\n);\n```",
+        "setup": "CREATE TABLE orders(\n  id INTEGER PRIMARY KEY,\n  customer_id INTEGER NOT NULL,\n  ordered_at TEXT NOT NULL,\n  amount REAL NOT NULL\n);",
+        "starterCode": "CREATE INDEX idx_orders_date ON orders(ordered_at);",
+        "referenceSolution": "CREATE INDEX idx_orders_customer_date ON orders(customer_id, ordered_at);",
+        "orderMatters": true,
+        "checkQuery": "SELECT ii.seqno, ii.name\nFROM pragma_index_list('orders') AS il\nJOIN pragma_index_info(il.name) AS ii\nWHERE il.origin = 'c' AND ii.seqno < 2\nORDER BY il.name, ii.seqno;",
+        "timeoutMs": 5000,
+        "tests": [
+          {
+            "seed": ""
+          }
+        ]
+      }
+    },
+    {
+      "type": "sqlite",
+      "title": "Практика: индекс по выражению",
+      "content": {
+        "description": "Поиск пользователя без учёта регистра:\n\n```sql\nSELECT id FROM users WHERE lower(email) = lower(?);\n```\n\nИндекс по `email` здесь не используется. Создайте **один неуникальный** индекс, который подойдёт этому запросу (имя любое).\n\nПроверяется определение индекса из `sqlite_master` без имени, без учёта регистра, пробелов и кавычек: индекс используется, только если его выражение совпадает с выражением в `WHERE`.\n\n```sql\nCREATE TABLE users(\n  id INTEGER PRIMARY KEY,\n  email TEXT NOT NULL\n);\n```",
+        "setup": "CREATE TABLE users(\n  id INTEGER PRIMARY KEY,\n  email TEXT NOT NULL\n);",
+        "starterCode": "CREATE INDEX idx_users_email ON users(email);",
+        "referenceSolution": "CREATE INDEX idx_users_email_lower ON users(lower(email));",
+        "orderMatters": true,
+        "checkQuery": "WITH defs AS (\n  SELECT il.\"unique\" AS is_unique,\n         replace(replace(replace(m.sql, char(10), ' '), char(13), ' '), char(9), ' ') AS ddl\n  FROM pragma_index_list('users') AS il\n  JOIN sqlite_master AS m ON m.type = 'index' AND m.name = il.name\n  WHERE il.origin = 'c'\n)\nSELECT is_unique,\n       lower(replace(replace(substr(ddl, instr(upper(ddl), ' ON ') + 4), ' ', ''), '\"', '')) AS definition\nFROM defs;",
+        "timeoutMs": 5000,
+        "tests": [
+          {
+            "seed": ""
+          }
+        ]
+      }
+    },
+    {
+      "type": "sqlite",
+      "title": "Практика: перевод без ухода в минус",
+      "content": {
+        "description": "Переведите **300** со счёта `id = 1` на счёт `id = 2` в одной транзакции. Если на счёте 1 меньше 300 — **ничего не меняйте** (ни один счёт).\n\nПроверяется: `SELECT id, balance FROM accounts ORDER BY id`.\n\n```sql\nCREATE TABLE accounts(\n  id INTEGER PRIMARY KEY,\n  owner TEXT NOT NULL,\n  balance INTEGER NOT NULL\n);\n```",
+        "setup": "CREATE TABLE accounts(\n  id INTEGER PRIMARY KEY,\n  owner TEXT NOT NULL,\n  balance INTEGER NOT NULL\n);",
+        "starterCode": "BEGIN;\nUPDATE accounts SET balance = balance - 300 WHERE id = 1;\nUPDATE accounts SET balance = balance + 300 WHERE id = 2;\nCOMMIT;",
+        "referenceSolution": "BEGIN;\nUPDATE accounts SET balance = balance - 300 WHERE id = 1 AND balance >= 300;\nUPDATE accounts SET balance = balance + 300 WHERE id = 2 AND changes() = 1;\nCOMMIT;",
+        "orderMatters": true,
+        "checkQuery": "SELECT id, balance FROM accounts ORDER BY id;",
+        "timeoutMs": 5000,
+        "tests": [
+          {
+            "seed": "INSERT INTO accounts(id, owner, balance) VALUES (1, 'Алиса', 1000), (2, 'Богдан', 0);"
+          },
+          {
+            "seed": "INSERT INTO accounts(id, owner, balance) VALUES (1, 'Вера', 299), (2, 'Глеб', 50);"
+          },
+          {
+            "seed": "INSERT INTO accounts(id, owner, balance) VALUES (1, 'Дина', 300), (2, 'Егор', 1);"
+          }
+        ]
+      }
+    },
+    {
+      "type": "quiz",
+      "title": "Проверка: левый префикс",
+      "content": {
+        "question": "Есть индекс `(a, b)`. Для каких условий он может использоваться для поиска?",
+        "options": [
+          "`WHERE a = 1`",
+          "`WHERE a = 1 AND b > 5`",
+          "`WHERE b = 5`",
+          "`WHERE a > 1 AND b = 5` — по обоим столбцам"
+        ],
+        "correctIndices": [
+          0,
+          1
+        ]
+      }
+    },
+    {
+      "type": "quiz",
+      "title": "Итоговый тест модуля",
+      "content": {
+        "question": "Что означает строка `SCAN orders` в `EXPLAIN QUERY PLAN`?",
+        "options": [
+          "Поиск по первичному ключу",
+          "Полный просмотр таблицы",
+          "Использование покрывающего индекса",
+          "Ошибку в запросе"
+        ],
+        "correctIndices": [
+          1
+        ]
+      }
+    }
+  ]
+}

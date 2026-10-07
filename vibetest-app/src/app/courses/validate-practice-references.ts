@@ -3,6 +3,7 @@ import {
   ExecutionProtocolError,
   ExecutionTimeoutError,
 } from '../execution/execution-errors';
+import { ReusableWorkerSource } from '../execution/practice-worker-source';
 import {
   createJavascriptPracticeWorker,
   runJavascriptPractice,
@@ -30,12 +31,15 @@ export type PracticeReferenceValidationDeps = {
   readonly runJavascriptStep: (step: JavascriptStep) => Promise<JavascriptPracticeResult>;
   readonly runSqliteStep: (step: SqliteStep) => Promise<SqlitePracticeResult>;
   readonly runRegexStep: (step: RegexStep) => Promise<RegexPracticeResult>;
+  /** Releases resources kept between steps (warm workers); called after each validation. */
+  readonly dispose?: () => void;
 };
 
 export function createWorkerPracticeReferenceValidationDeps(
   wrapper: ExecutionWorkerWrapperService,
 ): PracticeReferenceValidationDeps {
   const sqliteWasmUrl = sqliteWasmAssetUrl();
+  const sqliteWorkers = new ReusableWorkerSource(createSqlitePracticeWorker);
   return {
     runJavascriptStep: (step) =>
       runJavascriptPractice(step, step.content.referenceSolution, {
@@ -45,7 +49,7 @@ export function createWorkerPracticeReferenceValidationDeps(
     runSqliteStep: (step) =>
       runSqlitePractice(step, step.content.referenceSolution, {
         wrapper,
-        createWorker: createSqlitePracticeWorker,
+        workers: sqliteWorkers,
         wasmUrl: sqliteWasmUrl,
       }),
     runRegexStep: (step) =>
@@ -53,6 +57,7 @@ export function createWorkerPracticeReferenceValidationDeps(
         wrapper,
         createWorker: createRegexPracticeWorker,
       }),
+    dispose: () => sqliteWorkers.dispose(),
   };
 }
 
@@ -119,24 +124,28 @@ export async function validatePracticeReferences(
 ): Promise<readonly SemanticIssue[]> {
   const issues: SemanticIssue[] = [];
 
-  for (let moduleIndex = 0; moduleIndex < course.modules.length; moduleIndex += 1) {
-    const module = course.modules[moduleIndex];
-    for (let stepIndex = 0; stepIndex < module.steps.length; stepIndex += 1) {
-      const step = module.steps[stepIndex];
-      if (step.type !== 'javascript' && step.type !== 'sqlite' && step.type !== 'regex') {
-        continue;
-      }
-
-      const path = `modules[${moduleIndex}].steps[${stepIndex}]`;
-      try {
-        const stepIssue = await validatePracticeStep(step, deps);
-        if (stepIssue !== undefined) {
-          issues.push({ path, message: stepIssue.message });
+  try {
+    for (let moduleIndex = 0; moduleIndex < course.modules.length; moduleIndex += 1) {
+      const module = course.modules[moduleIndex];
+      for (let stepIndex = 0; stepIndex < module.steps.length; stepIndex += 1) {
+        const step = module.steps[stepIndex];
+        if (step.type !== 'javascript' && step.type !== 'sqlite' && step.type !== 'regex') {
+          continue;
         }
-      } catch (error: unknown) {
-        issues.push({ path, message: runtimeFailureMessage(error) });
+
+        const path = `modules[${moduleIndex}].steps[${stepIndex}]`;
+        try {
+          const stepIssue = await validatePracticeStep(step, deps);
+          if (stepIssue !== undefined) {
+            issues.push({ path, message: stepIssue.message });
+          }
+        } catch (error: unknown) {
+          issues.push({ path, message: runtimeFailureMessage(error) });
+        }
       }
     }
+  } finally {
+    deps.dispose?.();
   }
 
   return issues;

@@ -9,6 +9,7 @@ import {
   minimalValidCourseJson,
 } from '../courses/__fixtures__/course-fixtures';
 import { parseCourse } from '../courses/parse-course';
+import { ExecutionWorkerWrapperService } from '../execution/execution-worker-wrapper.service';
 import { CourseRepository } from '../storage/course-repository';
 import { ProgressRepository } from '../storage/progress-repository';
 import type { StepProgressSnapshot } from './step-engine/step-progress-snapshot';
@@ -81,6 +82,95 @@ describe('PlayerOrchestratorService', () => {
     await orchestrator.selectStep(1);
     await orchestrator.retry();
     expect(progress.put).toHaveBeenCalled();
+  });
+
+  function regexCourse(): Course {
+    const json = minimalValidCourseJson();
+    return parseCourse({
+      ...json,
+      modules: [
+        {
+          moduleId: FIXTURE_MODULE_ID,
+          title: 'Module 1',
+          steps: [
+            {
+              stepId: 'f6eebc99-9c0b-4ef8-bb6d-6bb9bd380a77',
+              type: 'regex',
+              title: 'Digits',
+              content: {
+                description: 'Digits only',
+                starterCode: '',
+                referenceSolution: '^\\d+$',
+                timeoutMs: 1000,
+                tests: [{ input: '123' }, { input: 'abc' }],
+              },
+            },
+          ],
+        },
+      ],
+    });
+  }
+
+  it('shows a runtime error instead of failing silently when the practice run throws', async () => {
+    TestBed.overrideProvider(CourseRepository, {
+      useValue: { get: vi.fn().mockResolvedValue(regexCourse()) },
+    });
+    const orchestrator = TestBed.inject(PlayerOrchestratorService);
+    await orchestrator.load(FIXTURE_COURSE_ID, FIXTURE_MODULE_ID);
+
+    await orchestrator.runPractice();
+
+    expect(orchestrator.practiceRunning()).toBe(false);
+    expect(orchestrator.practiceFeedback()).toEqual({
+      kind: 'error',
+      message: expect.stringMatching(/^Ошибка выполнения: /),
+      tests: { passed: 0, total: 2 },
+    });
+  });
+
+  describe('when saving progress fails after a run', () => {
+    afterEach(() => {
+      vi.unstubAllGlobals();
+    });
+
+    it('shows the run result and does not report it as a runtime error', async () => {
+      vi.stubGlobal(
+        'Worker',
+        class {
+          terminate(): void {}
+        },
+      );
+      TestBed.overrideProvider(CourseRepository, {
+        useValue: { get: vi.fn().mockResolvedValue(regexCourse()) },
+      });
+      TestBed.overrideProvider(ProgressRepository, {
+        useValue: {
+          listByCourseId: vi.fn().mockResolvedValue([]),
+          put: vi.fn().mockRejectedValue(new Error('QuotaExceededError')),
+        },
+      });
+      TestBed.overrideProvider(ExecutionWorkerWrapperService, {
+        useValue: {
+          runRequest: vi.fn(async (_worker: Worker, request: { type: string; id: string }) =>
+            request.type === 'regexInit'
+              ? { type: 'regexInited', id: request.id }
+              : { type: 'regexCaseResult', id: request.id, pass: true, userMs: 1, referenceMs: 1 },
+          ),
+        },
+      });
+      const orchestrator = TestBed.inject(PlayerOrchestratorService);
+      await orchestrator.load(FIXTURE_COURSE_ID, FIXTURE_MODULE_ID);
+
+      await expect(orchestrator.runPractice()).rejects.toThrow('QuotaExceededError');
+
+      expect(orchestrator.practiceRunning()).toBe(false);
+      expect(orchestrator.practiceFeedback()).toEqual({
+        kind: 'success',
+        message: 'Все проверки пройдены.',
+        tests: { passed: 2, total: 2 },
+        timing: { userMs: 2, referenceMs: 2 },
+      });
+    });
   });
 
   it('persists snapshot on dispatch', async () => {

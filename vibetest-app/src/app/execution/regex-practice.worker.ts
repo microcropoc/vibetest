@@ -1,4 +1,4 @@
-import { parseExecutionRequest } from './execution-messages';
+import { parseExecutionRequest, requestIdFromUnknown } from './execution-messages';
 import { compileRegexPattern, regexTestMatch } from './regex-pattern';
 
 /// <reference lib="webworker" />
@@ -89,7 +89,7 @@ self.addEventListener('message', (event: MessageEvent<unknown>) => {
   } catch {
     self.postMessage({
       type: 'error',
-      id: 'unknown',
+      id: requestIdFromUnknown(event.data),
       message: 'Invalid request',
     });
   }

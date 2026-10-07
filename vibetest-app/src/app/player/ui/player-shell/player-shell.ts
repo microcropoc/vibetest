@@ -72,6 +72,8 @@ export class PlayerShellComponent {
   }
 
   protected onPracticeRun(): void {
-    void this.orchestrator.runPractice();
+    this.orchestrator.runPractice().catch((error: unknown) => {
+      console.error('Practice progress save failed', error);
+    });
   }
 }

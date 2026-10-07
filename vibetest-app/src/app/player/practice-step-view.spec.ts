@@ -1,9 +1,12 @@
 import { describe, expect, it } from 'vitest';
 
+import { ExecutionTimeoutError } from '../execution/execution-errors';
+
 import {
   formatPracticeDurationMs,
   practiceFailureMessage,
   practiceFeedbackFromResult,
+  practiceRuntimeErrorFeedback,
   practiceStepShellLabels,
   practiceTimingComparison,
 } from './practice-step-view';
@@ -106,5 +109,24 @@ describe('practiceFeedbackFromResult', () => {
       message: 'Проверка 2 не пройдена: mock fail',
       tests: { passed: 1, total: 4 },
     });
+  });
+});
+
+describe('practiceRuntimeErrorFeedback', () => {
+  it('describes a timeout in Russian with the limit', () => {
+    expect(practiceRuntimeErrorFeedback(new ExecutionTimeoutError(5000), 3)).toEqual({
+      kind: 'error',
+      message: 'Ошибка выполнения: превышен лимит времени (5000 мс)',
+      tests: { passed: 0, total: 3 },
+    });
+  });
+
+  it('uses the error message for other errors', () => {
+    expect(practiceRuntimeErrorFeedback(new Error('Worker error'), 2).message).toBe(
+      'Ошибка выполнения: Worker error',
+    );
+    expect(practiceRuntimeErrorFeedback('boom', 2).message).toBe(
+      'Ошибка выполнения: неизвестная ошибка',
+    );
   });
 });

@@ -11,6 +11,7 @@
           "/index.csr.html",
           "/index.html",
           "/manifest.webmanifest",
+          "/sql-wasm.wasm",
           "/*.css",
           "/*.js"
         ]
@@ -22,7 +23,6 @@
       "updateMode": "prefetch",
       "resources": {
         "files": [
-          "/sql-wasm.wasm",
           "/schemas/**",
           "/bundled-courses/**",
           "/icons/**",

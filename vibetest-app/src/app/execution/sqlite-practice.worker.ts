@@ -1,84 +1,81 @@
-import { parseExecutionRequest } from './execution-messages';
-import { collectRowsFromExecResults, compareSqliteResultRows } from './sqlite-result-rows';
-import type { InitSqlJs, SqlJsDatabase, SqlJsStatic } from './sqlite-worker-types';
+import type { SqlJsStatic } from 'sql.js';
+
+import { parseExecutionRequest, requestIdFromUnknown } from './execution-messages';
+import { loadSqlJs } from './sqlite-engine';
+import {
+  closeSqlitePracticeSession,
+  openSqlitePracticeSession,
+  runSqlitePracticeCase,
+  type SqlitePracticeSession,
+} from './sqlite-practice-core';
 
 /// <reference lib="webworker" />
 
 declare const self: Worker;
 
-interface SqliteRuntime {
-  readonly userDb: SqlJsDatabase;
-  readonly referenceDb: SqlJsDatabase;
-  readonly userQuery: string;
-  readonly referenceQuery: string;
-  readonly orderMatters: boolean;
-}
-
 let sqlModulePromise: Promise<SqlJsStatic> | undefined;
-let runtime: SqliteRuntime | undefined;
+let session: SqlitePracticeSession | undefined;
 
-function sqlWasmScriptUrl(wasmUrl: string): string {
-  return new URL('sql-wasm.js', wasmUrl).href;
-}
-
-async function loadSqlModule(wasmUrl: string): Promise<SqlJsStatic> {
+function loadEngine(wasmUrl: string): Promise<SqlJsStatic> {
   if (sqlModulePromise === undefined) {
-    const scriptUrl = sqlWasmScriptUrl(wasmUrl);
-    const module = (await import(/* @vite-ignore */ scriptUrl)) as {
-      default: InitSqlJs;
-    };
-    sqlModulePromise = module.default({ locateFile: () => wasmUrl });
+    const loading = loadSqlJs({ locateFile: () => wasmUrl });
+    sqlModulePromise = loading;
+    loading.catch(() => {
+      if (sqlModulePromise === loading) {
+        sqlModulePromise = undefined;
+      }
+    });
   }
   return sqlModulePromise;
 }
 
-function runOptionalSql(db: SqlJsDatabase, sql: string | undefined): void {
-  const trimmed = (sql ?? '').trim();
-  if (trimmed === '') {
-    return;
+async function loadEngineOrReply(id: string, wasmUrl: string): Promise<SqlJsStatic | undefined> {
+  try {
+    return await loadEngine(wasmUrl);
+  } catch (error: unknown) {
+    const reason = error instanceof Error ? error.message : 'unknown error';
+    self.postMessage({ type: 'error', id, message: `Failed to load SQLite engine: ${reason}` });
+    return undefined;
   }
-  db.exec(trimmed);
-}
-
-function queryResultRows(db: SqlJsDatabase, sql: string): readonly string[] {
-  const results = db.exec(sql);
-  return collectRowsFromExecResults(results);
-}
-
-function createRuntime(
-  SQL: SqlJsStatic,
-  setup: string,
-  userQuery: string,
-  referenceQuery: string,
-  orderMatters: boolean,
-): SqliteRuntime {
-  const userDb = new SQL.Database();
-  const referenceDb = new SQL.Database();
-  runOptionalSql(userDb, setup);
-  runOptionalSql(referenceDb, setup);
-  return { userDb, referenceDb, userQuery, referenceQuery, orderMatters };
 }
 
 async function handleMessage(event: MessageEvent<unknown>): Promise<void> {
   try {
     const request = parseExecutionRequest(event.data);
     switch (request.type) {
+      case 'sqliteLoad': {
+        const SQL = await loadEngineOrReply(request.id, request.wasmUrl);
+        if (SQL !== undefined) {
+          self.postMessage({ type: 'sqliteLoaded', id: request.id });
+        }
+        break;
+      }
       case 'sqliteInit': {
-        const SQL = await loadSqlModule(request.wasmUrl);
-        runtime?.userDb.close();
-        runtime?.referenceDb.close();
-        runtime = createRuntime(
-          SQL,
-          request.setup,
-          request.userQuery,
-          request.referenceQuery,
-          request.orderMatters,
-        );
+        const SQL = await loadEngineOrReply(request.id, request.wasmUrl);
+        if (SQL === undefined) {
+          break;
+        }
+        if (session !== undefined) {
+          closeSqlitePracticeSession(session);
+          session = undefined;
+        }
+        try {
+          session = openSqlitePracticeSession(SQL, {
+            setup: request.setup,
+            userQuery: request.userQuery,
+            referenceQuery: request.referenceQuery,
+            orderMatters: request.orderMatters,
+          });
+        } catch (error: unknown) {
+          const message = error instanceof Error ? error.message : 'Setup SQL failed';
+          self.postMessage({ type: 'error', id: request.id, message });
+          break;
+        }
         self.postMessage({ type: 'sqliteInited', id: request.id });
         break;
       }
       case 'sqliteRunCase': {
-        if (!runtime) {
+        if (session === undefined) {
           self.postMessage({
             type: 'error',
             id: request.id,
@@ -86,39 +83,21 @@ async function handleMessage(event: MessageEvent<unknown>): Promise<void> {
           });
           break;
         }
-        try {
-          runOptionalSql(runtime.userDb, request.userReset);
-          runOptionalSql(runtime.referenceDb, request.referenceReset);
-          runOptionalSql(runtime.userDb, request.seed);
-          runOptionalSql(runtime.referenceDb, request.seed);
-          const userStart = performance.now();
-          const userRows = queryResultRows(runtime.userDb, runtime.userQuery);
-          const userMs = performance.now() - userStart;
-          const referenceStart = performance.now();
-          const referenceRows = queryResultRows(runtime.referenceDb, runtime.referenceQuery);
-          const referenceMs = performance.now() - referenceStart;
-          const pass = compareSqliteResultRows(userRows, referenceRows, runtime.orderMatters);
-          self.postMessage({
-            type: 'sqliteCaseResult',
-            id: request.id,
-            pass,
-            userRows: [...userRows],
-            referenceRows: [...referenceRows],
-            message: pass ? undefined : 'Query results do not match',
-            userMs,
-            referenceMs,
-          });
-        } catch (error: unknown) {
-          const message = error instanceof Error ? error.message : 'SQL error';
-          self.postMessage({
-            type: 'sqliteCaseResult',
-            id: request.id,
-            pass: false,
-            message,
-            userMs: 0,
-            referenceMs: 0,
-          });
-        }
+        const outcome = runSqlitePracticeCase(session, {
+          seed: request.seed,
+          userReset: request.userReset,
+          referenceReset: request.referenceReset,
+        });
+        self.postMessage({
+          type: 'sqliteCaseResult',
+          id: request.id,
+          pass: outcome.pass,
+          userRows: outcome.userRows === undefined ? undefined : [...outcome.userRows],
+          referenceRows: outcome.referenceRows === undefined ? undefined : [...outcome.referenceRows],
+          message: outcome.message,
+          userMs: outcome.userMs,
+          referenceMs: outcome.referenceMs,
+        });
         break;
       }
       default:
@@ -127,7 +106,7 @@ async function handleMessage(event: MessageEvent<unknown>): Promise<void> {
   } catch {
     self.postMessage({
       type: 'error',
-      id: 'unknown',
+      id: requestIdFromUnknown(event.data),
       message: 'Invalid request',
     });
   }

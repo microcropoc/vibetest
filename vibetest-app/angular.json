@@ -28,8 +28,15 @@
               {
                 "glob": "**/*",
                 "input": "public"
+              },
+              {
+                "glob": "sql-wasm.wasm",
+                "input": "node_modules/sql.js/dist",
+                "output": "/"
               }
             ],
+            "externalDependencies": ["fs", "path", "crypto"],
+            "allowedCommonJsDependencies": ["sql.js"],
             "styles": [
               "src/styles.scss"
             ]

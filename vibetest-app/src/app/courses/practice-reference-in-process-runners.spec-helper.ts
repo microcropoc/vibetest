@@ -1,5 +1,7 @@
+import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { pathToFileURL } from 'node:url';
+
+import type { SqlJsStatic } from 'sql.js';
 
 import {
   compileJavascriptPracticeCallable,
@@ -10,12 +12,14 @@ import type { JavascriptPracticeResult } from '../player/step-engine/javascript/
 import type { JavascriptStep } from '../player/step-engine/javascript/javascript-step-engine';
 import type { RegexPracticeResult } from '../player/step-engine/regex/regex-practice-runner';
 import type { RegexStep } from '../player/step-engine/regex/regex-step-engine';
-import { collectRowsFromExecResults, compareSqliteResultRows } from '../execution/sqlite-result-rows';
-import type { InitSqlJs, SqlJsDatabase, SqlJsStatic } from '../execution/sqlite-worker-types';
+import { loadSqlJs } from '../execution/sqlite-engine';
 import {
-  sqliteWasmAssetUrl,
-  type SqlitePracticeResult,
-} from '../player/step-engine/sqlite/sqlite-practice-runner';
+  closeSqlitePracticeSession,
+  openSqlitePracticeSession,
+  runSqlitePracticeCase,
+  type SqlitePracticeSession,
+} from '../execution/sqlite-practice-core';
+import type { SqlitePracticeResult } from '../player/step-engine/sqlite/sqlite-practice-runner';
 import type { SqliteStep } from '../player/step-engine/sqlite/sqlite-step-engine';
 
 import { practiceRunFailure, practiceRunSuccess } from '../player/step-engine/practice-run-result';
@@ -108,77 +112,50 @@ export async function runRegexReferenceSelfCheck(
 
 let sqlModulePromise: Promise<SqlJsStatic> | undefined;
 
-async function loadSqlJs(wasmUrl: string, scriptUrl: string): Promise<SqlJsStatic> {
-  const module = (await import(/* @vite-ignore */ scriptUrl)) as {
-    default: InitSqlJs;
-  };
-  return module.default({ locateFile: () => wasmUrl });
-}
-
-async function loadSqlModule(): Promise<SqlJsStatic> {
+/** Same `loadSqlJs` as the worker; the wasm comes from disk instead of `locateFile`. */
+export function loadSqlJsForSpecs(): Promise<SqlJsStatic> {
   if (sqlModulePromise === undefined) {
-    const browserWasmUrl = sqliteWasmAssetUrl();
-    const browserScriptUrl = new URL('sql-wasm.js', browserWasmUrl).href;
-    try {
-      sqlModulePromise = loadSqlJs(browserWasmUrl, browserScriptUrl);
-      return await sqlModulePromise;
-    } catch {
-      const wasmFile = pathToFileURL(join(process.cwd(), 'public', 'sql-wasm.wasm')).href;
-      const scriptFile = pathToFileURL(join(process.cwd(), 'public', 'sql-wasm.js')).href;
-      sqlModulePromise = loadSqlJs(wasmFile, scriptFile);
-    }
+    const wasm = readFileSync(join(process.cwd(), 'node_modules', 'sql.js', 'dist', 'sql-wasm.wasm'));
+    sqlModulePromise = loadSqlJs({ wasmBinary: new Uint8Array(wasm).buffer });
   }
   return sqlModulePromise;
 }
 
-function runOptionalSql(db: SqlJsDatabase, sql: string | undefined): void {
-  const trimmed = (sql ?? '').trim();
-  if (trimmed === '') {
-    return;
-  }
-  db.exec(trimmed);
-}
-
-function queryResultRows(db: SqlJsDatabase, sql: string): readonly string[] {
-  return collectRowsFromExecResults(db.exec(sql));
-}
-
 export async function runSqliteReferenceSelfCheck(
   step: SqliteStep,
+  userQuery: string = step.content.referenceSolution,
 ): Promise<SqlitePracticeResult> {
   const { content } = step;
-  const query = content.referenceSolution;
-  let SQL: SqlJsStatic;
+  const totalTests = content.tests.length;
+  const SQL = await loadSqlJsForSpecs();
+
+  let session: SqlitePracticeSession;
   try {
-    SQL = await loadSqlModule();
+    session = openSqlitePracticeSession(SQL, {
+      setup: content.setup,
+      userQuery,
+      referenceQuery: content.referenceSolution,
+      orderMatters: content.orderMatters,
+    });
   } catch (error: unknown) {
-    const message = error instanceof Error ? error.message : 'Failed to load sql.js';
-    return practiceRunFailure(0, content.tests.length, message);
+    const message = error instanceof Error ? error.message : 'Setup SQL failed';
+    return practiceRunFailure(0, totalTests, message);
   }
 
-  const userDb = new SQL.Database();
-  const referenceDb = new SQL.Database();
-  const totalTests = content.tests.length;
   try {
-    runOptionalSql(userDb, content.setup);
-    runOptionalSql(referenceDb, content.setup);
-
     for (let i = 0; i < content.tests.length; i += 1) {
-      runOptionalSql(userDb, content.reset);
-      runOptionalSql(referenceDb, content.reset);
-      runOptionalSql(userDb, content.tests[i].seed);
-      runOptionalSql(referenceDb, content.tests[i].seed);
-      const userRows = queryResultRows(userDb, query);
-      const referenceRows = queryResultRows(referenceDb, query);
-      const pass = compareSqliteResultRows(userRows, referenceRows, content.orderMatters);
-      if (!pass) {
-        return practiceRunFailure(i, totalTests, 'Query results do not match');
+      const outcome = runSqlitePracticeCase(session, {
+        seed: content.tests[i].seed,
+        userReset: content.reset,
+        referenceReset: content.reset,
+      });
+      if (!outcome.pass) {
+        return practiceRunFailure(i, totalTests, outcome.message ?? 'Test case failed');
       }
     }
     return practiceRunSuccess(totalTests, REFERENCE_SELF_CHECK_TIMINGS);
   } finally {
-    userDb.close();
-    referenceDb.close();
+    closeSqlitePracticeSession(session);
   }
 }
 

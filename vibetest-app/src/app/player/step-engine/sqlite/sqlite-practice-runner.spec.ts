@@ -1,13 +1,30 @@
+import { ExecutionTimeoutError, PracticeStartError } from '../../../execution/execution-errors';
 import { ExecutionWorkerWrapperService } from '../../../execution/execution-worker-wrapper.service';
+import { ReusableWorkerSource } from '../../../execution/practice-worker-source';
 
-import { runSqlitePractice } from './sqlite-practice-runner';
+import {
+  runSqlitePractice,
+  SQLITE_ENGINE_LOAD_TIMEOUT_MS,
+  warmUpSqlitePractice,
+} from './sqlite-practice-runner';
 import type { SqliteStep } from './sqlite-step-engine';
+
+interface MockOptions {
+  failOnCase?: number;
+  loadError?: string;
+  initError?: string;
+  silentInit?: boolean;
+  loadDelayMs?: number;
+  silentLoad?: boolean;
+}
 
 class ScriptableMockWorker {
   onmessage: ((event: MessageEvent<unknown>) => void) | null = null;
   onerror: ((event: ErrorEvent) => void) | null = null;
   terminated = false;
-  failOnCase = -1;
+  readonly received: string[] = [];
+
+  constructor(private readonly options: MockOptions = {}) {}
 
   addEventListener(type: 'message' | 'error', listener: (event: MessageEvent | ErrorEvent) => void): void {
     if (type === 'message') {
@@ -28,34 +45,43 @@ class ScriptableMockWorker {
 
   postMessage(data: unknown): void {
     const req = data as { type: string; id: string };
+    this.received.push(req.type);
+    const reply = (payload: Record<string, unknown>) =>
+      this.onmessage?.({ data: { id: req.id, ...payload } } as MessageEvent);
+
+    if (req.type === 'sqliteLoad') {
+      if (this.options.silentLoad) {
+        return;
+      }
+      const send = () =>
+        this.options.loadError !== undefined
+          ? reply({ type: 'error', message: this.options.loadError })
+          : reply({ type: 'sqliteLoaded' });
+      if (this.options.loadDelayMs !== undefined) {
+        setTimeout(send, this.options.loadDelayMs);
+      } else {
+        send();
+      }
+      return;
+    }
     if (req.type === 'sqliteInit') {
-      this.onmessage?.({ data: { type: 'sqliteInited', id: req.id } } as MessageEvent);
+      if (this.options.silentInit) {
+        return;
+      }
+      if (this.options.initError !== undefined) {
+        reply({ type: 'error', message: this.options.initError });
+        return;
+      }
+      reply({ type: 'sqliteInited' });
       return;
     }
     if (req.type === 'sqliteRunCase') {
-      const index = Number.parseInt(req.id.split('-')[1] ?? '0', 10);
-      if (index === this.failOnCase) {
-        this.onmessage?.({
-          data: {
-            type: 'sqliteCaseResult',
-            id: req.id,
-            pass: false,
-            message: 'mock fail',
-            userMs: 0,
-            referenceMs: 0,
-          },
-        } as MessageEvent);
+      const index = Number.parseInt(req.id.split('-')[2] ?? '0', 10);
+      if (index === this.options.failOnCase) {
+        reply({ type: 'sqliteCaseResult', pass: false, message: 'mock fail', userMs: 0, referenceMs: 0 });
         return;
       }
-      this.onmessage?.({
-        data: {
-          type: 'sqliteCaseResult',
-          id: req.id,
-          pass: true,
-          userMs: 2,
-          referenceMs: 1,
-        },
-      } as MessageEvent);
+      reply({ type: 'sqliteCaseResult', pass: true, userMs: 2, referenceMs: 1 });
     }
   }
 
@@ -83,33 +109,133 @@ const sqliteStep: SqliteStep = {
   },
 };
 
+const wasmUrl = 'https://example.test/sql-wasm.wasm';
+
+function setup(options?: MockOptions | ((workerIndex: number) => MockOptions)) {
+  const mocks: ScriptableMockWorker[] = [];
+  const workers = new ReusableWorkerSource(() => {
+    const mock = new ScriptableMockWorker(
+      typeof options === 'function' ? options(mocks.length) : options,
+    );
+    mocks.push(mock);
+    return mock as unknown as Worker;
+  });
+  const deps = { wrapper: new ExecutionWorkerWrapperService(), workers, wasmUrl };
+  return { mocks, deps };
+}
+
 describe('runSqlitePractice', () => {
-  it('runs all seed cases and returns ok', async () => {
-    const mock = new ScriptableMockWorker();
-    const wrapper = new ExecutionWorkerWrapperService();
-    const result = await runSqlitePractice(sqliteStep, sqliteStep.content.starterCode, {
-      wrapper,
-      createWorker: () => mock as unknown as Worker,
-      wasmUrl: 'https://example.test/sql-wasm.wasm',
-    });
+  it('loads the engine, runs all seed cases and returns ok', async () => {
+    const { mocks, deps } = setup();
+    const result = await runSqlitePractice(sqliteStep, sqliteStep.content.starterCode, deps);
     expect(result).toEqual({ ok: true, totalTests: 2, userMs: 4, referenceMs: 2 });
-    expect(mock.terminated).toBe(true);
+    expect(mocks[0].received).toEqual(['sqliteLoad', 'sqliteInit', 'sqliteRunCase', 'sqliteRunCase']);
+  });
+
+  it('keeps the worker warm between runs', async () => {
+    const { mocks, deps } = setup();
+    await runSqlitePractice(sqliteStep, sqliteStep.content.starterCode, deps);
+    await runSqlitePractice(sqliteStep, sqliteStep.content.starterCode, deps);
+    expect(mocks).toHaveLength(1);
+    expect(mocks[0].terminated).toBe(false);
   });
 
   it('fail-fast on first failing case', async () => {
-    const mock = new ScriptableMockWorker();
-    mock.failOnCase = 1;
-    const wrapper = new ExecutionWorkerWrapperService();
-    const result = await runSqlitePractice(sqliteStep, sqliteStep.content.starterCode, {
-      wrapper,
-      createWorker: () => mock as unknown as Worker,
-      wasmUrl: 'https://example.test/sql-wasm.wasm',
-    });
+    const { deps } = setup({ failOnCase: 1 });
+    const result = await runSqlitePractice(sqliteStep, sqliteStep.content.starterCode, deps);
     expect(result).toEqual({
       ok: false,
       failedTestIndex: 1,
       totalTests: 2,
       message: 'mock fail',
     });
+  });
+
+  it('throws the engine load error as a start error, not a failed case', async () => {
+    const { mocks, deps } = setup({ loadError: 'Failed to load SQLite engine: 404' });
+    const run = runSqlitePractice(sqliteStep, sqliteStep.content.starterCode, deps);
+    await expect(run).rejects.toBeInstanceOf(PracticeStartError);
+    await expect(run).rejects.toThrow('Failed to load SQLite engine: 404');
+    expect(mocks[0].terminated).toBe(false);
+  });
+
+  it('throws the setup error from init as a start error and keeps the worker', async () => {
+    const { mocks, deps } = setup({ initError: 'Setup SQL failed: near "(": syntax error' });
+    const run = runSqlitePractice(sqliteStep, sqliteStep.content.starterCode, deps);
+    await expect(run).rejects.toBeInstanceOf(PracticeStartError);
+    await expect(run).rejects.toThrow('Setup SQL failed: near "(": syntax error');
+    expect(mocks[0].terminated).toBe(false);
+    expect(mocks[0].received).not.toContain('sqliteRunCase');
+  });
+
+  it('does not count engine loading against the step timeout', async () => {
+    const { deps } = setup({ loadDelayMs: 250 });
+    const step: SqliteStep = { ...sqliteStep, content: { ...sqliteStep.content, timeoutMs: 150 } };
+    const result = await runSqlitePractice(step, step.content.starterCode, deps);
+    expect(result.ok).toBe(true);
+  });
+
+  it('discards the worker and rethrows on timeout', async () => {
+    const { mocks, deps } = setup({ silentInit: true });
+    const step: SqliteStep = { ...sqliteStep, content: { ...sqliteStep.content, timeoutMs: 100 } };
+    await expect(runSqlitePractice(step, step.content.starterCode, deps)).rejects.toBeInstanceOf(
+      ExecutionTimeoutError,
+    );
+    expect(mocks[0].terminated).toBe(true);
+    await deps.workers.acquire();
+    expect(mocks).toHaveLength(2);
+  });
+});
+
+describe('warmUpSqlitePractice', () => {
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it('loads the engine in the kept worker', async () => {
+    const { mocks, deps } = setup();
+    await warmUpSqlitePractice(deps);
+    expect(mocks[0].received).toEqual(['sqliteLoad']);
+    await runSqlitePractice(sqliteStep, sqliteStep.content.starterCode, deps);
+    expect(mocks).toHaveLength(1);
+  });
+
+  it('a run started during warm-up waits for the load and reuses the worker', async () => {
+    const { mocks, deps } = setup({ loadDelayMs: 200 });
+    const warmUp = warmUpSqlitePractice(deps);
+    const result = await runSqlitePractice(sqliteStep, sqliteStep.content.starterCode, deps);
+    await warmUp;
+
+    expect(result.ok).toBe(true);
+    expect(mocks).toHaveLength(1);
+    expect(mocks[0].terminated).toBe(false);
+    expect(mocks[0].received).toEqual([
+      'sqliteLoad',
+      'sqliteLoad',
+      'sqliteInit',
+      'sqliteRunCase',
+      'sqliteRunCase',
+    ]);
+  });
+
+  it('a warm-up timeout does not cut a waiting run: it gets a fresh worker and its own limit', async () => {
+    vi.useFakeTimers();
+    const { mocks, deps } = setup((index) => (index === 0 ? { silentLoad: true } : {}));
+    const warmUp = warmUpSqlitePractice(deps);
+    const warmUpOutcome = warmUp.catch((error: unknown) => error);
+    const run = runSqlitePractice(sqliteStep, sqliteStep.content.starterCode, deps);
+
+    await vi.advanceTimersByTimeAsync(SQLITE_ENGINE_LOAD_TIMEOUT_MS - 1);
+    expect(mocks).toHaveLength(1);
+    expect(mocks[0].received).toEqual(['sqliteLoad']);
+
+    await vi.advanceTimersByTimeAsync(1);
+    expect(await warmUpOutcome).toBeInstanceOf(ExecutionTimeoutError);
+    expect(mocks[0].terminated).toBe(true);
+
+    expect((await run).ok).toBe(true);
+    expect(mocks).toHaveLength(2);
+    expect(mocks[1].terminated).toBe(false);
+    expect(mocks[1].received).toEqual(['sqliteLoad', 'sqliteInit', 'sqliteRunCase', 'sqliteRunCase']);
   });
 });

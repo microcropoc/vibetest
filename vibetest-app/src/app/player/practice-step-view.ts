@@ -1,4 +1,5 @@
 import type { Step } from '../courses/course.model';
+import { ExecutionTimeoutError } from '../execution/execution-errors';
 
 import type { PracticeRunResult } from './step-engine/practice-run-result';
 import type { StepProgressSnapshot } from './step-engine/step-progress-snapshot';
@@ -122,6 +123,25 @@ export function practiceTimingComparison(userMs: number, referenceMs: number): s
   const slowdown = userMs / referenceMs;
   const factor = Math.round(slowdown * 10) / 10;
   return `В ${factor} раза медленнее эталона.`;
+}
+
+function runtimeErrorReason(error: unknown): string {
+  if (error instanceof ExecutionTimeoutError) {
+    return `превышен лимит времени (${error.timeoutMs} мс)`;
+  }
+  if (error instanceof Error && error.message !== '') {
+    return error.message;
+  }
+  return 'неизвестная ошибка';
+}
+
+/** Runner threw (timeout, worker crash) instead of returning a result. */
+export function practiceRuntimeErrorFeedback(error: unknown, totalTests: number): PracticeFeedback {
+  return {
+    kind: 'error',
+    message: `Ошибка выполнения: ${runtimeErrorReason(error)}`,
+    tests: { passed: 0, total: totalTests },
+  };
 }
 
 export function practiceFeedbackFromResult(result: PracticeRunResult): PracticeFeedback {

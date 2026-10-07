@@ -5,11 +5,14 @@ describe('ngsw-config.json', () => {
   it('caches offline assets including sql.js wasm and course schema', () => {
     const path = join(process.cwd(), 'ngsw-config.json');
     const config = JSON.parse(readFileSync(path, 'utf8')) as {
-      assetGroups: { resources: { files: string[] } }[];
+      assetGroups: { installMode: string; resources: { files: string[] } }[];
     };
 
     const files = config.assetGroups.flatMap((group) => group.resources.files);
-    expect(files).toContain('/sql-wasm.wasm');
+    const prefetched = config.assetGroups
+      .filter((group) => group.installMode === 'prefetch')
+      .flatMap((group) => group.resources.files);
+    expect(prefetched).toContain('/sql-wasm.wasm');
     expect(files.some((file) => file.includes('schemas'))).toBe(true);
   });
 });

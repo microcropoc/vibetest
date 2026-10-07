@@ -1,4 +1,4 @@
-import { parseExecutionRequest } from './execution-messages';
+import { parseExecutionRequest, requestIdFromUnknown } from './execution-messages';
 
 /// <reference lib="webworker" />
 
@@ -16,6 +16,7 @@ self.addEventListener('message', (event: MessageEvent<unknown>) => {
         break;
       case 'javascriptInit':
       case 'javascriptRunCase':
+      case 'sqliteLoad':
       case 'sqliteInit':
       case 'sqliteRunCase':
       case 'regexInit':
@@ -30,7 +31,7 @@ self.addEventListener('message', (event: MessageEvent<unknown>) => {
   } catch {
     self.postMessage({
       type: 'error',
-      id: 'unknown',
+      id: requestIdFromUnknown(event.data),
       message: 'Invalid request',
     });
   }

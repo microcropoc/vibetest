@@ -3,7 +3,7 @@ import {
   type JavascriptPracticeTarget,
 } from './javascript-practice-compile';
 import type { FakeTimerController } from './javascript-fake-timers';
-import { parseExecutionRequest } from './execution-messages';
+import { parseExecutionRequest, requestIdFromUnknown } from './execution-messages';
 import type { PracticeGlobalBag } from './javascript-practice-global';
 import { runJavascriptCaseComparison } from '../player/step-engine/javascript/run-javascript-case';
 
@@ -151,7 +151,7 @@ self.addEventListener('message', (event: MessageEvent<unknown>) => {
   } catch {
     self.postMessage({
       type: 'error',
-      id: 'unknown',
+      id: requestIdFromUnknown(event.data),
       message: 'Invalid request',
     });
   }

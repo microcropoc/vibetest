@@ -68,6 +68,14 @@ const javascriptRunCaseSchema = z
   })
   .strict();
 
+const sqliteLoadSchema = z
+  .object({
+    type: z.literal('sqliteLoad'),
+    id: messageIdSchema,
+    wasmUrl: z.string().url(),
+  })
+  .strict();
+
 const sqliteInitSchema = z
   .object({
     type: z.literal('sqliteInit'),
@@ -123,6 +131,7 @@ export const ExecutionRequestSchema = z.discriminatedUnion('type', [
     .strict(),
   javascriptInitSchema,
   javascriptRunCaseSchema,
+  sqliteLoadSchema,
   sqliteInitSchema,
   sqliteRunCaseSchema,
   regexInitSchema,
@@ -159,6 +168,12 @@ export const ExecutionResponseSchema = z.discriminatedUnion('type', [
       message: z.string().optional(),
       userMs: z.number().min(0),
       referenceMs: z.number().min(0),
+    })
+    .strict(),
+  z
+    .object({
+      type: z.literal('sqliteLoaded'),
+      id: messageIdSchema,
     })
     .strict(),
   z
@@ -208,6 +223,20 @@ export const ExecutionResponseSchema = z.discriminatedUnion('type', [
 
 export type ExecutionRequest = z.infer<typeof ExecutionRequestSchema>;
 export type ExecutionResponse = z.infer<typeof ExecutionResponseSchema>;
+
+/**
+ * Best-effort `id` of a request that failed validation, so the wrapper can match the error reply
+ * instead of waiting for its timeout.
+ */
+export function requestIdFromUnknown(value: unknown): string {
+  if (typeof value === 'object' && value !== null && 'id' in value) {
+    const id: unknown = value.id;
+    if (typeof id === 'string' && id.length > 0) {
+      return id;
+    }
+  }
+  return 'unknown';
+}
 
 export function parseExecutionRequest(value: unknown): ExecutionRequest {
   return ExecutionRequestSchema.parse(value);

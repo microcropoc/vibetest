@@ -1,18 +1,17 @@
 ---
-description: >-
-  Code review for vt-* tasks: review branch (committed + uncommitted),
-  write findings into REPORT.md «Изменения по ревью». Use when user asks
-  «ревью vt-N» or @code-review.
-alwaysApply: false
+name: task-review
+description: Код-ревью vt-* — diff + замечания в REPORT «Изменения по ревью»
 ---
 
 # vibetest — код-ревью vt-*
 
-Режим **только по явному запросу** («ревью vt-N», `@code-review`). Иначе этот рул не применять. Критерии кода — в `angular-cli.mdc`; здесь — процесс и выход.
+Ввод пользователя: `$ARGUMENTS` (например `vt-83` или пусто — тогда из текущей ветки `feature/vt-{n}-{slug}`).
+
+Критерии кода — в `.cursor/rules/angular-cli.mdc`; здесь — процесс и выход.
 
 ## Скоуп задачи
 
-1. Определить `vt-{n}` из запроса или текущей ветки `feature/vt-{n}-{slug}`.
+1. Определить `vt-{n}` из `$ARGUMENTS` или текущей ветки `feature/vt-{n}-{slug}`.
 2. Папка задачи: `docs/tasks/in-progress/vt-{n}-{slug}/` (`TASK.md`, `REPORT.md`).
 3. Если только в `done/` — ревьюить только если пользователь явно указал эту задачу.
 
@@ -37,7 +36,7 @@ alwaysApply: false
 
 Ревьюить и то, и другое.
 
-## Критерии (чеклист, без дублирования developer-рула)
+## Критерии (чеклист)
 
 - Соответствие `TASK.md` и SPEC; отклонения осознанны и отражены в REPORT
 - Архитектура: standalone, domain folders, lazy pages, smart/dumb, storage vs domain, execution/Workers

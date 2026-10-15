@@ -1,5 +1,5 @@
 ---
-description: vibetest — Angular 22 SPA/PWA, domain slices, tests, git on explicit request
+description: vibetest — Angular 22 SPA/PWA, domain slices, tests, git invariants
 alwaysApply: true
 ---
 
@@ -36,20 +36,18 @@ ng test
 
 - Required: domain logic, storage, guards, pipes, non-trivial component logic; **behavior**, not internals; `*.spec.ts` colocated; domain tests without `TestBed`, components with `TestBed`; zoneless — `await fixture.whenStable()` not `detectChanges()`; one-off run `ng test --watch=false`; green before task done (when tests exist); config/types/simple markup — no test-first mandate
 
-## Tasks & git
-
-Tasks in `docs/tasks/` — **status = folder** (`backlog` → `in-progress` → `done`); no status in `REPORT.md`. `backlog/vt-{n}-{slug}.md`; `in-progress/…/` → `TASK.md` + `REPORT.md` (`branch:`); `done/` after merge; `archive/{YYYY-MM}/` in batches on request; `_template/`; `{n}` = max `vt-*` in backlog, in-progress, done, and `archive/` + 1; kebab-case slug.
+## Git invariants
 
 **Protected app:** never modify anything in `vibetest-app/` unless the current branch is `feature/vt-{n}-{slug}` and the matching task exists in `docs/tasks/in-progress/vt-{n}-{slug}/`. Changes outside `vibetest-app/` may be made and committed on `main` without a task.
 
-**vt-{n}:** branch `feature/vt-{n}-{slug}` from `main`; backlog → `in-progress/` + `REPORT.md`; read `TASK.md` + spec; update `REPORT.md`; one task per branch. WIP commits on feature branch need no confirmation (squashed on merge). **Merge** only on explicit request (“merge vt-{n}”, “merge to main”) — also authorizes doc move, squash, push:
+**Merge** only on explicit request (“merge vt-{n}”, “merge to main”) — also authorizes doc move, squash, push:
 
 1. Move `in-progress/vt-{n}-{slug}/` → `done/` + final `REPORT.md`
 2. `git rebase main` (conflicts on branch only)
 3. Squash (`git reset --soft main && git commit`); message `vt-{n}: {short summary}` — show before commit
 4. `git switch main && git merge --ff-only feature/…`, push, delete branch
 
-Merged code must not land in `main` while folder is still `in-progress/`. Review: `REPORT.md` filled per `_template/` (all sections), green tests; diff `main..feature/…`.
+Merged code must not land in `main` while folder is still `in-progress/`.
 
 ## Never
 

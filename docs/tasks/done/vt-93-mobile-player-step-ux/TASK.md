@@ -39,18 +39,18 @@
 
 ## План работ
 
-- [ ] Scroll-to-top (or header) on step change
-- [ ] Mobile keyboard visibility для CodeMirror host
-- [ ] Удалить retry из nav + orchestrator wiring + copy
-- [ ] SPEC + unit/spec tests
+- [x] Scroll-to-top (or header) on step change
+- [x] Mobile keyboard visibility для CodeMirror host
+- [x] Удалить retry из nav + orchestrator wiring + copy
+- [x] SPEC + unit/spec tests
 - [ ] Ручной чеклист mobile PWA
 
 ## Критерии готовности (Definition of Done)
 
-- [ ] Theory→theory и другие переходы показывают начало шага
+- [x] Theory→theory и другие переходы показывают начало шага
 - [ ] На mobile PWA редактор не полностью скрыт клавиатурой в типичном сценарии
-- [ ] «Повторить» нигде в плеере; тексты согласованы
-- [ ] `ng test --watch=false` зелёный
+- [x] «Повторить» нигде в плеере; тексты согласованы
+- [x] `ng test --watch=false` зелёный
 
 ## Вне рамок задачи
 

@@ -90,7 +90,10 @@ describe('QuizStepUiComponent', () => {
     fixture.componentRef.setInput('showFailure', true);
     await fixture.whenStable();
     const root = fixture.nativeElement as HTMLElement;
-    expect(root.querySelector('[role="alert"]')?.textContent).toContain('Неверный ответ');
+    const alert = root.querySelector('[role="alert"]')?.textContent ?? '';
+    expect(alert).toContain('Неверный ответ');
+    expect(alert).toContain('«Проверить»');
+    expect(alert).not.toContain('Повторить');
   });
 
   it('shows success message when showSuccess is true', async () => {

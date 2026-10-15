@@ -164,6 +164,16 @@ describe('PracticeStepShellComponent', () => {
     expect(text).toContain('Write a function');
   });
 
+  it('shows persisted failure hint without Повторить', async () => {
+    const fixture = TestBed.createComponent(PracticeStepShellComponent);
+    fixture.componentRef.setInput('step', javascriptStep);
+    fixture.componentRef.setInput('showFailure', true);
+    await fixture.whenStable();
+    const alert = fixture.nativeElement.querySelector('[role="alert"]') as HTMLElement | null;
+    expect(alert?.textContent).toContain('«Запустить»');
+    expect(alert?.textContent).not.toContain('Повторить');
+  });
+
   it('emits draftChange from code editor stub', async () => {
     const fixture = TestBed.createComponent(PracticeStepShellComponent);
     fixture.componentRef.setInput('step', javascriptStep);

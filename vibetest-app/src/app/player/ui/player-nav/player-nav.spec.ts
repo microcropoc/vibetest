@@ -37,14 +37,9 @@ describe('PlayerNavComponent', () => {
     expect(next).toHaveBeenCalledOnce();
   });
 
-  it('emits retry when Повторить is clicked', async () => {
+  it('does not show Повторить', async () => {
     const fixture = TestBed.createComponent(PlayerNavComponent);
     await fixture.whenStable();
-    const retry = vi.fn();
-    fixture.componentInstance.retry.subscribe(retry);
-    const buttons = fixture.nativeElement.querySelectorAll('.player-nav__button--secondary');
-    (buttons[1] as HTMLButtonElement).click();
-    await fixture.whenStable();
-    expect(retry).toHaveBeenCalledOnce();
+    expect((fixture.nativeElement as HTMLElement).textContent).not.toContain('Повторить');
   });
 });

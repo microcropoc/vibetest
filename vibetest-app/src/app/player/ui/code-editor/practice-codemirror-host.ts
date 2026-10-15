@@ -4,6 +4,7 @@ import { Annotation, Compartment, EditorState, type Extension } from '@codemirro
 import { EditorView } from '@codemirror/view';
 import { basicSetup } from 'codemirror';
 
+import { scrollCaretIntoView, type ClientBand } from '../../player-scroll';
 import type { PracticeCodeEditorLanguage } from './practice-code-editor-language';
 import { practiceCodeEditorSyntaxHighlighting } from './practice-codemirror-highlight';
 import { practiceCodeEditorTheme } from './practice-codemirror-theme';
@@ -33,6 +34,64 @@ function applyLabelledBy(contentDOM: HTMLElement, labelledBy: string | undefined
     return;
   }
   contentDOM.setAttribute('aria-labelledby', id);
+}
+
+function caretBand(view: EditorView): ClientBand | null {
+  let coords: { readonly top: number; readonly bottom: number } | null;
+  try {
+    coords = view.coordsAtPos(view.state.selection.main.head);
+  } catch {
+    return null;
+  }
+  if (coords == null) {
+    return null;
+  }
+  return { top: coords.top, bottom: coords.bottom };
+}
+
+function bindCaretFollow(view: EditorView, parent: HTMLElement): () => void {
+  let removeViewportListeners: (() => void) | undefined;
+
+  const reveal = (): void => {
+    const caret = caretBand(view);
+    if (caret == null) {
+      return;
+    }
+    scrollCaretIntoView(caret, { element: view.contentDOM });
+  };
+
+  const onFocusIn = (): void => {
+    parent.classList.add('code-editor--editing');
+    reveal();
+    const viewport = window.visualViewport;
+    if (viewport != null && removeViewportListeners === undefined) {
+      const onViewportChange = (): void => {
+        reveal();
+      };
+      viewport.addEventListener('resize', onViewportChange);
+      viewport.addEventListener('scroll', onViewportChange);
+      removeViewportListeners = () => {
+        viewport.removeEventListener('resize', onViewportChange);
+        viewport.removeEventListener('scroll', onViewportChange);
+        removeViewportListeners = undefined;
+      };
+    }
+  };
+
+  const onFocusOut = (): void => {
+    parent.classList.remove('code-editor--editing');
+    removeViewportListeners?.();
+  };
+
+  view.contentDOM.addEventListener('focusin', onFocusIn);
+  view.contentDOM.addEventListener('focusout', onFocusOut);
+
+  return () => {
+    view.contentDOM.removeEventListener('focusin', onFocusIn);
+    view.contentDOM.removeEventListener('focusout', onFocusOut);
+    removeViewportListeners?.();
+    parent.classList.remove('code-editor--editing');
+  };
 }
 
 function languageExtension(language: PracticeCodeEditorLanguage): Extension {
@@ -91,6 +150,8 @@ export function mountPracticeCodeEditor(
   view.contentDOM.setAttribute('aria-multiline', 'true');
   applyLabelledBy(view.contentDOM, options.labelledBy);
 
+  const unbindCaretFollow = bindCaretFollow(view, parent);
+
   return {
     setDoc(text: string): void {
       const current = view.state.doc.toString();
@@ -116,6 +177,7 @@ export function mountPracticeCodeEditor(
       applyLabelledBy(view.contentDOM, labelledBy);
     },
     destroy(): void {
+      unbindCaretFollow();
       themeObserver?.disconnect();
       view.destroy();
     },

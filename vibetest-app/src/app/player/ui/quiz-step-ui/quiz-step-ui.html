@@ -2,7 +2,7 @@
   <app-markdown-content class="quiz-step-ui__question" [markdown]="step().content.question" />
 
   @if (showFailure()) {
-    <p class="quiz-step-ui__error" role="alert">Неверный ответ. Попробуйте снова или нажмите «Повторить».</p>
+    <p class="quiz-step-ui__error" role="alert">Неверный ответ. Измените выбор и нажмите «Проверить» снова.</p>
   } @else if (showSuccess()) {
     <p class="quiz-step-ui__success" role="status">Верно! Шаг пройден.</p>
   }

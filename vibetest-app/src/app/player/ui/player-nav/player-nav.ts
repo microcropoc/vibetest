@@ -12,7 +12,6 @@ export class PlayerNavComponent {
   readonly back = output<void>();
   readonly next = output<void>();
   readonly exit = output<void>();
-  readonly retry = output<void>();
 
   protected onBack(): void {
     this.back.emit();
@@ -24,9 +23,5 @@ export class PlayerNavComponent {
     } else {
       this.next.emit();
     }
-  }
-
-  protected onRetry(): void {
-    this.retry.emit();
   }
 }

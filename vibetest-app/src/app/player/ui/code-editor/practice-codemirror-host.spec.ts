@@ -29,4 +29,52 @@ describe('mountPracticeCodeEditor', () => {
     handle.destroy();
     expect(parent.querySelector('.cm-editor')).toBeNull();
   });
+
+  it('follows visualViewport resize and scroll only while focused', () => {
+    const listeners = new Map<string, Set<EventListener>>();
+    const viewport = {
+      addEventListener(type: string, listener: EventListener): void {
+        const bucket = listeners.get(type) ?? new Set<EventListener>();
+        bucket.add(listener);
+        listeners.set(type, bucket);
+      },
+      removeEventListener(type: string, listener: EventListener): void {
+        listeners.get(type)?.delete(listener);
+      },
+    };
+    const previous = Object.getOwnPropertyDescriptor(window, 'visualViewport');
+    Object.defineProperty(window, 'visualViewport', {
+      configurable: true,
+      value: viewport,
+    });
+
+    const parent = document.createElement('div');
+    const handle = mountPracticeCodeEditor(parent, {
+      initialDoc: 'a',
+      language: 'plain',
+      readOnly: false,
+      onDocChange: () => undefined,
+    });
+    const content = parent.querySelector('.cm-content');
+    if (!(content instanceof HTMLElement)) {
+      throw new Error('expected CodeMirror content');
+    }
+
+    content.dispatchEvent(new FocusEvent('focusin', { bubbles: true }));
+    expect(listeners.get('resize')?.size).toBe(1);
+    expect(listeners.get('scroll')?.size).toBe(1);
+    expect(parent.classList.contains('code-editor--editing')).toBe(true);
+
+    content.dispatchEvent(new FocusEvent('focusout', { bubbles: true }));
+    expect(listeners.get('resize')?.size).toBe(0);
+    expect(listeners.get('scroll')?.size).toBe(0);
+    expect(parent.classList.contains('code-editor--editing')).toBe(false);
+
+    handle.destroy();
+    if (previous) {
+      Object.defineProperty(window, 'visualViewport', previous);
+    } else {
+      Reflect.deleteProperty(window, 'visualViewport');
+    }
+  });
 });

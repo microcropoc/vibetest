@@ -64,5 +64,52 @@ describe('PlayerPage', () => {
     expect(root.textContent).toContain(course.modules[0]!.title);
     expect(root.querySelector('.step-indicator-bar')).toBeTruthy();
     expect(root.querySelector('.player-nav')).toBeTruthy();
+    expect(root.textContent).not.toContain('Повторить');
+  });
+
+  it('scrolls to step start when the current step changes', async () => {
+    const scrollTo = vi.spyOn(window, 'scrollTo').mockImplementation(() => undefined);
+    const fixture = TestBed.createComponent(PlayerPage);
+    fixture.componentRef.setInput('courseId', FIXTURE_COURSE_ID);
+    fixture.componentRef.setInput('moduleId', FIXTURE_MODULE_ID);
+    await whenPageReady(fixture);
+    scrollTo.mockClear();
+    const orchestrator = fixture.debugElement.injector.get(PlayerOrchestratorService);
+    orchestrator.selectStep(1);
+    await fixture.whenStable();
+    expect(scrollTo).toHaveBeenCalledWith(
+      expect.objectContaining({ top: 0, left: 0 }),
+    );
+    scrollTo.mockRestore();
+  });
+
+  it('does not scroll when the same step draft changes', async () => {
+    const scrollTo = vi.spyOn(window, 'scrollTo').mockImplementation(() => undefined);
+    const fixture = TestBed.createComponent(PlayerPage);
+    fixture.componentRef.setInput('courseId', FIXTURE_COURSE_ID);
+    fixture.componentRef.setInput('moduleId', FIXTURE_MODULE_ID);
+    await whenPageReady(fixture);
+    const orchestrator = fixture.debugElement.injector.get(PlayerOrchestratorService);
+    orchestrator.selectStep(1);
+    await fixture.whenStable();
+    scrollTo.mockClear();
+    await orchestrator.dispatch({ kind: 'setSelection', selectedIndices: [0] });
+    await fixture.whenStable();
+    expect(scrollTo).not.toHaveBeenCalled();
+    scrollTo.mockRestore();
+  });
+
+  it('does not scroll when steps are replaced without changing step id', async () => {
+    const scrollTo = vi.spyOn(window, 'scrollTo').mockImplementation(() => undefined);
+    const fixture = TestBed.createComponent(PlayerPage);
+    fixture.componentRef.setInput('courseId', FIXTURE_COURSE_ID);
+    fixture.componentRef.setInput('moduleId', FIXTURE_MODULE_ID);
+    await whenPageReady(fixture);
+    scrollTo.mockClear();
+    const orchestrator = fixture.debugElement.injector.get(PlayerOrchestratorService);
+    orchestrator.steps.set(orchestrator.steps().map((step) => ({ ...step })));
+    await fixture.whenStable();
+    expect(scrollTo).not.toHaveBeenCalled();
+    scrollTo.mockRestore();
   });
 });

@@ -139,11 +139,6 @@ export class PlayerOrchestratorService implements OnDestroy {
     this.selectStep(index + 1);
   }
 
-  async retry(): Promise<void> {
-    this.practiceFeedback.set(null);
-    await this.dispatch({ kind: 'retry' });
-  }
-
   async setPracticeDraft(text: string): Promise<void> {
     const step = this.currentStep();
     if (!step) {

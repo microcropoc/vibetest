@@ -75,15 +75,6 @@ describe('PlayerOrchestratorService', () => {
     });
   });
 
-  it('retry dispatches retry command', async () => {
-    const orchestrator = TestBed.inject(PlayerOrchestratorService);
-    const progress = TestBed.inject(ProgressRepository);
-    await orchestrator.load(FIXTURE_COURSE_ID, FIXTURE_MODULE_ID);
-    await orchestrator.selectStep(1);
-    await orchestrator.retry();
-    expect(progress.put).toHaveBeenCalled();
-  });
-
   function regexCourse(): Course {
     const json = minimalValidCourseJson();
     return parseCourse({

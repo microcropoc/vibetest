@@ -7,6 +7,22 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <link rel="icon" type="image/x-icon" href="favicon.ico">
   <link rel="manifest" href="manifest.webmanifest">
+  <script>
+    (function () {
+      var prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+      var theme = prefersDark ? 'dark' : 'light';
+      var themeColor = prefersDark ? '#121212' : '#ffffff';
+      document.documentElement.setAttribute('data-theme', theme);
+      var meta = document.createElement('meta');
+      meta.name = 'theme-color';
+      meta.content = themeColor;
+      document.head.appendChild(meta);
+      var scheme = document.createElement('meta');
+      scheme.name = 'color-scheme';
+      scheme.content = prefersDark ? 'dark' : 'light';
+      document.head.appendChild(scheme);
+    })();
+  </script>
 </head>
 <body>
   <app-root></app-root>

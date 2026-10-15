@@ -5,6 +5,7 @@ import { EditorView } from '@codemirror/view';
 import { basicSetup } from 'codemirror';
 
 import type { PracticeCodeEditorLanguage } from './practice-code-editor-language';
+import { practiceCodeEditorSyntaxHighlighting } from './practice-codemirror-highlight';
 import { practiceCodeEditorTheme } from './practice-codemirror-theme';
 
 const externalDocChange = Annotation.define<boolean>();
@@ -57,6 +58,7 @@ export function mountPracticeCodeEditor(
     extensions: [
       basicSetup,
       practiceCodeEditorTheme(),
+      practiceCodeEditorSyntaxHighlighting(),
       languageCompartment.of(languageExtension(options.language)),
       readOnlyCompartment.of(EditorState.readOnly.of(options.readOnly)),
       EditorView.updateListener.of((update) => {
@@ -73,6 +75,17 @@ export function mountPracticeCodeEditor(
   });
 
   const view = new EditorView({ state, parent });
+
+  const themeObserver =
+    typeof MutationObserver !== 'undefined'
+      ? new MutationObserver(() => {
+          view.requestMeasure();
+        })
+      : null;
+  themeObserver?.observe(document.documentElement, {
+    attributes: true,
+    attributeFilter: ['data-theme'],
+  });
 
   view.contentDOM.setAttribute('role', 'textbox');
   view.contentDOM.setAttribute('aria-multiline', 'true');
@@ -103,6 +116,7 @@ export function mountPracticeCodeEditor(
       applyLabelledBy(view.contentDOM, labelledBy);
     },
     destroy(): void {
+      themeObserver?.disconnect();
       view.destroy();
     },
   };

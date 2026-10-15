@@ -1,0 +1,206 @@
+{
+  "schemaVersion": 1,
+  "title": "Subqueries",
+  "steps": [
+    {
+      "type": "theory",
+      "title": "Подзапросы и CTE",
+      "content": "## Подзапросы\n\n`IN`, `NOT IN`, `EXISTS`, скалярные подзапросы. **`WITH`** (CTE) для читаемости. Осторожно с `NOT IN` и NULL."
+    },
+    {
+      "type": "svg",
+      "title": "Схема: Subqueries",
+      "content": {
+        "caption": "Подзапрос в FROM — производная таблица",
+        "description": "Коррелированный подзапрос ссылается на внешнюю строку.",
+        "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 280 80\" width=\"100%\" role=\"img\" aria-label=\"Subqueries\"><rect id=\"lsq06-box\" x=\"40\" y=\"15\" width=\"200\" height=\"50\" rx=\"4\" fill=\"#e3f2fd\" stroke=\"#1565c0\"/><text x=\"140\" y=\"45\" text-anchor=\"middle\" font-size=\"12\" fill=\"#0d47a1\">Subqueries</text></svg>"
+      }
+    },
+    {
+      "type": "sqlite",
+      "title": "1773. Employees Whose Manager Left the Company",
+      "content": {
+        "description": "Сотрудники, чей `managerId` **не существует** в таблице (менеджер «уволился»). Колонка `employee_id`.\n\n[LeetCode 1773](https://leetcode.com/problems/employees-whose-manager-left-the-company/)",
+        "setup": "CREATE TABLE Employees(employee_id INTEGER PRIMARY KEY, name TEXT NOT NULL, manager_id INTEGER);",
+        "starterCode": "SELECT employee_id FROM Employees;",
+        "referenceSolution": "SELECT employee_id FROM Employees WHERE manager_id IS NOT NULL AND manager_id NOT IN (SELECT employee_id FROM Employees);",
+        "timeoutMs": 8000,
+        "tests": [
+          {
+            "seed": "INSERT INTO Employees VALUES (3,\"Mila\",9),(12,\"Anton\",NULL),(13,\"Alex\",NULL),(10,\"Alice\",NULL);"
+          },
+          {
+            "seed": "INSERT INTO Employees VALUES (1,\"Root\",NULL);"
+          },
+          {
+            "seed": "INSERT INTO Employees VALUES (2,\"Orphan\",99);"
+          }
+        ],
+        "orderMatters": false,
+        "checkColumnNames": true
+      }
+    },
+    {
+      "type": "sqlite",
+      "title": "626. Exchange Seats",
+      "content": {
+        "description": "Поменяйте местами соседей: нечётный `id` меняется с `id+1`, последний нечётный остаётся. Колонка `id` (новый порядок), `student`.\n\n[LeetCode 626](https://leetcode.com/problems/exchange-seats/)",
+        "setup": "CREATE TABLE Seat(id INTEGER PRIMARY KEY, student TEXT NOT NULL);",
+        "starterCode": "SELECT id, student FROM Seat;",
+        "referenceSolution": "SELECT CASE WHEN id % 2 = 1 AND id = (SELECT MAX(id) FROM Seat) THEN id WHEN id % 2 = 1 THEN id + 1 ELSE id - 1 END AS id, student FROM Seat ORDER BY id;",
+        "timeoutMs": 8000,
+        "tests": [
+          {
+            "seed": "INSERT INTO Seat VALUES (1,'Abbot'),(2,'Doris'),(3,'Emerson'),(4,'Green'),(5,'Jeames');"
+          },
+          {
+            "seed": "INSERT INTO Seat VALUES (1,'A'),(2,'B'),(3,'C');"
+          },
+          {
+            "seed": "INSERT INTO Seat VALUES (1,'Only');"
+          }
+        ],
+        "orderMatters": true,
+        "checkColumnNames": true
+      }
+    },
+    {
+      "type": "sqlite",
+      "title": "1341. Movie Rating",
+      "content": {
+        "description": "Две строки, одна колонка `results`: (1) имя пользователя с **наибольшим** числом оценок (при ничьей — по алфавиту); (2) название фильма с **наибольшим средним** рейтингом в **феврале 2020** (при ничьей — по алфавиту).\n\n[LeetCode 1341](https://leetcode.com/problems/movie-rating/)",
+        "setup": "CREATE TABLE Movies(movie_id INTEGER PRIMARY KEY, title TEXT NOT NULL);\nCREATE TABLE Users(user_id INTEGER PRIMARY KEY, name TEXT NOT NULL);\nCREATE TABLE MovieRating(movie_id INTEGER NOT NULL, user_id INTEGER NOT NULL, rating INTEGER NOT NULL, created_at TEXT NOT NULL);",
+        "starterCode": "SELECT name AS results FROM Users ORDER BY name LIMIT 1;",
+        "referenceSolution": "SELECT results FROM (SELECT u.name AS results FROM Users u JOIN MovieRating mr ON u.user_id = mr.user_id GROUP BY u.user_id, u.name ORDER BY COUNT(*) DESC, u.name LIMIT 1) UNION ALL SELECT results FROM (SELECT m.title AS results FROM Movies m JOIN MovieRating mr ON m.movie_id = mr.movie_id WHERE strftime(\"%Y-%m\", mr.created_at) = \"2020-02\" GROUP BY m.movie_id, m.title ORDER BY AVG(mr.rating) DESC, m.title LIMIT 1);",
+        "timeoutMs": 8000,
+        "tests": [
+          {
+            "seed": "INSERT INTO Movies VALUES (1,\"Avengers\"),(2,\"Frozen 2\"),(3,\"Joker\");\nINSERT INTO Users VALUES (1,\"Daniel\"),(2,\"Monica\"),(3,\"Maria\"),(4,\"James\");\nINSERT INTO MovieRating VALUES (1,1,3,\"2020-03-01\"),(1,2,4,\"2020-03-01\"),(2,1,5,\"2020-03-01\"),(2,4,2,\"2020-03-01\"),(3,1,3,\"2020-03-01\"),(3,2,4,\"2020-03-01\"),(3,3,5,\"2020-03-01\"),(3,4,2,\"2020-03-01\"),(2,1,5,\"2020-02-05\"),(2,2,5,\"2020-02-06\"),(3,1,4,\"2020-02-01\");"
+          },
+          {
+            "seed": "INSERT INTO Movies VALUES (1,\"M\");\nINSERT INTO Users VALUES (1,\"U\");\nINSERT INTO MovieRating VALUES (1,1,5,\"2020-02-01\");"
+          },
+          {
+            "seed": "INSERT INTO Movies VALUES (1,\"A\"),(2,\"B\");\nINSERT INTO Users VALUES (1,\"U\"),(2,\"V\");\nINSERT INTO MovieRating VALUES (1,1,5,\"2020-02-01\"),(1,1,5,\"2020-02-02\"),(2,2,3,\"2020-02-01\"),(2,2,3,\"2020-02-02\");"
+          }
+        ],
+        "orderMatters": true,
+        "checkColumnNames": true
+      }
+    },
+    {
+      "type": "sqlite",
+      "title": "1321. Restaurant Growth",
+      "content": {
+        "description": "Скользящая сумма `amount` за **7** дней по `visited_on` (окно из 7 последовательных дней с данными). Колонки `visited_on`, `amount`, `average_amount` (округлить 2). Только даты, от которых есть 7 дней истории.\n\n[LeetCode 1321](https://leetcode.com/problems/restaurant-growth/)",
+        "setup": "CREATE TABLE Customer(customer_id INTEGER NOT NULL, name TEXT NOT NULL, visited_on TEXT NOT NULL, amount INTEGER NOT NULL);",
+        "starterCode": "SELECT visited_on, SUM(amount) FROM Customer GROUP BY visited_on;",
+        "referenceSolution": "WITH daily AS (SELECT visited_on, SUM(amount) AS amount FROM Customer GROUP BY visited_on)\nSELECT d1.visited_on, SUM(d2.amount) AS amount, ROUND(SUM(d2.amount) * 1.0 / 7, 2) AS average_amount FROM daily d1 JOIN daily d2 ON julianday(d2.visited_on) BETWEEN julianday(d1.visited_on) - 6 AND julianday(d1.visited_on) GROUP BY d1.visited_on HAVING COUNT(DISTINCT d2.visited_on) = 7 ORDER BY d1.visited_on;",
+        "timeoutMs": 8000,
+        "tests": [
+          {
+            "seed": "INSERT INTO Customer VALUES (1,\"Jade\",\"2019-01-01\",100),(2,\"Jeremy\",\"2019-01-02\",200),(3,\"Jasmine\",\"2019-01-03\",150),(1,\"Jade\",\"2019-01-04\",80),(2,\"Jeremy\",\"2019-01-05\",700),(3,\"Jasmine\",\"2019-01-06\",200),(1,\"Jade\",\"2019-01-07\",100),(2,\"Jeremy\",\"2019-01-08\",300);"
+          },
+          {
+            "seed": "INSERT INTO Customer VALUES (1,\"A\",\"2019-01-01\",10),(1,\"A\",\"2019-01-02\",20);"
+          },
+          {
+            "seed": "INSERT INTO Customer VALUES (1,\"A\",\"2019-01-01\",10),(1,\"A\",\"2019-01-02\",20),(1,\"A\",\"2019-01-03\",30),(1,\"A\",\"2019-01-04\",40),(1,\"A\",\"2019-01-05\",50),(1,\"A\",\"2019-01-06\",60),(1,\"A\",\"2019-01-07\",70);"
+          }
+        ],
+        "orderMatters": true,
+        "checkColumnNames": true,
+        "floatTolerance": 0.01
+      }
+    },
+    {
+      "type": "sqlite",
+      "title": "602. Friend Requests II: Who Has the Most Friends",
+      "content": {
+        "description": "Пользователь с **наибольшим** числом друзей (связь в `RequestAccepted` **неориентированная**). Колонка `friend` (id), `friend_count`.\n\n[LeetCode 602](https://leetcode.com/problems/friend-requests-ii-who-has-the-most-friends/)",
+        "setup": "CREATE TABLE RequestAccepted(requester_id INTEGER NOT NULL, accepter_id INTEGER NOT NULL, accept_date TEXT NOT NULL);",
+        "starterCode": "SELECT requester_id AS friend, COUNT(*) FROM RequestAccepted GROUP BY requester_id;",
+        "referenceSolution": "SELECT id AS friend, COUNT(*) AS friend_count FROM (SELECT requester_id AS id FROM RequestAccepted UNION ALL SELECT accepter_id FROM RequestAccepted) GROUP BY id ORDER BY friend_count DESC LIMIT 1;",
+        "timeoutMs": 8000,
+        "tests": [
+          {
+            "seed": "INSERT INTO RequestAccepted VALUES (1,2,\"2016-06-03\"),(1,3,\"2016-06-08\"),(2,3,\"2016-06-08\"),(3,4,\"2016-06-09\");"
+          },
+          {
+            "seed": "INSERT INTO RequestAccepted VALUES (1,2,\"2016-01-01\");"
+          },
+          {
+            "seed": "INSERT INTO RequestAccepted VALUES (1,2,\"2016-01-01\"),(1,3,\"2016-01-02\"),(3,4,\"2016-01-03\");"
+          }
+        ],
+        "orderMatters": false,
+        "checkColumnNames": true
+      }
+    },
+    {
+      "type": "sqlite",
+      "title": "585. Investments in 2016",
+      "content": {
+        "description": "Сумма `tiv_2016` полисов, у которых `tiv_2015` **совпадает хотя бы у двух** разных полисов, а пара `(lat, lon)` **уникальна** в таблице (встречается ровно один раз). Колонка `tiv_2016` (округлить 2).\n\n[LeetCode 585](https://leetcode.com/problems/investments-in-2016/)",
+        "setup": "CREATE TABLE Insurance(pid INTEGER PRIMARY KEY, tiv_2015 REAL NOT NULL, tiv_2016 REAL NOT NULL, lat REAL NOT NULL, lon REAL NOT NULL);",
+        "starterCode": "SELECT 0 AS tiv_2016;",
+        "referenceSolution": "SELECT ROUND(SUM(tiv_2016), 2) AS tiv_2016 FROM Insurance WHERE (lat, lon) IN (SELECT lat, lon FROM Insurance GROUP BY lat, lon HAVING COUNT(*) = 1) AND tiv_2015 IN (SELECT tiv_2015 FROM Insurance GROUP BY tiv_2015 HAVING COUNT(*) > 1);",
+        "timeoutMs": 8000,
+        "tests": [
+          {
+            "seed": "INSERT INTO Insurance VALUES (1,10,5,10,10),(2,10,20,20,20),(3,5,30,30,30);"
+          },
+          {
+            "seed": "INSERT INTO Insurance VALUES (1,1,1,0,0);"
+          },
+          {
+            "seed": "INSERT INTO Insurance VALUES (1,7,1,1,1),(2,7,2,2,2);"
+          }
+        ],
+        "orderMatters": false,
+        "checkColumnNames": true,
+        "floatTolerance": 0.01
+      }
+    },
+    {
+      "type": "sqlite",
+      "title": "185. Department Top Three Salaries",
+      "content": {
+        "description": "Сотрудники, входящие в **топ-3** оклада **в своём** отделе. Колонки: `Department`, `Employee`, `Salary`.\n\n[LeetCode 185](https://leetcode.com/problems/department-top-three-salaries/)",
+        "setup": "CREATE TABLE Employee(id INTEGER PRIMARY KEY, name TEXT NOT NULL, salary INTEGER NOT NULL, departmentId INTEGER NOT NULL);\nCREATE TABLE Department(id INTEGER PRIMARY KEY, name TEXT NOT NULL);",
+        "starterCode": "SELECT d.name AS Department, e.name AS Employee, e.salary AS Salary FROM Employee e JOIN Department d ON e.departmentId = d.id;",
+        "referenceSolution": "SELECT d.name AS Department, e.name AS Employee, e.salary AS Salary FROM Employee e JOIN Department d ON e.departmentId = d.id WHERE (SELECT COUNT(DISTINCT e2.salary) FROM Employee e2 WHERE e2.departmentId = e.departmentId AND e2.salary >= e.salary) <= 3 ORDER BY Department, Salary DESC;",
+        "timeoutMs": 8000,
+        "tests": [
+          {
+            "seed": "INSERT INTO Employee VALUES (1,\"Joe\",85000,1),(2,\"Henry\",80000,2),(3,\"Sam\",60000,2),(4,\"Max\",90000,1),(5,\"Janet\",69000,1),(6,\"Randy\",85000,1),(7,\"Will\",70000,1);\nINSERT INTO Department VALUES (1,\"IT\"),(2,\"Sales\");"
+          },
+          {
+            "seed": "INSERT INTO Employee VALUES (1,\"Low\",1000,1);\nINSERT INTO Department VALUES (1,\"D\");"
+          },
+          {
+            "seed": "INSERT INTO Employee VALUES (1,\"A\",90000,1),(2,\"B\",80000,1),(3,\"C\",70000,1),(4,\"D\",60000,1);\nINSERT INTO Department VALUES (1,\"IT\");"
+          }
+        ],
+        "orderMatters": false,
+        "checkColumnNames": true
+      }
+    },
+    {
+      "type": "quiz",
+      "title": "Итоговый тест модуля",
+      "content": {
+        "question": "Почему `NOT IN (SELECT …)` может дать неожиданный результат?",
+        "options": [
+          "Если подзапрос вернул NULL среди значений",
+          "SQLite не поддерживает NOT IN",
+          "Только с LEFT JOIN",
+          "Из-за ORDER BY"
+        ],
+        "correctIndices": [
+          0
+        ]
+      }
+    }
+  ]
+}

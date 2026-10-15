@@ -1,0 +1,204 @@
+{
+  "schemaVersion": 1,
+  "title": "Advanced String / Regex / Clause",
+  "steps": [
+    {
+      "type": "theory",
+      "title": "Строки, REGEXP, DML",
+      "content": "## Строки\n\n`SUBSTR`, `||`, `LOWER`/`UPPER`. **`REGEXP`** — JS RegExp. DML с **`checkQuery`**: проверяется состояние таблиц."
+    },
+    {
+      "type": "svg",
+      "title": "Схема: Advanced String / Regex / Clause",
+      "content": {
+        "caption": "DELETE/UPDATE проверяются через checkQuery",
+        "description": "Результат DELETE без SELECT сравнивается по checkQuery.",
+        "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 280 80\" width=\"100%\" role=\"img\" aria-label=\"Advanced String / Regex / Clause\"><rect id=\"lsq07-box\" x=\"40\" y=\"15\" width=\"200\" height=\"50\" rx=\"4\" fill=\"#e3f2fd\" stroke=\"#1565c0\"/><text x=\"140\" y=\"45\" text-anchor=\"middle\" font-size=\"12\" fill=\"#0d47a1\">Advanced String / Regex / Clause</text></svg>"
+      }
+    },
+    {
+      "type": "sqlite",
+      "title": "1667. Fix Names in a Table",
+      "content": {
+        "description": "Имена: первая буква заглавная, остальные строчные. Колонки `user_id`, `name`. Сортировка по `user_id`.\n\n[LeetCode 1667](https://leetcode.com/problems/fix-names-in-a-table/)",
+        "setup": "CREATE TABLE Users(user_id INTEGER PRIMARY KEY, name TEXT NOT NULL);",
+        "starterCode": "SELECT user_id, name FROM Users;",
+        "referenceSolution": "SELECT user_id, UPPER(SUBSTR(name, 1, 1)) || LOWER(SUBSTR(name, 2)) AS name FROM Users ORDER BY user_id;",
+        "timeoutMs": 8000,
+        "tests": [
+          {
+            "seed": "INSERT INTO Users VALUES (1,'aLice'),(2,'bOB');"
+          },
+          {
+            "seed": "INSERT INTO Users VALUES (1,'a');"
+          },
+          {
+            "seed": "INSERT INTO Users VALUES (3,'mc');"
+          }
+        ],
+        "orderMatters": true,
+        "checkColumnNames": true
+      }
+    },
+    {
+      "type": "sqlite",
+      "title": "1527. Patients With a Condition",
+      "content": {
+        "description": "Пациенты с кодом, **начинающимся** с `DIAB1` (коды через пробел). Колонки `patient_id`, `patient_name`, `conditions`.\n\n[LeetCode 1527](https://leetcode.com/problems/patients-with-a-condition/)",
+        "setup": "CREATE TABLE Patients(patient_id INTEGER PRIMARY KEY, patient_name TEXT NOT NULL, conditions TEXT NOT NULL);",
+        "starterCode": "SELECT patient_id, patient_name, conditions FROM Patients WHERE conditions LIKE '%DIAB1%';",
+        "referenceSolution": "SELECT patient_id, patient_name, conditions FROM Patients WHERE conditions REGEXP '(^| )DIAB1';",
+        "timeoutMs": 8000,
+        "tests": [
+          {
+            "seed": "INSERT INTO Patients VALUES (1,'Daniel','YFEV COUGH'),(2,'Alice',''),(3,'Bob','DIAB100 MYOP'),(4,'George','ACNE DIAB100'),(5,'Alain','DIAB201'),(6,'Zed','SADIAB100');"
+          },
+          {
+            "seed": "INSERT INTO Patients VALUES (9,'X','HEADACHE');"
+          },
+          {
+            "seed": "INSERT INTO Patients VALUES (1,'Y','DIAB1'),(2,'Z','');"
+          }
+        ],
+        "orderMatters": false,
+        "checkColumnNames": true
+      }
+    },
+    {
+      "type": "sqlite",
+      "title": "196. Delete Duplicate Emails",
+      "content": {
+        "description": "Удалите дубликаты `email`, оставив строку с **минимальным** `id`.\n\n[LeetCode 196](https://leetcode.com/problems/delete-duplicate-emails/)",
+        "setup": "CREATE TABLE Person(id INTEGER PRIMARY KEY, email TEXT NOT NULL);",
+        "starterCode": "SELECT * FROM Person;",
+        "referenceSolution": "DELETE FROM Person WHERE id NOT IN (SELECT MIN(id) FROM Person GROUP BY email);",
+        "timeoutMs": 8000,
+        "tests": [
+          {
+            "seed": "INSERT INTO Person VALUES (1,'john@example.com'),(2,'bob@example.com'),(3,'john@example.com');"
+          },
+          {
+            "seed": "INSERT INTO Person VALUES (1,'a@b.c');"
+          },
+          {
+            "seed": "INSERT INTO Person VALUES (1,'a@x.com'),(2,'a@x.com'),(3,'b@y.com');"
+          }
+        ],
+        "orderMatters": true,
+        "checkQuery": "SELECT id, email FROM Person ORDER BY id;"
+      }
+    },
+    {
+      "type": "sqlite",
+      "title": "176. Second Highest Salary",
+      "content": {
+        "description": "Второй по величине **уникальный** оклад как `SecondHighestSalary`; если нет — одна строка `NULL`.\n\n[LeetCode 176](https://leetcode.com/problems/second-highest-salary/)",
+        "setup": "CREATE TABLE Employee(id INTEGER PRIMARY KEY, salary INTEGER NOT NULL);",
+        "starterCode": "SELECT salary AS SecondHighestSalary FROM Employee ORDER BY salary DESC LIMIT 1 OFFSET 1;",
+        "referenceSolution": "SELECT (SELECT DISTINCT salary FROM Employee ORDER BY salary DESC LIMIT 1 OFFSET 1) AS SecondHighestSalary;",
+        "timeoutMs": 8000,
+        "tests": [
+          {
+            "seed": "INSERT INTO Employee VALUES (1,100),(2,200),(3,300);"
+          },
+          {
+            "seed": "INSERT INTO Employee VALUES (1,100);"
+          },
+          {
+            "seed": "INSERT INTO Employee VALUES (1,100),(2,100);"
+          }
+        ],
+        "orderMatters": false,
+        "checkColumnNames": true
+      }
+    },
+    {
+      "type": "sqlite",
+      "title": "1484. Group Sold Products By The Date",
+      "content": {
+        "description": "По каждой `sell_date` — строка `sold_num` (число **разных** товаров) и `sold_products` (имена через запятую **по алфавиту**).\n\n[LeetCode 1484](https://leetcode.com/problems/group-sold-products-by-the-date/)",
+        "setup": "CREATE TABLE Activities(sell_date TEXT NOT NULL, product TEXT NOT NULL);",
+        "starterCode": "SELECT sell_date, product FROM Activities;",
+        "referenceSolution": "SELECT sell_date, COUNT(DISTINCT product) AS sold_num, GROUP_CONCAT(DISTINCT product) AS sold_products FROM Activities GROUP BY sell_date ORDER BY sell_date;",
+        "timeoutMs": 8000,
+        "tests": [
+          {
+            "seed": "INSERT INTO Activities VALUES ('2020-05-30','Headphone'),('2020-05-30','Notebook'),('2020-05-30','Mouse'),('2020-05-31','Notebook'),('2020-05-31','Mouse');"
+          },
+          {
+            "seed": "INSERT INTO Activities VALUES ('2020-06-01','Solo');"
+          },
+          {
+            "seed": "INSERT INTO Activities VALUES ('2020-05-30','B'),('2020-05-30','A');"
+          }
+        ],
+        "orderMatters": true,
+        "checkColumnNames": true
+      }
+    },
+    {
+      "type": "sqlite",
+      "title": "1327. List the Products Ordered in a Period",
+      "content": {
+        "description": "Товары с **≥ 100** единиц, заказанных в период «2020-02-01»–«2020-02-28». Колонка `product` (имя), без дубликатов.\n\n[LeetCode 1327](https://leetcode.com/problems/list-the-products-ordered-in-a-period/)",
+        "setup": "CREATE TABLE Products(product_id INTEGER PRIMARY KEY, product_name TEXT NOT NULL, product_category TEXT);\nCREATE TABLE Orders(product_id INTEGER NOT NULL, order_date TEXT NOT NULL, unit INTEGER NOT NULL);",
+        "starterCode": "SELECT product_name AS product FROM Products;",
+        "referenceSolution": "SELECT DISTINCT p.product_name AS product FROM Orders o JOIN Products p ON o.product_id = p.product_id WHERE o.order_date BETWEEN \"2020-02-01\" AND \"2020-02-28\" GROUP BY p.product_id, p.product_name HAVING SUM(o.unit) >= 100;",
+        "timeoutMs": 8000,
+        "tests": [
+          {
+            "seed": "INSERT INTO Products VALUES (1,\"Leetcode Solutions\",NULL),(2,\"Jewels of Stringology\",NULL),(3,\"HP\",NULL),(4,\"Handbook\",NULL);\nINSERT INTO Orders VALUES (1,\"2020-02-05\",60),(1,\"2020-02-10\",70),(2,\"2020-01-18\",30),(2,\"2020-02-11\",80),(3,\"2020-02-17\",2),(3,\"2020-02-24\",3),(4,\"2020-03-01\",20);"
+          },
+          {
+            "seed": "INSERT INTO Products VALUES (9,\"Tiny\",NULL);\nINSERT INTO Orders VALUES (9,\"2020-02-10\",50);"
+          },
+          {
+            "seed": "INSERT INTO Products VALUES (1,\"Big\",NULL);\nINSERT INTO Orders VALUES (1,\"2020-02-01\",100);"
+          }
+        ],
+        "orderMatters": false,
+        "checkColumnNames": true
+      }
+    },
+    {
+      "type": "sqlite",
+      "title": "1517. Find Users With Valid E-Mails",
+      "content": {
+        "description": "Валидный email: имя из букв/цифр/`_`, `@`, домен из букв/цифр, `.`, `com|net|org`. Колонки `user_id`, `name`, `mail`.\n\n[LeetCode 1517](https://leetcode.com/problems/find-users-with-valid-e-mails/)",
+        "setup": "CREATE TABLE Users(user_id INTEGER PRIMARY KEY, name TEXT NOT NULL, mail TEXT NOT NULL);",
+        "starterCode": "SELECT user_id, name, mail FROM Users WHERE mail LIKE \"%@%.%\";",
+        "referenceSolution": "SELECT user_id, name, mail FROM Users WHERE mail REGEXP '^[A-Za-z0-9_]+@[A-Za-z0-9]+\\.(com|net|org)$';",
+        "timeoutMs": 8000,
+        "tests": [
+          {
+            "seed": "INSERT INTO Users VALUES (1,'Winston','winston@leetcode.com'),(2,'Jonathan','jonathan@example.com'),(3,'Annabelle','annabelle@example.com'),(4,'Sally','sally@example.com'),(5,'Marwan','marwan@example.com'),(6,'David','david@example.com'),(7,'Bad','m@bad.co');"
+          },
+          {
+            "seed": "INSERT INTO Users VALUES (8,'X','bad@domain');"
+          },
+          {
+            "seed": "INSERT INTO Users VALUES (9,'Y','a@b.com');"
+          }
+        ],
+        "orderMatters": false,
+        "checkColumnNames": true
+      }
+    },
+    {
+      "type": "quiz",
+      "title": "Итоговый тест модуля",
+      "content": {
+        "question": "Как проверяется задача DELETE в этом приложении?",
+        "options": [
+          "По числу затронутых строк DELETE",
+          "По результату checkQuery SELECT",
+          "Только по сообщению OK",
+          "По последнему SELECT ученика"
+        ],
+        "correctIndices": [
+          1
+        ]
+      }
+    }
+  ]
+}

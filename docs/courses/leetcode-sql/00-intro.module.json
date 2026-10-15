@@ -1,0 +1,57 @@
+{
+  "schemaVersion": 1,
+  "title": "Введение: SQLite и LeetCode SQL 50",
+  "steps": [
+    {
+      "type": "theory",
+      "title": "Диалект SQLite и проверка",
+      "content": "## Курс LeetCode SQL 50\n\nЗадачи с [LeetCode Study Plan SQL 50](https://leetcode.com/studyplan/top-sql-50/) адаптированы под **SQLite 3** (sql.js в браузере).\n\n### Даты и время\n\n| MySQL | SQLite |\n|-------|--------|\n| `DATE_FORMAT(d, '%Y-%m')` | `strftime('%Y-%m', d)` |\n| `DATEDIFF(a, b)` | `julianday(a) - julianday(b)` |\n| `DATE_ADD(d, INTERVAL 1 DAY)` | `DATE(d, '+1 day')` |\n\n### Строки и regex\n\n- `CONCAT(a, b)` → `a || b` или `printf('%s%s', a, b)`\n- Оператор **`REGEXP`** в приложении — семантика **JavaScript** `RegExp` (регистрозависимый).\n\n### Проверка\n\n- Сравнивается **последний** result set с колонками.\n- **`checkColumnNames: true`** — имена столбцов как на LeetCode.\n- **`orderMatters: true`** — порядок строк важен.\n- **`checkQuery`** — для UPDATE/DELETE проверяется состояние таблиц после запроса.\n- Задачи «функция» (Nth Salary): параметр в таблице **`params`** через `seed`.\n\n### Ссылки\n\nВ каждой задаче — номер LeetCode и ссылка на оригинал."
+    },
+    {
+      "type": "svg",
+      "title": "Схема: один кейс — новая БД",
+      "content": {
+        "caption": "На каждый тест: **setup → seed → ваш SQL**",
+        "description": "Temp-таблицы ученика не переносятся в следующий кейс.",
+        "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 300 70\" width=\"100%\" role=\"img\" aria-label=\"Порядок проверки SQL\"><rect id=\"lsq00-a\" x=\"10\" y=\"20\" width=\"70\" height=\"30\" rx=\"3\" fill=\"#fff9c4\" stroke=\"#f9a825\"/><text x=\"45\" y=\"38\" text-anchor=\"middle\" font-size=\"8\">setup</text><text x=\"115\" y=\"38\" font-size=\"14\">→</text><rect id=\"lsq00-b\" x=\"130\" y=\"20\" width=\"70\" height=\"30\" rx=\"3\" fill=\"#e8f5e9\" stroke=\"#2e7d32\"/><text x=\"165\" y=\"38\" text-anchor=\"middle\" font-size=\"8\">seed</text><text x=\"235\" y=\"38\" font-size=\"14\">→</text><rect id=\"lsq00-c\" x=\"250\" y=\"20\" width=\"40\" height=\"30\" rx=\"3\" fill=\"#e3f2fd\" stroke=\"#1565c0\"/><text x=\"270\" y=\"38\" text-anchor=\"middle\" font-size=\"8\">SQL</text></svg>"
+      }
+    },
+    {
+      "type": "sqlite",
+      "title": "Разминка: SELECT 1",
+      "content": {
+        "description": "Верните одну строку с колонкой **`answer`** и значением `1`.",
+        "setup": "CREATE TABLE warmup(id INTEGER);",
+        "starterCode": "SELECT 0 AS answer;",
+        "referenceSolution": "SELECT 1 AS answer;",
+        "orderMatters": false,
+        "checkColumnNames": true,
+        "timeoutMs": 5000,
+        "tests": [
+          {
+            "seed": ""
+          },
+          {
+            "seed": "INSERT INTO warmup VALUES (1);"
+          }
+        ]
+      }
+    },
+    {
+      "type": "quiz",
+      "title": "Итоговый тест модуля",
+      "content": {
+        "question": "Как в SQLite получить разницу в днях между датами `a` и `b`?",
+        "options": [
+          "`DATEDIFF(a, b)`",
+          "`julianday(a) - julianday(b)`",
+          "`DATE_DIFF(a, b)`",
+          "`TIMESTAMPDIFF(DAY, b, a)`"
+        ],
+        "correctIndices": [
+          1
+        ]
+      }
+    }
+  ]
+}

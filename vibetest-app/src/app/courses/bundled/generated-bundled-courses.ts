@@ -29,6 +29,11 @@ export const BUNDLED_COURSES: readonly BundledCourseEntry[] = [
     "title": "JavaScript для C#-разработчика"
   },
   {
+    "courseId": "f6561e05-963c-4aa6-97d5-ed8e93037a67",
+    "file": "leetcode-sql.json",
+    "title": "LeetCode SQL"
+  },
+  {
     "courseId": "31524c07-1452-4f54-8d92-11b0ebc98279",
     "file": "ozon-csharp-livecoding.json",
     "title": "Лайвкодинг в Ozon на C#"

@@ -1,0 +1,204 @@
+{
+  "schemaVersion": 1,
+  "title": "Sorting and Grouping",
+  "steps": [
+    {
+      "type": "theory",
+      "title": "GROUP BY, HAVING, ORDER BY",
+      "content": "## Группировка\n\n`HAVING` фильтрует **группы**. `ORDER BY` после `GROUP BY`. Для «ровно один раз» — `HAVING COUNT(*) = 1`."
+    },
+    {
+      "type": "svg",
+      "title": "Схема: Sorting and Grouping",
+      "content": {
+        "caption": "HAVING — WHERE для групп",
+        "description": "Сначала GROUP BY, затем HAVING и ORDER BY.",
+        "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 280 80\" width=\"100%\" role=\"img\" aria-label=\"Sorting and Grouping\"><rect id=\"lsq04-box\" x=\"40\" y=\"15\" width=\"200\" height=\"50\" rx=\"4\" fill=\"#e3f2fd\" stroke=\"#1565c0\"/><text x=\"140\" y=\"45\" text-anchor=\"middle\" font-size=\"12\" fill=\"#0d47a1\">Sorting and Grouping</text></svg>"
+      }
+    },
+    {
+      "type": "sqlite",
+      "title": "2356. Number of Unique Subjects Taught by Each Teacher",
+      "content": {
+        "description": "Для каждого `teacher_id` — число **разных** `subject` (`count`); без предметов — не выводить.\n\n[LeetCode 2356](https://leetcode.com/problems/number-of-unique-subjects-taught-by-each-teacher/)",
+        "setup": "CREATE TABLE Teacher(teacher_id INTEGER NOT NULL, subject TEXT NOT NULL, dept TEXT NOT NULL);",
+        "starterCode": "SELECT teacher_id, COUNT(subject) AS count FROM Teacher GROUP BY teacher_id;",
+        "referenceSolution": "SELECT teacher_id, COUNT(DISTINCT subject) AS count FROM Teacher GROUP BY teacher_id;",
+        "timeoutMs": 8000,
+        "tests": [
+          {
+            "seed": "INSERT INTO Teacher VALUES (1,\"Math\",\"A\"),(1,\"Physics\",\"A\"),(1,\"Math\",\"A\"),(2,\"Programming\",\"B\"),(2,\"Math\",\"B\");"
+          },
+          {
+            "seed": "INSERT INTO Teacher VALUES (1,\"X\",\"A\");"
+          },
+          {
+            "seed": "INSERT INTO Teacher VALUES (9,\"Art\",\"Z\"),(9,\"Art\",\"Z\");"
+          }
+        ],
+        "orderMatters": false,
+        "checkColumnNames": true
+      }
+    },
+    {
+      "type": "sqlite",
+      "title": "1141. User Activity for the Past 30 Days I",
+      "content": {
+        "description": "По каждой дате `activity_day`: число **уникальных** `user_id` с активностью. Только даты в пределах 30 дней до «2019-07-27» (включительно).\n\n[LeetCode 1141](https://leetcode.com/problems/user-activity-for-the-past-30-days-i/)",
+        "setup": "CREATE TABLE Activity(user_id INTEGER NOT NULL, session_id INTEGER NOT NULL, activity_date TEXT NOT NULL, activity_type TEXT NOT NULL);",
+        "starterCode": "SELECT activity_date AS day, COUNT(user_id) AS active_users FROM Activity GROUP BY activity_date;",
+        "referenceSolution": "SELECT activity_date AS day, COUNT(DISTINCT user_id) AS active_users FROM Activity WHERE activity_date BETWEEN DATE(\"2019-07-27\", \"-29 days\") AND \"2019-07-27\" GROUP BY activity_date ORDER BY day;",
+        "timeoutMs": 8000,
+        "tests": [
+          {
+            "seed": "INSERT INTO Activity VALUES (1,1,\"2019-07-20\",\"open\"),(1,1,\"2019-07-20\",\"click\"),(2,1,\"2019-07-20\",\"open\"),(3,1,\"2019-07-20\",\"open\"),(4,1,\"2019-07-20\",\"open\"),(1,1,\"2019-07-21\",\"open\"),(2,1,\"2019-07-21\",\"open\"),(3,1,\"2019-07-21\",\"open\"),(1,1,\"2019-07-21\",\"click\"),(3,1,\"2019-07-21\",\"click\"),(1,1,\"2019-07-22\",\"open\"),(2,1,\"2019-07-22\",\"open\"),(5,1,\"2019-07-22\",\"open\"),(3,1,\"2019-07-23\",\"open\"),(3,1,\"2019-07-23\",\"click\"),(1,1,\"2019-07-24\",\"open\"),(2,1,\"2019-07-24\",\"open\"),(3,1,\"2019-07-24\",\"open\"),(3,1,\"2019-07-24\",\"click\"),(1,1,\"2019-07-25\",\"open\"),(2,1,\"2019-07-25\",\"open\"),(1,1,\"2019-07-26\",\"open\"),(2,1,\"2019-07-26\",\"open\"),(3,1,\"2019-07-26\",\"open\"),(1,1,\"2019-07-27\",\"open\"),(3,1,\"2019-07-27\",\"open\"),(1,1,\"2019-07-28\",\"open\"),(2,1,\"2019-07-28\",\"open\"),(3,1,\"2019-07-28\",\"open\");"
+          },
+          {
+            "seed": "INSERT INTO Activity VALUES (1,1,\"2019-06-01\",1);"
+          },
+          {
+            "seed": "INSERT INTO Activity VALUES (1,1,\"2019-07-27\",1),(2,1,\"2019-07-27\",1);"
+          }
+        ],
+        "orderMatters": true,
+        "checkColumnNames": true
+      }
+    },
+    {
+      "type": "sqlite",
+      "title": "1070. Product Sales Analysis III",
+      "content": {
+        "description": "Первый и последний год продаж каждого `product_id` (`first_year`, `last_year`) — только товары, продававшиеся **≥ 2 разных** года.\n\n[LeetCode 1070](https://leetcode.com/problems/product-sales-analysis-iii/)",
+        "setup": "CREATE TABLE Sales(sale_id INTEGER PRIMARY KEY, product_id INTEGER NOT NULL, year INTEGER NOT NULL);",
+        "starterCode": "SELECT product_id, MIN(year), MAX(year) FROM Sales GROUP BY product_id;",
+        "referenceSolution": "SELECT product_id, MIN(year) AS first_year, MAX(year) AS last_year FROM Sales GROUP BY product_id HAVING COUNT(DISTINCT year) >= 2;",
+        "timeoutMs": 8000,
+        "tests": [
+          {
+            "seed": "INSERT INTO Sales VALUES (1,100,2008),(2,100,2009),(7,200,2008),(8,200,2009),(9,200,2010);"
+          },
+          {
+            "seed": "INSERT INTO Sales VALUES (1,1,2020);"
+          },
+          {
+            "seed": "INSERT INTO Sales VALUES (1,1,2020),(2,1,2020);"
+          }
+        ],
+        "orderMatters": false,
+        "checkColumnNames": true
+      }
+    },
+    {
+      "type": "sqlite",
+      "title": "596. Classes More Than 5 Students",
+      "content": {
+        "description": "Классы (`class`), в которых **≥ 5** **разных** студентов (`student`).\n\n[LeetCode 596](https://leetcode.com/problems/classes-more-than-5-students/)",
+        "setup": "CREATE TABLE Courses(student TEXT NOT NULL, class TEXT NOT NULL);",
+        "starterCode": "SELECT class FROM Courses LIMIT 1;",
+        "referenceSolution": "SELECT class FROM Courses GROUP BY class HAVING COUNT(DISTINCT student) >= 5;",
+        "timeoutMs": 8000,
+        "tests": [
+          {
+            "seed": "INSERT INTO Courses VALUES (\"A\",\"Math\"),(\"B\",\"English\"),(\"C\",\"Math\"),(\"D\",\"Biology\"),(\"E\",\"Math\"),(\"F\",\"Math\"),(\"G\",\"Math\"),(\"H\",\"Math\"),(\"I\",\"Math\");"
+          },
+          {
+            "seed": "INSERT INTO Courses VALUES (\"A\",\"X\"),(\"B\",\"X\"),(\"C\",\"X\"),(\"D\",\"X\");"
+          },
+          {
+            "seed": "INSERT INTO Courses VALUES (\"P1\",\"Z\"),(\"P2\",\"Z\"),(\"P3\",\"Z\"),(\"P4\",\"Z\");"
+          }
+        ],
+        "orderMatters": false,
+        "checkColumnNames": true
+      }
+    },
+    {
+      "type": "sqlite",
+      "title": "1729. Find Followers Count",
+      "content": {
+        "description": "Для каждого `user_id` — `followers_count` (число подписчиков). Сортировка: `user_id` по возрастанию.\n\n[LeetCode 1729](https://leetcode.com/problems/find-followers-count/)",
+        "setup": "CREATE TABLE Followers(user_id INTEGER NOT NULL, follower_id INTEGER NOT NULL);",
+        "starterCode": "SELECT user_id, COUNT(follower_id) AS followers_count FROM Followers GROUP BY user_id ORDER BY user_id DESC;",
+        "referenceSolution": "SELECT user_id, COUNT(follower_id) AS followers_count FROM Followers GROUP BY user_id ORDER BY user_id;",
+        "timeoutMs": 8000,
+        "tests": [
+          {
+            "seed": "INSERT INTO Followers VALUES (0,1),(0,2),(1,0),(1,3),(2,2),(2,3);"
+          },
+          {
+            "seed": "INSERT INTO Followers VALUES (1,2);"
+          },
+          {
+            "seed": "INSERT INTO Followers VALUES (0,1),(0,2),(1,0);"
+          }
+        ],
+        "orderMatters": true,
+        "checkColumnNames": true
+      }
+    },
+    {
+      "type": "sqlite",
+      "title": "619. Biggest Single Number",
+      "content": {
+        "description": "Число, которое встречается **ровно один раз** и больше всех таких; если нет — `NULL` (колонка `num`).\n\n[LeetCode 619](https://leetcode.com/problems/biggest-single-number/)",
+        "setup": "CREATE TABLE MyNumbers(num INTEGER NOT NULL);",
+        "starterCode": "SELECT MAX(num) AS num FROM MyNumbers;",
+        "referenceSolution": "SELECT MAX(num) AS num FROM (SELECT num FROM MyNumbers GROUP BY num HAVING COUNT(*) = 1);",
+        "timeoutMs": 8000,
+        "tests": [
+          {
+            "seed": "INSERT INTO MyNumbers VALUES (8),(8),(3),(3),(1),(4),(5),(6);"
+          },
+          {
+            "seed": "INSERT INTO MyNumbers VALUES (1),(1);"
+          },
+          {
+            "seed": "INSERT INTO MyNumbers VALUES (5);"
+          }
+        ],
+        "orderMatters": false,
+        "checkColumnNames": true
+      }
+    },
+    {
+      "type": "sqlite",
+      "title": "1045. Customers Who Bought All Products",
+      "content": {
+        "description": "Клиенты, купившие **все** продукты из каталога `Product`. Колонка `customer_id`.\n\n[LeetCode 1045](https://leetcode.com/problems/customers-who-bought-all-products/)",
+        "setup": "CREATE TABLE Customer(customer_id INTEGER NOT NULL, product_key INTEGER NOT NULL);\nCREATE TABLE Product(product_key INTEGER PRIMARY KEY);",
+        "starterCode": "SELECT DISTINCT customer_id FROM Customer;",
+        "referenceSolution": "SELECT customer_id FROM Customer GROUP BY customer_id HAVING COUNT(DISTINCT product_key) = (SELECT COUNT(*) FROM Product);",
+        "timeoutMs": 8000,
+        "tests": [
+          {
+            "seed": "INSERT INTO Customer VALUES (1,5),(2,6),(3,5),(3,6),(1,6);\nINSERT INTO Product VALUES (5),(6);"
+          },
+          {
+            "seed": "INSERT INTO Product VALUES (1);\nINSERT INTO Customer VALUES (1,1);"
+          },
+          {
+            "seed": "INSERT INTO Product VALUES (1),(2);\nINSERT INTO Customer VALUES (1,1);"
+          }
+        ],
+        "orderMatters": false,
+        "checkColumnNames": true
+      }
+    },
+    {
+      "type": "quiz",
+      "title": "Итоговый тест модуля",
+      "content": {
+        "question": "Как отобрать классы с ≥ 5 разными студентами?",
+        "options": [
+          "WHERE COUNT(DISTINCT student) >= 5",
+          "HAVING COUNT(DISTINCT student) >= 5",
+          "ORDER BY COUNT(student)",
+          "DISTINCT class"
+        ],
+        "correctIndices": [
+          1
+        ]
+      }
+    }
+  ]
+}

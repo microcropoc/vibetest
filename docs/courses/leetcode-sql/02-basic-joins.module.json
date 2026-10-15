@@ -1,0 +1,257 @@
+{
+  "schemaVersion": 1,
+  "title": "Basic Joins",
+  "steps": [
+    {
+      "type": "theory",
+      "title": "JOIN и NULL в связях",
+      "content": "## JOIN\n\n- **`INNER JOIN`** — только совпадения.\n- **`LEFT JOIN`** — все строки слева; нет пары → NULL справа.\n- Сравнение дат: `DATE(col, \"+1 day\")` в SQLite."
+    },
+    {
+      "type": "svg",
+      "title": "Схема: Basic Joins",
+      "content": {
+        "caption": "LEFT JOIN сохраняет левую таблицу",
+        "description": "Для «никогда не …» часто LEFT JOIN + `IS NULL`.",
+        "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 280 80\" width=\"100%\" role=\"img\" aria-label=\"Basic Joins\"><rect id=\"lsq02-box\" x=\"40\" y=\"15\" width=\"200\" height=\"50\" rx=\"4\" fill=\"#e3f2fd\" stroke=\"#1565c0\"/><text x=\"140\" y=\"45\" text-anchor=\"middle\" font-size=\"12\" fill=\"#0d47a1\">Basic Joins</text></svg>"
+      }
+    },
+    {
+      "type": "sqlite",
+      "title": "1378. Replace Employee ID With The Unique Identifier",
+      "content": {
+        "description": "Свяжите `Employees` и `EmployeeUNI` по `id`. Верните `unique_id` и `name`; если unique_id нет — NULL.\n\n[LeetCode 1378](https://leetcode.com/problems/replace-employee-id-with-the-unique-identifier/)",
+        "setup": "CREATE TABLE Employees(id INTEGER PRIMARY KEY, name TEXT NOT NULL);\nCREATE TABLE EmployeeUNI(id INTEGER PRIMARY KEY, unique_id INTEGER NOT NULL);",
+        "starterCode": "SELECT e.id AS unique_id, e.name FROM Employees e INNER JOIN EmployeeUNI u ON e.id = u.id;",
+        "referenceSolution": "SELECT u.unique_id, e.name FROM Employees e LEFT JOIN EmployeeUNI u ON e.id = u.id;",
+        "timeoutMs": 8000,
+        "tests": [
+          {
+            "seed": "INSERT INTO Employees VALUES (1,'Alice'),(7,'Bob'),(11,'Meir'),(90,'Winston'),(3,'Jonathan');\nINSERT INTO EmployeeUNI VALUES (3,1),(11,2),(90,3);"
+          },
+          {
+            "seed": "INSERT INTO Employees VALUES (1,'A');"
+          },
+          {
+            "seed": "INSERT INTO Employees VALUES (1,'A');\nINSERT INTO EmployeeUNI VALUES (1,10);"
+          }
+        ],
+        "orderMatters": false,
+        "checkColumnNames": true
+      }
+    },
+    {
+      "type": "sqlite",
+      "title": "1581. Customer Who Never Order",
+      "content": {
+        "description": "Клиенты, которые **ни разу** не делали заказ. Колонка результата: `Customers` (имя).\n\n[LeetCode 1581](https://leetcode.com/problems/customer-who-never-order/)",
+        "setup": "CREATE TABLE Customers(id INTEGER PRIMARY KEY, name TEXT NOT NULL);\nCREATE TABLE Orders(id INTEGER PRIMARY KEY, customerId INTEGER NOT NULL);",
+        "starterCode": "SELECT name AS Customers FROM Customers;",
+        "referenceSolution": "SELECT c.name AS Customers FROM Customers c LEFT JOIN Orders o ON c.id = o.customerId WHERE o.customerId IS NULL;",
+        "timeoutMs": 8000,
+        "tests": [
+          {
+            "seed": "INSERT INTO Customers VALUES (1,'Joe'),(2,'Henry'),(3,'Sam'),(4,'Max');\nINSERT INTO Orders VALUES (1,3),(2,1);"
+          },
+          {
+            "seed": "INSERT INTO Customers VALUES (1,'A');"
+          },
+          {
+            "seed": "INSERT INTO Customers VALUES (1,'A');\nINSERT INTO Orders VALUES (1,1);"
+          }
+        ],
+        "orderMatters": false,
+        "checkColumnNames": true
+      }
+    },
+    {
+      "type": "sqlite",
+      "title": "1068. Product Sales Analysis I",
+      "content": {
+        "description": "Для каждой продажи: `product_name`, `year`, `price` (название из `Product`, год и цена из `Sales`).\n\n[LeetCode 1068](https://leetcode.com/problems/product-sales-analysis-i/)",
+        "setup": "CREATE TABLE Sales(sale_id INTEGER PRIMARY KEY, product_id INTEGER NOT NULL, year INTEGER NOT NULL, quantity INTEGER NOT NULL, price INTEGER NOT NULL);\nCREATE TABLE Product(product_id INTEGER PRIMARY KEY, product_name TEXT NOT NULL);",
+        "starterCode": "SELECT product_id, year, price FROM Sales;",
+        "referenceSolution": "SELECT p.product_name, s.year, s.price FROM Sales s JOIN Product p ON s.product_id = p.product_id;",
+        "timeoutMs": 8000,
+        "tests": [
+          {
+            "seed": "INSERT INTO Sales VALUES (1,100,2008,10,5000),(2,100,2009,12,5000);\nINSERT INTO Product VALUES (100,'Nokia');"
+          },
+          {
+            "seed": "INSERT INTO Sales VALUES (1,1,2020,1,10);\nINSERT INTO Product VALUES (1,'A'),(2,'B');"
+          },
+          {
+            "seed": "INSERT INTO Product VALUES (1,'Solo');"
+          },
+          {
+            "seed": "INSERT INTO Sales VALUES (1,1,2020,1,9),(2,1,2021,1,10);\nINSERT INTO Product VALUES (1,'A'),(2,'B');"
+          }
+        ],
+        "orderMatters": false,
+        "checkColumnNames": true
+      }
+    },
+    {
+      "type": "sqlite",
+      "title": "1075. Project Employees I",
+      "content": {
+        "description": "Средний `experience_years` по каждому `project_id`, округлённый до **2** знаков, колонка `average_years`.\n\n[LeetCode 1075](https://leetcode.com/problems/project-employees-i/)",
+        "setup": "CREATE TABLE Project(project_id INTEGER NOT NULL, employee_id INTEGER NOT NULL, PRIMARY KEY(project_id, employee_id));\nCREATE TABLE Employee(employee_id INTEGER PRIMARY KEY, name TEXT NOT NULL, experience_years INTEGER NOT NULL);",
+        "starterCode": "SELECT project_id, AVG(experience_years) AS average_years FROM Employee GROUP BY project_id;",
+        "referenceSolution": "SELECT p.project_id, ROUND(AVG(e.experience_years), 2) AS average_years FROM Project p JOIN Employee e ON p.employee_id = e.employee_id GROUP BY p.project_id;",
+        "timeoutMs": 8000,
+        "tests": [
+          {
+            "seed": "INSERT INTO Project VALUES (1,1),(1,2),(1,3),(2,1),(2,4);\nINSERT INTO Employee VALUES (1,\"Khaled\",3),(2,\"Ali\",2),(3,\"John\",1),(4,\"Doe\",2);"
+          },
+          {
+            "seed": "INSERT INTO Project VALUES (1,1);\nINSERT INTO Employee VALUES (1,\"A\",5);"
+          },
+          {
+            "seed": "INSERT INTO Project VALUES (9,1);\nINSERT INTO Employee VALUES (1,\"Only\",4);"
+          }
+        ],
+        "orderMatters": false,
+        "checkColumnNames": true,
+        "floatTolerance": 0.001
+      }
+    },
+    {
+      "type": "sqlite",
+      "title": "197. Rising Temperature",
+      "content": {
+        "description": "Id записей, где температура **строго выше**, чем в **предыдущий календарный день** (`recordDate`).\n\n[LeetCode 197](https://leetcode.com/problems/rising-temperature/)",
+        "setup": "CREATE TABLE Weather(id INTEGER PRIMARY KEY, recordDate TEXT NOT NULL, temperature INTEGER NOT NULL);",
+        "starterCode": "SELECT id FROM Weather ORDER BY recordDate;",
+        "referenceSolution": "SELECT w1.id FROM Weather w1 JOIN Weather w2 ON w1.recordDate = DATE(w2.recordDate, \"+1 day\") WHERE w1.temperature > w2.temperature;",
+        "timeoutMs": 8000,
+        "tests": [
+          {
+            "seed": "INSERT INTO Weather VALUES (1,\"2015-01-01\",10),(2,\"2015-01-02\",25),(3,\"2015-01-03\",20),(4,\"2015-01-04\",30);"
+          },
+          {
+            "seed": "INSERT INTO Weather VALUES (1,\"2015-01-01\",10),(2,\"2015-01-02\",10);"
+          },
+          {
+            "seed": "INSERT INTO Weather VALUES (1,\"2015-01-01\",10);"
+          }
+        ],
+        "orderMatters": false,
+        "checkColumnNames": true
+      }
+    },
+    {
+      "type": "sqlite",
+      "title": "577. Employee Bonus",
+      "content": {
+        "description": "Имена сотрудников с `bonus < 1000` (или bonus NULL). Колонки: `Employee`, `Bonus`.\n\n[LeetCode 577](https://leetcode.com/problems/employee-bonus/)",
+        "setup": "CREATE TABLE Employee(empId INTEGER PRIMARY KEY, name TEXT NOT NULL, supervisor INTEGER, salary INTEGER NOT NULL);\nCREATE TABLE Bonus(empId INTEGER PRIMARY KEY, bonus INTEGER);",
+        "starterCode": "SELECT name AS Employee, bonus AS Bonus FROM Employee JOIN Bonus USING(empId);",
+        "referenceSolution": "SELECT e.name AS Employee, b.bonus AS Bonus FROM Employee e LEFT JOIN Bonus b ON e.empId = b.empId WHERE b.bonus < 1000 OR b.bonus IS NULL;",
+        "timeoutMs": 8000,
+        "tests": [
+          {
+            "seed": "INSERT INTO Employee VALUES (3,\"Brad\",NULL,4000),(1,\"John\",3,1000),(2,\"Dan\",3,2000),(4,\"Thomas\",3,4000);\nINSERT INTO Bonus VALUES (2,500),(4,2000);"
+          },
+          {
+            "seed": "INSERT INTO Employee VALUES (1,\"A\",NULL,1);"
+          },
+          {
+            "seed": "INSERT INTO Employee VALUES (1,\"Rich\",NULL,1);\nINSERT INTO Bonus VALUES (1,5000);"
+          }
+        ],
+        "orderMatters": false,
+        "checkColumnNames": true
+      }
+    },
+    {
+      "type": "sqlite",
+      "title": "570. Managers with at Least 5 Direct Reports",
+      "content": {
+        "description": "Имена менеджеров, у которых **≥ 5** прямых подчинённых (`managerId`).\n\n[LeetCode 570](https://leetcode.com/problems/managers-with-at-least-5-direct-reports/)",
+        "setup": "CREATE TABLE Employee(id INTEGER PRIMARY KEY, name TEXT NOT NULL, department TEXT, managerId INTEGER);",
+        "starterCode": "SELECT name FROM Employee WHERE id IN (SELECT managerId FROM Employee);",
+        "referenceSolution": "SELECT name FROM Employee WHERE id IN (SELECT managerId FROM Employee GROUP BY managerId HAVING COUNT(*) >= 5);",
+        "timeoutMs": 8000,
+        "tests": [
+          {
+            "seed": "INSERT INTO Employee VALUES (101,\"John\",\"A\",NULL),(102,\"Dan\",\"A\",101),(103,\"James\",\"A\",101),(104,\"Amy\",\"A\",101),(105,\"Anne\",\"A\",101),(106,\"Ron\",\"A\",101),(107,\"Bob\",\"B\",101);"
+          },
+          {
+            "seed": "INSERT INTO Employee VALUES (1,\"M\",NULL,NULL),(2,\"A\",\"X\",1),(3,\"B\",\"X\",1);"
+          },
+          {
+            "seed": "INSERT INTO Employee VALUES (1,\"Boss\",NULL,NULL),(2,\"A\",\"X\",1),(3,\"B\",\"X\",1),(4,\"C\",\"X\",1),(5,\"D\",\"X\",1);"
+          }
+        ],
+        "orderMatters": false,
+        "checkColumnNames": true
+      }
+    },
+    {
+      "type": "sqlite",
+      "title": "1280. Students and Examinations",
+      "content": {
+        "description": "Для каждой пары студент × предмет выведите `student_id`, `student_name`, `subject_name` и `attended_exams` — сколько раз студент сдавал экзамен по этому предмету (0, если не сдавал). Сортировка: `student_id`, затем `subject_name`.\n\n[LeetCode 1280](https://leetcode.com/problems/students-and-examinations/)",
+        "setup": "CREATE TABLE Students(student_id INTEGER PRIMARY KEY, student_name TEXT NOT NULL);\nCREATE TABLE Subjects(subject_name TEXT PRIMARY KEY);\nCREATE TABLE Examinations(student_id INTEGER NOT NULL, subject_name TEXT NOT NULL);",
+        "starterCode": "SELECT student_id, student_name, subject_name, COUNT(*) AS attended_exams FROM Examinations GROUP BY student_id, subject_name;",
+        "referenceSolution": "SELECT s.student_id, s.student_name, sub.subject_name, COUNT(e.student_id) AS attended_exams FROM Students s CROSS JOIN Subjects sub LEFT JOIN Examinations e ON s.student_id = e.student_id AND sub.subject_name = e.subject_name GROUP BY s.student_id, s.student_name, sub.subject_name ORDER BY s.student_id, sub.subject_name;",
+        "timeoutMs": 8000,
+        "tests": [
+          {
+            "seed": "INSERT INTO Students VALUES (1,'Alice'),(2,'Bob'),(13,'John'),(6,'Alex');\nINSERT INTO Subjects VALUES ('Math'),('Physics'),('Programming');\nINSERT INTO Examinations VALUES (1,'Math'),(1,'Math'),(1,'Physics'),(2,'Programming'),(2,'Physics'),(13,'Math'),(13,'Math'),(13,'Math'),(13,'Programming'),(6,'Math');"
+          },
+          {
+            "seed": "INSERT INTO Students VALUES (1,'Ann');\nINSERT INTO Subjects VALUES ('Bio');"
+          },
+          {
+            "seed": "INSERT INTO Students VALUES (1,'Ann');\nINSERT INTO Subjects VALUES ('Bio');\nINSERT INTO Examinations VALUES (1,'Bio');"
+          }
+        ],
+        "orderMatters": true,
+        "checkColumnNames": true
+      }
+    },
+    {
+      "type": "sqlite",
+      "title": "1934. Confirmation Rate",
+      "content": {
+        "description": "Для каждого `user_id` — `confirmation_rate`: доля `confirmed` среди **timeout** и **confirmed** (rounded to 2 decimals). Нет таких действий → `0.00`.\n\n[LeetCode 1934](https://leetcode.com/problems/confirmation-rate/)",
+        "setup": "CREATE TABLE Signups(user_id INTEGER PRIMARY KEY, time_stamp TEXT NOT NULL);\nCREATE TABLE Confirmations(user_id INTEGER NOT NULL, time_stamp TEXT NOT NULL, action TEXT NOT NULL);",
+        "starterCode": "SELECT user_id, 1.0 AS confirmation_rate FROM Signups;",
+        "referenceSolution": "SELECT s.user_id, ROUND(COALESCE(SUM(c.action = \"confirmed\") * 1.0 / NULLIF(SUM(c.action IN (\"confirmed\",\"timeout\")), 0), 0), 2) AS confirmation_rate FROM Signups s LEFT JOIN Confirmations c ON s.user_id = c.user_id GROUP BY s.user_id;",
+        "timeoutMs": 8000,
+        "tests": [
+          {
+            "seed": "INSERT INTO Signups VALUES (3,\"2020-03-21 10:16:13\"),(7,\"2020-01-04 13:57:59\"),(2,\"2020-07-29 23:09:44\"),(6,\"2020-12-09 10:39:37\");\nINSERT INTO Confirmations VALUES (3,\"2021-01-06 03:30:46\",\"timeout\"),(3,\"2021-07-14 14:00:00\",\"timeout\"),(7,\"2021-06-12 11:57:29\",\"confirmed\"),(7,\"2021-06-13 12:57:29\",\"confirmed\"),(7,\"2021-06-14 13:57:29\",\"confirmed\"),(2,\"2021-06-14 13:57:29\",\"confirmed\"),(2,\"2021-06-15 13:57:29\",\"timeout\");"
+          },
+          {
+            "seed": "INSERT INTO Signups VALUES (1,\"2020-01-01\");\nINSERT INTO Confirmations VALUES (1,\"2020-01-02\",\"confirmed\");"
+          },
+          {
+            "seed": "INSERT INTO Signups VALUES (1,\"2020-01-01\");\nINSERT INTO Confirmations VALUES (1,\"2020-01-02\",\"timeout\");"
+          }
+        ],
+        "orderMatters": false,
+        "checkColumnNames": true,
+        "floatTolerance": 0.01
+      }
+    },
+    {
+      "type": "quiz",
+      "title": "Итоговый тест модуля",
+      "content": {
+        "question": "Как найти клиентов без заказов?",
+        "options": [
+          "INNER JOIN Orders",
+          "LEFT JOIN Orders WHERE Orders.id IS NULL",
+          "CROSS JOIN",
+          "UNION ALL"
+        ],
+        "correctIndices": [
+          1
+        ]
+      }
+    }
+  ]
+}

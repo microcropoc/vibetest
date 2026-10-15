@@ -1,0 +1,240 @@
+{
+  "schemaVersion": 1,
+  "title": "Basic Aggregate Functions",
+  "steps": [
+    {
+      "type": "theory",
+      "title": "Агрегаты и FILTER",
+      "content": "## Агрегаты\n\n`COUNT`, `SUM`, `AVG`, `MIN`, `MAX`. `COUNT(DISTINCT x)`. Условная агрегация: `SUM(CASE WHEN …)` или `COUNT(*) FILTER (WHERE …)` (SQLite 3.30+)."
+    },
+    {
+      "type": "svg",
+      "title": "Схема: Basic Aggregate Functions",
+      "content": {
+        "caption": "GROUP BY сворачивает строки",
+        "description": "Без GROUP BY агрегат по всей таблице.",
+        "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 280 80\" width=\"100%\" role=\"img\" aria-label=\"Basic Aggregate Functions\"><rect id=\"lsq03-box\" x=\"40\" y=\"15\" width=\"200\" height=\"50\" rx=\"4\" fill=\"#e3f2fd\" stroke=\"#1565c0\"/><text x=\"140\" y=\"45\" text-anchor=\"middle\" font-size=\"12\" fill=\"#0d47a1\">Basic Aggregate Functions</text></svg>"
+      }
+    },
+    {
+      "type": "sqlite",
+      "title": "620. Not Boring Movies",
+      "content": {
+        "description": "Фильмы: нечётный `id`, `description` **не** «boring», сортировка по `rating` **убыванию**.\n\n[LeetCode 620](https://leetcode.com/problems/not-boring-movies/)",
+        "setup": "CREATE TABLE Cinema(id INTEGER PRIMARY KEY, movie TEXT NOT NULL, description TEXT NOT NULL, rating REAL NOT NULL);",
+        "starterCode": "SELECT * FROM Cinema ORDER BY rating DESC;",
+        "referenceSolution": "SELECT * FROM Cinema WHERE id % 2 = 1 AND description != 'boring' ORDER BY rating DESC;",
+        "timeoutMs": 8000,
+        "tests": [
+          {
+            "seed": "INSERT INTO Cinema VALUES (1,'War','great 3D',8.9),(2,'Science','fiction',8.5),(3,'irish','boring',6.2),(4,'Ice song','Fantacy',8.6),(5,'House card','Interesting',9.1);"
+          },
+          {
+            "seed": "INSERT INTO Cinema VALUES (1,'A','boring',5);"
+          },
+          {
+            "seed": "INSERT INTO Cinema VALUES (2,'Dull','boring',9);"
+          }
+        ],
+        "orderMatters": true,
+        "checkColumnNames": true
+      }
+    },
+    {
+      "type": "sqlite",
+      "title": "1251. Average Selling Price",
+      "content": {
+        "description": "Средняя цена продажи каждого `product_id` за период (Units с `purchase_date` между «2019-01-01» и «2019-06-30»). Колонка `average_price`, округление 2 знака; нет продаж → NULL.\n\n[LeetCode 1251](https://leetcode.com/problems/average-selling-price/)",
+        "setup": "CREATE TABLE Products(product_id INTEGER PRIMARY KEY, start_date TEXT NOT NULL, end_date TEXT NOT NULL, price INTEGER NOT NULL);\nCREATE TABLE Units(product_id INTEGER NOT NULL, purchase_date TEXT NOT NULL, amount INTEGER NOT NULL);",
+        "starterCode": "SELECT product_id, AVG(price) AS average_price FROM Products GROUP BY product_id;",
+        "referenceSolution": "SELECT p.product_id, ROUND(AVG(u.amount * p.price * 1.0) / NULLIF(SUM(u.amount), 0), 2) AS average_price FROM Products p LEFT JOIN Units u ON p.product_id = u.product_id AND u.purchase_date BETWEEN p.start_date AND p.end_date AND u.purchase_date BETWEEN \"2019-01-01\" AND \"2019-06-30\" GROUP BY p.product_id;",
+        "timeoutMs": 8000,
+        "tests": [
+          {
+            "seed": "INSERT INTO Products VALUES (1,\"2019-02-17\",\"2019-02-28\",5),(2,\"2019-06-01\",\"2019-06-30\",8);\nINSERT INTO Units VALUES (1,\"2019-02-25\",100),(1,\"2019-03-01\",15),(2,\"2019-06-03\",50);"
+          },
+          {
+            "seed": "INSERT INTO Products VALUES (1,\"2019-01-01\",\"2019-12-31\",10);"
+          },
+          {
+            "seed": "INSERT INTO Products VALUES (9,\"2020-01-01\",\"2020-12-31\",100);"
+          }
+        ],
+        "orderMatters": false,
+        "checkColumnNames": true,
+        "floatTolerance": 0.01
+      }
+    },
+    {
+      "type": "sqlite",
+      "title": "1661. Average Time of Process per Machine",
+      "content": {
+        "description": "Среднее время обработки (`processing_time`, округление **3** знака) для каждой `machine_id`: по каждой паре `(machine_id, process_id)` время = `end` − `start`, затем среднее по машине.\n\n[LeetCode 1661](https://leetcode.com/problems/average-time-of-process-per-machine/)",
+        "setup": "CREATE TABLE Activity(machine_id INTEGER NOT NULL, process_id INTEGER NOT NULL, activity_type TEXT NOT NULL, timestamp REAL NOT NULL);",
+        "starterCode": "SELECT machine_id, AVG(timestamp) AS processing_time FROM Activity GROUP BY machine_id;",
+        "referenceSolution": "SELECT machine_id, ROUND(AVG(end_time - start_time), 3) AS processing_time FROM (SELECT machine_id, process_id, MAX(CASE WHEN activity_type = \"start\" THEN timestamp END) AS start_time, MAX(CASE WHEN activity_type = \"end\" THEN timestamp END) AS end_time FROM Activity GROUP BY machine_id, process_id) t GROUP BY machine_id;",
+        "timeoutMs": 8000,
+        "tests": [
+          {
+            "seed": "INSERT INTO Activity VALUES (0,0,\"start\",0.712),(0,0,\"end\",1.52),(0,1,\"start\",3.14),(0,1,\"end\",4.12),(1,0,\"start\",0.55),(1,0,\"end\",1.55),(1,1,\"start\",0.43),(1,1,\"end\",1.42),(2,0,\"start\",0.1),(2,0,\"end\",0.2),(2,1,\"start\",2.5),(2,1,\"end\",5);"
+          },
+          {
+            "seed": "INSERT INTO Activity VALUES (1,1,\"start\",1),(1,1,\"end\",3);"
+          },
+          {
+            "seed": "INSERT INTO Activity VALUES (5,0,\"start\",0),(5,0,\"end\",10);"
+          },
+          {
+            "seed": "INSERT INTO Activity VALUES (1,0,\"start\",0),(1,0,\"end\",2),(1,1,\"start\",1),(1,1,\"end\",3);"
+          }
+        ],
+        "orderMatters": false,
+        "checkColumnNames": true,
+        "floatTolerance": 0.001
+      }
+    },
+    {
+      "type": "sqlite",
+      "title": "1633. Percentage of Users Attended a Contest",
+      "content": {
+        "description": "Доля пользователей, участвовавших в **хотя бы одном** контесте (`registered_in_contest`), округлить до 2 знаков — `percentage`.\n\n[LeetCode 1633](https://leetcode.com/problems/percentage-of-users-attended-a-contest/)",
+        "setup": "CREATE TABLE Users(user_id INTEGER PRIMARY KEY, user_name TEXT NOT NULL);\nCREATE TABLE Register(contest_id INTEGER NOT NULL, user_id INTEGER NOT NULL, PRIMARY KEY(contest_id, user_id));",
+        "starterCode": "SELECT 100.0 AS percentage;",
+        "referenceSolution": "SELECT ROUND(COUNT(DISTINCT r.user_id) * 100.0 / (SELECT COUNT(*) FROM Users), 2) AS percentage FROM Register r;",
+        "timeoutMs": 8000,
+        "tests": [
+          {
+            "seed": "INSERT INTO Users VALUES (6,\"Alice\"),(2,\"Bob\"),(7,\"Alex\");\nINSERT INTO Register VALUES (215,6),(209,2),(208,2);"
+          },
+          {
+            "seed": "INSERT INTO Users VALUES (1,\"A\");"
+          },
+          {
+            "seed": "INSERT INTO Users VALUES (1,\"Solo\"),(2,\"Other\");"
+          }
+        ],
+        "orderMatters": false,
+        "checkColumnNames": true,
+        "floatTolerance": 0.01
+      }
+    },
+    {
+      "type": "sqlite",
+      "title": "1193. Monthly Transactions I",
+      "content": {
+        "description": "По `(month, country)`: `approved_count`, `approved_amount` (только state approved), `chargeback_count`, `chargeback_amount` (только chargeback). Месяц — `YYYY-MM` из `trans_date`.\n\n[LeetCode 1193](https://leetcode.com/problems/monthly-transactions-i/)",
+        "setup": "CREATE TABLE Transactions(id INTEGER PRIMARY KEY, country TEXT NOT NULL, state TEXT NOT NULL, amount INTEGER NOT NULL, trans_date TEXT NOT NULL);",
+        "starterCode": "SELECT country, trans_date FROM Transactions;",
+        "referenceSolution": "SELECT strftime(\"%Y-%m\", trans_date) AS month, country,\n  COUNT(CASE WHEN state = \"approved\" THEN 1 END) AS approved_count,\n  SUM(CASE WHEN state = \"approved\" THEN amount ELSE 0 END) AS approved_amount,\n  COUNT(CASE WHEN state = \"chargeback\" THEN 1 END) AS chargeback_count,\n  SUM(CASE WHEN state = \"chargeback\" THEN amount ELSE 0 END) AS chargeback_amount\nFROM Transactions GROUP BY month, country ORDER BY month, country;",
+        "timeoutMs": 8000,
+        "tests": [
+          {
+            "seed": "INSERT INTO Transactions VALUES (101,\"US\",\"approved\",1000,\"2019-05-18\"),(102,\"US\",\"approved\",3000,\"2019-05-19\"),(103,\"US\",\"chargeback\",1000,\"2019-06-17\"),(104,\"US\",\"approved\",2000,\"2019-06-18\");"
+          },
+          {
+            "seed": "INSERT INTO Transactions VALUES (201,\"DE\",\"approved\",500,\"2019-05-20\");"
+          },
+          {
+            "seed": "INSERT INTO Transactions VALUES (301,\"US\",\"chargeback\",100,\"2019-06-01\");"
+          }
+        ],
+        "orderMatters": true,
+        "checkColumnNames": true
+      }
+    },
+    {
+      "type": "sqlite",
+      "title": "1174. Immediate Food Delivery II",
+      "content": {
+        "description": "Доля заказов первого заказа клиента (`order_number=1`), доставленных в **первый** день (`order_date = customer_pref_delivery_date`), в процентах `immediate_percentage` (2 знака).\n\n[LeetCode 1174](https://leetcode.com/problems/immediate-food-delivery-ii/)",
+        "setup": "CREATE TABLE Delivery(delivery_id INTEGER PRIMARY KEY, customer_id INTEGER NOT NULL, order_date TEXT NOT NULL, customer_pref_delivery_date TEXT NOT NULL, delivery_date TEXT NOT NULL);",
+        "starterCode": "SELECT 100 AS immediate_percentage;",
+        "referenceSolution": "SELECT ROUND(SUM(order_date = customer_pref_delivery_date) * 100.0 / COUNT(*), 2) AS immediate_percentage FROM Delivery WHERE (customer_id, order_date) IN (SELECT customer_id, MIN(order_date) FROM Delivery GROUP BY customer_id);",
+        "timeoutMs": 8000,
+        "tests": [
+          {
+            "seed": "INSERT INTO Delivery VALUES (1,1,\"2019-08-01\",\"2019-08-02\",\"2019-08-02\"),(2,2,\"2019-08-02\",\"2019-08-02\",\"2019-08-02\"),(3,1,\"2019-08-11\",\"2019-08-12\",\"2019-08-12\"),(4,3,\"2019-08-24\",\"2019-08-24\",\"2019-08-24\"),(5,3,\"2019-08-21\",\"2019-08-22\",\"2019-08-22\"),(6,2,\"2019-08-11\",\"2019-08-13\",\"2019-08-13\"),(7,4,\"2019-08-09\",\"2019-08-09\",\"2019-08-09\");"
+          },
+          {
+            "seed": "INSERT INTO Delivery VALUES (1,1,\"2019-01-01\",\"2019-01-05\",\"2019-01-06\");"
+          },
+          {
+            "seed": "INSERT INTO Delivery VALUES (1,1,\"2019-02-01\",\"2019-02-01\",\"2019-02-01\"),(2,1,\"2019-02-02\",\"2019-02-03\",\"2019-02-03\");"
+          }
+        ],
+        "orderMatters": false,
+        "checkColumnNames": true,
+        "floatTolerance": 0.01
+      }
+    },
+    {
+      "type": "sqlite",
+      "title": "550. Game Play Analysis IV",
+      "content": {
+        "description": "Доля игроков, которые заходили **на следующий календарный день** после дня первого входа. Одна строка: `fraction` (округлить 2 знака).\n\n[LeetCode 550](https://leetcode.com/problems/game-play-analysis-iv/)",
+        "setup": "CREATE TABLE Activity(player_id INTEGER NOT NULL, device_id INTEGER NOT NULL, event_date TEXT NOT NULL, games_played INTEGER NOT NULL);",
+        "starterCode": "SELECT 0.0 AS fraction;",
+        "referenceSolution": "WITH first_login AS (SELECT player_id, MIN(event_date) AS fd FROM Activity GROUP BY player_id)\nSELECT ROUND((SELECT COUNT(DISTINCT a.player_id) FROM Activity a JOIN first_login f ON a.player_id = f.player_id WHERE a.event_date = DATE(f.fd, \"+1 day\")) * 1.0 / COUNT(DISTINCT player_id), 2) AS fraction FROM Activity;",
+        "timeoutMs": 8000,
+        "tests": [
+          {
+            "seed": "INSERT INTO Activity VALUES (1,2,\"2016-03-01\",5),(1,2,\"2016-03-02\",6),(2,3,\"2017-06-25\",1),(3,1,\"2016-03-02\",0),(3,4,\"2018-07-03\",5);"
+          },
+          {
+            "seed": "INSERT INTO Activity VALUES (1,1,\"2020-01-01\",1),(1,1,\"2020-01-02\",1),(2,1,\"2020-01-01\",1);"
+          },
+          {
+            "seed": "INSERT INTO Activity VALUES (1,1,\"2020-06-01\",1);"
+          },
+          {
+            "seed": "INSERT INTO Activity VALUES (1,1,\"2020-06-01\",1),(2,1,\"2020-06-01\",1),(2,1,\"2020-06-03\",1);"
+          }
+        ],
+        "orderMatters": false,
+        "checkColumnNames": true,
+        "floatTolerance": 0.01
+      }
+    },
+    {
+      "type": "sqlite",
+      "title": "1211. Queries Quality and Percentage",
+      "content": {
+        "description": "По каждому `query_name`: `quality` = avg(rating/position), `poor_query_percentage` = % rating < 3 (оба округлить 2 знака).\n\n[LeetCode 1211](https://leetcode.com/problems/queries-quality-and-percentage/)",
+        "setup": "CREATE TABLE Queries(query_name TEXT NOT NULL, result TEXT NOT NULL, position INTEGER NOT NULL, rating INTEGER NOT NULL);",
+        "starterCode": "SELECT query_name FROM Queries GROUP BY query_name;",
+        "referenceSolution": "SELECT query_name,\n  ROUND(AVG(rating * 1.0 / position), 2) AS quality,\n  ROUND(SUM(rating < 3) * 100.0 / COUNT(*), 2) AS poor_query_percentage\nFROM Queries GROUP BY query_name;",
+        "timeoutMs": 8000,
+        "tests": [
+          {
+            "seed": "INSERT INTO Queries VALUES (\"Dog\",\"Pluto\",1,1),(\"Dog\",\"Cereal\",3,2),(\"Dog\",\"Grain\",1,3),(\"Cat\",\"Milk\",4,4),(\"Cat\",\"Tiger\",5,5),(\"Cat\",\"Pigeon\",6,6);"
+          },
+          {
+            "seed": "INSERT INTO Queries VALUES (\"Solo\",\"x\",1,5);"
+          },
+          {
+            "seed": "INSERT INTO Queries VALUES (\"A\",\"r\",2,2),(\"A\",\"s\",1,1);"
+          }
+        ],
+        "orderMatters": false,
+        "checkColumnNames": true,
+        "floatTolerance": 0.01
+      }
+    },
+    {
+      "type": "quiz",
+      "title": "Итоговый тест модуля",
+      "content": {
+        "question": "Что вернёт SUM(amount) на пустой таблице?",
+        "options": [
+          "0",
+          "NULL",
+          "Пустой result set",
+          "Ошибка"
+        ],
+        "correctIndices": [
+          1
+        ]
+      }
+    }
+  ]
+}

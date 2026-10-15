@@ -1,0 +1,204 @@
+{
+  "schemaVersion": 1,
+  "title": "Advanced Select and Joins",
+  "steps": [
+    {
+      "type": "theory",
+      "title": "Оконные функции и сложные JOIN",
+      "content": "## Окна\n\n`SUM() OVER (ORDER BY …)`, `FIRST_VALUE`, `ROW_NUMBER`. Для «топ-N в группе» — оконные функции или коррелированные подзапросы."
+    },
+    {
+      "type": "svg",
+      "title": "Схема: Advanced Select and Joins",
+      "content": {
+        "caption": "PARTITION BY задаёт группы для окна",
+        "description": "ORDER BY внутри OVER задаёт порядок строк в окне.",
+        "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 280 80\" width=\"100%\" role=\"img\" aria-label=\"Advanced Select and Joins\"><rect id=\"lsq05-box\" x=\"40\" y=\"15\" width=\"200\" height=\"50\" rx=\"4\" fill=\"#e3f2fd\" stroke=\"#1565c0\"/><text x=\"140\" y=\"45\" text-anchor=\"middle\" font-size=\"12\" fill=\"#0d47a1\">Advanced Select and Joins</text></svg>"
+      }
+    },
+    {
+      "type": "sqlite",
+      "title": "1731. The Number of Employees Which Report to Each Employee",
+      "content": {
+        "description": "Для каждого менеджера (`employee_id` из `Employees`): `reports_count`, `average_age` (округлить 0 знаков) подчинённых. Только менеджеры с ≥1 подчинённым.\n\n[LeetCode 1731](https://leetcode.com/problems/the-number-of-employees-which-report-to-each-employee/)",
+        "setup": "CREATE TABLE Employees(employee_id INTEGER PRIMARY KEY, employee_name TEXT NOT NULL, reports_to INTEGER, age INTEGER NOT NULL);",
+        "starterCode": "SELECT employee_id, COUNT(*) FROM Employees GROUP BY reports_to;",
+        "referenceSolution": "SELECT e.employee_id, COUNT(r.employee_id) AS reports_count, ROUND(AVG(r.age), 0) AS average_age FROM Employees e JOIN Employees r ON e.employee_id = r.reports_to GROUP BY e.employee_id ORDER BY e.employee_id;",
+        "timeoutMs": 8000,
+        "tests": [
+          {
+            "seed": "INSERT INTO Employees VALUES (9,\"Gabe\",NULL,40),(6,\"Tyler\",9,25),(4,\"Benjamin\",9,20),(5,\"Alice\",9,22),(11,\"Daniel\",9,40);"
+          },
+          {
+            "seed": "INSERT INTO Employees VALUES (1,\"Lead\",NULL,30),(2,\"Rep\",1,20);"
+          },
+          {
+            "seed": "INSERT INTO Employees VALUES (9,\"Head\",NULL,50),(8,\"A\",9,22),(7,\"B\",9,24);"
+          }
+        ],
+        "orderMatters": true,
+        "checkColumnNames": true
+      }
+    },
+    {
+      "type": "sqlite",
+      "title": "1789. Primary Department for Each Employee",
+      "content": {
+        "description": "Для каждого сотрудника — **основной** отдел: если одна запись в `Employee` — она; если две — где `primary_flag = \"Y\"`. Колонки: `employee_id`, `department_id`.\n\n[LeetCode 1789](https://leetcode.com/problems/primary-department-for-each-employee/)",
+        "setup": "CREATE TABLE Employee(employee_id INTEGER NOT NULL, department_id INTEGER NOT NULL, primary_flag TEXT NOT NULL);",
+        "starterCode": "SELECT employee_id, department_id FROM Employee;",
+        "referenceSolution": "SELECT employee_id, department_id FROM Employee WHERE primary_flag = \"Y\" OR employee_id IN (SELECT employee_id FROM Employee GROUP BY employee_id HAVING COUNT(*) = 1);",
+        "timeoutMs": 8000,
+        "tests": [
+          {
+            "seed": "INSERT INTO Employee VALUES (1,1,\"N\"),(2,1,\"Y\"),(2,2,\"N\"),(3,3,\"N\"),(4,3,\"N\"),(4,4,\"Y\");"
+          },
+          {
+            "seed": "INSERT INTO Employee VALUES (5,9,\"Y\");"
+          },
+          {
+            "seed": "INSERT INTO Employee VALUES (1,1,\"N\"),(2,2,\"N\");"
+          }
+        ],
+        "orderMatters": false,
+        "checkColumnNames": true
+      }
+    },
+    {
+      "type": "sqlite",
+      "title": "177. Triangle Judgement",
+      "content": {
+        "description": "Строки `(x,y,z)`, которые могут быть сторонами **нестороннего** треугольника (сумма любых двух > третьей). Колонка `triangle` = «Yes»/«No».\n\n[LeetCode 177](https://leetcode.com/problems/triangle-judgement/)",
+        "setup": "CREATE TABLE Triangle(x INTEGER NOT NULL, y INTEGER NOT NULL, z INTEGER NOT NULL);",
+        "starterCode": "SELECT x, y, z, \"No\" AS triangle FROM Triangle;",
+        "referenceSolution": "SELECT x, y, z, CASE WHEN x + y > z AND x + z > y AND y + z > x THEN \"Yes\" ELSE \"No\" END AS triangle FROM Triangle;",
+        "timeoutMs": 8000,
+        "tests": [
+          {
+            "seed": "INSERT INTO Triangle VALUES (13,15,30),(10,20,15);"
+          },
+          {
+            "seed": "INSERT INTO Triangle VALUES (1,1,1);"
+          },
+          {
+            "seed": "INSERT INTO Triangle VALUES (1,2,10);"
+          }
+        ],
+        "orderMatters": false,
+        "checkColumnNames": true
+      }
+    },
+    {
+      "type": "sqlite",
+      "title": "180. Consecutive Numbers",
+      "content": {
+        "description": "Числа, встречающиеся **≥ 3 раз подряд** (по `id`). Верните `num` **без дубликатов**.\n\n[LeetCode 180](https://leetcode.com/problems/consecutive-numbers/)",
+        "setup": "CREATE TABLE Logs(id INTEGER PRIMARY KEY, num INTEGER NOT NULL);",
+        "starterCode": "SELECT DISTINCT num FROM Logs;",
+        "referenceSolution": "SELECT DISTINCT l1.num FROM Logs l1 JOIN Logs l2 ON l1.id = l2.id - 1 JOIN Logs l3 ON l2.id = l3.id - 1 WHERE l1.num = l2.num AND l2.num = l3.num;",
+        "timeoutMs": 8000,
+        "tests": [
+          {
+            "seed": "INSERT INTO Logs VALUES (1,1),(2,1),(3,1),(4,2),(5,1),(6,2),(7,2);"
+          },
+          {
+            "seed": "INSERT INTO Logs VALUES (1,1),(2,2);"
+          },
+          {
+            "seed": "INSERT INTO Logs VALUES (1,9),(2,9);"
+          }
+        ],
+        "orderMatters": false,
+        "checkColumnNames": true
+      }
+    },
+    {
+      "type": "sqlite",
+      "title": "1164. Product Price at a Given Date",
+      "content": {
+        "description": "Цена каждого `product_id` на «2019-08-16»: последняя известная цена на эту дату или раньше. Колонка `price`.\n\n[LeetCode 1164](https://leetcode.com/problems/product-price-at-a-given-date/)",
+        "setup": "CREATE TABLE Products(product_id INTEGER NOT NULL, new_price INTEGER NOT NULL, change_date TEXT NOT NULL);",
+        "starterCode": "SELECT product_id, new_price AS price FROM Products;",
+        "referenceSolution": "SELECT DISTINCT product_id, FIRST_VALUE(new_price) OVER (PARTITION BY product_id ORDER BY change_date DESC) AS price FROM Products WHERE change_date <= \"2019-08-16\";",
+        "timeoutMs": 8000,
+        "tests": [
+          {
+            "seed": "INSERT INTO Products VALUES (1,20,\"2019-08-01\"),(2,50,\"2019-08-01\"),(1,30,\"2019-08-14\"),(1,35,\"2019-08-18\"),(2,65,\"2019-08-22\");"
+          },
+          {
+            "seed": "INSERT INTO Products VALUES (9,99,\"2019-09-01\");"
+          },
+          {
+            "seed": "INSERT INTO Products VALUES (1,10,\"2019-08-01\"),(1,20,\"2019-08-20\");"
+          }
+        ],
+        "orderMatters": false,
+        "checkColumnNames": true
+      }
+    },
+    {
+      "type": "sqlite",
+      "title": "1204. Last Person to Fit in the Bus",
+      "content": {
+        "description": "Люди садятся в автобус по `turn` по очереди; вместимость 1000 кг. Кто **последний** успел сесть? Колонка `person_name`.\n\n[LeetCode 1204](https://leetcode.com/problems/last-person-to-fit-in-the-bus/)",
+        "setup": "CREATE TABLE Queue(person_id INTEGER PRIMARY KEY, person_name TEXT NOT NULL, weight INTEGER NOT NULL, turn INTEGER NOT NULL);",
+        "starterCode": "SELECT person_name FROM Queue ORDER BY turn DESC LIMIT 1;",
+        "referenceSolution": "SELECT person_name FROM (SELECT person_name, turn, SUM(weight) OVER (ORDER BY turn) AS running FROM Queue) WHERE running <= 1000 ORDER BY turn DESC LIMIT 1;",
+        "timeoutMs": 8000,
+        "tests": [
+          {
+            "seed": "INSERT INTO Queue VALUES (5,\"Alice\",250,1),(4,\"Bob\",175,5),(3,\"Alex\",700,2),(6,\"John\",375,3),(1,\"David\",200,4);"
+          },
+          {
+            "seed": "INSERT INTO Queue VALUES (1,\"Solo\",500,1);"
+          },
+          {
+            "seed": "INSERT INTO Queue VALUES (1,\"A\",400,1),(2,\"B\",400,2);"
+          }
+        ],
+        "orderMatters": false,
+        "checkColumnNames": true
+      }
+    },
+    {
+      "type": "sqlite",
+      "title": "1907. Count Salary Categories",
+      "content": {
+        "description": "Три категории окладов всех сотрудников: `Low Salary` (<20000), `Average Salary` ([20000,50000]), `High Salary` (>50000). Колонки `category`, `accounts_count` (0 если никого).\n\n[LeetCode 1907](https://leetcode.com/problems/count-salary-categories/)",
+        "setup": "CREATE TABLE Accounts(account_id INTEGER PRIMARY KEY, income INTEGER NOT NULL);",
+        "starterCode": "SELECT \"Low Salary\" AS category, COUNT(*) FROM Accounts;",
+        "referenceSolution": "SELECT category, COUNT(a.income) AS accounts_count FROM (SELECT \"Low Salary\" AS category UNION SELECT \"Average Salary\" UNION SELECT \"High Salary\") c LEFT JOIN Accounts a ON (c.category = \"Low Salary\" AND a.income < 20000) OR (c.category = \"Average Salary\" AND a.income BETWEEN 20000 AND 50000) OR (c.category = \"High Salary\" AND a.income > 50000) GROUP BY category ORDER BY category;",
+        "timeoutMs": 8000,
+        "tests": [
+          {
+            "seed": "INSERT INTO Accounts VALUES (3,108039),(2,12747),(8,87709),(6,91796);"
+          },
+          {
+            "seed": "INSERT INTO Accounts VALUES (1,1000);"
+          },
+          {
+            "seed": "INSERT INTO Accounts VALUES (1,60000);"
+          }
+        ],
+        "orderMatters": true,
+        "checkColumnNames": true
+      }
+    },
+    {
+      "type": "quiz",
+      "title": "Итоговый тест модуля",
+      "content": {
+        "question": "Чем `HAVING` отличается от `WHERE`?",
+        "options": [
+          "HAVING фильтрует группы после GROUP BY",
+          "WHERE работает только с JOIN",
+          "HAVING нельзя использовать с агрегатами",
+          "Ничем"
+        ],
+        "correctIndices": [
+          0
+        ]
+      }
+    }
+  ]
+}

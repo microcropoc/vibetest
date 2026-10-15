@@ -5,22 +5,28 @@ import { SettingsRepository } from '../../../storage/settings-repository';
 import type { LlmProfile } from '../../llm-profile.model';
 import { LlmProfilesEditorComponent } from '../../ui/llm-profiles-editor/llm-profiles-editor';
 import { ThemePickerComponent } from '../../ui/theme-picker/theme-picker';
+import { TypographyPicker } from '../../ui/typography-picker/typography-picker';
 import type { Theme } from '../../theme.model';
 import { ThemeService } from '../../theme.service';
+import type { CodeTypography, UiTypography } from '../../typography.model';
+import { TypographyService } from '../../typography.service';
 import { removeLlmProfile, upsertLlmProfile } from '../../upsert-llm-profile';
 
 @Component({
   selector: 'app-settings-page',
-  imports: [ThemePickerComponent, LlmProfilesEditorComponent],
+  imports: [ThemePickerComponent, TypographyPicker, LlmProfilesEditorComponent],
   templateUrl: './settings-page.html',
   styleUrl: './settings-page.scss',
 })
 export class SettingsPage {
   private readonly themeService = inject(ThemeService);
+  private readonly typographyService = inject(TypographyService);
   private readonly bundledCourses = inject(BundledCoursesService);
   private readonly settings = inject(SettingsRepository);
 
   protected readonly theme = this.themeService.theme;
+  protected readonly uiTypography = this.typographyService.ui;
+  protected readonly codeTypography = this.typographyService.code;
   protected readonly bundledRestoreBusy = signal(false);
   protected readonly bundledRestoreMessage = signal<string | null>(null);
 
@@ -34,6 +40,18 @@ export class SettingsPage {
 
   protected onThemeChange(theme: Theme): void {
     void this.themeService.setTheme(theme);
+  }
+
+  protected onUiTypography(typography: UiTypography): void {
+    void this.typographyService.setUi(typography);
+  }
+
+  protected onCodeTypography(typography: CodeTypography): void {
+    void this.typographyService.setCode(typography);
+  }
+
+  protected onTypographyReset(): void {
+    void this.typographyService.reset();
   }
 
   protected async onLlmProfileSave(profile: LlmProfile): Promise<void> {

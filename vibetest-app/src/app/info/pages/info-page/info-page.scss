@@ -23,7 +23,7 @@
   margin: 0 0 0.5rem;
   font-size: 1.125rem;
   font-weight: 600;
-  font-family: ui-monospace, monospace;
+  font-family: var(--font-code-family);
 }
 
 .info-page__status {
@@ -70,8 +70,8 @@
   border-radius: 8px;
   background: var(--color-bg-subtle);
   color: var(--color-text);
-  font-family: ui-monospace, monospace;
-  font-size: 0.8125rem;
+  font-family: var(--font-code-family);
+  font-size: var(--font-code-size);
   line-height: 1.45;
   white-space: pre;
   box-sizing: border-box;

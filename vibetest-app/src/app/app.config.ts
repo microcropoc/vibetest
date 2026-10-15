@@ -11,9 +11,14 @@ import { routes } from './app.routes';
 import { provideServiceWorker } from '@angular/service-worker';
 
 import { ThemeService } from './settings/theme.service';
+import { TypographyService } from './settings/typography.service';
 
 function initializeTheme(themeService: ThemeService): () => Promise<void> {
   return () => themeService.initialize();
+}
+
+function initializeTypography(typographyService: TypographyService): () => Promise<void> {
+  return () => typographyService.initialize();
 }
 
 function initializeBundledCourses(): () => Promise<void> {
@@ -37,6 +42,12 @@ export const appConfig: ApplicationConfig = {
       multi: true,
       useFactory: initializeTheme,
       deps: [ThemeService],
+    },
+    {
+      provide: APP_INITIALIZER,
+      multi: true,
+      useFactory: initializeTypography,
+      deps: [TypographyService],
     },
     {
       provide: APP_INITIALIZER,

@@ -3,6 +3,7 @@ import { Injectable, inject } from '@angular/core';
 import type { ManualStagedProgress } from '../prompt-generation/manual-staged-progress';
 import type { LlmProfile } from '../settings/llm-profile.model';
 import type { Theme } from '../settings/theme.model';
+import type { CodeTypography, UiTypography } from '../settings/typography.model';
 
 import {
   llmProfilesFromSettingsRow,
@@ -10,11 +11,19 @@ import {
   settingsRowForLlmProfiles,
   settingsRowForManualStagedProgress,
   settingsRowForTheme,
+  settingsRowForTypographyCode,
+  settingsRowForTypographyUi,
   themeFromSettingsRow,
+  typographyCodeFromSettingsRow,
+  typographyUiFromSettingsRow,
 } from './settings-row-parse';
 import { SETTINGS_LLM_PROFILES_KEY } from './settings-llm-profiles-key';
 import { SETTINGS_MANUAL_STAGED_PROGRESS_KEY } from './settings-manual-staged-progress-key';
 import { SETTINGS_THEME_KEY } from './settings-theme-key';
+import {
+  SETTINGS_TYPOGRAPHY_CODE_KEY,
+  SETTINGS_TYPOGRAPHY_UI_KEY,
+} from './settings-typography-key';
 import type { VibetestDb } from './vibetest-db';
 import { VibetestDbProvider, vibetestDbProviderFor } from './vibetest-db-provider';
 
@@ -62,5 +71,32 @@ export class SettingsRepository {
 
   async clearManualStagedProgress(): Promise<void> {
     await this.db.settings.delete(SETTINGS_MANUAL_STAGED_PROGRESS_KEY);
+  }
+
+  /** Undefined when nothing is saved or the stored row is broken. */
+  async getTypographyUi(): Promise<UiTypography | undefined> {
+    const row = await this.db.settings.get(SETTINGS_TYPOGRAPHY_UI_KEY);
+    return typographyUiFromSettingsRow(row);
+  }
+
+  async setTypographyUi(typography: UiTypography): Promise<void> {
+    await this.db.settings.put(settingsRowForTypographyUi(typography));
+  }
+
+  /** Undefined when nothing is saved or the stored row is broken. */
+  async getTypographyCode(): Promise<CodeTypography | undefined> {
+    const row = await this.db.settings.get(SETTINGS_TYPOGRAPHY_CODE_KEY);
+    return typographyCodeFromSettingsRow(row);
+  }
+
+  async setTypographyCode(typography: CodeTypography): Promise<void> {
+    await this.db.settings.put(settingsRowForTypographyCode(typography));
+  }
+
+  async clearTypography(): Promise<void> {
+    await this.db.transaction('rw', this.db.settings, async () => {
+      await this.db.settings.delete(SETTINGS_TYPOGRAPHY_UI_KEY);
+      await this.db.settings.delete(SETTINGS_TYPOGRAPHY_CODE_KEY);
+    });
   }
 }

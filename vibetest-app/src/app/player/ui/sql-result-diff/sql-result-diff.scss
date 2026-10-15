@@ -27,8 +27,8 @@
 
 .sql-result-diff__table {
   border-collapse: collapse;
-  font-family: monospace;
-  font-size: 0.8125rem;
+  font-family: var(--font-code-family);
+  font-size: var(--font-code-size);
   white-space: nowrap;
 }
 
@@ -65,8 +65,8 @@
 
 .sql-result-diff__error {
   margin: 0;
-  font-family: monospace;
-  font-size: 0.8125rem;
+  font-family: var(--font-code-family);
+  font-size: var(--font-code-size);
   white-space: pre-wrap;
   overflow-wrap: anywhere;
 }

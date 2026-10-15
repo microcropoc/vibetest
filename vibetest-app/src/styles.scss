@@ -9,6 +9,11 @@
   --content-max-width: 72rem;
   --touch-target-min: 2.75rem;
 
+  --font-ui-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-ui-size: 16px;
+  --font-code-family: ui-monospace, Consolas, "Courier New", monospace;
+  --font-code-size: 15px;
+
   --color-bg: #ffffff;
   --color-bg-subtle: #fafafa;
   --color-bg-muted: #f0f0f0;
@@ -166,6 +171,8 @@
 
 html {
   overflow-x: clip;
+  font-family: var(--font-ui-family);
+  font-size: var(--font-ui-size);
 }
 
 body {

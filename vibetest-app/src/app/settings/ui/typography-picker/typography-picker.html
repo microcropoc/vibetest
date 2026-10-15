@@ -1,0 +1,73 @@
+<section class="typography-picker" aria-labelledby="typography-picker-heading">
+  <h2 id="typography-picker-heading" class="typography-picker__title">Шрифты</h2>
+  <p class="typography-picker__hint">
+    Только системные шрифты. Размер интерфейса меняет базовый размер страницы, заголовки в rem
+    масштабируются вместе с ним. Размер кода задаётся отдельно и не растёт вместе с интерфейсом.
+  </p>
+
+  <fieldset class="typography-picker__group">
+    <legend class="typography-picker__legend">Интерфейс</legend>
+    <label class="typography-picker__field">
+      <span class="typography-picker__label">Семейство</span>
+      <select
+        class="typography-picker__select"
+        name="typography-ui-family"
+        (change)="onUiFamilyChange($event)"
+      >
+        @for (option of uiFamilies; track option.value) {
+          <option [value]="option.value" [selected]="option.value === uiValue().family">
+            {{ option.label }}
+          </option>
+        }
+      </select>
+    </label>
+    <label class="typography-picker__field">
+      <span class="typography-picker__label">Размер</span>
+      <select
+        class="typography-picker__select"
+        name="typography-ui-size"
+        (change)="onUiSizeChange($event)"
+      >
+        @for (option of sizes; track option.value) {
+          <option [value]="option.value" [selected]="option.value === uiValue().size">
+            {{ option.label }}
+          </option>
+        }
+      </select>
+    </label>
+  </fieldset>
+
+  <fieldset class="typography-picker__group">
+    <legend class="typography-picker__legend">Код</legend>
+    <label class="typography-picker__field">
+      <span class="typography-picker__label">Семейство</span>
+      <select
+        class="typography-picker__select"
+        name="typography-code-family"
+        (change)="onCodeFamilyChange($event)"
+      >
+        @for (option of codeFamilies; track option.value) {
+          <option [value]="option.value" [selected]="option.value === codeValue().family">
+            {{ option.label }}
+          </option>
+        }
+      </select>
+    </label>
+    <label class="typography-picker__field">
+      <span class="typography-picker__label">Размер</span>
+      <select
+        class="typography-picker__select"
+        name="typography-code-size"
+        (change)="onCodeSizeChange($event)"
+      >
+        @for (option of sizes; track option.value) {
+          <option [value]="option.value" [selected]="option.value === codeValue().size">
+            {{ option.label }}
+          </option>
+        }
+      </select>
+    </label>
+  </fieldset>
+
+  <button type="button" class="typography-picker__reset" (click)="onReset()">По умолчанию</button>
+</section>

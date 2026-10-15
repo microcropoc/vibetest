@@ -143,7 +143,7 @@ export function mountPracticeCodeEditor(
       : null;
   themeObserver?.observe(document.documentElement, {
     attributes: true,
-    attributeFilter: ['data-theme'],
+    attributeFilter: ['data-theme', 'style'],
   });
 
   view.contentDOM.setAttribute('role', 'textbox');

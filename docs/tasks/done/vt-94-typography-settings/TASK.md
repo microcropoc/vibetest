@@ -28,21 +28,25 @@
 
 ## План работ
 
-- [ ] Модель + parse + repository keys
-- [ ] TypographyService + CSS variables в styles
-- [ ] UI на settings-page
-- [ ] Подключить code editor и основные monospace surfaces
-- [ ] SPEC + tests + `ng test --watch=false`
+- [x] Модель + parse + repository keys
+- [x] TypographyService + CSS variables в styles
+- [x] UI на settings-page
+- [x] Подключить code editor и основные monospace surfaces
+- [x] SPEC + tests + `ng test --watch=false`
 
 ## Критерии готовности (Definition of Done)
 
-- [ ] UI и code шрифт/размер настраиваются и переживают перезагрузку
-- [ ] Редактор практики и типичный theory markdown отражают выбор
-- [ ] Defaults восстанавливаются одной кнопкой
-- [ ] Тесты зелёные; strict TS, signals в UI
+- [x] UI и code шрифт/размер настраиваются и переживают перезагрузку
+- [x] Редактор практики и типичный theory markdown отражают выбор
+- [x] Defaults восстанавливаются одной кнопкой
+- [x] Тесты зелёные; strict TS, signals в UI
 
 ## Вне рамок задачи
 
 - Загрузка custom web fonts / Google Fonts
 - Per-course typography
 - Markdown editor WYSIWYG
+
+## Модель (зафиксировано при реализации)
+
+Корень документа (`html`) получает `--font-ui-size` как `font-size`, поэтому существующие размеры в `rem` (заголовки и отступы) масштабируются вместе с интерфейсом. Моноширинные поверхности читают `--font-code-size` в px и не зависят от размера UI. Шаги только S/M/L (потолок — L).

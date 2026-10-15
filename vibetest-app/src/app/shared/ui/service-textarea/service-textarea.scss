@@ -32,8 +32,8 @@
 
 .service-textarea__field--monospace {
   min-height: 12rem;
-  font-family: ui-monospace, monospace;
-  font-size: 0.875rem;
+  font-family: var(--font-code-family);
+  font-size: var(--font-code-size);
   line-height: 1.4;
   border-radius: 4px;
 }

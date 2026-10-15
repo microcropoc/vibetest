@@ -6,6 +6,8 @@ import { createTestVibetestDb, destroyTestVibetestDb } from '../../../storage/te
 import type { VibetestDb } from '../../../storage/vibetest-db';
 import { stubMatchMedia } from '../../test-match-media-stub';
 import { ThemeService } from '../../theme.service';
+import { UI_FONT_STACKS } from '../../typography.model';
+import { TypographyService } from '../../typography.service';
 
 import { SettingsPage } from './settings-page';
 
@@ -34,6 +36,7 @@ describe('SettingsPage', () => {
       await destroyTestVibetestDb(db);
     }
     document.documentElement.removeAttribute('data-theme');
+    document.documentElement.removeAttribute('style');
   });
 
   it('persists theme when user selects an option', async () => {
@@ -62,6 +65,44 @@ describe('SettingsPage', () => {
 
     expect(await SettingsRepository.forDb(db!).getStoredTheme()).toBe('eink');
     expect(document.documentElement.getAttribute('data-theme')).toBe('eink');
+  });
+
+  it('persists a UI font choice and restores defaults without clearing the theme', async () => {
+    db = createTestVibetestDb();
+    const repo = SettingsRepository.forDb(db);
+    await repo.setTheme('eink');
+    TestBed.configureTestingModule({
+      imports: [SettingsPage],
+      providers: [
+        { provide: SettingsRepository, useValue: repo },
+        { provide: BundledCoursesService, useValue: { restoreMissing: vi.fn() } },
+      ],
+    });
+    const fixture = TestBed.createComponent(SettingsPage);
+    await TestBed.inject(TypographyService).initialize();
+    await whenSettingsPageReady(fixture);
+
+    const family = fixture.nativeElement.querySelector(
+      'select[name="typography-ui-family"]',
+    ) as HTMLSelectElement;
+    family.value = 'serif';
+    family.dispatchEvent(new Event('change', { bubbles: true }));
+    await fixture.whenStable();
+
+    expect(await repo.getTypographyUi()).toEqual({ family: 'serif', size: 'm' });
+    expect(document.documentElement.style.getPropertyValue('--font-ui-family')).toBe(
+      UI_FONT_STACKS.serif,
+    );
+
+    const reset = fixture.nativeElement.querySelector(
+      '.typography-picker__reset',
+    ) as HTMLButtonElement;
+    reset.click();
+    await fixture.whenStable();
+
+    expect(await repo.getTypographyUi()).toBeUndefined();
+    expect(await repo.getStoredTheme()).toBe('eink');
+    expect(document.documentElement.style.getPropertyValue('--font-ui-size')).toBe('16px');
   });
 
   it('persists a profile saved through the llm profiles editor', async () => {

@@ -122,4 +122,31 @@ describe('SettingsRepository', () => {
     expect(profile?.structuredOutput).toBe(false);
     expect(profile?.contextLength).toBeNull();
   });
+
+  it('round-trips typography and treats a broken row as missing', async () => {
+    db = createTestVibetestDb();
+    const repo = SettingsRepository.forDb(db);
+    expect(await repo.getTypographyUi()).toBeUndefined();
+    expect(await repo.getTypographyCode()).toBeUndefined();
+
+    await repo.setTypographyUi({ family: 'serif', size: 'l' });
+    await repo.setTypographyCode({ family: 'consolas', size: 's' });
+    expect(await repo.getTypographyUi()).toEqual({ family: 'serif', size: 'l' });
+    expect(await repo.getTypographyCode()).toEqual({ family: 'consolas', size: 's' });
+
+    await db.settings.put({ key: 'typographyUi', value: { family: 'nope', size: 'm' } });
+    expect(await repo.getTypographyUi()).toBeUndefined();
+  });
+
+  it('clears typography without deleting the theme', async () => {
+    db = createTestVibetestDb();
+    const repo = SettingsRepository.forDb(db);
+    await repo.setTheme('dark');
+    await repo.setTypographyUi({ family: 'serif', size: 's' });
+    await repo.setTypographyCode({ family: 'consolas', size: 'l' });
+    await repo.clearTypography();
+    expect(await repo.getTypographyUi()).toBeUndefined();
+    expect(await repo.getTypographyCode()).toBeUndefined();
+    expect(await repo.getStoredTheme()).toBe('dark');
+  });
 });

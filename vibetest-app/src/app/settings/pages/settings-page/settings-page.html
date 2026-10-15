@@ -1,8 +1,16 @@
 <section class="settings-page">
   <h1 class="settings-page__title">Настройки</h1>
-  <p class="settings-page__hint">Тема применяется сразу и сохраняется в этом браузере.</p>
+  <p class="settings-page__hint">Тема и шрифты применяются сразу и сохраняются в этом браузере.</p>
 
   <app-theme-picker [value]="theme()" (themeChange)="onThemeChange($event)" />
+
+  <app-typography-picker
+    [ui]="uiTypography()"
+    [code]="codeTypography()"
+    (uiChange)="onUiTypography($event)"
+    (codeChange)="onCodeTypography($event)"
+    (resetTypography)="onTypographyReset()"
+  />
 
   <section class="settings-page__section">
     <app-llm-profiles-editor

@@ -31,6 +31,10 @@
   margin-bottom: 0;
 }
 
+:host ::ng-deep .markdown-content :where(pre, code) {
+  font-family: var(--font-code-family);
+}
+
 :host ::ng-deep .markdown-content :where(pre) {
   max-width: 100%;
   padding: 0.75rem 1rem;
@@ -42,13 +46,14 @@
   border-radius: 8px;
   background: var(--color-bg-subtle);
   box-sizing: border-box;
+  font-size: var(--font-code-size);
 }
 
 :host ::ng-deep .markdown-content :where(:not(pre) > code) {
   padding: 0.1em 0.35em;
   border-radius: 4px;
   background: var(--color-bg-subtle);
-  font-size: 0.92em;
+  font-size: var(--font-code-size);
   overflow-wrap: anywhere;
 }
 

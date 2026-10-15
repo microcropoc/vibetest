@@ -270,7 +270,7 @@ Inline SVG (SMIL/CSS и т.п.); рендер SVG **без санитизаци�
 |----------------|------------|
 | `courses`      | JSON курса целиком, key `courseId` |
 | `stepProgress` | key `${courseId}::${moduleId}::${stepId}`; `status`: `not-started` \| `in-progress` \| `completed`; черновики по типу шага; признак неудачной последней проверки (quiz/практика) для UI |
-| `settings`     | key/value; `theme` → `light` \| `dark` \| `eink` (только после явного выбора пользователя); `llmProfiles` → массив профилей LLM (`id`, `label`, `baseUrl`, `apiKey`, `model`, `structuredOutput`, `contextLength` — число или `null`) для генерации курса; `manualStagedProgress` → прогресс поэтапного режима «Генерации промта» (`description`, `outlineResponse`, `courseId` или `null`, `nextModuleIndex`) |
+| `settings`     | key/value; `theme` → `light` \| `dark` \| `eink` (только после явного выбора пользователя); `typographyUi` / `typographyCode` → `{ family, size }` (размер `s` \| `m` \| `l`; отсутствие ключа — встроенные значения); `llmProfiles` → массив профилей LLM (`id`, `label`, `baseUrl`, `apiKey`, `model`, `structuredOutput`, `contextLength` — число или `null`) для генерации курса; `manualStagedProgress` → прогресс поэтапного режима «Генерации промта» (`description`, `outlineResponse`, `courseId` или `null`, `nextModuleIndex`) |
 
 Статус модуля и курса — агрегация по шагам. Удаление курса — одной транзакцией (курс + прогресс).
 
@@ -353,6 +353,8 @@ Inline SVG (SMIL/CSS и т.п.); рендер SVG **без санитизаци�
 ### Настройки
 
 Выбор темы **Светлая** | **Тёмная** | **E-ink**; применяется сразу ко всему приложению (`data-theme` на корневом элементе) и синхронизирует `<meta name="theme-color">` / `<meta name="color-scheme">` с фоном активной темы (системный chrome браузера и PWA). **Первый запуск** без записи в IndexedDB следует `prefers-color-scheme` (`dark` / `light`); до bootstrap Angular начальный `data-theme` и meta задаются inline-скриптом в `index.html`. **E-ink** только при ручном выборе. После выбора тема сохраняется в `settings` (ключ `theme`).
+
+**Типографика** — два профиля, только системные шрифты (без загрузки из сети). **Интерфейс:** семейство «Системный» или «С засечками», размер **Мелкий / Обычный / Крупный** (`14px` / `16px` / `18px` на корне документа, поэтому размеры в `rem`, включая заголовки, масштабируются вместе с ним). **Код:** семейство «Системный моно» или Consolas и тот же ряд размеров в абсолютных `13px` / `15px` / `17px` (редактор практики, код в markdown, схема на Инфо, SQL diff, моноширинные поля). Потолок — **Крупный**. Изменение применяется сразу через CSS variables на корне и сохраняется в `settings` (`typographyUi`, `typographyCode`). Нет записи — встроенные значения (системный UI 16px, системный моно 15px). **«По умолчанию»** удаляет только эти два ключа и не трогает тему.
 
 Секция **«Генерация курса (LLM)»**: список профилей подключения (просмотр, добавление, правка, удаление); API key в списке маскируется; заданный Context Length показывается в списке («контекст N»).
 

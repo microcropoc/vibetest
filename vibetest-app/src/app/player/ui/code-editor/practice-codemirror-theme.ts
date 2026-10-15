@@ -16,9 +16,11 @@ export function practiceCodeEditorTheme(): Extension {
       outline: '2px solid var(--color-accent)',
       outlineOffset: '-1px',
     },
+    '.cm-content, .cm-gutters': {
+      fontFamily: 'var(--font-code-family)',
+      fontSize: 'var(--font-code-size)',
+    },
     '.cm-content': {
-      fontFamily: "ui-monospace, 'Cascadia Code', 'Consolas', monospace",
-      fontSize: '0.9375rem',
       lineHeight: '1.45',
       caretColor: 'var(--color-text)',
     },

@@ -9,17 +9,14 @@
   <link rel="manifest" href="manifest.webmanifest">
   <script>
     (function () {
-      var prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-      var theme = prefersDark ? 'dark' : 'light';
-      var themeColor = prefersDark ? '#121212' : '#ffffff';
-      document.documentElement.setAttribute('data-theme', theme);
+      document.documentElement.setAttribute('data-theme', 'dark');
       var meta = document.createElement('meta');
       meta.name = 'theme-color';
-      meta.content = themeColor;
+      meta.content = '#121212';
       document.head.appendChild(meta);
       var scheme = document.createElement('meta');
       scheme.name = 'color-scheme';
-      scheme.content = prefersDark ? 'dark' : 'light';
+      scheme.content = 'dark';
       document.head.appendChild(scheme);
     })();
   </script>

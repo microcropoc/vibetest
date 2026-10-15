@@ -10,7 +10,7 @@ import { SettingsRepository } from '../storage/settings-repository';
 export class ThemeService {
   private readonly settings = inject(SettingsRepository);
 
-  private readonly themeSignal = signal<Theme>('light');
+  private readonly themeSignal = signal<Theme>('dark');
   private initialized = false;
 
   /** Current theme (after {@link initialize}). */

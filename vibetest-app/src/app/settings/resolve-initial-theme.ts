@@ -4,13 +4,13 @@ export interface ColorSchemePreference {
   readonly prefersDark: boolean;
 }
 
-/** Stored theme wins; otherwise system light/dark (never e-ink). */
+/** Stored theme wins; otherwise dark (never e-ink, system scheme ignored). */
 export function resolveInitialTheme(
-  preference: ColorSchemePreference,
+  _preference: ColorSchemePreference,
   storedTheme: Theme | undefined,
 ): Theme {
   if (storedTheme !== undefined) {
     return storedTheme;
   }
-  return preference.prefersDark ? 'dark' : 'light';
+  return 'dark';
 }

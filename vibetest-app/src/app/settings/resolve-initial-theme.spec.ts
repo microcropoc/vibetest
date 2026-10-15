@@ -6,11 +6,8 @@ describe('resolveInitialTheme', () => {
     expect(resolveInitialTheme({ prefersDark: true }, 'light')).toBe('light');
   });
 
-  it('follows system dark when nothing stored', () => {
+  it('defaults to dark when nothing stored, regardless of system scheme', () => {
     expect(resolveInitialTheme({ prefersDark: true }, undefined)).toBe('dark');
-  });
-
-  it('follows system light when nothing stored', () => {
-    expect(resolveInitialTheme({ prefersDark: false }, undefined)).toBe('light');
+    expect(resolveInitialTheme({ prefersDark: false }, undefined)).toBe('dark');
   });
 });

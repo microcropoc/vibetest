@@ -17,8 +17,8 @@ describe('ThemeService', () => {
     document.documentElement.removeAttribute('data-theme');
   });
 
-  it('applies data-theme on initialize from system when nothing stored', async () => {
-    stubMatchMedia(true);
+  it('applies dark when nothing stored even if the system scheme is light', async () => {
+    stubMatchMedia(false);
     db = createTestVibetestDb();
     TestBed.configureTestingModule({
       providers: [{ provide: SettingsRepository, useValue: SettingsRepository.forDb(db) }],

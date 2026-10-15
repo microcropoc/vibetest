@@ -34,17 +34,15 @@
       </label>
     </fieldset>
 
-    <label class="prompt-generation-page__label">
-      Описание курса
-      <textarea
-        class="prompt-generation-page__description"
-        rows="6"
-        placeholder="Например: базовый курс по регулярным выражениям для начинающих"
-        [value]="courseDescription()"
-        [disabled]="inputsLocked()"
-        (input)="onDescriptionInput($event)"
-      ></textarea>
-    </label>
+    <app-service-textarea
+      class="prompt-generation-page__description-field"
+      label="Описание курса"
+      [value]="courseDescription()"
+      (valueChange)="onDescriptionChange($event)"
+      [rows]="6"
+      placeholder="Например: базовый курс по регулярным выражениям для начинающих"
+      [disabled]="inputsLocked()"
+    />
     @if (inputsLocked()) {
       <p class="prompt-generation-page__stage-hint">
         Курс уже сохранён: описание и план менять нельзя. Чтобы начать другой курс, нажмите «Начать
@@ -57,7 +55,11 @@
         Промт с правилами import-DTO и полной JSON Schema; ответ LLM — весь курс.
       </p>
       <div class="prompt-generation-page__toolbar">
-        <button type="button" class="prompt-generation-page__copy" (click)="onCopyPrompt()">
+        <button
+          type="button"
+          class="app-button app-button--primary app-button--stack-full prompt-generation-page__copy"
+          (click)="onCopyPrompt()"
+        >
           Копировать в буфер обмена
         </button>
         <ng-container
@@ -78,7 +80,7 @@
           <div class="prompt-generation-page__toolbar">
             <button
               type="button"
-              class="prompt-generation-page__copy"
+              class="app-button app-button--primary app-button--stack-full prompt-generation-page__copy"
               data-stage="outline"
               [disabled]="!hasDescription()"
               (click)="onCopyOutlinePrompt()"
@@ -94,16 +96,14 @@
 
         <li class="prompt-generation-page__stage">
           <h2 class="prompt-generation-page__stage-title">2. Ответ LLM с планом</h2>
-          <label class="prompt-generation-page__label">
-            JSON плана (можно целиком ответ с блоком ```json)
-            <textarea
-              class="prompt-generation-page__description prompt-generation-page__outline-response"
-              rows="8"
-              [value]="outlineResponse()"
-              [disabled]="inputsLocked()"
-              (input)="onOutlineResponseInput($event)"
-            ></textarea>
-          </label>
+          <app-service-textarea
+            class="prompt-generation-page__outline-field"
+            label="JSON плана (можно целиком ответ с блоком ```json)"
+            [value]="outlineResponse()"
+            (valueChange)="onOutlineResponseChange($event)"
+            [rows]="8"
+            [disabled]="inputsLocked()"
+          />
 
           @if (outlineIssues().length > 0) {
             <p class="prompt-generation-page__error" role="alert">План не прошёл проверку:</p>
@@ -188,7 +188,7 @@
           <div class="prompt-generation-page__toolbar">
             <button
               type="button"
-              class="prompt-generation-page__copy prompt-generation-page__retry-progress"
+              class="app-button app-button--primary app-button--stack-full prompt-generation-page__copy prompt-generation-page__retry-progress"
               [disabled]="accepting()"
               (click)="onRetryProgress()"
             >
@@ -201,7 +201,7 @@
         <div class="prompt-generation-page__toolbar prompt-generation-page__restart">
           <button
             type="button"
-            class="prompt-generation-page__secondary"
+            class="app-button app-button--secondary app-button--stack-full prompt-generation-page__secondary"
             [disabled]="accepting()"
             (click)="onStartOver()"
           >

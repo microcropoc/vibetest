@@ -22,16 +22,15 @@
     }
 
     <fieldset class="course-generation-page__form" [disabled]="generating()">
-      <label class="course-generation-page__label">
-        Описание курса
-        <textarea
-          class="course-generation-page__description"
-          rows="6"
-          placeholder="Например: базовый курс по регулярным выражениям для начинающих"
-          [value]="courseDescription()"
-          (input)="onDescriptionInput($event)"
-        ></textarea>
-      </label>
+      <app-service-textarea
+        class="course-generation-page__description-field"
+        label="Описание курса"
+        [value]="courseDescription()"
+        (valueChange)="onDescriptionChange($event)"
+        [rows]="6"
+        placeholder="Например: базовый курс по регулярным выражениям для начинающих"
+        [disabled]="generating()"
+      />
 
       <fieldset class="course-generation-page__profile-mode">
         <legend class="course-generation-page__profile-mode-legend">Профиль LLM</legend>
@@ -92,13 +91,17 @@
 
     <div class="course-generation-page__toolbar">
       @if (canResume()) {
-        <button type="button" class="course-generation-page__resume" (click)="onResume()">
+        <button
+          type="button"
+          class="app-button app-button--primary app-button--stack-full course-generation-page__resume"
+          (click)="onResume()"
+        >
           Продолжить
         </button>
       }
       <button
         type="button"
-        class="course-generation-page__generate"
+        class="app-button app-button--primary app-button--stack-full course-generation-page__generate"
         [disabled]="!canGenerate()"
         (click)="onGenerate()"
       >
@@ -111,7 +114,11 @@
         }
       </button>
       @if (generating()) {
-        <button type="button" class="course-generation-page__cancel" (click)="onCancelGenerate()">
+        <button
+          type="button"
+          class="app-button app-button--secondary app-button--stack-full course-generation-page__cancel"
+          (click)="onCancelGenerate()"
+        >
           Отмена
         </button>
       }

@@ -13,7 +13,7 @@ function copyButton(fixture: Fixture): HTMLButtonElement {
 }
 
 function acceptButton(fixture: Fixture): HTMLButtonElement {
-  return root(fixture).querySelector('.manual-stage-panel__accept') as HTMLButtonElement;
+  return root(fixture).querySelector('.service-textarea__apply') as HTMLButtonElement;
 }
 
 describe('ManualStagePanel', () => {

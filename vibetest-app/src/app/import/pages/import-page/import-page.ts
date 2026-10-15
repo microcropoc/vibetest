@@ -9,7 +9,9 @@ import {
 import type { ImportIssue, ImportValidationStage } from '../../../courses/import-types';
 import { sortCoursesByCreatedAtDesc } from '../../../courses/sort-courses-by-created-at';
 import { CourseRepository } from '../../../storage/course-repository';
+import { CLIPBOARD_READ_FAILED_JSON_MESSAGE } from '../../../shared/clipboard/read-text-from-clipboard';
 import { ConfirmDialogComponent } from '../../../shared/ui/confirm-dialog/confirm-dialog';
+import { ServiceTextarea } from '../../../shared/ui/service-textarea/service-textarea';
 
 type CourseSelectOption = {
   readonly courseId: string;
@@ -18,7 +20,7 @@ type CourseSelectOption = {
 
 @Component({
   selector: 'app-import-page',
-  imports: [ConfirmDialogComponent],
+  imports: [ConfirmDialogComponent, ServiceTextarea],
   templateUrl: './import-page.html',
   styleUrl: './import-page.scss',
 })
@@ -34,7 +36,6 @@ export class ImportPage {
   protected readonly issueStage = signal<ImportValidationStage | 'replace-required' | null>(
     null,
   );
-  protected readonly clipboardMessage = signal<string | null>(null);
   protected readonly successMessage = signal<string | null>(null);
   protected readonly importing = signal(false);
   protected readonly replaceDialogOpen = signal(false);
@@ -48,13 +49,13 @@ export class ImportPage {
   protected readonly moduleIssueStage = signal<
     ImportValidationStage | 'target' | null
   >(null);
-  protected readonly moduleClipboardMessage = signal<string | null>(null);
   protected readonly moduleSuccessMessage = signal<string | null>(null);
   protected readonly moduleImporting = signal(false);
 
   private pendingImportText = '';
 
   protected readonly formatIssue = formatImportIssue;
+  protected readonly jsonPasteFailedMessage = CLIPBOARD_READ_FAILED_JSON_MESSAGE;
 
   protected readonly stageHeading = computed((): string => {
     const stage = this.issueStage();
@@ -84,20 +85,12 @@ export class ImportPage {
     void this.loadCourseOptions();
   }
 
-  protected onJsonInput(event: Event): void {
-    const target = event.target;
-    if (!(target instanceof HTMLTextAreaElement)) {
-      return;
-    }
-    this.jsonText.set(target.value);
+  protected onCourseJsonChange(value: string): void {
+    this.jsonText.set(value);
   }
 
-  protected onModuleJsonInput(event: Event): void {
-    const target = event.target;
-    if (!(target instanceof HTMLTextAreaElement)) {
-      return;
-    }
-    this.moduleJsonText.set(target.value);
+  protected onModuleJsonChange(value: string): void {
+    this.moduleJsonText.set(value);
   }
 
   protected onRegenerateIdsChange(event: Event): void {
@@ -132,27 +125,11 @@ export class ImportPage {
     this.selectedCourseId.set(target.value);
   }
 
-  protected async onPasteCourseFromClipboard(): Promise<void> {
-    await this.pasteFromClipboard((text) => {
-      this.jsonText.set(text);
-      this.clipboardMessage.set(null);
-    }, (message) => this.clipboardMessage.set(message));
-  }
-
-  protected async onPasteModuleFromClipboard(): Promise<void> {
-    await this.pasteFromClipboard((text) => {
-      this.moduleJsonText.set(text);
-      this.moduleClipboardMessage.set(null);
-    }, (message) => this.moduleClipboardMessage.set(message));
-  }
-
-  protected onSubmit(event: Event): void {
-    event.preventDefault();
+  protected onCourseApply(): void {
     void this.runImport(false);
   }
 
-  protected onModuleSubmit(event: Event): void {
-    event.preventDefault();
+  protected onModuleApply(): void {
     void this.runModuleImport();
   }
 
@@ -180,22 +157,6 @@ export class ImportPage {
     }
   }
 
-  private async pasteFromClipboard(
-    onText: (text: string) => void,
-    onError: (message: string) => void,
-  ): Promise<void> {
-    if (typeof navigator === 'undefined' || !navigator.clipboard?.readText) {
-      onError('Буфер обмена недоступен в этом браузере.');
-      return;
-    }
-    try {
-      const text = await navigator.clipboard.readText();
-      onText(text);
-    } catch {
-      onError('Нет доступа к буферу обмена. Вставьте JSON вручную.');
-    }
-  }
-
   private async runImport(confirmReplace: boolean): Promise<void> {
     const text = confirmReplace ? this.pendingImportText : this.jsonText();
     if (!confirmReplace) {
@@ -206,7 +167,6 @@ export class ImportPage {
     this.issues.set([]);
     this.issueStage.set(null);
     this.successMessage.set(null);
-    this.clipboardMessage.set(null);
 
     try {
       const result = await this.importService.importCourse(text, {
@@ -255,7 +215,6 @@ export class ImportPage {
     this.moduleIssues.set([]);
     this.moduleIssueStage.set(null);
     this.moduleSuccessMessage.set(null);
-    this.moduleClipboardMessage.set(null);
 
     try {
       const result = await this.importService.importModule(this.moduleJsonText(), {

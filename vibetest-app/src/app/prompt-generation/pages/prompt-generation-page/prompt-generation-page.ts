@@ -43,6 +43,7 @@ import {
   type ManualStagedProgress,
 } from '../../manual-staged-progress';
 import { parseOutlineResponse } from '../../parse-outline-response';
+import { ServiceTextarea } from '../../../shared/ui/service-textarea/service-textarea';
 import { ManualStagePanel } from '../../ui/manual-stage-panel/manual-stage-panel';
 
 export type PromptGenerationMode = 'single' | 'staged';
@@ -72,7 +73,7 @@ const STAGE_COPY_KEY = 'stage';
 
 @Component({
   selector: 'app-prompt-generation-page',
-  imports: [NgTemplateOutlet, RouterLink, ManualStagePanel],
+  imports: [NgTemplateOutlet, RouterLink, ManualStagePanel, ServiceTextarea],
   templateUrl: './prompt-generation-page.html',
   styleUrl: './prompt-generation-page.scss',
 })
@@ -195,22 +196,20 @@ export class PromptGenerationPage {
     this.copyFeedback.set(null);
   }
 
-  protected onDescriptionInput(event: Event): void {
-    const target = event.target as HTMLTextAreaElement;
+  protected onDescriptionChange(value: string): void {
     if (this.inputsLocked()) {
       return;
     }
-    this.courseDescription.set(target.value);
+    this.courseDescription.set(value);
     this.copyFeedback.set(null);
     void this.persistProgressIfNeeded();
   }
 
-  protected onOutlineResponseInput(event: Event): void {
-    const target = event.target as HTMLTextAreaElement;
+  protected onOutlineResponseChange(value: string): void {
     if (this.inputsLocked()) {
       return;
     }
-    this.outlineResponse.set(target.value);
+    this.outlineResponse.set(value);
     this.copyFeedback.set(null);
     this.resetStageAttempt();
     void this.persistProgressIfNeeded();

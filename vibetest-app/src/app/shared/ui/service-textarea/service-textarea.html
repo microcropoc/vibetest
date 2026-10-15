@@ -1,0 +1,88 @@
+<div class="service-textarea">
+  <label class="service-textarea__label">
+    @if (label(); as labelText) {
+      <span class="service-textarea__label-text">{{ labelText }}</span>
+    }
+    <textarea
+      class="service-textarea__field"
+      [class.service-textarea__field--monospace]="monospace()"
+      [attr.name]="name()"
+      [attr.aria-label]="ariaLabel() ?? label()"
+      [rows]="rows()"
+      [placeholder]="placeholder() ?? ''"
+      [value]="value()"
+      [disabled]="fieldDisabled()"
+      (input)="onInput($event)"
+      autocomplete="off"
+      spellcheck="false"
+    ></textarea>
+  </label>
+
+  <ng-content />
+
+  <div class="service-textarea__toolbar">
+    @if (showCopy()) {
+      <button
+        type="button"
+        class="app-button app-button--secondary app-button--stack-full service-textarea__action"
+        [disabled]="fieldDisabled() || !hasValue()"
+        (click)="onCopy()"
+      >
+        Копировать
+      </button>
+    }
+    @if (showPaste()) {
+      <button
+        type="button"
+        class="app-button app-button--secondary app-button--stack-full service-textarea__action"
+        [disabled]="fieldDisabled()"
+        (click)="onPaste()"
+      >
+        Вставить из буфера
+      </button>
+    }
+    @if (showClear()) {
+      <button
+        type="button"
+        class="app-button app-button--secondary app-button--stack-full service-textarea__action"
+        [disabled]="fieldDisabled() || !hasValue()"
+        (click)="onClear()"
+      >
+        Очистить
+      </button>
+    }
+    <ng-content select="[serviceTextareaToolbar]" />
+    @if (showApplyButton()) {
+      <button
+        type="button"
+        class="app-button app-button--primary app-button--stack-full service-textarea__action service-textarea__apply"
+        [disabled]="applyButtonDisabled()"
+        (click)="onApplyClick()"
+      >
+        {{ applyButtonText() }}
+      </button>
+    }
+  </div>
+
+  @if (copyResult() === 'copied') {
+    <p class="service-textarea__status" role="status">Скопировано</p>
+  } @else if (copyResult() === 'unavailable') {
+    <p class="service-textarea__status service-textarea__status--error" role="status">
+      Копирование недоступно в этом браузере
+    </p>
+  } @else if (copyResult() === 'failed') {
+    <p class="service-textarea__status service-textarea__status--error" role="status">
+      Не удалось скопировать
+    </p>
+  }
+
+  @if (clipboardMessage(); as message) {
+    <p
+      class="service-textarea__status"
+      [class.service-textarea__status--error]="clipboardMessageIsError()"
+      role="status"
+    >
+      {{ message }}
+    </p>
+  }
+</div>

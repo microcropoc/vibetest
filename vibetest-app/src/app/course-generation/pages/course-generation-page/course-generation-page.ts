@@ -39,6 +39,7 @@ import {
   type StagedGenerationOutcome,
   type StagedGenerationState,
 } from '../../staged-course-generator.service';
+import { ServiceTextarea } from '../../../shared/ui/service-textarea/service-textarea';
 import { GenerationStages } from '../../ui/generation-stages/generation-stages';
 
 type ProfileMode = 'saved' | 'new';
@@ -79,7 +80,7 @@ function generationSchema(schema: unknown): GenerationSchema {
 
 @Component({
   selector: 'app-course-generation-page',
-  imports: [RouterLink, LlmProfileFieldsComponent, GenerationStages],
+  imports: [RouterLink, LlmProfileFieldsComponent, GenerationStages, ServiceTextarea],
   templateUrl: './course-generation-page.html',
   styleUrl: './course-generation-page.scss',
 })
@@ -188,12 +189,11 @@ export class CourseGenerationPage {
     void this.loadProfiles();
   }
 
-  protected onDescriptionInput(event: Event): void {
-    const target = event.target;
-    if (!(target instanceof HTMLTextAreaElement) || this.generating()) {
+  protected onDescriptionChange(value: string): void {
+    if (this.generating()) {
       return;
     }
-    this.courseDescription.set(target.value);
+    this.courseDescription.set(value);
     this.resetGeneration();
   }
 

@@ -7,7 +7,7 @@
   <div class="manual-stage-panel__toolbar">
     <button
       type="button"
-      class="manual-stage-panel__button manual-stage-panel__copy"
+      class="app-button app-button--primary app-button--stack-full manual-stage-panel__copy"
       [disabled]="busy()"
       (click)="copyPrompt.emit()"
     >
@@ -26,27 +26,17 @@
     }
   </div>
 
-  <label class="manual-stage-panel__label">
-    Ответ LLM (можно целиком, с блоком ```json)
-    <textarea
-      class="manual-stage-panel__answer"
-      rows="8"
-      [value]="answer()"
-      [disabled]="busy()"
-      (input)="onAnswerInput($event)"
-    ></textarea>
-  </label>
-
-  <div class="manual-stage-panel__toolbar">
-    <button
-      type="button"
-      class="manual-stage-panel__button manual-stage-panel__accept"
-      [disabled]="busy() || !hasAnswer()"
-      (click)="accept.emit()"
-    >
-      {{ busy() ? 'Проверка…' : 'Проверить и сохранить' }}
-    </button>
-  </div>
+  <app-service-textarea
+    label="Ответ LLM (можно целиком, с блоком ```json)"
+    [value]="answer()"
+    (valueChange)="onAnswerChange($event)"
+    [rows]="8"
+    [disabled]="busy()"
+    [busy]="busy()"
+    applyLabel="Проверить и сохранить"
+    applyBusyLabel="Проверка…"
+    (apply)="accept.emit()"
+  />
 
   @if (error(); as errorText) {
     <p class="manual-stage-panel__error" role="alert">{{ errorText }}</p>

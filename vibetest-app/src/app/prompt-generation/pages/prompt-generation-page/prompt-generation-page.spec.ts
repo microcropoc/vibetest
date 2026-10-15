@@ -105,19 +105,19 @@ async function submitStageAnswer(
   fixture: ComponentFixture<PromptGenerationPage>,
   answer: string,
 ): Promise<void> {
-  await typeInto(fixture, '.manual-stage-panel__answer', answer);
-  (root(fixture).querySelector('.manual-stage-panel__accept') as HTMLButtonElement).click();
+  await typeInto(fixture, 'app-manual-stage-panel textarea', answer);
+  (root(fixture).querySelector('.service-textarea__apply') as HTMLButtonElement).click();
   await waitFor(
     fixture,
-    () => root(fixture).querySelector('.manual-stage-panel__accept')?.textContent?.trim() !== 'Проверка…',
+    () => root(fixture).querySelector('.service-textarea__apply')?.textContent?.trim() !== 'Проверка…',
   );
 }
 
 async function preparePlan(fixture: ComponentFixture<PromptGenerationPage>): Promise<void> {
   await whenPageReady(fixture);
   await switchToStaged(fixture);
-  await typeInto(fixture, '.prompt-generation-page__description', 'Курс про regex');
-  await typeInto(fixture, '.prompt-generation-page__outline-response', JSON.stringify(OUTLINE));
+  await typeInto(fixture, '.prompt-generation-page__description-field textarea', 'Курс про regex');
+  await typeInto(fixture, '.prompt-generation-page__outline-field textarea', JSON.stringify(OUTLINE));
 }
 
 const COURSE_ANSWER = `Готово:\n\`\`\`json\n${JSON.stringify(minimalValidImportJson())}\n\`\`\``;
@@ -168,7 +168,7 @@ describe('PromptGenerationPage', () => {
     const settings = SettingsRepository.forDb(db);
     const fixture = TestBed.createComponent(PromptGenerationPage);
     await whenPageReady(fixture);
-    await typeInto(fixture, '.prompt-generation-page__description', 'Курс про CSS');
+    await typeInto(fixture, '.prompt-generation-page__description-field textarea', 'Курс про CSS');
     await waitFor(fixture, async () => (await settings.getManualStagedProgress()) === undefined);
 
     expect(await settings.getManualStagedProgress()).toBeUndefined();
@@ -178,7 +178,7 @@ describe('PromptGenerationPage', () => {
     const fixture = TestBed.createComponent(PromptGenerationPage);
     await whenPageReady(fixture);
 
-    await typeInto(fixture, '.prompt-generation-page__description', 'Курс про CSS');
+    await typeInto(fixture, '.prompt-generation-page__description-field textarea', 'Курс про CSS');
 
     const copyBtn = root(fixture).querySelector(
       '.prompt-generation-page__copy',
@@ -226,7 +226,7 @@ describe('PromptGenerationPage', () => {
 
     expect(stageButton(fixture, 'outline')!.disabled).toBe(true);
 
-    await typeInto(fixture, '.prompt-generation-page__description', 'Курс про regex');
+    await typeInto(fixture, '.prompt-generation-page__description-field textarea', 'Курс про regex');
     stageButton(fixture, 'outline')!.click();
     await fixture.whenStable();
 
@@ -243,7 +243,7 @@ describe('PromptGenerationPage', () => {
     await whenPageReady(fixture);
     await switchToStaged(fixture);
 
-    await typeInto(fixture, '.prompt-generation-page__outline-response', 'Не могу помочь');
+    await typeInto(fixture, '.prompt-generation-page__outline-field textarea', 'Не могу помочь');
 
     const issues = root(fixture).querySelector('.prompt-generation-page__issues')!.textContent ?? '';
     expect(issues).toContain('Ответ не содержит JSON для импорта.');
@@ -257,7 +257,7 @@ describe('PromptGenerationPage', () => {
 
     await typeInto(
       fixture,
-      '.prompt-generation-page__outline-response',
+      '.prompt-generation-page__outline-field textarea',
       JSON.stringify({ ...OUTLINE, modules: [] }),
     );
 
@@ -279,7 +279,7 @@ describe('PromptGenerationPage', () => {
     };
     await typeInto(
       fixture,
-      '.prompt-generation-page__outline-response',
+      '.prompt-generation-page__outline-field textarea',
       JSON.stringify(theoryOnly),
     );
 
@@ -295,10 +295,10 @@ describe('PromptGenerationPage', () => {
     const fixture = TestBed.createComponent(PromptGenerationPage);
     await whenPageReady(fixture);
     await switchToStaged(fixture);
-    await typeInto(fixture, '.prompt-generation-page__description', 'Курс про regex');
+    await typeInto(fixture, '.prompt-generation-page__description-field textarea', 'Курс про regex');
     await typeInto(
       fixture,
-      '.prompt-generation-page__outline-response',
+      '.prompt-generation-page__outline-field textarea',
       `План:\n\`\`\`json\n${JSON.stringify(OUTLINE)}\n\`\`\``,
     );
 
@@ -329,14 +329,14 @@ describe('PromptGenerationPage', () => {
     const [course] = await CourseRepository.forDb(db).list();
     expect(link.getAttribute('href')).toBe(`/courses/${course!.courseId}`);
     expect(
-      (root(fixture).querySelector('.prompt-generation-page__description') as HTMLTextAreaElement)
+      (root(fixture).querySelector('.prompt-generation-page__description-field textarea') as HTMLTextAreaElement)
         .disabled,
     ).toBe(true);
     expect(
-      (root(fixture).querySelector('.prompt-generation-page__outline-response') as HTMLTextAreaElement)
+      (root(fixture).querySelector('.prompt-generation-page__outline-field textarea') as HTMLTextAreaElement)
         .disabled,
     ).toBe(true);
-    expect((root(fixture).querySelector('.manual-stage-panel__answer') as HTMLTextAreaElement).value).toBe('');
+    expect((root(fixture).querySelector('app-manual-stage-panel textarea') as HTMLTextAreaElement).value).toBe('');
 
     await copyStagePrompt(fixture);
     expect(writeTextMock).toHaveBeenLastCalledWith(
@@ -446,7 +446,7 @@ describe('PromptGenerationPage', () => {
 
     expect((root(fixture).querySelector('input[value="staged"]') as HTMLInputElement).checked).toBe(true);
     expect(
-      (root(fixture).querySelector('.prompt-generation-page__description') as HTMLTextAreaElement).value,
+      (root(fixture).querySelector('.prompt-generation-page__description-field textarea') as HTMLTextAreaElement).value,
     ).toBe('Курс про regex');
     expect(panelTitle(fixture)).toBe('Модуль 2 из 3: «Квантификаторы»');
     expect(root(fixture).querySelector('a.prompt-generation-page__link')).not.toBeNull();
@@ -462,7 +462,7 @@ describe('PromptGenerationPage', () => {
     await waitFor(fixture, async () => (await settings.getManualStagedProgress()) === undefined);
 
     const description = root(fixture).querySelector(
-      '.prompt-generation-page__description',
+      '.prompt-generation-page__description-field textarea',
     ) as HTMLTextAreaElement;
     expect(description.value).toBe('');
     expect(description.disabled).toBe(false);

@@ -45,16 +45,6 @@
   gap: 0.75rem;
 }
 
-.import-page__json {
-  width: 100%;
-  min-height: 12rem;
-  font-family: ui-monospace, monospace;
-  font-size: 0.875rem;
-  line-height: 1.4;
-  padding: 0.5rem;
-  box-sizing: border-box;
-}
-
 .import-page__checkbox {
   display: flex;
   align-items: flex-start;
@@ -67,34 +57,6 @@
   min-width: 1.125rem;
   min-height: 1.125rem;
   margin-top: 0.15rem;
-}
-
-.import-page__actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.5rem;
-}
-
-.import-page__button {
-  min-height: var(--touch-target-min);
-  padding: 0.5rem 1rem;
-  font-size: 1rem;
-  cursor: pointer;
-}
-
-@media (max-width: 479px) {
-  .import-page__actions {
-    flex-direction: column;
-  }
-
-  .import-page__actions .import-page__button {
-    width: 100%;
-  }
-}
-
-.import-page__button:disabled {
-  cursor: not-allowed;
-  opacity: 0.6;
 }
 
 .import-page__status {

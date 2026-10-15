@@ -71,7 +71,7 @@ async function createReadyPage(expectSavedProfile: boolean): Promise<Fixture> {
 
 async function typeDescription(fixture: Fixture, value: string): Promise<void> {
   const textarea = root(fixture).querySelector(
-    '.course-generation-page__description',
+    '.course-generation-page__description-field textarea',
   ) as HTMLTextAreaElement;
   textarea.value = value;
   textarea.dispatchEvent(new Event('input'));

@@ -1,4 +1,5 @@
 import { TestBed, type ComponentFixture } from '@angular/core/testing';
+import { By } from '@angular/platform-browser';
 import { provideRouter, Router } from '@angular/router';
 
 import { CourseImportService } from '../../../courses/course-import.service';
@@ -45,6 +46,36 @@ describe('ImportPage', () => {
     return TestBed.createComponent(ImportPage);
   }
 
+  async function fillTextarea(
+    fixture: ComponentFixture<ImportPage>,
+    name: string,
+    value: string,
+  ): Promise<void> {
+    const debugEl = fixture.debugElement.query(By.css(`textarea[name="${name}"]`));
+    const textarea = debugEl.nativeElement as HTMLTextAreaElement;
+    textarea.value = value;
+    debugEl.triggerEventHandler('input', { target: textarea });
+    await fixture.whenStable();
+  }
+
+  async function clickCourseImport(fixture: ComponentFixture<ImportPage>): Promise<void> {
+    const section = fixture.nativeElement.querySelector(
+      'section[aria-labelledby="import-course-heading"]',
+    ) as HTMLElement;
+    const apply = section.querySelector('.service-textarea__apply') as HTMLButtonElement;
+    apply.click();
+    await fixture.whenStable();
+  }
+
+  async function clickModuleImport(fixture: ComponentFixture<ImportPage>): Promise<void> {
+    const section = fixture.nativeElement.querySelector(
+      'section[aria-labelledby="import-module-heading"]',
+    ) as HTMLElement;
+    const apply = section.querySelector('.service-textarea__apply') as HTMLButtonElement;
+    apply.click();
+    await fixture.whenStable();
+  }
+
   it('checks regenerate IDs by default', async () => {
     const fixture = createFixture();
     await fixture.whenStable();
@@ -81,13 +112,8 @@ describe('ImportPage', () => {
     checkbox.dispatchEvent(new Event('change', { bubbles: true }));
     await fixture.whenStable();
 
-    const textarea = fixture.nativeElement.querySelector(
-      'textarea[name="courseJson"]',
-    ) as HTMLTextAreaElement;
-    textarea.value = '{}';
-    textarea.dispatchEvent(new Event('input'));
-    fixture.nativeElement.querySelector('form')!.dispatchEvent(new Event('submit'));
-    await fixture.whenStable();
+    await fillTextarea(fixture, 'courseJson', '{}');
+    await clickCourseImport(fixture);
 
     expect(importCourse).toHaveBeenCalledWith('{}', {
       regenerateIds: true,
@@ -105,14 +131,8 @@ describe('ImportPage', () => {
 
     const fixture = createFixture();
     await fixture.whenStable();
-    const textarea = fixture.nativeElement.querySelector(
-      'textarea[name="courseJson"]',
-    ) as HTMLTextAreaElement;
-    textarea.value = '{';
-    textarea.dispatchEvent(new Event('input'));
-    const form = fixture.nativeElement.querySelector('form') as HTMLFormElement;
-    form.dispatchEvent(new Event('submit'));
-    await fixture.whenStable();
+    await fillTextarea(fixture, 'courseJson', '{');
+    await clickCourseImport(fixture);
 
     const root = fixture.nativeElement as HTMLElement;
     expect(root.textContent).toContain('Разбор JSON');
@@ -140,14 +160,8 @@ describe('ImportPage', () => {
     checkbox.dispatchEvent(new Event('change', { bubbles: true }));
     await fixture.whenStable();
 
-    const textarea = fixture.nativeElement.querySelector(
-      'textarea[name="courseJson"]',
-    ) as HTMLTextAreaElement;
-    textarea.value = '{}';
-    textarea.dispatchEvent(new Event('input'));
-    const form = fixture.nativeElement.querySelector('form') as HTMLFormElement;
-    form.dispatchEvent(new Event('submit'));
-    await fixture.whenStable();
+    await fillTextarea(fixture, 'courseJson', '{}');
+    await clickCourseImport(fixture);
 
     expect(fixture.nativeElement.textContent).toContain('Заменить курс');
     expect(fixture.nativeElement.textContent).toContain('course-1');
@@ -176,13 +190,8 @@ describe('ImportPage', () => {
     checkbox.checked = false;
     checkbox.dispatchEvent(new Event('change', { bubbles: true }));
 
-    const textarea = fixture.nativeElement.querySelector(
-      'textarea[name="courseJson"]',
-    ) as HTMLTextAreaElement;
-    textarea.value = '{"courseId":"course-1"}';
-    textarea.dispatchEvent(new Event('input'));
-    fixture.nativeElement.querySelector('form')!.dispatchEvent(new Event('submit'));
-    await fixture.whenStable();
+    await fillTextarea(fixture, 'courseJson', '{"courseId":"course-1"}');
+    await clickCourseImport(fixture);
 
     const confirm = fixture.nativeElement.querySelector(
       '.confirm-dialog__button--primary',
@@ -209,13 +218,8 @@ describe('ImportPage', () => {
     const router = TestBed.inject(Router);
     const navigateSpy = vi.spyOn(router, 'navigate').mockResolvedValue(true);
 
-    const textarea = fixture.nativeElement.querySelector(
-      'textarea[name="courseJson"]',
-    ) as HTMLTextAreaElement;
-    textarea.value = '{}';
-    textarea.dispatchEvent(new Event('input'));
-    fixture.nativeElement.querySelector('form')!.dispatchEvent(new Event('submit'));
-    await fixture.whenStable();
+    await fillTextarea(fixture, 'courseJson', '{}');
+    await clickCourseImport(fixture);
 
     expect(navigateSpy).toHaveBeenCalledWith(['/courses', 'new-id']);
   });
@@ -229,8 +233,11 @@ describe('ImportPage', () => {
 
     const fixture = createFixture();
     await fixture.whenStable();
-    const button = fixture.nativeElement.querySelector(
-      'section[aria-labelledby="import-course-heading"] button.import-page__button',
+    const section = fixture.nativeElement.querySelector(
+      'section[aria-labelledby="import-course-heading"]',
+    ) as HTMLElement;
+    const button = [...section.querySelectorAll('button')].find((element) =>
+      element.textContent?.includes('Вставить'),
     ) as HTMLButtonElement;
     button.click();
     await fixture.whenStable();
@@ -251,17 +258,8 @@ describe('ImportPage', () => {
     const router = TestBed.inject(Router);
     vi.spyOn(router, 'navigate').mockResolvedValue(true);
 
-    const moduleTextarea = fixture.nativeElement.querySelector(
-      'textarea[name="moduleJson"]',
-    ) as HTMLTextAreaElement;
-    moduleTextarea.value = '{"schemaVersion":1}';
-    moduleTextarea.dispatchEvent(new Event('input'));
-
-    const moduleForm = fixture.nativeElement.querySelector(
-      'section[aria-labelledby="import-module-heading"] form',
-    ) as HTMLFormElement;
-    moduleForm.dispatchEvent(new Event('submit'));
-    await fixture.whenStable();
+    await fillTextarea(fixture, 'moduleJson', '{"schemaVersion":1}');
+    await clickModuleImport(fixture);
 
     expect(importModule).toHaveBeenCalledWith('{"schemaVersion":1}', {
       courseId: 'course-1',

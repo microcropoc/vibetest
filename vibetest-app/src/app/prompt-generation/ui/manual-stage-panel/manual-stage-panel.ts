@@ -3,10 +3,11 @@ import { Component, computed, input, output } from '@angular/core';
 import { formatImportIssue } from '../../../courses/import-issue-view';
 import type { ImportIssue } from '../../../courses/import-types';
 import type { CopyTextToClipboardResult } from '../../../shared/clipboard/copy-text-to-clipboard';
+import { ServiceTextarea } from '../../../shared/ui/service-textarea/service-textarea';
 
 /** Current manual stage: copy the prompt, paste the LLM answer, check and save it. */
 @Component({
-  imports: [],
+  imports: [ServiceTextarea],
   selector: 'app-manual-stage-panel',
   styleUrl: './manual-stage-panel.scss',
   templateUrl: './manual-stage-panel.html',
@@ -26,13 +27,9 @@ export class ManualStagePanel {
   readonly accept = output<void>();
 
   protected readonly formatIssue = formatImportIssue;
-  protected readonly hasAnswer = computed(() => this.answer().trim().length > 0);
   protected readonly retry = computed(() => this.issues().length > 0);
 
-  protected onAnswerInput(event: Event): void {
-    const target = event.target;
-    if (target instanceof HTMLTextAreaElement) {
-      this.answerChange.emit(target.value);
-    }
+  protected onAnswerChange(value: string): void {
+    this.answerChange.emit(value);
   }
 }

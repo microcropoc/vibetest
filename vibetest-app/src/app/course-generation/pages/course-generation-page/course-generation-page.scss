@@ -127,6 +127,23 @@
   margin-top: 1rem;
 }
 
+.course-generation-page__raw-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem;
+  margin: 0.5rem 0;
+}
+
+.course-generation-page__copy-status {
+  color: var(--color-text-muted);
+  font-size: 0.875rem;
+}
+
+.course-generation-page__copy-status--error {
+  color: var(--color-danger);
+}
+
 .course-generation-page__raw-pre {
   max-height: 16rem;
   overflow: auto;

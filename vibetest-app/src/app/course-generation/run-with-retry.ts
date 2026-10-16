@@ -8,6 +8,7 @@ export type AttemptInvalid = {
   readonly stage: ImportValidationStage;
   readonly issues: readonly ImportIssue[];
   readonly rawResponse?: string;
+  readonly prompt?: string;
 };
 
 /** Repeating the same request will not help (HTTP/network error, cancel, missing course). */
@@ -16,6 +17,7 @@ export type AttemptFatal = {
   readonly message: string;
   readonly cancelled?: boolean;
   readonly rawResponse?: string;
+  readonly prompt?: string;
 };
 
 export type AttemptOutcome<T> =

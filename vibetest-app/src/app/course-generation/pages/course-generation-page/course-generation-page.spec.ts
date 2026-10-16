@@ -108,6 +108,7 @@ const EXHAUSTED: StagedGenerationResult = {
       stage: 'zod',
       issues: [{ path: 'steps', message: 'Too small' }],
       rawResponse: '{"steps":[]}',
+      prompt: 'system rules\n\nuser stage data',
     },
   },
 };
@@ -292,6 +293,8 @@ describe('CourseGenerationPage', () => {
     expect(text(fixture)).toContain('не прошёл проверку после всех попыток');
     expect(text(fixture)).toContain('steps: Too small');
     expect(text(fixture)).toContain('Ответ модели (последняя попытка)');
+    expect(text(fixture)).toContain('Промт (последняя попытка)');
+    expect(text(fixture)).toContain('system rules');
     expect(generateButton(fixture).textContent).toContain('Начать заново');
 
     resumeButton(fixture)!.click();

@@ -53,7 +53,21 @@ describe('openai-chat-completions', () => {
       choices: [{ message: { content: '{}' }, finish_reason: 'length' }],
     });
     expect(result.kind).toBe('failure');
-    expect(result.kind === 'failure' && result.retryReason).toBe('truncated');
+    if (result.kind === 'failure') {
+      expect(result.retryReason).toBe('truncated');
+      expect(result.rawResponse).toBe('{}');
+    }
+  });
+
+  it('omits rawResponse on length finish_reason when content is empty', () => {
+    const result = parseChatCompletionResponseBody({
+      choices: [{ message: { content: '  ' }, finish_reason: 'length' }],
+    });
+    expect(result.kind).toBe('failure');
+    if (result.kind === 'failure') {
+      expect(result.retryReason).toBe('truncated');
+      expect(result.rawResponse).toBeUndefined();
+    }
   });
 
   it('fails retryably on empty content', () => {

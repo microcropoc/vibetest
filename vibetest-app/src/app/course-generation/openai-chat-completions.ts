@@ -60,6 +60,8 @@ export type ChatCompletionFailure = {
   readonly promptTokens?: number;
   /** Set when the model answered unusably; another attempt may succeed. */
   readonly retryReason?: ChatCompletionRetryReason;
+  /** Raw model text when available (e.g. truncated answer at finish_reason: length). */
+  readonly rawResponse?: string;
 };
 
 export type ChatCompletionRetryReason = 'truncated' | 'empty';
@@ -118,12 +120,16 @@ export function parseChatCompletionResponseBody(
   const promptTokens = parsed.data.usage?.prompt_tokens;
   const choice = parsed.data.choices[0]!;
   if (choice.finish_reason === 'length') {
+    const content = choice.message.content;
+    const rawResponse =
+      content !== null && content.trim().length > 0 ? content : undefined;
     return {
       kind: 'failure',
       message:
         'Ответ модели обрезан (finish_reason: length). Уменьшите курс или увеличьте лимит токенов.',
       promptTokens,
       retryReason: 'truncated',
+      ...(rawResponse !== undefined ? { rawResponse } : {}),
     };
   }
 

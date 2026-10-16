@@ -156,9 +156,55 @@
           }
         </ul>
       }
+      @if (fail.prompt; as prompt) {
+        <details class="course-generation-page__raw">
+          <summary>Промт (последняя попытка)</summary>
+          <div class="course-generation-page__raw-toolbar">
+            <button
+              type="button"
+              class="app-button app-button--secondary course-generation-page__raw-copy"
+              (click)="onCopyFailurePrompt()"
+            >
+              Копировать промт
+            </button>
+            @if (promptCopyFeedback() === 'copied') {
+              <span class="course-generation-page__copy-status" role="status">Скопировано</span>
+            } @else if (promptCopyFeedback() === 'unavailable') {
+              <span class="course-generation-page__copy-status course-generation-page__copy-status--error" role="alert">
+                Копирование недоступно в этом браузере
+              </span>
+            } @else if (promptCopyFeedback() === 'failed') {
+              <span class="course-generation-page__copy-status course-generation-page__copy-status--error" role="alert">
+                Не удалось скопировать
+              </span>
+            }
+          </div>
+          <pre class="course-generation-page__raw-pre">{{ prompt }}</pre>
+        </details>
+      }
       @if (fail.rawResponse; as raw) {
         <details class="course-generation-page__raw">
           <summary>Ответ модели (последняя попытка)</summary>
+          <div class="course-generation-page__raw-toolbar">
+            <button
+              type="button"
+              class="app-button app-button--secondary course-generation-page__raw-copy"
+              (click)="onCopyFailureRawResponse()"
+            >
+              Копировать ответ
+            </button>
+            @if (rawCopyFeedback() === 'copied') {
+              <span class="course-generation-page__copy-status" role="status">Скопировано</span>
+            } @else if (rawCopyFeedback() === 'unavailable') {
+              <span class="course-generation-page__copy-status course-generation-page__copy-status--error" role="alert">
+                Копирование недоступно в этом браузере
+              </span>
+            } @else if (rawCopyFeedback() === 'failed') {
+              <span class="course-generation-page__copy-status course-generation-page__copy-status--error" role="alert">
+                Не удалось скопировать
+              </span>
+            }
+          </div>
           <pre class="course-generation-page__raw-pre">{{ raw }}</pre>
         </details>
       }

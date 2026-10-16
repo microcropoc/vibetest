@@ -4,6 +4,7 @@ import {
   buildFirstModuleCourseMessages,
   buildModuleMessages,
   buildOutlineMessages,
+  joinStagedMessages,
   type StagedGenerationMessages,
   type StagedGenerationMessagesOptions,
 } from '../prompt-generation/build-staged-generation-messages';
@@ -28,6 +29,8 @@ import {
   invalidJson,
   type ModelText,
 } from './staged-step-acceptor.service';
+
+type ModelTextWithPrompt = ModelText & { readonly prompt: string };
 
 /** Progress that survives a failed run, so generation can resume from the failed step. */
 export type StagedGenerationState = {
@@ -96,6 +99,16 @@ const RETRY_ISSUE_MESSAGES: Record<ChatCompletionRetryReason, string> = {
     'Ответ не поместился в лимит токенов и обрезан. Пиши компактнее: короче теория и описания, меньше примеров, без лишних пробелов в JSON.',
   empty: 'Ответ пустой. Выведи JSON.',
 };
+
+function attachPrompt<T>(
+  outcome: AttemptOutcome<T>,
+  prompt: string,
+): AttemptOutcome<T> {
+  if (outcome.kind === 'ok') {
+    return outcome;
+  }
+  return { ...outcome, prompt };
+}
 
 @Injectable({ providedIn: 'root' })
 export class StagedCourseGenerator {
@@ -200,6 +213,7 @@ export class StagedCourseGenerator {
         stage: parsed.stage,
         issues: parsed.issues,
         rawResponse: response.rawResponse,
+        prompt: response.prompt,
       };
     }
     return { kind: 'ok', value: parsed.outline };
@@ -225,7 +239,10 @@ export class StagedCourseGenerator {
     if (response.kind !== 'text') {
       return response;
     }
-    return this.acceptor.acceptFirstModule(response.text, response.rawResponse);
+    return attachPrompt(
+      await this.acceptor.acceptFirstModule(response.text, response.rawResponse),
+      response.prompt,
+    );
   }
 
   private async moduleAttempt(
@@ -249,7 +266,10 @@ export class StagedCourseGenerator {
     if (response.kind !== 'text') {
       return response;
     }
-    return this.acceptor.acceptModule(response.text, courseId, response.rawResponse);
+    return attachPrompt(
+      await this.acceptor.acceptModule(response.text, courseId, response.rawResponse),
+      response.prompt,
+    );
   }
 
   /** One chat request; returns extracted JSON text or an invalid/fatal outcome. */
@@ -260,13 +280,14 @@ export class StagedCourseGenerator {
     context: AttemptContext,
     signal: AbortSignal | undefined,
     callbacks: StagedGenerationCallbacks | undefined,
-  ): Promise<ModelText | AttemptInvalid | AttemptFatal> {
+  ): Promise<ModelTextWithPrompt | AttemptInvalid | AttemptFatal> {
     const importSchema =
       profile.structuredOutput && schema.record !== null ? schema.record : undefined;
     const messages = buildMessages({
       structuredOutput: importSchema !== undefined,
       retryIssues: context.retryIssues,
     });
+    const prompt = joinStagedMessages(messages);
 
     const completion = await this.lmStudio.complete(
       profile,
@@ -284,10 +305,18 @@ export class StagedCourseGenerator {
     }
     if (completion.kind === 'failure') {
       return completion.retryReason !== undefined
-        ? invalidJson(RETRY_ISSUE_MESSAGES[completion.retryReason])
-        : { kind: 'fatal', message: completion.message };
+        ? { ...invalidJson(RETRY_ISSUE_MESSAGES[completion.retryReason], completion.rawResponse), prompt }
+        : {
+            kind: 'fatal',
+            message: completion.message,
+            prompt,
+            ...(completion.rawResponse !== undefined ? { rawResponse: completion.rawResponse } : {}),
+          };
     }
 
-    return extractModelJson(completion.content);
+    const extracted = extractModelJson(completion.content);
+    return extracted.kind === 'text'
+      ? { ...extracted, prompt }
+      : { ...extracted, prompt };
   }
 }

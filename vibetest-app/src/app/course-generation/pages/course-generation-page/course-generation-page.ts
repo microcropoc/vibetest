@@ -39,6 +39,10 @@ import {
   type StagedGenerationOutcome,
   type StagedGenerationState,
 } from '../../staged-course-generator.service';
+import {
+  copyTextToClipboard,
+  type CopyTextToClipboardResult,
+} from '../../../shared/clipboard/copy-text-to-clipboard';
 import { ServiceTextarea } from '../../../shared/ui/service-textarea/service-textarea';
 import { GenerationStages } from '../../ui/generation-stages/generation-stages';
 
@@ -60,6 +64,7 @@ type GenerationFailure = {
   readonly stage: ImportValidationStage | null;
   readonly issues: readonly ImportIssue[];
   readonly rawResponse: string | null;
+  readonly prompt: string | null;
 };
 
 /** Stand-in plan for the token estimate before stage 1 has produced the real one. */
@@ -107,6 +112,8 @@ export class CourseGenerationPage {
   protected readonly runningStep = signal<GenerationStep | null>(null);
   protected readonly runningAttempt = signal<GenerationAttempt | null>(null);
   protected readonly failure = signal<GenerationFailure | null>(null);
+  protected readonly promptCopyFeedback = signal<CopyTextToClipboardResult | null>(null);
+  protected readonly rawCopyFeedback = signal<CopyTextToClipboardResult | null>(null);
   protected readonly apiError = signal<string | null>(null);
   protected readonly completed = signal(false);
 
@@ -236,6 +243,22 @@ export class CourseGenerationPage {
     this.abortController?.abort();
   }
 
+  protected async onCopyFailurePrompt(): Promise<void> {
+    const prompt = this.failure()?.prompt;
+    if (prompt === null || prompt === undefined || prompt.length === 0) {
+      return;
+    }
+    this.promptCopyFeedback.set(await copyTextToClipboard(prompt));
+  }
+
+  protected async onCopyFailureRawResponse(): Promise<void> {
+    const raw = this.failure()?.rawResponse;
+    if (raw === null || raw === undefined || raw.length === 0) {
+      return;
+    }
+    this.rawCopyFeedback.set(await copyTextToClipboard(raw));
+  }
+
   private async runGeneration(fromScratch: boolean): Promise<void> {
     const schemas = this.schemas();
     if (!this.canGenerate() || schemas === null) {
@@ -247,6 +270,8 @@ export class CourseGenerationPage {
     }
     this.apiError.set(null);
     this.failure.set(null);
+    this.promptCopyFeedback.set(null);
+    this.rawCopyFeedback.set(null);
     this.generating.set(true);
     const controller = new AbortController();
     this.abortController = controller;
@@ -300,6 +325,7 @@ export class CourseGenerationPage {
         stage: outcome.last.stage,
         issues: outcome.last.issues,
         rawResponse: outcome.last.rawResponse ?? null,
+        prompt: outcome.last.prompt ?? null,
       });
       return;
     }
@@ -309,12 +335,15 @@ export class CourseGenerationPage {
       stage: null,
       issues: [],
       rawResponse: outcome.failure.rawResponse ?? null,
+      prompt: outcome.failure.prompt ?? null,
     });
   }
 
   private resetGeneration(): void {
     this.generationState.set(INITIAL_STAGED_GENERATION_STATE);
     this.failure.set(null);
+    this.promptCopyFeedback.set(null);
+    this.rawCopyFeedback.set(null);
     this.apiError.set(null);
     this.completed.set(false);
     this.lastPromptTokens.set(null);

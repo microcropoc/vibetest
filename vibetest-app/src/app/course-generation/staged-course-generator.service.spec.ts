@@ -169,6 +169,35 @@ describe('StagedCourseGenerator', () => {
     expect(userMessage(complete.mock.calls[2])).toContain('Нужен ровно один модуль');
   });
 
+  it('includes prompt and rawResponse on exhausted module validation', async () => {
+    complete
+      .mockResolvedValueOnce(success(OUTLINE))
+      .mockResolvedValueOnce(success(minimalValidImportJson()))
+      .mockResolvedValueOnce(success(BAD_MODULE))
+      .mockResolvedValueOnce(success(BAD_MODULE))
+      .mockResolvedValueOnce(success(BAD_MODULE));
+
+    const failed = await generator.run(INITIAL_STAGED_GENERATION_STATE, INPUT);
+
+    expect(failed.outcome.kind).toBe('exhausted');
+    if (failed.outcome.kind === 'exhausted') {
+      expect(failed.outcome.last.prompt).toContain('Сгенерируй JSON одного модуля');
+      expect(failed.outcome.last.prompt).toContain('Предыдущий ответ отклонён');
+      expect(failed.outcome.last.rawResponse).toBe(JSON.stringify(BAD_MODULE));
+    }
+  });
+
+  it('includes prompt on fatal API failure', async () => {
+    complete.mockResolvedValue({ kind: 'failure', message: 'Model not loaded' });
+
+    const result = await generator.run(INITIAL_STAGED_GENERATION_STATE, INPUT);
+
+    expect(result.outcome.kind).toBe('fatal');
+    if (result.outcome.kind === 'fatal') {
+      expect(result.outcome.failure.prompt).toContain('Составь план курса');
+    }
+  });
+
   it('stops after max attempts and resumes from the failed module', async () => {
     complete
       .mockResolvedValueOnce(success(OUTLINE))
@@ -208,7 +237,11 @@ describe('StagedCourseGenerator', () => {
     expect(result.outcome).toEqual({
       kind: 'fatal',
       step: { kind: 'outline' },
-      failure: { kind: 'fatal', message: 'Model not loaded' },
+      failure: expect.objectContaining({
+        kind: 'fatal',
+        message: 'Model not loaded',
+        prompt: expect.stringContaining('Составь план курса'),
+      }),
     });
     expect(complete).toHaveBeenCalledTimes(1);
   });

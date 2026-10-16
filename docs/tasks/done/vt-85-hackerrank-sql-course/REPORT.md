@@ -1,5 +1,6 @@
 ---
 branch: feature/vt-85-hackerrank-sql-course
+merged: "0177197"
 ---
 
 # Отчёт vt-85 — Курс «HackerRank SQL»

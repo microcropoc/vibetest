@@ -548,10 +548,10 @@ const advancedSelectProblems: readonly SqliteProblem[] = [
     ],
   },
   {
-    leetcode: 177,
+    leetcode: 610,
     title: 'Triangle Judgement',
     description:
-      'Строки `(x,y,z)`, которые могут быть сторонами **нестороннего** треугольника (сумма любых двух > третьей). Колонка `triangle` = «Yes»/«No».',
+      'Строки `(x,y,z)`, которые могут быть сторонами **треугольника** (сумма любых двух сторон > третьей). Колонка `triangle` = «Yes»/«No».',
     setup: 'CREATE TABLE Triangle(x INTEGER NOT NULL, y INTEGER NOT NULL, z INTEGER NOT NULL);',
     starterCode: 'SELECT x, y, z, "No" AS triangle FROM Triangle;',
     referenceSolution:
@@ -627,17 +627,18 @@ const advancedSelectProblems: readonly SqliteProblem[] = [
 
 const subqueryProblems: readonly SqliteProblem[] = [
   {
-    leetcode: 1773,
+    leetcode: 1978,
     title: 'Employees Whose Manager Left the Company',
     description:
-      'Сотрудники, чей `managerId` **не существует** в таблице (менеджер «уволился»). Колонка `employee_id`.',
+      'Сотрудники с `salary` **строго меньше 30000**, чей менеджер (`manager_id`) **больше не работает** в компании. Колонка `employee_id`, сортировка по возрастанию.',
     setup:
-      'CREATE TABLE Employees(employee_id INTEGER PRIMARY KEY, name TEXT NOT NULL, manager_id INTEGER);',
+      'CREATE TABLE Employees(employee_id INTEGER PRIMARY KEY, name TEXT NOT NULL, manager_id INTEGER, salary INTEGER NOT NULL);',
     starterCode: 'SELECT employee_id FROM Employees;',
     referenceSolution:
-      'SELECT employee_id FROM Employees WHERE manager_id IS NOT NULL AND manager_id NOT IN (SELECT employee_id FROM Employees);',
+      'SELECT employee_id FROM Employees WHERE salary < 30000 AND manager_id IS NOT NULL AND manager_id NOT IN (SELECT employee_id FROM Employees) ORDER BY employee_id;',
+    orderMatters: true,
     tests: [
-      'INSERT INTO Employees VALUES (3,"Mila",9),(12,"Anton",NULL),(13,"Alex",NULL),(10,"Alice",NULL);',
+      'INSERT INTO Employees VALUES (3,"Mila",9,40000),(12,"Anton",NULL,30000),(13,"Alex",NULL,38000),(10,"Alice",NULL,20000);',
     ],
   },
   {

@@ -66,9 +66,9 @@
     },
     {
       "type": "sqlite",
-      "title": "177. Triangle Judgement",
+      "title": "610. Triangle Judgement",
       "content": {
-        "description": "Строки `(x,y,z)`, которые могут быть сторонами **нестороннего** треугольника (сумма любых двух > третьей). Колонка `triangle` = «Yes»/«No».\n\n[LeetCode 177](https://leetcode.com/problems/triangle-judgement/)",
+        "description": "Строки `(x,y,z)`, которые могут быть сторонами **треугольника** (сумма любых двух сторон > третьей). Колонка `triangle` = «Yes»/«No».\n\n[LeetCode 610](https://leetcode.com/problems/triangle-judgement/)",
         "setup": "CREATE TABLE Triangle(x INTEGER NOT NULL, y INTEGER NOT NULL, z INTEGER NOT NULL);",
         "starterCode": "SELECT x, y, z, \"No\" AS triangle FROM Triangle;",
         "referenceSolution": "SELECT x, y, z, CASE WHEN x + y > z AND x + z > y AND y + z > x THEN \"Yes\" ELSE \"No\" END AS triangle FROM Triangle;",

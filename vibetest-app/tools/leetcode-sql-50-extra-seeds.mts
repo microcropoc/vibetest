@@ -77,7 +77,7 @@ export const EXTRA_SEEDS: Readonly<Record<number, readonly string[]>> = {
     'INSERT INTO Employee VALUES (5,9,"Y");',
     'INSERT INTO Employee VALUES (1,1,"N"),(2,2,"N");',
   ],
-  177: [
+  610: [
     'INSERT INTO Triangle VALUES (1,2,10);',
   ],
   180: [
@@ -94,9 +94,10 @@ export const EXTRA_SEEDS: Readonly<Record<number, readonly string[]>> = {
   1907: [
     'INSERT INTO Accounts VALUES (1,60000);',
   ],
-  1773: [
-    'INSERT INTO Employees VALUES (1,"Root",NULL);',
-    'INSERT INTO Employees VALUES (2,"Orphan",99);',
+  1978: [
+    'INSERT INTO Employees VALUES (1,"Root",NULL,50000);',
+    'INSERT INTO Employees VALUES (2,"Orphan",99,25000);',
+    'INSERT INTO Employees VALUES (5,"E",7,29000),(8,"G",7,50000);',
   ],
   626: [
     "INSERT INTO Seat VALUES (1,'Only');",
@@ -146,7 +147,7 @@ export const EXTRA_SEEDS: Readonly<Record<number, readonly string[]>> = {
 };
 
 export const FORCE_CHECK_COLUMN_NAMES = new Set<number>([
-  595, 1683, 197, 570, 620, 596, 1045, 1789, 180, 1164, 1773, 1527, 1327, 1517,
+  595, 1683, 197, 570, 620, 596, 1045, 1789, 180, 1164, 1978, 1527, 1327, 1517,
 ]);
 
 export function mergeProblemTests(leetcode: number, base: readonly string[]): string[] {

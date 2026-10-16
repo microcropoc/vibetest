@@ -12,7 +12,7 @@
 | [ozon-csharp-livecoding.json](./ozon-csharp-livecoding.json) | **Лайвкодинг в Ozon на C#** — 25 модулей (intro + 24 дня: Enrichment … Outbox), theory, svg, quiz, решения .NET 8 |
 | [csharp-ozon-interview.json](./csharp-ozon-interview.json) | **C# для опытного разработчика: собеседование в Ozon** — 21 модуль (intro + 20 тем: CLR … архитектура), theory, svg, вопросы с собеседования, quiz, .NET 8 |
 | [sqlite-flagship.json](./sqlite-flagship.json) | **SQL на SQLite** — 20 модулей (theory, svg, sqlite, quiz): SELECT … оконные функции, CTE, DML/UPSERT, DDL, индексы и EXPLAIN QUERY PLAN, транзакции, JSON, отличия от MySQL/PostgreSQL; 61 задача в формате LeetCode |
-| [leetcode-sql.json](./leetcode-sql.json) | **LeetCode SQL** (SQL 50) — intro + 7 модулей по учебному плану LeetCode: 50 sqlite-задач с ссылками на оригинал, русскими условиями и seed-тестами |
+| [leetcode-sql.json](./leetcode-sql.json) | **LeetCode SQL** — intro + 12 модулей: учебный план SQL 50 (01–07) и остальные бесплатные SQL/Database-задачи LeetCode, сгруппированные по темам (08–12); 105 sqlite-задач с ссылками на оригинал, русскими условиями и seed-тестами |
 
 ## Исходники и сборка
 
@@ -41,7 +41,7 @@ npm run generate:bundled-courses   # перед ng serve / в prebuild авто�
 
 Источник правды — `NN-slug.module.json`: правьте их, затем запускайте сборку.
 
-**LeetCode SQL:** модули в [leetcode-sql/](./leetcode-sql/) генерируются из `vibetest-app/tools/leetcode-sql-50-modules-data.mts` (доп. seed — `leetcode-sql-50-extra-seeds.mts`):
+**LeetCode SQL:** модули в [leetcode-sql/](./leetcode-sql/) генерируются из `vibetest-app/tools/leetcode-sql-50-modules-data.mts` (SQL 50), `leetcode-sql-free-rest-modules-data.mts` (модули 08–12, остальные бесплатные задачи) и `leetcode-sql-50-extra-seeds.mts` (доп. seed-тесты):
 
 ```bash
 cd vibetest-app

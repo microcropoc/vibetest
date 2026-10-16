@@ -1,0 +1,327 @@
+{
+  "schemaVersion": 1,
+  "title": "Aggregation and Pivoting",
+  "steps": [
+    {
+      "type": "theory",
+      "title": "Агрегаты, HAVING и разворот в колонки",
+      "content": "## Агрегация и pivot\n\n- `COUNT(DISTINCT x)` считает **разные** значения, `COUNT(x)` — непустые.\n- `HAVING` фильтрует группы; агрегат можно сравнивать с агрегатом (`HAVING SUM(a) > 10000`).\n- «Разворот» в колонки — `SUM(CASE WHEN month = … THEN revenue END)` по одной колонке на месяц.\n- Целочисленное деление в SQLite: `SUM(x) * 1.0 / COUNT(*)`, иначе дробная часть теряется."
+    },
+    {
+      "type": "svg",
+      "title": "Схема: Aggregation and Pivoting",
+      "content": {
+        "caption": "Условный SUM(CASE …) строит колонки-месяцы",
+        "description": "Pivot одной таблицы без отдельного pivot-оператора.",
+        "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 280 80\" width=\"100%\" role=\"img\" aria-label=\"Aggregation and Pivoting\"><rect id=\"lsq09-box\" x=\"40\" y=\"15\" width=\"200\" height=\"50\" rx=\"4\" fill=\"#e3f2fd\" stroke=\"#1565c0\"/><text x=\"140\" y=\"45\" text-anchor=\"middle\" font-size=\"12\" fill=\"#0d47a1\">Aggregation and Pivoting</text></svg>"
+      }
+    },
+    {
+      "type": "sqlite",
+      "title": "182. Duplicate Emails",
+      "content": {
+        "description": "Email-адреса (`email`), встречающиеся **более одного раза**.\n\n[LeetCode 182](https://leetcode.com/problems/duplicate-emails/)",
+        "setup": "CREATE TABLE Person(id INTEGER PRIMARY KEY, email TEXT NOT NULL);",
+        "starterCode": "SELECT email FROM Person GROUP BY email HAVING COUNT(*) = 1;",
+        "referenceSolution": "SELECT email FROM Person GROUP BY email HAVING COUNT(*) > 1;",
+        "timeoutMs": 8000,
+        "tests": [
+          {
+            "seed": "INSERT INTO Person VALUES (1,'a@b.com'),(2,'c@d.com'),(3,'a@b.com');"
+          },
+          {
+            "seed": "INSERT INTO Person VALUES (1,'a@b.com'),(2,'c@d.com');"
+          },
+          {
+            "seed": "INSERT INTO Person VALUES (1,'x@y.z'),(2,'x@y.z'),(3,'x@y.z');"
+          },
+          {
+            "seed": "INSERT INTO Person VALUES (1,'solo@x.com');"
+          }
+        ],
+        "orderMatters": false,
+        "checkColumnNames": true
+      }
+    },
+    {
+      "type": "sqlite",
+      "title": "511. Game Play Analysis I",
+      "content": {
+        "description": "Для каждого `player_id` — дата первой игры как `first_login`.\n\n[LeetCode 511](https://leetcode.com/problems/game-play-analysis-i/)",
+        "setup": "CREATE TABLE Activity(player_id INTEGER NOT NULL, device_id INTEGER NOT NULL, event_date TEXT NOT NULL, games_played INTEGER NOT NULL);",
+        "starterCode": "SELECT player_id, MAX(event_date) AS first_login FROM Activity GROUP BY player_id;",
+        "referenceSolution": "SELECT player_id, MIN(event_date) AS first_login FROM Activity GROUP BY player_id;",
+        "timeoutMs": 8000,
+        "tests": [
+          {
+            "seed": "INSERT INTO Activity VALUES (1,2,'2016-03-01',5),(1,2,'2016-05-02',6),(2,3,'2017-06-25',1),(3,1,'2016-03-02',0),(3,4,'2018-07-03',5);"
+          },
+          {
+            "seed": "INSERT INTO Activity VALUES (1,1,'2020-01-01',1),(1,1,'2020-01-02',1);"
+          },
+          {
+            "seed": "INSERT INTO Activity VALUES (5,1,'2019-12-31',2);"
+          }
+        ],
+        "orderMatters": false,
+        "checkColumnNames": true
+      }
+    },
+    {
+      "type": "sqlite",
+      "title": "586. Customer Placing the Largest Number of Orders",
+      "content": {
+        "description": "`customer_number` клиента с наибольшим числом заказов.\n\n[LeetCode 586](https://leetcode.com/problems/customer-placing-the-largest-number-of-orders/)",
+        "setup": "CREATE TABLE Orders(order_number INTEGER PRIMARY KEY, customer_number INTEGER NOT NULL);",
+        "starterCode": "SELECT customer_number FROM Orders GROUP BY customer_number ORDER BY COUNT(*) ASC LIMIT 1;",
+        "referenceSolution": "SELECT customer_number FROM Orders GROUP BY customer_number ORDER BY COUNT(*) DESC LIMIT 1;",
+        "timeoutMs": 8000,
+        "tests": [
+          {
+            "seed": "INSERT INTO Orders VALUES (1,1),(2,2),(3,3),(4,3);"
+          },
+          {
+            "seed": "INSERT INTO Orders VALUES (1,5);"
+          },
+          {
+            "seed": "INSERT INTO Orders VALUES (1,1),(2,1),(3,2);"
+          }
+        ],
+        "orderMatters": false,
+        "checkColumnNames": true
+      }
+    },
+    {
+      "type": "sqlite",
+      "title": "1050. Actors and Directors Who Cooperated At Least Three Times",
+      "content": {
+        "description": "Пары `actor_id`, `director_id`, работавшие вместе **≥ 3** раз (`timestamp`).\n\n[LeetCode 1050](https://leetcode.com/problems/actors-and-directors-who-cooperated-at-least-three-times/)",
+        "setup": "CREATE TABLE ActorDirector(actor_id INTEGER NOT NULL, director_id INTEGER NOT NULL, timestamp INTEGER PRIMARY KEY);",
+        "starterCode": "SELECT actor_id, director_id FROM ActorDirector GROUP BY actor_id, director_id HAVING COUNT(*) >= 2;",
+        "referenceSolution": "SELECT actor_id, director_id FROM ActorDirector GROUP BY actor_id, director_id HAVING COUNT(*) >= 3;",
+        "timeoutMs": 8000,
+        "tests": [
+          {
+            "seed": "INSERT INTO ActorDirector VALUES (1,1,0),(1,1,1),(1,1,2),(1,2,3),(1,2,4),(2,1,5),(2,1,6);"
+          },
+          {
+            "seed": "INSERT INTO ActorDirector VALUES (1,1,0),(1,1,1);"
+          },
+          {
+            "seed": "INSERT INTO ActorDirector VALUES (3,4,1),(3,4,2),(3,4,3),(3,4,4);"
+          }
+        ],
+        "orderMatters": false,
+        "checkColumnNames": true
+      }
+    },
+    {
+      "type": "sqlite",
+      "title": "1084. Sales Analysis III",
+      "content": {
+        "description": "`product_id`, `product_name` товаров, которые продавались **только** в первом квартале 2019 (`2019-01-01`–`2019-03-31`).\n\n[LeetCode 1084](https://leetcode.com/problems/sales-analysis-iii/)",
+        "setup": "CREATE TABLE Product(product_id INTEGER PRIMARY KEY, product_name TEXT NOT NULL, unit_price INTEGER NOT NULL);\nCREATE TABLE Sales(seller_id INTEGER NOT NULL, product_id INTEGER NOT NULL, buyer_id INTEGER NOT NULL, sale_date TEXT NOT NULL, quantity INTEGER NOT NULL, price INTEGER NOT NULL);",
+        "starterCode": "SELECT p.product_id, p.product_name FROM Product p JOIN Sales s ON p.product_id = s.product_id WHERE s.sale_date BETWEEN '2019-01-01' AND '2019-03-31';",
+        "referenceSolution": "SELECT p.product_id, p.product_name FROM Product p JOIN Sales s ON p.product_id = s.product_id GROUP BY p.product_id HAVING MIN(s.sale_date) >= '2019-01-01' AND MAX(s.sale_date) <= '2019-03-31';",
+        "timeoutMs": 8000,
+        "tests": [
+          {
+            "seed": "INSERT INTO Product VALUES (1,'S8',1000),(2,'G4',800),(3,'iPhone',1400);\nINSERT INTO Sales VALUES (1,1,1,'2019-01-21',2,2000),(1,2,2,'2019-02-17',1,800),(2,2,3,'2019-06-02',1,800),(3,3,4,'2019-05-13',2,2800);"
+          },
+          {
+            "seed": "INSERT INTO Product VALUES (1,'A',10),(2,'B',20);\nINSERT INTO Sales VALUES (1,1,1,'2019-01-01',1,10),(1,1,1,'2019-03-31',1,10),(1,2,1,'2019-04-01',1,20);"
+          },
+          {
+            "seed": "INSERT INTO Product VALUES (1,'A',10);"
+          }
+        ],
+        "orderMatters": false,
+        "checkColumnNames": true
+      }
+    },
+    {
+      "type": "sqlite",
+      "title": "1179. Reformat Department Table",
+      "content": {
+        "description": "Разверните `Department` по месяцам: колонки `id`, `Jan_Revenue`, …, `Dec_Revenue`; сумма `revenue` за месяц и `id`, `NULL` если данных нет. Сортировка по `id`.\n\n[LeetCode 1179](https://leetcode.com/problems/reformat-department-table/)",
+        "setup": "CREATE TABLE Department(id INTEGER NOT NULL, revenue INTEGER NOT NULL, month TEXT NOT NULL);",
+        "starterCode": "SELECT id, revenue, month FROM Department ORDER BY id;",
+        "referenceSolution": "SELECT id,\n  SUM(CASE WHEN month = 'Jan' THEN revenue END) AS Jan_Revenue,\n  SUM(CASE WHEN month = 'Feb' THEN revenue END) AS Feb_Revenue,\n  SUM(CASE WHEN month = 'Mar' THEN revenue END) AS Mar_Revenue,\n  SUM(CASE WHEN month = 'Apr' THEN revenue END) AS Apr_Revenue,\n  SUM(CASE WHEN month = 'May' THEN revenue END) AS May_Revenue,\n  SUM(CASE WHEN month = 'Jun' THEN revenue END) AS Jun_Revenue,\n  SUM(CASE WHEN month = 'Jul' THEN revenue END) AS Jul_Revenue,\n  SUM(CASE WHEN month = 'Aug' THEN revenue END) AS Aug_Revenue,\n  SUM(CASE WHEN month = 'Sep' THEN revenue END) AS Sep_Revenue,\n  SUM(CASE WHEN month = 'Oct' THEN revenue END) AS Oct_Revenue,\n  SUM(CASE WHEN month = 'Nov' THEN revenue END) AS Nov_Revenue,\n  SUM(CASE WHEN month = 'Dec' THEN revenue END) AS Dec_Revenue\nFROM Department GROUP BY id ORDER BY id;",
+        "timeoutMs": 8000,
+        "tests": [
+          {
+            "seed": "INSERT INTO Department VALUES (1,8000,'Jan'),(2,9000,'Jan'),(3,10000,'Feb'),(1,7000,'Feb'),(1,6000,'Mar');"
+          },
+          {
+            "seed": "INSERT INTO Department VALUES (1,100,'Dec');"
+          },
+          {
+            "seed": "INSERT INTO Department VALUES (2,50,'Jun'),(2,60,'Jun');"
+          }
+        ],
+        "orderMatters": true,
+        "checkColumnNames": true
+      }
+    },
+    {
+      "type": "sqlite",
+      "title": "1587. Bank Account Summary II",
+      "content": {
+        "description": "Имя владельца (`name`) и `balance` — сумма всех транзакций по счёту, если она **больше 10000**.\n\n[LeetCode 1587](https://leetcode.com/problems/bank-account-summary-ii/)",
+        "setup": "CREATE TABLE Users(account INTEGER PRIMARY KEY, name TEXT NOT NULL);\nCREATE TABLE Transactions(trans_id INTEGER PRIMARY KEY, account INTEGER NOT NULL, amount INTEGER NOT NULL, trans_date TEXT NOT NULL);",
+        "starterCode": "SELECT u.name, SUM(t.amount) AS balance FROM Users u JOIN Transactions t ON u.account = t.account GROUP BY u.account;",
+        "referenceSolution": "SELECT u.name, SUM(t.amount) AS balance FROM Users u JOIN Transactions t ON u.account = t.account GROUP BY u.account HAVING SUM(t.amount) > 10000;",
+        "timeoutMs": 8000,
+        "tests": [
+          {
+            "seed": "INSERT INTO Users VALUES (900001,'Alice'),(900002,'Bob'),(900003,'Charlie');\nINSERT INTO Transactions VALUES (1,900001,7000,'2020-09-01'),(2,900001,7000,'2020-09-02'),(3,900001,7000,'2020-09-03'),(4,900002,5000,'2020-09-04'),(5,900003,1000,'2020-09-05'),(6,900003,6000,'2020-09-06');"
+          },
+          {
+            "seed": "INSERT INTO Users VALUES (1,'A');\nINSERT INTO Transactions VALUES (1,1,10000,'2020-01-01');"
+          },
+          {
+            "seed": "INSERT INTO Users VALUES (1,'A'),(2,'B');\nINSERT INTO Transactions VALUES (1,1,20000,'2020-01-01'),(2,2,-5000,'2020-01-02');"
+          }
+        ],
+        "orderMatters": false,
+        "checkColumnNames": true
+      }
+    },
+    {
+      "type": "sqlite",
+      "title": "1693. Daily Leads and Partners",
+      "content": {
+        "description": "По `date_id`, `make_name`: `unique_leads` (разные `lead_id`) и `unique_partners` (разные `partner_id`).\n\n[LeetCode 1693](https://leetcode.com/problems/daily-leads-and-partners/)",
+        "setup": "CREATE TABLE DailySales(date_id TEXT NOT NULL, make_name TEXT NOT NULL, lead_id INTEGER NOT NULL, partner_id INTEGER NOT NULL);",
+        "starterCode": "SELECT date_id, make_name, COUNT(lead_id) AS unique_leads, COUNT(partner_id) AS unique_partners FROM DailySales GROUP BY date_id, make_name;",
+        "referenceSolution": "SELECT date_id, make_name, COUNT(DISTINCT lead_id) AS unique_leads, COUNT(DISTINCT partner_id) AS unique_partners FROM DailySales GROUP BY date_id, make_name;",
+        "timeoutMs": 8000,
+        "tests": [
+          {
+            "seed": "INSERT INTO DailySales VALUES ('2020-12-08','toyota',0,1),('2020-12-08','toyota',1,0),('2020-12-08','toyota',1,2),('2020-12-07','toyota',0,2),('2020-12-07','toyota',0,1),('2020-12-08','honda',1,2),('2020-12-08','honda',1,2),('2020-12-07','honda',0,1),('2020-12-07','honda',2,1);"
+          },
+          {
+            "seed": "INSERT INTO DailySales VALUES ('2021-01-01','X',1,1);"
+          },
+          {
+            "seed": "INSERT INTO DailySales VALUES ('2021-01-02','Y',1,2),('2021-01-02','Y',1,2);"
+          }
+        ],
+        "orderMatters": false,
+        "checkColumnNames": true
+      }
+    },
+    {
+      "type": "sqlite",
+      "title": "1741. Find Total Time Spent by Each Employee",
+      "content": {
+        "description": "Для пары `(emp_id, event_day)`: `day` и `total_time` = сумма `out_time - in_time`.\n\n[LeetCode 1741](https://leetcode.com/problems/find-total-time-spent-by-each-employee/)",
+        "setup": "CREATE TABLE Employees(emp_id INTEGER NOT NULL, event_day TEXT NOT NULL, in_time INTEGER NOT NULL, out_time INTEGER NOT NULL);",
+        "starterCode": "SELECT event_day AS day, emp_id, SUM(out_time + in_time) AS total_time FROM Employees GROUP BY emp_id, event_day;",
+        "referenceSolution": "SELECT event_day AS day, emp_id, SUM(out_time - in_time) AS total_time FROM Employees GROUP BY emp_id, event_day;",
+        "timeoutMs": 8000,
+        "tests": [
+          {
+            "seed": "INSERT INTO Employees VALUES (1,'2020-11-28',7,13),(1,'2020-12-09',9,15),(1,'2020-11-28',9,16),(2,'2020-11-28',8,16),(2,'2020-12-09',8,12),(3,'2020-11-28',9,16),(3,'2020-12-09',9,16);"
+          },
+          {
+            "seed": "INSERT INTO Employees VALUES (1,'2020-01-01',1,2);"
+          },
+          {
+            "seed": "INSERT INTO Employees VALUES (1,'2020-01-01',9,9);"
+          }
+        ],
+        "orderMatters": false,
+        "checkColumnNames": true
+      }
+    },
+    {
+      "type": "sqlite",
+      "title": "1890. The Latest Login in 2020",
+      "content": {
+        "description": "Для каждого `user_id` — последний вход (`last_stamp`) **в 2020 году**. Пользователи без входов в 2020 не выводятся.\n\n[LeetCode 1890](https://leetcode.com/problems/the-latest-login-in-2020/)",
+        "setup": "CREATE TABLE Logins(user_id INTEGER NOT NULL, time_stamp TEXT NOT NULL);",
+        "starterCode": "SELECT user_id, MAX(time_stamp) AS last_stamp FROM Logins GROUP BY user_id;",
+        "referenceSolution": "SELECT user_id, MAX(time_stamp) AS last_stamp FROM Logins WHERE strftime('%Y', time_stamp) = '2020' GROUP BY user_id;",
+        "timeoutMs": 8000,
+        "tests": [
+          {
+            "seed": "INSERT INTO Logins VALUES (6,'2020-06-30 15:06:07'),(6,'2021-04-21 14:06:06'),(6,'2019-03-07 00:18:15'),(8,'2020-02-01 05:10:53'),(8,'2020-12-30 00:46:50'),(2,'2020-01-16 02:49:50'),(2,'2019-08-25 07:59:08'),(14,'2019-07-14 09:00:55'),(14,'2021-01-25 06:00:28');"
+          },
+          {
+            "seed": "INSERT INTO Logins VALUES (1,'2021-01-01 00:00:00');"
+          },
+          {
+            "seed": "INSERT INTO Logins VALUES (5,'2020-01-01 10:00:00'),(5,'2020-01-02 10:00:00');"
+          }
+        ],
+        "orderMatters": false,
+        "checkColumnNames": true
+      }
+    },
+    {
+      "type": "sqlite",
+      "title": "1393. Capital Gain/Loss",
+      "content": {
+        "description": "Для каждой акции (`stock_name`) — `capital_gain_loss` = Σ(продажи) − Σ(покупки), т.е. сумма `price` со знаком минус для `Buy`.\n\n[LeetCode 1393](https://leetcode.com/problems/capital-gainloss/)",
+        "setup": "CREATE TABLE Stocks(stock_name TEXT NOT NULL, operation TEXT NOT NULL, price INTEGER NOT NULL);",
+        "starterCode": "SELECT stock_name, SUM(price) AS capital_gain_loss FROM Stocks GROUP BY stock_name;",
+        "referenceSolution": "SELECT stock_name, SUM(CASE WHEN operation = 'Buy' THEN -price ELSE price END) AS capital_gain_loss FROM Stocks GROUP BY stock_name;",
+        "timeoutMs": 8000,
+        "tests": [
+          {
+            "seed": "INSERT INTO Stocks VALUES ('Leetcode','Buy',1000),('Corona Masks','Buy',10),('Leetcode','Sell',9000),('Handbags','Buy',30000),('Corona Masks','Sell',1010),('Handbags','Buy',15000),('Corona Masks','Buy',1000),('Handbags','Sell',60000),('Leetcode','Sell',7000);"
+          },
+          {
+            "seed": "INSERT INTO Stocks VALUES ('A','Buy',100),('A','Sell',50);"
+          },
+          {
+            "seed": "INSERT INTO Stocks VALUES ('A','Buy',100),('B','Buy',200);"
+          }
+        ],
+        "orderMatters": false,
+        "checkColumnNames": true
+      }
+    },
+    {
+      "type": "sqlite",
+      "title": "3220. Odd and Even Transactions",
+      "content": {
+        "description": "По каждой `transaction_date`: `odd_sum` (сумма нечётных `amount`) и `even_sum` (сумма чётных), `0` если таких нет. Сортировка по дате.\n\n[LeetCode 3220](https://leetcode.com/problems/odd-and-even-transactions/)",
+        "setup": "CREATE TABLE transactions(transaction_id INTEGER PRIMARY KEY, amount INTEGER NOT NULL, transaction_date TEXT NOT NULL);",
+        "starterCode": "SELECT transaction_date, SUM(CASE WHEN amount % 2 = 1 THEN amount ELSE 0 END) AS odd_sum, SUM(CASE WHEN amount % 2 = 1 THEN amount ELSE 0 END) AS even_sum FROM transactions GROUP BY transaction_date ORDER BY transaction_date;",
+        "referenceSolution": "SELECT transaction_date, SUM(CASE WHEN amount % 2 = 1 THEN amount ELSE 0 END) AS odd_sum, SUM(CASE WHEN amount % 2 = 0 THEN amount ELSE 0 END) AS even_sum FROM transactions GROUP BY transaction_date ORDER BY transaction_date;",
+        "timeoutMs": 8000,
+        "tests": [
+          {
+            "seed": "INSERT INTO transactions VALUES (1,150,'2024-07-01'),(2,200,'2024-07-01'),(3,75,'2024-07-01'),(4,300,'2024-07-02'),(5,50,'2024-07-02'),(6,120,'2024-07-03');"
+          },
+          {
+            "seed": "INSERT INTO transactions VALUES (1,7,'2024-01-01');"
+          },
+          {
+            "seed": "INSERT INTO transactions VALUES (1,2,'2024-01-01'),(2,4,'2024-01-01');"
+          }
+        ],
+        "orderMatters": true,
+        "checkColumnNames": true
+      }
+    },
+    {
+      "type": "quiz",
+      "title": "Итоговый тест модуля",
+      "content": {
+        "question": "Чем `COUNT(DISTINCT lead_id)` отличается от `COUNT(lead_id)`?",
+        "options": [
+          "Ничем",
+          "Первое считает уникальные значения, второе — все непустые",
+          "Первое работает только с числами",
+          "Второе игнорирует NULL, первое нет"
+        ],
+        "correctIndices": [
+          1
+        ]
+      }
+    }
+  ]
+}

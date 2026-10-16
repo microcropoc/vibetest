@@ -75,12 +75,12 @@ function slugFromLeet(n: number): string {
     1045: 'customers-who-bought-all-products',
     1731: 'the-number-of-employees-which-report-to-each-employee',
     1789: 'primary-department-for-each-employee',
-    177: 'triangle-judgement',
+    610: 'triangle-judgement',
     180: 'consecutive-numbers',
     1164: 'product-price-at-a-given-date',
     1204: 'last-person-to-fit-in-the-bus',
     1907: 'count-salary-categories',
-    1773: 'employees-whose-manager-left-the-company',
+    1978: 'employees-whose-manager-left-the-company',
     626: 'exchange-seats',
     1341: 'movie-rating',
     1321: 'restaurant-growth',
@@ -94,6 +94,62 @@ function slugFromLeet(n: number): string {
     1484: 'group-sold-products-by-the-date',
     1327: 'list-the-products-ordered-in-a-period',
     1517: 'find-users-with-valid-e-mails',
+    /* vt-84: остальные бесплатные задачи LeetCode SQL */
+    175: 'combine-two-tables',
+    177: 'nth-highest-salary',
+    178: 'rank-scores',
+    181: 'employees-earning-more-than-their-managers',
+    182: 'duplicate-emails',
+    183: 'customers-who-never-order',
+    184: 'department-highest-salary',
+    262: 'trips-and-users',
+    511: 'game-play-analysis-i',
+    586: 'customer-placing-the-largest-number-of-orders',
+    601: 'human-traffic-of-stadium',
+    607: 'sales-person',
+    608: 'tree-node',
+    627: 'swap-salary',
+    1050: 'actors-and-directors-who-cooperated-at-least-three-times',
+    1084: 'sales-analysis-iii',
+    1158: 'market-analysis-i',
+    1179: 'reformat-department-table',
+    1393: 'capital-gainloss',
+    1407: 'top-travellers',
+    1587: 'bank-account-summary-ii',
+    1693: 'daily-leads-and-partners',
+    1741: 'find-total-time-spent-by-each-employee',
+    1795: 'rearrange-products-table',
+    1873: 'calculate-special-bonus',
+    1890: 'the-latest-login-in-2020',
+    1965: 'employees-with-missing-information',
+    3220: 'odd-and-even-transactions',
+    3374: 'first-letter-capitalization-ii',
+    3421: 'find-students-who-improved',
+    3436: 'find-valid-emails',
+    3451: 'find-invalid-ip-addresses',
+    3465: 'find-products-with-valid-serial-numbers',
+    3475: 'dna-pattern-recognition',
+    3482: 'analyze-organization-hierarchy',
+    3497: 'analyze-subscription-conversion',
+    3521: 'find-product-recommendation-pairs',
+    3554: 'find-category-recommendation-pairs',
+    3564: 'seasonal-sales-analysis',
+    3570: 'find-books-with-no-available-copies',
+    3580: 'find-consistently-improving-employees',
+    3586: 'find-covid-recovery-patients',
+    3601: 'find-drivers-with-improved-fuel-efficiency',
+    3611: 'find-overbooked-employees',
+    3617: 'find-students-with-study-spiral-pattern',
+    3626: 'find-stores-with-inventory-imbalance',
+    3642: 'find-books-with-polarized-opinions',
+    3657: 'find-loyal-customers',
+    3673: 'find-zombie-sessions',
+    3705: 'find-golden-hour-customers',
+    3716: 'find-churn-risk-customers',
+    3764: 'most-common-course-pairs',
+    3793: 'find-users-with-high-token-usage',
+    3808: 'find-emotionally-consistent-users',
+    3832: 'find-users-with-persistent-behavior-patterns',
   };
   return map[n] ?? `problem-${n}`;
 }
@@ -156,13 +212,13 @@ function buildModule(mod: ModuleDef): object {
 
 const introModule = {
   schemaVersion: 1,
-  title: 'Введение: SQLite и LeetCode SQL 50',
+  title: 'Введение: SQLite и LeetCode SQL',
   steps: [
     {
       type: 'theory',
       title: 'Диалект SQLite и проверка',
       content:
-        '## Курс LeetCode SQL 50\n\nЗадачи с [LeetCode Study Plan SQL 50](https://leetcode.com/studyplan/top-sql-50/) адаптированы под **SQLite 3** (sql.js в браузере).\n\n### Даты и время\n\n| MySQL | SQLite |\n|-------|--------|\n| `DATE_FORMAT(d, \'%Y-%m\')` | `strftime(\'%Y-%m\', d)` |\n| `DATEDIFF(a, b)` | `julianday(a) - julianday(b)` |\n| `DATE_ADD(d, INTERVAL 1 DAY)` | `DATE(d, \'+1 day\')` |\n\n### Строки и regex\n\n- `CONCAT(a, b)` → `a || b` или `printf(\'%s%s\', a, b)`\n- Оператор **`REGEXP`** в приложении — семантика **JavaScript** `RegExp` (регистрозависимый).\n\n### Проверка\n\n- Сравнивается **последний** result set с колонками.\n- **`checkColumnNames: true`** — имена столбцов как на LeetCode.\n- **`orderMatters: true`** — порядок строк важен.\n- **`checkQuery`** — для UPDATE/DELETE проверяется состояние таблиц после запроса.\n- Задачи «функция» (Nth Salary): параметр в таблице **`params`** через `seed`.\n\n### Ссылки\n\nВ каждой задаче — номер LeetCode и ссылка на оригинал.',
+        '## Курс LeetCode SQL\n\nЗадачи с [LeetCode](https://leetcode.com/problem-list/m8baczxh/) адаптированы под **SQLite 3** (sql.js в браузере). Модули `01`–`07` — учебный план [SQL 50](https://leetcode.com/studyplan/top-sql-50/); модули `08`–`12` — остальные бесплатные SQL-задачи LeetCode, сгруппированные по темам (JOIN/DML, агрегации и pivot, подзапросы и множества, окна и CTE, строки/regex и аналитика).\n\n### Даты и время\n\n| MySQL | SQLite |\n|-------|--------|\n| `DATE_FORMAT(d, \'%Y-%m\')` | `strftime(\'%Y-%m\', d)` |\n| `DATEDIFF(a, b)` | `julianday(a) - julianday(b)` |\n| `DATE_ADD(d, INTERVAL 1 DAY)` | `DATE(d, \'+1 day\')` |\n\n### Строки и regex\n\n- `CONCAT(a, b)` → `a || b` или `printf(\'%s%s\', a, b)`\n- Оператор **`REGEXP`** в приложении — семантика **JavaScript** `RegExp` (регистрозависимый).\n- `GLOB` — маска SQLite (`?`, `*`, `[a-z]`), возвращает 0/1.\n\n### Проверка\n\n- Сравнивается **последний** result set с колонками.\n- **`checkColumnNames: true`** — имена столбцов как на LeetCode.\n- **`orderMatters: true`** — порядок строк важен.\n- **`checkQuery`** — для UPDATE/DELETE проверяется состояние таблиц после запроса.\n- Задачи «функция» (Nth Salary): параметр в таблице **`params`** через `seed`.\n\n### Ссылки\n\nВ каждой задаче — номер LeetCode и ссылка на оригинал.',
     },
     {
       type: 'svg',
@@ -206,6 +262,7 @@ const introModule = {
 };
 
 import { MODULE_DEFS } from './leetcode-sql-50-modules-data.mts';
+import { FREE_REST_MODULE_DEFS } from './leetcode-sql-free-rest-modules-data.mts';
 import {
   FORCE_CHECK_COLUMN_NAMES,
   mergeProblemTests,
@@ -217,7 +274,7 @@ writeFileSync(
   'utf8',
 );
 
-for (const mod of MODULE_DEFS) {
+for (const mod of [...MODULE_DEFS, ...FREE_REST_MODULE_DEFS]) {
   writeFileSync(join(outDir, mod.file), `${JSON.stringify(buildModule(mod), null, 2)}\n`, 'utf8');
   console.log(`Wrote ${mod.file} (${mod.problems.length} problems)`);
 }

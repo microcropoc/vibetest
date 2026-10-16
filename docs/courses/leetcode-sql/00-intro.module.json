@@ -1,11 +1,11 @@
 {
   "schemaVersion": 1,
-  "title": "Введение: SQLite и LeetCode SQL 50",
+  "title": "Введение: SQLite и LeetCode SQL",
   "steps": [
     {
       "type": "theory",
       "title": "Диалект SQLite и проверка",
-      "content": "## Курс LeetCode SQL 50\n\nЗадачи с [LeetCode Study Plan SQL 50](https://leetcode.com/studyplan/top-sql-50/) адаптированы под **SQLite 3** (sql.js в браузере).\n\n### Даты и время\n\n| MySQL | SQLite |\n|-------|--------|\n| `DATE_FORMAT(d, '%Y-%m')` | `strftime('%Y-%m', d)` |\n| `DATEDIFF(a, b)` | `julianday(a) - julianday(b)` |\n| `DATE_ADD(d, INTERVAL 1 DAY)` | `DATE(d, '+1 day')` |\n\n### Строки и regex\n\n- `CONCAT(a, b)` → `a || b` или `printf('%s%s', a, b)`\n- Оператор **`REGEXP`** в приложении — семантика **JavaScript** `RegExp` (регистрозависимый).\n\n### Проверка\n\n- Сравнивается **последний** result set с колонками.\n- **`checkColumnNames: true`** — имена столбцов как на LeetCode.\n- **`orderMatters: true`** — порядок строк важен.\n- **`checkQuery`** — для UPDATE/DELETE проверяется состояние таблиц после запроса.\n- Задачи «функция» (Nth Salary): параметр в таблице **`params`** через `seed`.\n\n### Ссылки\n\nВ каждой задаче — номер LeetCode и ссылка на оригинал."
+      "content": "## Курс LeetCode SQL\n\nЗадачи с [LeetCode](https://leetcode.com/problem-list/m8baczxh/) адаптированы под **SQLite 3** (sql.js в браузере). Модули `01`–`07` — учебный план [SQL 50](https://leetcode.com/studyplan/top-sql-50/); модули `08`–`12` — остальные бесплатные SQL-задачи LeetCode, сгруппированные по темам (JOIN/DML, агрегации и pivot, подзапросы и множества, окна и CTE, строки/regex и аналитика).\n\n### Даты и время\n\n| MySQL | SQLite |\n|-------|--------|\n| `DATE_FORMAT(d, '%Y-%m')` | `strftime('%Y-%m', d)` |\n| `DATEDIFF(a, b)` | `julianday(a) - julianday(b)` |\n| `DATE_ADD(d, INTERVAL 1 DAY)` | `DATE(d, '+1 day')` |\n\n### Строки и regex\n\n- `CONCAT(a, b)` → `a || b` или `printf('%s%s', a, b)`\n- Оператор **`REGEXP`** в приложении — семантика **JavaScript** `RegExp` (регистрозависимый).\n- `GLOB` — маска SQLite (`?`, `*`, `[a-z]`), возвращает 0/1.\n\n### Проверка\n\n- Сравнивается **последний** result set с колонками.\n- **`checkColumnNames: true`** — имена столбцов как на LeetCode.\n- **`orderMatters: true`** — порядок строк важен.\n- **`checkQuery`** — для UPDATE/DELETE проверяется состояние таблиц после запроса.\n- Задачи «функция» (Nth Salary): параметр в таблице **`params`** через `seed`.\n\n### Ссылки\n\nВ каждой задаче — номер LeetCode и ссылка на оригинал."
     },
     {
       "type": "svg",

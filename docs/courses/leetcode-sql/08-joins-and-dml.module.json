@@ -1,0 +1,240 @@
+{
+  "schemaVersion": 1,
+  "title": "Additional Joins and DML",
+  "steps": [
+    {
+      "type": "theory",
+      "title": "LEFT JOIN, анти-джойны и UPDATE",
+      "content": "## Ещё раз про JOIN и DML\n\n- **Анти-джойн**: `LEFT JOIN … WHERE right.id IS NULL` — «у левого нет пары».\n- **`NOT IN` + подзапрос** — «нет ни одной связанной записи с условием».\n- **`COALESCE(SUM(x), 0)`** — ноль вместо `NULL` при `LEFT JOIN`.\n- **`UPDATE … SET col = CASE WHEN … END`** — DML-задачи проверяются по состоянию таблицы после запроса."
+    },
+    {
+      "type": "svg",
+      "title": "Схема: Additional Joins and DML",
+      "content": {
+        "caption": "LEFT JOIN + IS NULL отсеивает пары",
+        "description": "Анти-джойн возвращает строки левой таблицы без совпадений.",
+        "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 280 80\" width=\"100%\" role=\"img\" aria-label=\"Additional Joins and DML\"><rect id=\"lsq08-box\" x=\"40\" y=\"15\" width=\"200\" height=\"50\" rx=\"4\" fill=\"#e3f2fd\" stroke=\"#1565c0\"/><text x=\"140\" y=\"45\" text-anchor=\"middle\" font-size=\"12\" fill=\"#0d47a1\">Additional Joins and DML</text></svg>"
+      }
+    },
+    {
+      "type": "sqlite",
+      "title": "175. Combine Two Tables",
+      "content": {
+        "description": "Для каждой записи `Person` верните `firstName`, `lastName`, `city`, `state`; если адреса нет — `NULL`. Сортировка по `personId`.\n\n[LeetCode 175](https://leetcode.com/problems/combine-two-tables/)",
+        "setup": "CREATE TABLE Person(personId INTEGER PRIMARY KEY, lastName TEXT NOT NULL, firstName TEXT NOT NULL);\nCREATE TABLE Address(addressId INTEGER PRIMARY KEY, personId INTEGER NOT NULL, city TEXT NOT NULL, state TEXT NOT NULL);",
+        "starterCode": "SELECT p.firstName, p.lastName, a.city, a.state FROM Person p JOIN Address a ON p.personId = a.personId ORDER BY p.personId;",
+        "referenceSolution": "SELECT p.firstName, p.lastName, a.city, a.state FROM Person p LEFT JOIN Address a ON p.personId = a.personId ORDER BY p.personId;",
+        "timeoutMs": 8000,
+        "tests": [
+          {
+            "seed": "INSERT INTO Person VALUES (1,'Wang','Allen'),(2,'Alice','Bob');\nINSERT INTO Address VALUES (1,2,'New York City','New York'),(2,3,'Leetcode','California');"
+          },
+          {
+            "seed": "INSERT INTO Person VALUES (1,'Solo','Han');"
+          },
+          {
+            "seed": "INSERT INTO Person VALUES (1,'A','X'),(2,'B','Y');"
+          },
+          {
+            "seed": "INSERT INTO Person VALUES (3,'C','Z');\nINSERT INTO Address VALUES (9,3,'Boston','MA');"
+          }
+        ],
+        "orderMatters": true,
+        "checkColumnNames": true
+      }
+    },
+    {
+      "type": "sqlite",
+      "title": "181. Employees Earning More Than Their Managers",
+      "content": {
+        "description": "Верните `name` сотрудников, которые зарабатывают **больше** своего менеджера. Колонка `Employee`.\n\n[LeetCode 181](https://leetcode.com/problems/employees-earning-more-than-their-managers/)",
+        "setup": "CREATE TABLE Employee(id INTEGER PRIMARY KEY, name TEXT NOT NULL, salary INTEGER NOT NULL, managerId INTEGER);",
+        "starterCode": "SELECT e.name AS Employee FROM Employee e JOIN Employee m ON e.managerId = m.id;",
+        "referenceSolution": "SELECT e.name AS Employee FROM Employee e JOIN Employee m ON e.managerId = m.id WHERE e.salary > m.salary;",
+        "timeoutMs": 8000,
+        "tests": [
+          {
+            "seed": "INSERT INTO Employee VALUES (1,'Joe',70000,3),(2,'Henry',80000,4),(3,'Sam',60000,NULL),(4,'Max',90000,NULL);"
+          },
+          {
+            "seed": "INSERT INTO Employee VALUES (1,'A',10,2),(2,'B',20,NULL);"
+          },
+          {
+            "seed": "INSERT INTO Employee VALUES (1,'A',30,2),(2,'B',20,NULL);"
+          },
+          {
+            "seed": "INSERT INTO Employee VALUES (1,'Solo',100,NULL);"
+          }
+        ],
+        "orderMatters": false,
+        "checkColumnNames": true
+      }
+    },
+    {
+      "type": "sqlite",
+      "title": "183. Customers Who Never Order",
+      "content": {
+        "description": "Клиенты, не сделавшие **ни одного** заказа. Верните `name` с псевдонимом `Customers`, сортировка по `id`.\n\n[LeetCode 183](https://leetcode.com/problems/customers-who-never-order/)",
+        "setup": "CREATE TABLE Customers(id INTEGER PRIMARY KEY, name TEXT NOT NULL);\nCREATE TABLE Orders(id INTEGER PRIMARY KEY, customerId INTEGER NOT NULL);",
+        "starterCode": "SELECT c.name AS Customers FROM Customers c JOIN Orders o ON c.id = o.customerId ORDER BY c.id;",
+        "referenceSolution": "SELECT c.name AS Customers FROM Customers c LEFT JOIN Orders o ON c.id = o.customerId WHERE o.id IS NULL ORDER BY c.id;",
+        "timeoutMs": 8000,
+        "tests": [
+          {
+            "seed": "INSERT INTO Customers VALUES (1,'Joe'),(2,'Henry'),(3,'Sam'),(4,'Max');\nINSERT INTO Orders VALUES (1,3),(2,1);"
+          },
+          {
+            "seed": "INSERT INTO Customers VALUES (1,'Solo');"
+          },
+          {
+            "seed": "INSERT INTO Customers VALUES (1,'A'),(2,'B');\nINSERT INTO Orders VALUES (1,1),(2,1),(3,2);"
+          },
+          {
+            "seed": "INSERT INTO Customers VALUES (1,'Solo'),(2,'Other');\nINSERT INTO Orders VALUES (1,2);"
+          }
+        ],
+        "orderMatters": true,
+        "checkColumnNames": true
+      }
+    },
+    {
+      "type": "sqlite",
+      "title": "607. Sales Person",
+      "content": {
+        "description": "Имя продавца (`name`), у которого **нет** ни одного заказа от компании с именем `RED`.\n\n[LeetCode 607](https://leetcode.com/problems/sales-person/)",
+        "setup": "CREATE TABLE SalesPerson(sales_id INTEGER PRIMARY KEY, name TEXT NOT NULL, salary INTEGER NOT NULL, commission_rate INTEGER NOT NULL, hire_date TEXT NOT NULL);\nCREATE TABLE Company(com_id INTEGER PRIMARY KEY, name TEXT NOT NULL, city TEXT NOT NULL);\nCREATE TABLE Orders(order_id INTEGER PRIMARY KEY, order_date TEXT NOT NULL, com_id INTEGER NOT NULL, sales_id INTEGER NOT NULL, amount INTEGER NOT NULL);",
+        "starterCode": "SELECT s.name FROM SalesPerson s JOIN Orders o ON s.sales_id = o.sales_id JOIN Company c ON o.com_id = c.com_id WHERE c.name = 'RED';",
+        "referenceSolution": "SELECT s.name FROM SalesPerson s WHERE s.sales_id NOT IN (SELECT o.sales_id FROM Orders o JOIN Company c ON o.com_id = c.com_id WHERE c.name = 'RED');",
+        "timeoutMs": 8000,
+        "tests": [
+          {
+            "seed": "INSERT INTO SalesPerson VALUES (1,'John',100000,6,'2006-04-01'),(2,'Amy',12000,5,'2010-05-01'),(3,'Mark',65000,12,'2008-12-25'),(4,'Pam',25000,25,'2005-01-01'),(5,'Alex',5000,10,'2007-02-03');\nINSERT INTO Company VALUES (1,'RED','Boston'),(2,'ORANGE','New York'),(3,'YELLOW','Boston'),(4,'GREEN','Austin');\nINSERT INTO Orders VALUES (1,'2014-01-01',3,4,10000),(2,'2014-02-01',4,5,5000),(3,'2014-03-01',1,1,50000),(4,'2014-04-01',1,4,60000);"
+          },
+          {
+            "seed": "INSERT INTO SalesPerson VALUES (1,'A',1,1,'2020-01-01'),(2,'B',1,1,'2020-01-01');\nINSERT INTO Company VALUES (1,'RED','X');\nINSERT INTO Orders VALUES (1,'2020-01-01',1,1,10),(2,'2020-01-01',1,2,10);"
+          },
+          {
+            "seed": "INSERT INTO SalesPerson VALUES (1,'Solo',1,1,'2020-01-01');\nINSERT INTO Company VALUES (1,'RED','X');\nINSERT INTO Orders VALUES (1,'2020-01-01',2,1,10);"
+          }
+        ],
+        "orderMatters": false,
+        "checkColumnNames": true
+      }
+    },
+    {
+      "type": "sqlite",
+      "title": "627. Swap Salary",
+      "content": {
+        "description": "Поменяйте значения `sex` (`m` ↔ `f`) одним `UPDATE` — без промежуточной таблицы. Проверяется состояние таблицы после запроса.\n\n[LeetCode 627](https://leetcode.com/problems/swap-salary/)",
+        "setup": "CREATE TABLE Salary(id INTEGER PRIMARY KEY, name TEXT NOT NULL, sex TEXT NOT NULL, salary INTEGER NOT NULL);",
+        "starterCode": "SELECT * FROM Salary;",
+        "referenceSolution": "UPDATE Salary SET sex = CASE WHEN sex = 'm' THEN 'f' ELSE 'm' END;",
+        "timeoutMs": 8000,
+        "tests": [
+          {
+            "seed": "INSERT INTO Salary VALUES (1,'A','m',2500),(2,'B','f',1500),(3,'C','m',5500),(4,'D','f',500);"
+          },
+          {
+            "seed": "INSERT INTO Salary VALUES (1,'X','m',100);"
+          },
+          {
+            "seed": "INSERT INTO Salary VALUES (1,'Y','f',100),(2,'Z','m',200);"
+          }
+        ],
+        "orderMatters": true,
+        "checkQuery": "SELECT id, name, sex, salary FROM Salary ORDER BY id;"
+      }
+    },
+    {
+      "type": "sqlite",
+      "title": "1407. Top Travellers",
+      "content": {
+        "description": "Для каждого `name`: `travelled_distance` — суммарная дистанция, `0` если поездок не было. Сортировка по дистанции убыв., затем по имени возр.\n\n[LeetCode 1407](https://leetcode.com/problems/top-travellers/)",
+        "setup": "CREATE TABLE Users(id INTEGER PRIMARY KEY, name TEXT NOT NULL);\nCREATE TABLE Rides(id INTEGER PRIMARY KEY, user_id INTEGER NOT NULL, distance INTEGER NOT NULL);",
+        "starterCode": "SELECT u.name, SUM(r.distance) AS travelled_distance FROM Users u JOIN Rides r ON u.id = r.user_id GROUP BY u.id ORDER BY travelled_distance DESC, u.name ASC;",
+        "referenceSolution": "SELECT u.name, COALESCE(SUM(r.distance), 0) AS travelled_distance FROM Users u LEFT JOIN Rides r ON u.id = r.user_id GROUP BY u.id ORDER BY travelled_distance DESC, u.name ASC;",
+        "timeoutMs": 8000,
+        "tests": [
+          {
+            "seed": "INSERT INTO Users VALUES (1,'Alice'),(2,'Bob'),(3,'Alex');\nINSERT INTO Rides VALUES (1,1,120),(2,2,317),(3,3,222),(4,1,100);"
+          },
+          {
+            "seed": "INSERT INTO Users VALUES (1,'A'),(2,'B');\nINSERT INTO Rides VALUES (1,1,10);"
+          },
+          {
+            "seed": "INSERT INTO Users VALUES (1,'A');"
+          },
+          {
+            "seed": "INSERT INTO Users VALUES (1,'Zed'),(2,'Ann');\nINSERT INTO Rides VALUES (1,1,50),(2,2,50);"
+          }
+        ],
+        "orderMatters": true,
+        "checkColumnNames": true
+      }
+    },
+    {
+      "type": "sqlite",
+      "title": "1158. Market Analysis I",
+      "content": {
+        "description": "Для каждого покупателя: `buyer_id`, `join_date` и `orders_in_2019` — число заказов за 2019 год (`0`, если заказов нет). Сортировка по `buyer_id`.\n\n[LeetCode 1158](https://leetcode.com/problems/market-analysis-i/)",
+        "setup": "CREATE TABLE Users(user_id INTEGER PRIMARY KEY, join_date TEXT NOT NULL, favorite_brand TEXT NOT NULL);\nCREATE TABLE Orders(order_id INTEGER PRIMARY KEY, order_date TEXT NOT NULL, item_id INTEGER NOT NULL, buyer_id INTEGER NOT NULL, seller_id INTEGER NOT NULL);\nCREATE TABLE Items(item_id INTEGER PRIMARY KEY, item_brand TEXT NOT NULL);",
+        "starterCode": "SELECT u.user_id AS buyer_id, u.join_date, COUNT(o.order_id) AS orders_in_2019 FROM Users u JOIN Orders o ON u.user_id = o.buyer_id WHERE strftime('%Y', o.order_date) = '2019' GROUP BY u.user_id ORDER BY u.user_id;",
+        "referenceSolution": "SELECT u.user_id AS buyer_id, u.join_date, COUNT(o.order_id) AS orders_in_2019 FROM Users u LEFT JOIN Orders o ON u.user_id = o.buyer_id AND strftime('%Y', o.order_date) = '2019' GROUP BY u.user_id ORDER BY u.user_id;",
+        "timeoutMs": 8000,
+        "tests": [
+          {
+            "seed": "INSERT INTO Users VALUES (1,'2018-01-01','Lenovo'),(2,'2018-02-09','Samsung'),(3,'2018-01-19','LG'),(4,'2018-05-21','HP');\nINSERT INTO Orders VALUES (1,'2019-08-01',4,1,2),(2,'2018-08-02',2,1,3),(3,'2019-08-03',3,2,3),(4,'2018-08-04',1,4,2),(5,'2018-08-04',1,3,4),(6,'2019-08-05',2,4,2);\nINSERT INTO Items VALUES (1,'Samsung'),(2,'Lenovo'),(3,'LG'),(4,'HP');"
+          },
+          {
+            "seed": "INSERT INTO Users VALUES (1,'2019-01-01','X');\nINSERT INTO Items VALUES (1,'X');"
+          },
+          {
+            "seed": "INSERT INTO Users VALUES (1,'2018-01-01','X'),(2,'2018-01-02','Y');\nINSERT INTO Orders VALUES (1,'2020-01-01',1,1,2);\nINSERT INTO Items VALUES (1,'X');"
+          }
+        ],
+        "orderMatters": true,
+        "checkColumnNames": true
+      }
+    },
+    {
+      "type": "sqlite",
+      "title": "3570. Find Books with No Available Copies",
+      "content": {
+        "description": "Книги, которые **сейчас на руках** (`return_date IS NULL`) и у которых не осталось свободных экземпляров (число невозвращённых = `total_copies`). Колонки `book_id`, `title`, `author`, `genre`, `publication_year`, `current_borrowers`; сортировка по `current_borrowers` убыв., затем `title` возр.\n\n[LeetCode 3570](https://leetcode.com/problems/find-books-with-no-available-copies/)",
+        "setup": "CREATE TABLE library_books(book_id INTEGER PRIMARY KEY, title TEXT NOT NULL, author TEXT NOT NULL, genre TEXT NOT NULL, publication_year INTEGER NOT NULL, total_copies INTEGER NOT NULL);\nCREATE TABLE borrowing_records(record_id INTEGER PRIMARY KEY, book_id INTEGER NOT NULL, borrower_name TEXT NOT NULL, borrow_date TEXT NOT NULL, return_date TEXT);",
+        "starterCode": "SELECT b.book_id, b.title, b.author, b.genre, b.publication_year, COUNT(*) AS current_borrowers FROM library_books b JOIN borrowing_records r ON b.book_id = r.book_id GROUP BY b.book_id ORDER BY current_borrowers DESC, b.title ASC;",
+        "referenceSolution": "SELECT b.book_id, b.title, b.author, b.genre, b.publication_year, COUNT(*) AS current_borrowers FROM library_books b JOIN borrowing_records r ON b.book_id = r.book_id AND r.return_date IS NULL GROUP BY b.book_id HAVING COUNT(*) = b.total_copies ORDER BY current_borrowers DESC, b.title ASC;",
+        "timeoutMs": 8000,
+        "tests": [
+          {
+            "seed": "INSERT INTO library_books VALUES (1,'The Great Gatsby','F. Scott','Fiction',1925,3),(2,'To Kill a Mockingbird','Harper Lee','Fiction',1960,3),(3,'1984','George Orwell','Dystopian',1949,1),(4,'Pride and Prejudice','Jane Austen','Romance',1813,2),(5,'The Catcher in the Rye','J.D. Salinger','Fiction',1951,1),(6,'Brave New World','Aldous Huxley','Dystopian',1932,4);\nINSERT INTO borrowing_records VALUES (1,1,'Alice Smith','2024-01-15',NULL),(2,1,'Bob Johnson','2024-01-20',NULL),(3,2,'Carol White','2024-01-10','2024-01-25'),(4,3,'David Brown','2024-02-01',NULL),(5,4,'Emma Wilson','2024-01-05',NULL),(6,5,'Frank Davis','2024-01-18','2024-02-10'),(7,1,'Grace Miller','2024-02-05',NULL),(8,6,'Henry Taylor','2024-01-12',NULL),(9,2,'Ivan Clark','2024-02-12',NULL),(10,2,'Jane Adams','2024-02-15',NULL);"
+          },
+          {
+            "seed": "INSERT INTO library_books VALUES (1,'Solo','A','G',2000,2),(2,'Other','B','G',2001,5);\nINSERT INTO borrowing_records VALUES (1,1,'P','2024-01-01',NULL),(2,1,'Q','2024-01-02',NULL),(3,2,'R','2024-01-03',NULL);"
+          },
+          {
+            "seed": "INSERT INTO library_books VALUES (1,'Only','A','G',2000,2);\nINSERT INTO borrowing_records VALUES (1,1,'P','2024-01-01','2024-01-05'),(2,1,'Q','2024-01-02',NULL);"
+          }
+        ],
+        "orderMatters": true,
+        "checkColumnNames": true
+      }
+    },
+    {
+      "type": "quiz",
+      "title": "Итоговый тест модуля",
+      "content": {
+        "question": "Как вернуть клиентов без заказов?",
+        "options": [
+          "INNER JOIN Orders",
+          "LEFT JOIN Orders и условие Orders.id IS NULL",
+          "CROSS JOIN Orders",
+          "WHERE Orders.status = 'none'"
+        ],
+        "correctIndices": [
+          1
+        ]
+      }
+    }
+  ]
+}

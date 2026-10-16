@@ -29,7 +29,7 @@ export const BUNDLED_COURSES: readonly BundledCourseEntry[] = [
     "title": "JavaScript для C#-разработчика"
   },
   {
-    "courseId": "f6561e05-963c-4aa6-97d5-ed8e93037a67",
+    "courseId": "6493b69b-48e9-4292-bc23-a16f932dfc39",
     "file": "leetcode-sql.json",
     "title": "LeetCode SQL"
   },

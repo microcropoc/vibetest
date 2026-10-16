@@ -1,0 +1,261 @@
+{
+  "schemaVersion": 1,
+  "title": "Window Functions and CTE",
+  "steps": [
+    {
+      "type": "theory",
+      "title": "Оконные функции, ранжирование и рекурсия",
+      "content": "## Окна и CTE\n\n- `ROW_NUMBER` / `RANK` / `DENSE_RANK` — нумерация внутри окна; `RANK` пропускает номера при ничьих, `DENSE_RANK` — нет.\n- `LAG`/`LEAD` — предыдущая/следующая строка окна.\n- «3+ подряд» — `id - ROW_NUMBER() OVER (ORDER BY id)` даёт одинаковую группу у последовательных строк.\n- `WITH RECURSIVE` — иерархии: уровень = `уровень менеджера + 1`.\n- Пара «стран-функция»: параметр N кладётся в таблицу `params` — `LIMIT 1 OFFSET (SELECT n - 1 FROM params)`."
+    },
+    {
+      "type": "svg",
+      "title": "Схема: Window Functions and CTE",
+      "content": {
+        "caption": "PARTITION BY делит строки на независимые окна",
+        "description": "WITH RECURSIVE разворачивает дерево от корня к листьям.",
+        "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 280 80\" width=\"100%\" role=\"img\" aria-label=\"Window Functions and CTE\"><rect id=\"lsq11-box\" x=\"40\" y=\"15\" width=\"200\" height=\"50\" rx=\"4\" fill=\"#e3f2fd\" stroke=\"#1565c0\"/><text x=\"140\" y=\"45\" text-anchor=\"middle\" font-size=\"12\" fill=\"#0d47a1\">Window Functions and CTE</text></svg>"
+      }
+    },
+    {
+      "type": "sqlite",
+      "title": "177. Nth Highest Salary",
+      "content": {
+        "description": "Верните N-й по величине **уникальный** оклад как `getNthHighestSalary`; значение `N` лежит в таблице `params` (колонка `n`). Если такого нет — одна строка `NULL`.\n\n[LeetCode 177](https://leetcode.com/problems/nth-highest-salary/)",
+        "setup": "CREATE TABLE Employee(id INTEGER PRIMARY KEY, salary INTEGER NOT NULL);\nCREATE TABLE params(n INTEGER NOT NULL);",
+        "starterCode": "SELECT MAX(salary) AS getNthHighestSalary FROM Employee;",
+        "referenceSolution": "SELECT (SELECT DISTINCT salary FROM Employee ORDER BY salary DESC LIMIT 1 OFFSET (SELECT n - 1 FROM params)) AS getNthHighestSalary;",
+        "timeoutMs": 8000,
+        "tests": [
+          {
+            "seed": "INSERT INTO Employee VALUES (1,100),(2,200),(3,300);\nINSERT INTO params VALUES (2);"
+          },
+          {
+            "seed": "INSERT INTO Employee VALUES (1,100);\nINSERT INTO params VALUES (2);"
+          },
+          {
+            "seed": "INSERT INTO Employee VALUES (1,100),(2,100);\nINSERT INTO params VALUES (2);"
+          },
+          {
+            "seed": "INSERT INTO Employee VALUES (1,100),(2,200),(3,300);\nINSERT INTO params VALUES (3);"
+          }
+        ],
+        "orderMatters": false,
+        "checkColumnNames": true
+      }
+    },
+    {
+      "type": "sqlite",
+      "title": "178. Rank Scores",
+      "content": {
+        "description": "Для каждой `score` — `rank` без пропусков (dense rank) по убыванию score. Сортировка по `score` убыв.\n\n[LeetCode 178](https://leetcode.com/problems/rank-scores/)",
+        "setup": "CREATE TABLE Scores(id INTEGER PRIMARY KEY, score REAL NOT NULL);",
+        "starterCode": "SELECT score, ROW_NUMBER() OVER (ORDER BY score DESC) AS \"rank\" FROM Scores ORDER BY score DESC;",
+        "referenceSolution": "SELECT score, DENSE_RANK() OVER (ORDER BY score DESC) AS \"rank\" FROM Scores ORDER BY score DESC;",
+        "timeoutMs": 8000,
+        "tests": [
+          {
+            "seed": "INSERT INTO Scores VALUES (1,3.50),(2,3.65),(3,4.00),(4,3.85),(5,4.00),(6,3.65);"
+          },
+          {
+            "seed": "INSERT INTO Scores VALUES (1,1.0);"
+          },
+          {
+            "seed": "INSERT INTO Scores VALUES (1,10.0),(2,5.0),(3,5.0);"
+          }
+        ],
+        "orderMatters": true,
+        "checkColumnNames": true
+      }
+    },
+    {
+      "type": "sqlite",
+      "title": "262. Trips and Users",
+      "content": {
+        "description": "Для дат `2013-10-01`–`2013-10-03`: `Day` и `Cancellation Rate` — доля отменённых поездок (статус ≠ `completed`) среди поездок, где и клиент, и водитель не забанены. Округлить до 2 знаков, сортировка по дате.\n\n[LeetCode 262](https://leetcode.com/problems/trips-and-users/)",
+        "setup": "CREATE TABLE Trips(id INTEGER PRIMARY KEY, client_id INTEGER NOT NULL, driver_id INTEGER NOT NULL, city_id INTEGER NOT NULL, status TEXT NOT NULL, request_at TEXT NOT NULL);\nCREATE TABLE Users(users_id INTEGER PRIMARY KEY, banned TEXT NOT NULL, role TEXT NOT NULL);",
+        "starterCode": "SELECT t.request_at AS Day, ROUND(SUM(CASE WHEN t.status = 'completed' THEN 1 ELSE 0 END) * 1.0 / COUNT(*), 2) AS \"Cancellation Rate\" FROM Trips t WHERE t.request_at BETWEEN '2013-10-01' AND '2013-10-03' GROUP BY t.request_at ORDER BY t.request_at;",
+        "referenceSolution": "SELECT t.request_at AS Day, ROUND(SUM(CASE WHEN t.status <> 'completed' THEN 1 ELSE 0 END) * 1.0 / COUNT(*), 2) AS \"Cancellation Rate\" FROM Trips t JOIN Users c ON t.client_id = c.users_id AND c.banned = 'No' JOIN Users d ON t.driver_id = d.users_id AND d.banned = 'No' WHERE t.request_at BETWEEN '2013-10-01' AND '2013-10-03' GROUP BY t.request_at ORDER BY t.request_at;",
+        "timeoutMs": 8000,
+        "tests": [
+          {
+            "seed": "INSERT INTO Trips VALUES (1,1,10,1,'completed','2013-10-01'),(2,2,11,1,'cancelled_by_driver','2013-10-01'),(3,3,12,6,'completed','2013-10-01'),(4,4,13,6,'cancelled_by_client','2013-10-01'),(5,1,10,1,'completed','2013-10-02'),(6,2,11,6,'completed','2013-10-02'),(7,3,12,6,'completed','2013-10-02'),(8,2,12,12,'completed','2013-10-03'),(9,3,10,12,'completed','2013-10-03'),(10,4,13,12,'cancelled_by_driver','2013-10-03');\nINSERT INTO Users VALUES (1,'No','client'),(2,'Yes','client'),(3,'No','client'),(4,'No','client'),(10,'No','driver'),(11,'No','driver'),(12,'No','driver'),(13,'No','driver');"
+          },
+          {
+            "seed": "INSERT INTO Trips VALUES (1,1,10,1,'completed','2013-10-01'),(2,1,10,1,'completed','2013-10-01');\nINSERT INTO Users VALUES (1,'No','client'),(10,'No','driver');"
+          },
+          {
+            "seed": "INSERT INTO Trips VALUES (1,2,11,1,'cancelled_by_client','2013-10-02'),(2,1,10,1,'completed','2013-10-02');\nINSERT INTO Users VALUES (2,'Yes','client'),(1,'No','client'),(11,'No','driver'),(10,'No','driver');"
+          }
+        ],
+        "orderMatters": true,
+        "checkColumnNames": true,
+        "floatTolerance": 0.01
+      }
+    },
+    {
+      "type": "sqlite",
+      "title": "601. Human Traffic of Stadium",
+      "content": {
+        "description": "Строки стадиона, где `people >= 100` у **трёх и более** последовательных `id`. Колонки `id`, `visit_date`, `people`; сортировка по `visit_date`.\n\n[LeetCode 601](https://leetcode.com/problems/human-traffic-of-stadium/)",
+        "setup": "CREATE TABLE Stadium(id INTEGER PRIMARY KEY, visit_date TEXT NOT NULL, people INTEGER NOT NULL);",
+        "starterCode": "SELECT id, visit_date, people FROM Stadium WHERE people >= 100 ORDER BY visit_date;",
+        "referenceSolution": "WITH t AS (SELECT id, visit_date, people, id - ROW_NUMBER() OVER (ORDER BY id) AS grp FROM Stadium WHERE people >= 100)\nSELECT id, visit_date, people FROM t WHERE grp IN (SELECT grp FROM t GROUP BY grp HAVING COUNT(*) >= 3) ORDER BY visit_date;",
+        "timeoutMs": 8000,
+        "tests": [
+          {
+            "seed": "INSERT INTO Stadium VALUES (1,'2017-01-01',10),(2,'2017-01-02',109),(3,'2017-01-03',150),(4,'2017-01-04',99),(5,'2017-01-05',145),(6,'2017-01-06',1455),(7,'2017-01-07',199),(8,'2017-01-08',188);"
+          },
+          {
+            "seed": "INSERT INTO Stadium VALUES (1,'2017-01-01',100),(2,'2017-01-02',100);"
+          },
+          {
+            "seed": "INSERT INTO Stadium VALUES (1,'2017-01-01',200),(2,'2017-01-02',300),(3,'2017-01-03',100);"
+          },
+          {
+            "seed": "INSERT INTO Stadium VALUES (10,'2017-01-01',100),(11,'2017-01-02',100),(12,'2017-01-03',100);"
+          }
+        ],
+        "orderMatters": true,
+        "checkColumnNames": true
+      }
+    },
+    {
+      "type": "sqlite",
+      "title": "3421. Find Students Who Improved",
+      "content": {
+        "description": "Студенты, у которых минимум два экзамена по предмету и **последний** балл выше **первого**: `student_id`, `subject`, `first_score`, `latest_score`. Сортировка по `student_id`, `subject`.\n\n[LeetCode 3421](https://leetcode.com/problems/find-students-who-improved/)",
+        "setup": "CREATE TABLE Scores(student_id INTEGER NOT NULL, subject TEXT NOT NULL, score INTEGER NOT NULL, exam_date TEXT NOT NULL, PRIMARY KEY(student_id, subject, exam_date));",
+        "starterCode": "SELECT student_id, subject, MIN(score) AS first_score, MAX(score) AS latest_score FROM Scores GROUP BY student_id, subject;",
+        "referenceSolution": "WITH ranked AS (SELECT student_id, subject, score, ROW_NUMBER() OVER (PARTITION BY student_id, subject ORDER BY exam_date) AS rn_first, ROW_NUMBER() OVER (PARTITION BY student_id, subject ORDER BY exam_date DESC) AS rn_last FROM Scores)\nSELECT f.student_id, f.subject, f.score AS first_score, l.score AS latest_score FROM ranked f JOIN ranked l ON f.student_id = l.student_id AND f.subject = l.subject AND f.rn_first = 1 AND l.rn_last = 1 WHERE l.score > f.score ORDER BY f.student_id, f.subject;",
+        "timeoutMs": 8000,
+        "tests": [
+          {
+            "seed": "INSERT INTO Scores VALUES (101,'Math',70,'2023-01-15'),(101,'Math',85,'2023-02-15'),(101,'Physics',65,'2023-01-15'),(101,'Physics',60,'2023-02-15'),(102,'Math',80,'2023-01-15'),(102,'Math',85,'2023-02-15'),(103,'Math',90,'2023-01-15'),(104,'Physics',75,'2023-01-15'),(104,'Physics',85,'2023-02-15');"
+          },
+          {
+            "seed": "INSERT INTO Scores VALUES (1,'Math',50,'2023-01-01');"
+          },
+          {
+            "seed": "INSERT INTO Scores VALUES (1,'Math',90,'2023-01-01'),(1,'Math',80,'2023-02-01');"
+          }
+        ],
+        "orderMatters": true,
+        "checkColumnNames": true
+      }
+    },
+    {
+      "type": "sqlite",
+      "title": "3482. Analyze Organization Hierarchy",
+      "content": {
+        "description": "Для каждого сотрудника: `level` (CEO = 1), `team_size` (все подчинённые, прямые и косвенные), `budget` (свой оклад + оклады всех подчинённых). Колонки `employee_id`, `employee_name`, `level`, `team_size`, `budget`. Сортировка: `level` возр., `budget` убыв., `employee_name` возр.\n\n[LeetCode 3482](https://leetcode.com/problems/analyze-organization-hierarchy/)",
+        "setup": "CREATE TABLE Employees(employee_id INTEGER PRIMARY KEY, employee_name TEXT NOT NULL, manager_id INTEGER, salary INTEGER NOT NULL, department TEXT NOT NULL);",
+        "starterCode": "SELECT employee_id, employee_name, 1 AS level, 0 AS team_size, salary AS budget FROM Employees ORDER BY level, budget DESC, employee_name;",
+        "referenceSolution": "WITH RECURSIVE pairs(ancestor_id, descendant_id, salary) AS (SELECT employee_id, employee_id, salary FROM Employees\nUNION ALL SELECT p.ancestor_id, e.employee_id, e.salary FROM pairs p JOIN Employees e ON e.manager_id = p.descendant_id),\nup AS (SELECT descendant_id AS employee_id, COUNT(*) AS level FROM pairs GROUP BY descendant_id),\ndown AS (SELECT ancestor_id AS employee_id, COUNT(*) - 1 AS team_size, SUM(salary) AS budget FROM pairs GROUP BY ancestor_id)\nSELECT e.employee_id, e.employee_name, u.level, d.team_size, d.budget FROM Employees e JOIN up u ON u.employee_id = e.employee_id JOIN down d ON d.employee_id = e.employee_id ORDER BY u.level, d.budget DESC, e.employee_name;",
+        "timeoutMs": 8000,
+        "tests": [
+          {
+            "seed": "INSERT INTO Employees VALUES (1,'Alice',NULL,12000,'Executive'),(2,'Bob',1,10000,'Sales'),(3,'Charlie',1,10000,'Engineering'),(4,'David',2,7500,'Sales'),(5,'Eva',2,7500,'Sales'),(6,'Frank',3,9000,'Engineering'),(7,'Grace',3,8500,'Engineering'),(8,'Hank',4,6000,'Sales'),(9,'Ivy',6,7000,'Engineering'),(10,'Judy',6,7000,'Engineering');"
+          },
+          {
+            "seed": "INSERT INTO Employees VALUES (1,'Solo',NULL,5000,'Exec');"
+          },
+          {
+            "seed": "INSERT INTO Employees VALUES (1,'Boss',NULL,100,'X'),(2,'A',1,50,'X'),(3,'B',1,60,'X');"
+          }
+        ],
+        "orderMatters": true,
+        "checkColumnNames": true
+      }
+    },
+    {
+      "type": "sqlite",
+      "title": "3564. Seasonal Sales Analysis",
+      "content": {
+        "description": "Самый популярный `category` каждого сезона (Winter: 12/01/02, Spring: 03/04/05, Summer: 06/07/08, Fall: 09/10/11) по сумме `quantity`; при равенстве — по выручке `quantity * price`, затем по алфавиту. Колонки `season`, `category`, `total_quantity`, `total_revenue`; сортировка по `season`.\n\n[LeetCode 3564](https://leetcode.com/problems/seasonal-sales-analysis/)",
+        "setup": "CREATE TABLE sales(sale_id INTEGER PRIMARY KEY, product_id INTEGER NOT NULL, sale_date TEXT NOT NULL, quantity INTEGER NOT NULL, price REAL NOT NULL);\nCREATE TABLE products(product_id INTEGER PRIMARY KEY, product_name TEXT NOT NULL, category TEXT NOT NULL);",
+        "starterCode": "SELECT 'Fall' AS season, p.category, SUM(s.quantity) AS total_quantity, SUM(s.quantity * s.price) AS total_revenue FROM sales s JOIN products p ON p.product_id = s.product_id GROUP BY p.category;",
+        "referenceSolution": "WITH seasonal AS (SELECT CASE WHEN strftime('%m', s.sale_date) IN ('12','01','02') THEN 'Winter' WHEN strftime('%m', s.sale_date) IN ('03','04','05') THEN 'Spring' WHEN strftime('%m', s.sale_date) IN ('06','07','08') THEN 'Summer' ELSE 'Fall' END AS season, p.category, SUM(s.quantity) AS total_quantity, SUM(s.quantity * s.price) AS total_revenue FROM sales s JOIN products p ON p.product_id = s.product_id GROUP BY season, p.category),\nranked AS (SELECT *, RANK() OVER (PARTITION BY season ORDER BY total_quantity DESC, total_revenue DESC, category ASC) AS rk FROM seasonal)\nSELECT season, category, total_quantity, total_revenue FROM ranked WHERE rk = 1 ORDER BY season;",
+        "timeoutMs": 8000,
+        "tests": [
+          {
+            "seed": "INSERT INTO sales VALUES (1,1,'2023-01-15',5,10.00),(2,2,'2023-01-20',4,15.00),(3,3,'2023-03-10',3,18.00),(4,4,'2023-04-05',1,20.00),(5,1,'2023-05-20',2,10.00),(6,2,'2023-06-12',4,15.00),(7,5,'2023-06-15',5,12.00),(8,3,'2023-07-24',2,18.00),(9,4,'2023-08-01',5,20.00),(10,5,'2023-09-03',3,12.00),(11,1,'2023-09-25',6,10.00),(12,2,'2023-11-10',4,15.00),(13,3,'2023-12-05',6,18.00),(14,4,'2023-12-22',3,20.00),(15,5,'2024-02-14',2,12.00);\nINSERT INTO products VALUES (1,'Warm Jacket','Apparel'),(2,'Designer Jeans','Apparel'),(3,'Cutting Board','Kitchen'),(4,'Smart Speaker','Tech'),(5,'Yoga Mat','Fitness');"
+          },
+          {
+            "seed": "INSERT INTO sales VALUES (1,1,'2023-01-05',3,10.0);\nINSERT INTO products VALUES (1,'A','Alpha');"
+          },
+          {
+            "seed": "INSERT INTO sales VALUES (1,1,'2023-01-05',5,10.0),(2,2,'2023-01-06',5,20.0);\nINSERT INTO products VALUES (1,'A','Alpha'),(2,'B','Beta');"
+          }
+        ],
+        "orderMatters": true,
+        "checkColumnNames": true,
+        "floatTolerance": 0.01
+      }
+    },
+    {
+      "type": "sqlite",
+      "title": "3580. Find Consistently Improving Employees",
+      "content": {
+        "description": "Сотрудники (≥ 3 отзыва), у которых **последние три** отзыва строго возрастают: `employee_id`, `name`, `improvement_score` = последний − первый из этих трёх. Сортировка: `improvement_score` убыв., `name` возр.\n\n[LeetCode 3580](https://leetcode.com/problems/find-consistently-improving-employees/)",
+        "setup": "CREATE TABLE employees(employee_id INTEGER PRIMARY KEY, name TEXT NOT NULL);\nCREATE TABLE performance_reviews(review_id INTEGER PRIMARY KEY, employee_id INTEGER NOT NULL, review_date TEXT NOT NULL, rating INTEGER NOT NULL);",
+        "starterCode": "SELECT e.employee_id, e.name, MAX(p.rating) - MIN(p.rating) AS improvement_score FROM employees e JOIN performance_reviews p ON p.employee_id = e.employee_id GROUP BY e.employee_id ORDER BY improvement_score DESC, e.name;",
+        "referenceSolution": "WITH recent AS (SELECT employee_id, rating, ROW_NUMBER() OVER (PARTITION BY employee_id ORDER BY review_date DESC, review_id DESC) AS rn FROM performance_reviews),\nlast3 AS (SELECT employee_id, MAX(CASE WHEN rn = 1 THEN rating END) AS r1, MAX(CASE WHEN rn = 2 THEN rating END) AS r2, MAX(CASE WHEN rn = 3 THEN rating END) AS r3, COUNT(*) AS cnt FROM recent WHERE rn <= 3 GROUP BY employee_id)\nSELECT e.employee_id, e.name, l.r1 - l.r3 AS improvement_score FROM last3 l JOIN employees e ON e.employee_id = l.employee_id WHERE l.cnt = 3 AND l.r1 > l.r2 AND l.r2 > l.r3 ORDER BY improvement_score DESC, e.name;",
+        "timeoutMs": 8000,
+        "tests": [
+          {
+            "seed": "INSERT INTO employees VALUES (1,'Alice Johnson'),(2,'Bob Smith'),(3,'Carol Davis'),(4,'David Wilson'),(5,'Emma Brown');\nINSERT INTO performance_reviews VALUES (1,1,'2023-01-15',2),(2,1,'2023-04-15',3),(3,1,'2023-07-15',4),(4,1,'2023-10-15',5),(5,2,'2023-02-01',3),(6,2,'2023-05-01',2),(7,2,'2023-08-01',4),(8,2,'2023-11-01',5),(9,3,'2023-03-10',1),(10,3,'2023-06-10',2),(11,3,'2023-09-10',3),(12,3,'2023-12-10',4),(13,4,'2023-01-20',4),(14,4,'2023-04-20',4),(15,4,'2023-07-20',4),(16,5,'2023-02-15',3),(17,5,'2023-05-15',2);"
+          },
+          {
+            "seed": "INSERT INTO employees VALUES (1,'Only');\nINSERT INTO performance_reviews VALUES (1,1,'2023-01-01',1),(2,1,'2023-02-01',2),(3,1,'2023-03-01',3);"
+          },
+          {
+            "seed": "INSERT INTO employees VALUES (1,'Flat');\nINSERT INTO performance_reviews VALUES (1,1,'2023-01-01',3),(2,1,'2023-02-01',3),(3,1,'2023-03-01',3),(4,1,'2023-04-01',3);"
+          }
+        ],
+        "orderMatters": true,
+        "checkColumnNames": true
+      }
+    },
+    {
+      "type": "sqlite",
+      "title": "3601. Find Drivers with Improved Fuel Efficiency",
+      "content": {
+        "description": "Водители, у которых средняя эффективность (`distance_km / fuel_consumed`) во **второй** половине года выше, чем в **первой** (янв–июн / июл–дек). Колонки `driver_id`, `driver_name`, `first_half_avg`, `second_half_avg`, `efficiency_improvement` (округлить до 2). Сортировка: улучшение убыв., имя возр.\n\n[LeetCode 3601](https://leetcode.com/problems/find-drivers-with-improved-fuel-efficiency/)",
+        "setup": "CREATE TABLE drivers(driver_id INTEGER PRIMARY KEY, driver_name TEXT NOT NULL);\nCREATE TABLE trips(trip_id INTEGER PRIMARY KEY, driver_id INTEGER NOT NULL, trip_date TEXT NOT NULL, distance_km REAL NOT NULL, fuel_consumed REAL NOT NULL);",
+        "starterCode": "WITH halves AS (SELECT driver_id, CASE WHEN CAST(strftime('%m', trip_date) AS INTEGER) <= 6 THEN 1 ELSE 2 END AS half, AVG(distance_km / fuel_consumed) AS avg_eff FROM trips GROUP BY driver_id, half)\nSELECT h1.driver_id, d.driver_name, ROUND(h1.avg_eff, 2) AS first_half_avg, ROUND(h2.avg_eff, 2) AS second_half_avg, ROUND(h2.avg_eff - h1.avg_eff, 2) AS efficiency_improvement FROM halves h1 JOIN halves h2 ON h1.driver_id = h2.driver_id AND h1.half = 1 AND h2.half = 2 JOIN drivers d ON d.driver_id = h1.driver_id ORDER BY efficiency_improvement DESC, d.driver_name;",
+        "referenceSolution": "WITH halves AS (SELECT driver_id, CASE WHEN CAST(strftime('%m', trip_date) AS INTEGER) <= 6 THEN 1 ELSE 2 END AS half, AVG(distance_km / fuel_consumed) AS avg_eff FROM trips GROUP BY driver_id, half)\nSELECT h1.driver_id, d.driver_name, ROUND(h1.avg_eff, 2) AS first_half_avg, ROUND(h2.avg_eff, 2) AS second_half_avg, ROUND(h2.avg_eff - h1.avg_eff, 2) AS efficiency_improvement FROM halves h1 JOIN halves h2 ON h1.driver_id = h2.driver_id AND h1.half = 1 AND h2.half = 2 JOIN drivers d ON d.driver_id = h1.driver_id WHERE h2.avg_eff > h1.avg_eff ORDER BY efficiency_improvement DESC, d.driver_name;",
+        "timeoutMs": 8000,
+        "tests": [
+          {
+            "seed": "INSERT INTO drivers VALUES (1,'Alice Johnson'),(2,'Bob Smith'),(3,'Carol Davis'),(4,'David Wilson'),(5,'Emma Brown');\nINSERT INTO trips VALUES (1,1,'2023-02-15',120.5,10.2),(2,1,'2023-03-20',200.0,16.5),(3,1,'2023-08-10',150.0,11.0),(4,1,'2023-09-25',180.0,12.5),(5,2,'2023-01-10',100.0,9.0),(6,2,'2023-04-15',250.0,22.0),(7,2,'2023-10-05',200.0,15.0),(8,3,'2023-03-12',80.0,8.5),(9,3,'2023-05-18',90.0,9.2),(10,4,'2023-07-22',160.0,12.8),(11,4,'2023-11-30',140.0,11.0),(12,5,'2023-02-28',110.0,11.5);"
+          },
+          {
+            "seed": "INSERT INTO drivers VALUES (1,'Worse');\nINSERT INTO trips VALUES (1,1,'2023-02-01',100.0,10.0),(2,1,'2023-08-01',100.0,20.0);"
+          },
+          {
+            "seed": "INSERT INTO drivers VALUES (1,'Half');\nINSERT INTO trips VALUES (1,1,'2023-02-01',100.0,10.0);"
+          }
+        ],
+        "orderMatters": true,
+        "checkColumnNames": true,
+        "floatTolerance": 0.01
+      }
+    },
+    {
+      "type": "quiz",
+      "title": "Итоговый тест модуля",
+      "content": {
+        "question": "Чем `RANK` отличается от `DENSE_RANK` при ничьей?",
+        "options": [
+          "Ничем",
+          "RANK пропускает номера, DENSE_RANK — нет",
+          "DENSE_RANK работает только с числами",
+          "RANK нельзя использовать с PARTITION BY"
+        ],
+        "correctIndices": [
+          1
+        ]
+      }
+    }
+  ]
+}

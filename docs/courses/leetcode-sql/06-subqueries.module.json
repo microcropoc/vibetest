@@ -18,25 +18,28 @@
     },
     {
       "type": "sqlite",
-      "title": "1773. Employees Whose Manager Left the Company",
+      "title": "1978. Employees Whose Manager Left the Company",
       "content": {
-        "description": "Сотрудники, чей `managerId` **не существует** в таблице (менеджер «уволился»). Колонка `employee_id`.\n\n[LeetCode 1773](https://leetcode.com/problems/employees-whose-manager-left-the-company/)",
-        "setup": "CREATE TABLE Employees(employee_id INTEGER PRIMARY KEY, name TEXT NOT NULL, manager_id INTEGER);",
+        "description": "Сотрудники с `salary` **строго меньше 30000**, чей менеджер (`manager_id`) **больше не работает** в компании. Колонка `employee_id`, сортировка по возрастанию.\n\n[LeetCode 1978](https://leetcode.com/problems/employees-whose-manager-left-the-company/)",
+        "setup": "CREATE TABLE Employees(employee_id INTEGER PRIMARY KEY, name TEXT NOT NULL, manager_id INTEGER, salary INTEGER NOT NULL);",
         "starterCode": "SELECT employee_id FROM Employees;",
-        "referenceSolution": "SELECT employee_id FROM Employees WHERE manager_id IS NOT NULL AND manager_id NOT IN (SELECT employee_id FROM Employees);",
+        "referenceSolution": "SELECT employee_id FROM Employees WHERE salary < 30000 AND manager_id IS NOT NULL AND manager_id NOT IN (SELECT employee_id FROM Employees) ORDER BY employee_id;",
         "timeoutMs": 8000,
         "tests": [
           {
-            "seed": "INSERT INTO Employees VALUES (3,\"Mila\",9),(12,\"Anton\",NULL),(13,\"Alex\",NULL),(10,\"Alice\",NULL);"
+            "seed": "INSERT INTO Employees VALUES (3,\"Mila\",9,40000),(12,\"Anton\",NULL,30000),(13,\"Alex\",NULL,38000),(10,\"Alice\",NULL,20000);"
           },
           {
-            "seed": "INSERT INTO Employees VALUES (1,\"Root\",NULL);"
+            "seed": "INSERT INTO Employees VALUES (1,\"Root\",NULL,50000);"
           },
           {
-            "seed": "INSERT INTO Employees VALUES (2,\"Orphan\",99);"
+            "seed": "INSERT INTO Employees VALUES (2,\"Orphan\",99,25000);"
+          },
+          {
+            "seed": "INSERT INTO Employees VALUES (5,\"E\",7,29000),(8,\"G\",7,50000);"
           }
         ],
-        "orderMatters": false,
+        "orderMatters": true,
         "checkColumnNames": true
       }
     },

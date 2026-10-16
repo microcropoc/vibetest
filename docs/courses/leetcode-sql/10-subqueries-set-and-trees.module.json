@@ -1,0 +1,262 @@
+{
+  "schemaVersion": 1,
+  "title": "Subqueries, Sets and Trees",
+  "steps": [
+    {
+      "type": "theory",
+      "title": "Подзапросы, UNION и иерархии",
+      "content": "## Подзапросы и множества\n\n- Коррелированный подзапрос считает условие «для каждой строки» (например, нет сотрудника с большей зарплатой в отделе).\n- **`UNION`** убирает дубликаты, **`UNION ALL`** — нет; обе ветви требуют одинаковых колонок.\n- Дерево (`id`, `p_id`): `Root` — нет родителя, `Inner` — встречается как чей-то родитель, остальные — `Leaf`.\n- **`LEAD(...) OVER (PARTITION BY … ORDER BY …)`** даёт следующую строку окна — удобно для пар «соседних» событий."
+    },
+    {
+      "type": "svg",
+      "title": "Схема: Subqueries, Sets and Trees",
+      "content": {
+        "caption": "UNION склеивает две выборки, UNION ALL сохраняет дубли",
+        "description": "Анти-джойны в обе стороны находят «дыры» в данных.",
+        "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 280 80\" width=\"100%\" role=\"img\" aria-label=\"Subqueries, Sets and Trees\"><rect id=\"lsq10-box\" x=\"40\" y=\"15\" width=\"200\" height=\"50\" rx=\"4\" fill=\"#e3f2fd\" stroke=\"#1565c0\"/><text x=\"140\" y=\"45\" text-anchor=\"middle\" font-size=\"12\" fill=\"#0d47a1\">Subqueries, Sets and Trees</text></svg>"
+      }
+    },
+    {
+      "type": "sqlite",
+      "title": "1873. Calculate Special Bonus",
+      "content": {
+        "description": "`bonus` = `salary`, если `employee_id` нечётный **и** `name` не начинается с `M`; иначе `0`. Сортировка по `employee_id`.\n\n[LeetCode 1873](https://leetcode.com/problems/calculate-special-bonus/)",
+        "setup": "CREATE TABLE Employees(employee_id INTEGER PRIMARY KEY, name TEXT NOT NULL, salary INTEGER NOT NULL);",
+        "starterCode": "SELECT employee_id, CASE WHEN employee_id % 2 = 1 THEN salary ELSE 0 END AS bonus FROM Employees ORDER BY employee_id;",
+        "referenceSolution": "SELECT employee_id, CASE WHEN employee_id % 2 = 1 AND name NOT LIKE 'M%' THEN salary ELSE 0 END AS bonus FROM Employees ORDER BY employee_id;",
+        "timeoutMs": 8000,
+        "tests": [
+          {
+            "seed": "INSERT INTO Employees VALUES (2,'Meir',3000),(3,'Michael',3800),(7,'Addilyn',7400),(8,'Juan',6100),(9,'Kannon',7700);"
+          },
+          {
+            "seed": "INSERT INTO Employees VALUES (1,'M',100);"
+          },
+          {
+            "seed": "INSERT INTO Employees VALUES (2,'A',100);"
+          },
+          {
+            "seed": "INSERT INTO Employees VALUES (3,'B',100);"
+          }
+        ],
+        "orderMatters": true,
+        "checkColumnNames": true
+      }
+    },
+    {
+      "type": "sqlite",
+      "title": "1795. Rearrange Products Table",
+      "content": {
+        "description": "Разверните `Products` в длинный формат: `product_id`, `store` (`store1`/`store2`/`store3`), `price`; строки с `NULL` не выводятся. Сортировка по `product_id`, `store`.\n\n[LeetCode 1795](https://leetcode.com/problems/rearrange-products-table/)",
+        "setup": "CREATE TABLE Products(product_id INTEGER PRIMARY KEY, store1 INTEGER, store2 INTEGER, store3 INTEGER);",
+        "starterCode": "SELECT product_id, 'store1' AS store, store1 AS price FROM Products;",
+        "referenceSolution": "SELECT product_id, 'store1' AS store, store1 AS price FROM Products WHERE store1 IS NOT NULL\nUNION ALL SELECT product_id, 'store2', store2 FROM Products WHERE store2 IS NOT NULL\nUNION ALL SELECT product_id, 'store3', store3 FROM Products WHERE store3 IS NOT NULL\nORDER BY product_id, store;",
+        "timeoutMs": 8000,
+        "tests": [
+          {
+            "seed": "INSERT INTO Products VALUES (0,95,100,105),(1,70,NULL,80);"
+          },
+          {
+            "seed": "INSERT INTO Products VALUES (1,NULL,NULL,NULL);"
+          },
+          {
+            "seed": "INSERT INTO Products VALUES (1,10,NULL,NULL);"
+          },
+          {
+            "seed": "INSERT INTO Products VALUES (1,NULL,20,NULL),(2,NULL,NULL,30);"
+          }
+        ],
+        "orderMatters": true,
+        "checkColumnNames": true
+      }
+    },
+    {
+      "type": "sqlite",
+      "title": "1965. Employees With Missing Information",
+      "content": {
+        "description": "`employee_id` сотрудников, у которых нет `name` **или** нет `salary`. Сортировка по `employee_id`.\n\n[LeetCode 1965](https://leetcode.com/problems/employees-with-missing-information/)",
+        "setup": "CREATE TABLE Employees(employee_id INTEGER PRIMARY KEY, name TEXT NOT NULL);\nCREATE TABLE Salaries(employee_id INTEGER PRIMARY KEY, salary INTEGER NOT NULL);",
+        "starterCode": "SELECT employee_id FROM Employees UNION SELECT employee_id FROM Salaries ORDER BY employee_id;",
+        "referenceSolution": "SELECT employee_id FROM (\n  SELECT e.employee_id AS employee_id FROM Employees e LEFT JOIN Salaries s ON e.employee_id = s.employee_id WHERE s.employee_id IS NULL\n  UNION\n  SELECT s.employee_id AS employee_id FROM Salaries s LEFT JOIN Employees e ON e.employee_id = s.employee_id WHERE e.employee_id IS NULL\n)\nORDER BY employee_id;",
+        "timeoutMs": 8000,
+        "tests": [
+          {
+            "seed": "INSERT INTO Employees VALUES (2,'Crew'),(4,'Haven'),(5,'Kristian');\nINSERT INTO Salaries VALUES (5,76071),(1,22517),(4,63539);"
+          },
+          {
+            "seed": "INSERT INTO Employees VALUES (1,'A');\nINSERT INTO Salaries VALUES (1,100);"
+          },
+          {
+            "seed": "INSERT INTO Employees VALUES (1,'A'),(2,'B');"
+          },
+          {
+            "seed": "INSERT INTO Salaries VALUES (9,10);"
+          }
+        ],
+        "orderMatters": true,
+        "checkColumnNames": true
+      }
+    },
+    {
+      "type": "sqlite",
+      "title": "184. Department Highest Salary",
+      "content": {
+        "description": "Для каждого отдела — сотрудники с **максимальной** зарплатой в нём. Колонки `Department`, `Employee`, `Salary`.\n\n[LeetCode 184](https://leetcode.com/problems/department-highest-salary/)",
+        "setup": "CREATE TABLE Employee(id INTEGER PRIMARY KEY, name TEXT NOT NULL, salary INTEGER NOT NULL, departmentId INTEGER NOT NULL);\nCREATE TABLE Department(id INTEGER PRIMARY KEY, name TEXT NOT NULL);",
+        "starterCode": "SELECT d.name AS Department, e.name AS Employee, MAX(e.salary) AS Salary FROM Employee e JOIN Department d ON e.departmentId = d.id GROUP BY d.id;",
+        "referenceSolution": "SELECT d.name AS Department, e.name AS Employee, e.salary AS Salary FROM Employee e JOIN Department d ON e.departmentId = d.id WHERE (SELECT COUNT(DISTINCT e2.salary) FROM Employee e2 WHERE e2.departmentId = e.departmentId AND e2.salary > e.salary) = 0;",
+        "timeoutMs": 8000,
+        "tests": [
+          {
+            "seed": "INSERT INTO Employee VALUES (1,'Joe',70000,1),(2,'Jim',90000,1),(3,'Henry',80000,2),(4,'Sam',60000,2),(5,'Max',90000,1);\nINSERT INTO Department VALUES (1,'IT'),(2,'Sales');"
+          },
+          {
+            "seed": "INSERT INTO Employee VALUES (1,'A',10,1),(2,'B',10,1),(3,'C',5,2);\nINSERT INTO Department VALUES (1,'D1'),(2,'D2');"
+          },
+          {
+            "seed": "INSERT INTO Employee VALUES (1,'A',10,9);\nINSERT INTO Department VALUES (1,'Other');"
+          }
+        ],
+        "orderMatters": false,
+        "checkColumnNames": true
+      }
+    },
+    {
+      "type": "sqlite",
+      "title": "608. Tree Node",
+      "content": {
+        "description": "Для каждого узла `Tree` верните `id` и `type`: `Root` (нет `p_id`), `Inner` (есть потомки), `Leaf`. Сортировка по `id`.\n\n[LeetCode 608](https://leetcode.com/problems/tree-node/)",
+        "setup": "CREATE TABLE Tree(id INTEGER PRIMARY KEY, p_id INTEGER);",
+        "starterCode": "SELECT id, CASE WHEN p_id IS NULL THEN 'Leaf' ELSE 'Root' END AS type FROM Tree ORDER BY id;",
+        "referenceSolution": "SELECT id, CASE WHEN p_id IS NULL THEN 'Root' WHEN id IN (SELECT DISTINCT p_id FROM Tree WHERE p_id IS NOT NULL) THEN 'Inner' ELSE 'Leaf' END AS type FROM Tree ORDER BY id;",
+        "timeoutMs": 8000,
+        "tests": [
+          {
+            "seed": "INSERT INTO Tree VALUES (1,NULL),(2,1),(3,1),(4,2),(5,2);"
+          },
+          {
+            "seed": "INSERT INTO Tree VALUES (1,NULL);"
+          },
+          {
+            "seed": "INSERT INTO Tree VALUES (1,NULL),(2,1);"
+          }
+        ],
+        "orderMatters": true,
+        "checkColumnNames": true
+      }
+    },
+    {
+      "type": "sqlite",
+      "title": "3497. Analyze Subscription Conversion",
+      "content": {
+        "description": "Пользователи, перешедшие с `free_trial` на `paid`: `user_id`, `trial_avg_duration`, `paid_avg_duration` — средние `activity_duration` за соответствующий период (округлить до 2 знаков). Строки `cancelled` игнорируются. Сортировка по `user_id`.\n\n[LeetCode 3497](https://leetcode.com/problems/analyze-subscription-conversion/)",
+        "setup": "CREATE TABLE UserActivity(user_id INTEGER NOT NULL, activity_date TEXT NOT NULL, activity_type TEXT NOT NULL, activity_duration INTEGER NOT NULL);",
+        "starterCode": "SELECT user_id, ROUND(AVG(activity_duration), 2) AS trial_avg_duration, ROUND(AVG(activity_duration), 2) AS paid_avg_duration FROM UserActivity WHERE activity_type <> 'cancelled' GROUP BY user_id ORDER BY user_id;",
+        "referenceSolution": "WITH t AS (SELECT user_id, activity_type, ROUND(SUM(activity_duration) * 1.0 / COUNT(*), 2) AS duration FROM UserActivity WHERE activity_type <> 'cancelled' GROUP BY user_id, activity_type)\nSELECT f.user_id, f.duration AS trial_avg_duration, p.duration AS paid_avg_duration FROM t f JOIN t p ON f.user_id = p.user_id WHERE f.activity_type = 'free_trial' AND p.activity_type = 'paid' ORDER BY f.user_id;",
+        "timeoutMs": 8000,
+        "tests": [
+          {
+            "seed": "INSERT INTO UserActivity VALUES (1,'2023-01-01','free_trial',45),(1,'2023-01-02','free_trial',30),(1,'2023-01-05','free_trial',60),(1,'2023-01-10','paid',75),(1,'2023-01-12','paid',90),(1,'2023-01-15','paid',65),(2,'2023-02-01','free_trial',55),(2,'2023-02-03','free_trial',25),(2,'2023-02-07','free_trial',50),(2,'2023-02-10','cancelled',0),(3,'2023-03-05','free_trial',70),(3,'2023-03-06','free_trial',60),(3,'2023-03-08','free_trial',80),(3,'2023-03-12','paid',50),(3,'2023-03-15','paid',55),(3,'2023-03-20','paid',85),(4,'2023-04-01','free_trial',40),(4,'2023-04-03','free_trial',35),(4,'2023-04-05','paid',45),(4,'2023-04-07','cancelled',0);"
+          },
+          {
+            "seed": "INSERT INTO UserActivity VALUES (1,'2023-01-01','free_trial',10),(1,'2023-01-02','paid',20);"
+          },
+          {
+            "seed": "INSERT INTO UserActivity VALUES (1,'2023-01-01','free_trial',10);"
+          }
+        ],
+        "orderMatters": true,
+        "checkColumnNames": true,
+        "floatTolerance": 0.01
+      }
+    },
+    {
+      "type": "sqlite",
+      "title": "3521. Find Product Recommendation Pairs",
+      "content": {
+        "description": "Пары товаров (`product1_id` < `product2_id`), купленные **≥ 3** разными покупателями: колонки `product1_id`, `product2_id`, `product1_category`, `product2_category`, `customer_count`. Сортировка: `customer_count` убыв., затем `product1_id`, `product2_id` возр.\n\n[LeetCode 3521](https://leetcode.com/problems/find-product-recommendation-pairs/)",
+        "setup": "CREATE TABLE ProductPurchases(user_id INTEGER NOT NULL, product_id INTEGER NOT NULL, quantity INTEGER NOT NULL, PRIMARY KEY(user_id, product_id));\nCREATE TABLE ProductInfo(product_id INTEGER PRIMARY KEY, category TEXT NOT NULL, price INTEGER NOT NULL);",
+        "starterCode": "SELECT a.product_id AS product1_id, b.product_id AS product2_id, ai.category AS product1_category, bi.category AS product2_category, COUNT(*) AS customer_count FROM ProductPurchases a JOIN ProductPurchases b ON a.user_id = b.user_id AND a.product_id < b.product_id JOIN ProductInfo ai ON ai.product_id = a.product_id JOIN ProductInfo bi ON bi.product_id = b.product_id GROUP BY a.product_id, b.product_id ORDER BY customer_count DESC, product1_id, product2_id;",
+        "referenceSolution": "SELECT a.product_id AS product1_id, b.product_id AS product2_id, ai.category AS product1_category, bi.category AS product2_category, COUNT(DISTINCT a.user_id) AS customer_count FROM ProductPurchases a JOIN ProductPurchases b ON a.user_id = b.user_id AND a.product_id < b.product_id JOIN ProductInfo ai ON ai.product_id = a.product_id JOIN ProductInfo bi ON bi.product_id = b.product_id GROUP BY a.product_id, b.product_id HAVING COUNT(DISTINCT a.user_id) >= 3 ORDER BY customer_count DESC, product1_id, product2_id;",
+        "timeoutMs": 8000,
+        "tests": [
+          {
+            "seed": "INSERT INTO ProductPurchases VALUES (1,101,2),(1,102,1),(1,103,3),(2,101,1),(2,102,5),(2,104,1),(3,101,2),(3,103,1),(3,105,4),(4,101,1),(4,102,1),(4,103,2),(4,104,3),(5,102,2),(5,104,1);\nINSERT INTO ProductInfo VALUES (101,'Electronics',100),(102,'Books',20),(103,'Clothing',35),(104,'Kitchen',50),(105,'Sports',75);"
+          },
+          {
+            "seed": "INSERT INTO ProductPurchases VALUES (1,1,1),(1,2,1),(2,1,1),(2,2,1),(3,1,1),(3,3,1);\nINSERT INTO ProductInfo VALUES (1,'A',1),(2,'B',1),(3,'C',1);"
+          },
+          {
+            "seed": "INSERT INTO ProductPurchases VALUES (1,1,1),(1,2,1),(2,1,1),(2,2,1),(3,1,1),(3,2,1),(4,1,1),(4,2,1);\nINSERT INTO ProductInfo VALUES (1,'A',1),(2,'B',1);"
+          }
+        ],
+        "orderMatters": true,
+        "checkColumnNames": true
+      }
+    },
+    {
+      "type": "sqlite",
+      "title": "3554. Find Category Recommendation Pairs",
+      "content": {
+        "description": "Пары **категорий** (`category1` < `category2`), товары из которых покупали **≥ 3** разных покупателя: колонки `category1`, `category2`, `customer_count`. Сортировка: `customer_count` убыв., затем `category1`, `category2` возр.\n\n[LeetCode 3554](https://leetcode.com/problems/find-category-recommendation-pairs/)",
+        "setup": "CREATE TABLE ProductPurchases(user_id INTEGER NOT NULL, product_id INTEGER NOT NULL, quantity INTEGER NOT NULL, PRIMARY KEY(user_id, product_id));\nCREATE TABLE ProductInfo(product_id INTEGER PRIMARY KEY, category TEXT NOT NULL, price INTEGER NOT NULL);",
+        "starterCode": "WITH user_category AS (SELECT DISTINCT p.user_id, i.category FROM ProductPurchases p JOIN ProductInfo i ON p.product_id = i.product_id)\nSELECT a.category AS category1, b.category AS category2, COUNT(*) AS customer_count FROM user_category a JOIN user_category b ON a.user_id = b.user_id AND a.category < b.category GROUP BY a.category, b.category ORDER BY customer_count DESC, category1, category2;",
+        "referenceSolution": "WITH user_category AS (SELECT DISTINCT p.user_id, i.category FROM ProductPurchases p JOIN ProductInfo i ON p.product_id = i.product_id)\nSELECT a.category AS category1, b.category AS category2, COUNT(DISTINCT a.user_id) AS customer_count FROM user_category a JOIN user_category b ON a.user_id = b.user_id AND a.category < b.category GROUP BY a.category, b.category HAVING COUNT(DISTINCT a.user_id) >= 3 ORDER BY customer_count DESC, category1, category2;",
+        "timeoutMs": 8000,
+        "tests": [
+          {
+            "seed": "INSERT INTO ProductPurchases VALUES (1,101,2),(1,102,1),(1,201,3),(1,301,1),(2,101,1),(2,102,2),(2,103,1),(2,201,5),(3,101,2),(3,103,1),(3,301,4),(3,401,2),(4,101,1),(4,201,3),(4,301,1),(4,401,2),(5,102,2),(5,103,1),(5,201,2),(5,202,3);\nINSERT INTO ProductInfo VALUES (101,'Electronics',100),(102,'Books',20),(103,'Books',35),(201,'Clothing',45),(202,'Clothing',60),(301,'Sports',75),(401,'Kitchen',50);"
+          },
+          {
+            "seed": "INSERT INTO ProductPurchases VALUES (1,1,1),(1,2,1),(2,1,1),(2,2,1);\nINSERT INTO ProductInfo VALUES (1,'A',1),(2,'B',1);"
+          },
+          {
+            "seed": "INSERT INTO ProductPurchases VALUES (1,1,1),(1,2,1),(2,1,1),(2,2,1),(3,1,1),(3,2,1);\nINSERT INTO ProductInfo VALUES (1,'A',1),(2,'B',1);"
+          }
+        ],
+        "orderMatters": true,
+        "checkColumnNames": true
+      }
+    },
+    {
+      "type": "sqlite",
+      "title": "3764. Most Common Course Pairs",
+      "content": {
+        "description": "Для «сильных» студентов (≥ 5 курсов и средний `course_rating` ≥ 4) — последовательные пары курсов в порядке `completion_date`: `first_course`, `second_course`, `transition_count`. Сортировка: `transition_count` убыв., затем названия курсов возр.\n\n[LeetCode 3764](https://leetcode.com/problems/most-common-course-pairs/)",
+        "setup": "CREATE TABLE course_completions(user_id INTEGER NOT NULL, course_id INTEGER NOT NULL, course_name TEXT NOT NULL, completion_date TEXT NOT NULL, course_rating INTEGER NOT NULL, PRIMARY KEY(user_id, course_id));",
+        "starterCode": "WITH pairs AS (SELECT course_name AS first_course, LEAD(course_name) OVER (PARTITION BY user_id ORDER BY completion_date, course_id) AS second_course FROM course_completions)\nSELECT first_course, second_course, COUNT(*) AS transition_count FROM pairs WHERE second_course IS NOT NULL GROUP BY first_course, second_course ORDER BY transition_count DESC, first_course, second_course;",
+        "referenceSolution": "WITH top_students AS (SELECT user_id FROM course_completions GROUP BY user_id HAVING COUNT(*) >= 5 AND AVG(course_rating) >= 4),\npairs AS (SELECT c.course_name AS first_course, LEAD(c.course_name) OVER (PARTITION BY c.user_id ORDER BY c.completion_date, c.course_id) AS second_course FROM course_completions c JOIN top_students t ON t.user_id = c.user_id)\nSELECT first_course, second_course, COUNT(*) AS transition_count FROM pairs WHERE second_course IS NOT NULL GROUP BY first_course, second_course ORDER BY transition_count DESC, first_course, second_course;",
+        "timeoutMs": 8000,
+        "tests": [
+          {
+            "seed": "INSERT INTO course_completions VALUES (1,101,'Python Basics','2024-01-05',5),(1,102,'SQL Fundamentals','2024-02-10',4),(1,103,'JavaScript','2024-03-15',5),(1,104,'React Basics','2024-04-20',4),(1,105,'Node.js','2024-05-25',5),(1,106,'Docker','2024-06-30',4),(2,101,'Python Basics','2024-01-08',4),(2,104,'React Basics','2024-02-14',5),(2,105,'Node.js','2024-03-20',4),(2,106,'Docker','2024-04-25',5),(2,107,'AWS Fundamentals','2024-05-30',4),(3,101,'Python Basics','2024-01-10',3),(3,102,'SQL Fundamentals','2024-02-12',3),(3,103,'JavaScript','2024-03-18',3),(3,104,'React Basics','2024-04-22',2),(3,105,'Node.js','2024-05-28',3),(4,101,'Python Basics','2024-01-12',5),(4,108,'Data Science','2024-02-16',5),(4,109,'Machine Learning','2024-03-22',5);"
+          },
+          {
+            "seed": "INSERT INTO course_completions VALUES (1,1,'A','2024-01-01',4),(1,2,'B','2024-02-01',4),(1,3,'C','2024-03-01',4),(1,4,'D','2024-04-01',4),(1,5,'E','2024-05-01',3);"
+          },
+          {
+            "seed": "INSERT INTO course_completions VALUES (1,1,'A','2024-01-01',5),(1,2,'B','2024-02-01',5),(1,3,'C','2024-03-01',5),(1,4,'D','2024-04-01',5);"
+          }
+        ],
+        "orderMatters": true,
+        "checkColumnNames": true
+      }
+    },
+    {
+      "type": "quiz",
+      "title": "Итоговый тест модуля",
+      "content": {
+        "question": "Что делает коррелированный подзапрос в `WHERE (SELECT COUNT(*) … ) = 0`?",
+        "options": [
+          "Выполняется один раз для всей таблицы",
+          "Выполняется для каждой строки внешнего запроса",
+          "Работает только с GROUP BY",
+          "Всегда возвращает NULL"
+        ],
+        "correctIndices": [
+          1
+        ]
+      }
+    }
+  ]
+}

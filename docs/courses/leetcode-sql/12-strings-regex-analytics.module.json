@@ -1,0 +1,465 @@
+{
+  "schemaVersion": 1,
+  "title": "Strings, Regex and Behavioral Analytics",
+  "steps": [
+    {
+      "type": "theory",
+      "title": "Строки, regex и оконная аналитика",
+      "content": "## Строки и аналитика\n\n- **`REGEXP`** в приложении — **JavaScript**-регулярка (регистрозависимая): `^…$`, `[0-9]{4}`, `\\b` (граница слова).\n- Даты хранятся как `TEXT` (`YYYY-MM-DD`), сравниваются лексикографически; разница в днях — `julianday(a) - julianday(b)`.\n- Неделя: `strftime('%Y-%W', d)`; время суток — `substr(ts, 12, 5)`.\n- «Интервалы подряд» — приём `date(action_date, '-' || ROW_NUMBER() … || ' days')`: одинаковая метка у последовательных дней.\n- `GLOB` проверяет по маске и возвращает 0/1: `x GLOB '[A-Za-z]'`, `x NOT GLOB '*[^A-Za-z]*'`."
+    },
+    {
+      "type": "svg",
+      "title": "Схема: Strings, Regex and Behavioral Analytics",
+      "content": {
+        "caption": "REGEXP — JS-регулярка, GLOB — маска SQLite",
+        "description": "Разница дат через julianday, неделя через strftime.",
+        "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 280 80\" width=\"100%\" role=\"img\" aria-label=\"Strings, Regex and Behavioral Analytics\"><rect id=\"lsq12-box\" x=\"40\" y=\"15\" width=\"200\" height=\"50\" rx=\"4\" fill=\"#e3f2fd\" stroke=\"#1565c0\"/><text x=\"140\" y=\"45\" text-anchor=\"middle\" font-size=\"12\" fill=\"#0d47a1\">Strings, Regex and Behavioral Analytics</text></svg>"
+      }
+    },
+    {
+      "type": "sqlite",
+      "title": "3436. Find Valid Emails",
+      "content": {
+        "description": "Валидный email: ровно один `@`, локальная часть из букв/цифр/`_`, домен только из букв и заканчивается на `.com`. Колонки `user_id`, `email`; сортировка по `user_id`.\n\n[LeetCode 3436](https://leetcode.com/problems/find-valid-emails/)",
+        "setup": "CREATE TABLE Users(user_id INTEGER PRIMARY KEY, email TEXT NOT NULL);",
+        "starterCode": "SELECT user_id, email FROM Users WHERE email REGEXP '^.+@[A-Za-z]+\\.com$' ORDER BY user_id;",
+        "referenceSolution": "SELECT user_id, email FROM Users WHERE email REGEXP '^[A-Za-z0-9_]+@[A-Za-z]+\\.com$' ORDER BY user_id;",
+        "timeoutMs": 8000,
+        "tests": [
+          {
+            "seed": "INSERT INTO Users VALUES (1,'alice@example.com'),(2,'bob_at_example.com'),(3,'charlie@example.net'),(4,'david@domain.com'),(5,'eve@invalid');"
+          },
+          {
+            "seed": "INSERT INTO Users VALUES (1,'a-b@x.com');"
+          },
+          {
+            "seed": "INSERT INTO Users VALUES (1,'a_b@x.com');"
+          },
+          {
+            "seed": "INSERT INTO Users VALUES (1,'a@b.c.com');"
+          }
+        ],
+        "orderMatters": true,
+        "checkColumnNames": true
+      }
+    },
+    {
+      "type": "sqlite",
+      "title": "3465. Find Products with Valid Serial Numbers",
+      "content": {
+        "description": "Товары, в описании которых есть серийный номер вида `SN` + ровно 4 цифры + `-` + ровно 4 цифры (границы слова). Колонки `product_id`, `product_name`, `description`; сортировка по `product_id`.\n\n[LeetCode 3465](https://leetcode.com/problems/find-products-with-valid-serial-numbers/)",
+        "setup": "CREATE TABLE products(product_id INTEGER PRIMARY KEY, product_name TEXT NOT NULL, description TEXT NOT NULL);",
+        "starterCode": "SELECT product_id, product_name, description FROM products WHERE description LIKE '%SN____-____%' ORDER BY product_id;",
+        "referenceSolution": "SELECT product_id, product_name, description FROM products WHERE description REGEXP '\\bSN[0-9]{4}-[0-9]{4}\\b' ORDER BY product_id;",
+        "timeoutMs": 8000,
+        "tests": [
+          {
+            "seed": "INSERT INTO products VALUES (1,'Widget A','This is a sample product with SN1234-5678'),(2,'Widget B','A product with serial SN9876-1234 in the description'),(3,'Widget C','Product SN1234-56789 is available now'),(4,'Widget D','No serial number here'),(5,'Widget E','Check out SN4321-8765 in this description');"
+          },
+          {
+            "seed": "INSERT INTO products VALUES (1,'X','code xSN1234-5678 here');"
+          },
+          {
+            "seed": "INSERT INTO products VALUES (1,'X','valid SN0000-0000 code');"
+          },
+          {
+            "seed": "INSERT INTO products VALUES (1,'X','nothing');"
+          }
+        ],
+        "orderMatters": true,
+        "checkColumnNames": true
+      }
+    },
+    {
+      "type": "sqlite",
+      "title": "3475. DNA Pattern Recognition",
+      "content": {
+        "description": "Для каждой последовательности верните `sample_id`, `dna_sequence`, `species` и флаги: `has_start` (начинается с `ATG`), `has_stop` (заканчивается `TAA`/`TAG`/`TGA`), `has_atat` (содержит `ATAT`), `has_ggg` (есть ≥ 3 подряд `G`). Сортировка по `sample_id`.\n\n[LeetCode 3475](https://leetcode.com/problems/dna-pattern-recognition/)",
+        "setup": "CREATE TABLE Samples(sample_id INTEGER PRIMARY KEY, dna_sequence TEXT NOT NULL, species TEXT NOT NULL);",
+        "starterCode": "SELECT sample_id, dna_sequence, species, dna_sequence LIKE 'ATG%' AS has_start, dna_sequence LIKE '%TAA%' AS has_stop, dna_sequence LIKE '%ATAT%' AS has_atat, dna_sequence LIKE '%GGG%' AS has_ggg FROM Samples ORDER BY sample_id;",
+        "referenceSolution": "SELECT sample_id, dna_sequence, species, dna_sequence LIKE 'ATG%' AS has_start, dna_sequence REGEXP 'TAA$|TAG$|TGA$' AS has_stop, dna_sequence LIKE '%ATAT%' AS has_atat, dna_sequence REGEXP 'GGG' AS has_ggg FROM Samples ORDER BY sample_id;",
+        "timeoutMs": 8000,
+        "tests": [
+          {
+            "seed": "INSERT INTO Samples VALUES (1,'ATGCTAGCTAGCTAA','Human'),(2,'GGGTCAATCATC','Human'),(3,'ATATATCGTAGCTA','Human'),(4,'ATGGGGTCATCATAA','Mouse'),(5,'TCAGTCAGTCAG','Mouse'),(6,'ATATCGCGCTAG','Zebrafish'),(7,'CGTATGCGTCGTA','Zebrafish');"
+          },
+          {
+            "seed": "INSERT INTO Samples VALUES (1,'TAAXXXX','X');"
+          },
+          {
+            "seed": "INSERT INTO Samples VALUES (1,'GGGG','X');"
+          },
+          {
+            "seed": "INSERT INTO Samples VALUES (1,'ATGATATAA','X');"
+          }
+        ],
+        "orderMatters": true,
+        "checkColumnNames": true
+      }
+    },
+    {
+      "type": "sqlite",
+      "title": "3374. First Letter Capitalization II",
+      "content": {
+        "description": "Преобразуйте каждое слово `content_text`: если слово начинается не с английской буквы — без изменений; если это 2+ части из английских букв через `-` — каждую часть с заглавной; иначе — первая буква заглавная, остальные строчные. Колонки `content_id`, `original_text`, `converted_text`.\n\n[LeetCode 3374](https://leetcode.com/problems/first-letter-capitalization-ii/)",
+        "setup": "CREATE TABLE user_content(content_id INTEGER PRIMARY KEY, content_text TEXT NOT NULL);",
+        "starterCode": "SELECT content_id, content_text AS original_text, UPPER(SUBSTR(content_text, 1, 1)) || LOWER(SUBSTR(content_text, 2)) AS converted_text FROM user_content ORDER BY content_id;",
+        "referenceSolution": "WITH RECURSIVE splitwords(content_id, idx, word, rest) AS (SELECT content_id, 1, CASE WHEN instr(content_text, ' ') = 0 THEN content_text ELSE substr(content_text, 1, instr(content_text, ' ') - 1) END, CASE WHEN instr(content_text, ' ') = 0 THEN '' ELSE substr(content_text, instr(content_text, ' ') + 1) END FROM user_content\nUNION ALL SELECT content_id, idx + 1, CASE WHEN instr(rest, ' ') = 0 THEN rest ELSE substr(rest, 1, instr(rest, ' ') - 1) END, CASE WHEN instr(rest, ' ') = 0 THEN '' ELSE substr(rest, instr(rest, ' ') + 1) END FROM splitwords WHERE rest <> ''),\nparts(content_id, idx, part_idx, part, rest) AS (SELECT content_id, idx, 1, CASE WHEN instr(word, '-') = 0 THEN word ELSE substr(word, 1, instr(word, '-') - 1) END, CASE WHEN instr(word, '-') = 0 THEN '' ELSE substr(word, instr(word, '-') + 1) END FROM splitwords\nUNION ALL SELECT content_id, idx, part_idx + 1, CASE WHEN instr(rest, '-') = 0 THEN rest ELSE substr(rest, 1, instr(rest, '-') - 1) END, CASE WHEN instr(rest, '-') = 0 THEN '' ELSE substr(rest, instr(rest, '-') + 1) END FROM parts WHERE rest <> ''),\nhyphen(content_id, idx, part_idx, acc) AS (SELECT content_id, idx, 1, UPPER(SUBSTR(part, 1, 1)) || LOWER(SUBSTR(part, 2)) FROM parts WHERE part_idx = 1\nUNION ALL SELECT p.content_id, p.idx, p.part_idx, h.acc || '-' || UPPER(SUBSTR(p.part, 1, 1)) || LOWER(SUBSTR(p.part, 2)) FROM hyphen h JOIN parts p ON p.content_id = h.content_id AND p.idx = h.idx AND p.part_idx = h.part_idx + 1),\nwordinfo AS (SELECT w.content_id, w.idx, w.word, COUNT(p.part_idx) AS part_count, MAX(CASE WHEN p.part_idx = 1 AND SUBSTR(p.part, 1, 1) GLOB '[A-Za-z]' THEN 1 ELSE 0 END) AS starts_letter, MIN(CASE WHEN p.part <> '' AND p.part NOT GLOB '*[^A-Za-z]*' THEN 1 ELSE 0 END) AS all_letters FROM splitwords w JOIN parts p ON p.content_id = w.content_id AND p.idx = w.idx GROUP BY w.content_id, w.idx),\nconverted AS (SELECT content_id, idx, CASE WHEN starts_letter = 0 THEN word WHEN all_letters = 1 AND part_count >= 2 THEN (SELECT acc FROM hyphen h WHERE h.content_id = wordinfo.content_id AND h.idx = wordinfo.idx ORDER BY h.part_idx DESC LIMIT 1) ELSE UPPER(SUBSTR(word, 1, 1)) || LOWER(SUBSTR(word, 2)) END AS conv FROM wordinfo),\nbuilt(content_id, idx, out) AS (SELECT content_id, idx, conv FROM converted WHERE idx = 1\nUNION ALL SELECT b.content_id, c.idx, b.out || ' ' || c.conv FROM built b JOIN converted c ON c.content_id = b.content_id AND c.idx = b.idx + 1)\nSELECT uc.content_id, uc.content_text AS original_text, COALESCE((SELECT out FROM built b WHERE b.content_id = uc.content_id ORDER BY b.idx DESC LIMIT 1), '') AS converted_text FROM user_content uc ORDER BY uc.content_id;",
+        "timeoutMs": 8000,
+        "tests": [
+          {
+            "seed": "INSERT INTO user_content VALUES (1,'hello world of SQL'),(2,'the QUICK-brown fox'),(3,'modern-day DATA science'),(4,'web-based FRONT-end development');"
+          },
+          {
+            "seed": "INSERT INTO user_content VALUES (1,'123abc DEF');"
+          },
+          {
+            "seed": "INSERT INTO user_content VALUES (1,'a-b-c x');"
+          },
+          {
+            "seed": "INSERT INTO user_content VALUES (1,'@tag hello');"
+          }
+        ],
+        "orderMatters": true,
+        "checkColumnNames": true
+      }
+    },
+    {
+      "type": "sqlite",
+      "title": "3451. Find Invalid IP Addresses",
+      "content": {
+        "description": "Невалидный IPv4: не 4 октета, октет > 255 или октет с ведущим нулём. Колонки `ip`, `invalid_count`; сортировка по `invalid_count` и `ip` убыв.\n\n[LeetCode 3451](https://leetcode.com/problems/find-invalid-ip-addresses/)",
+        "setup": "CREATE TABLE logs(log_id INTEGER PRIMARY KEY, ip TEXT NOT NULL, status_code INTEGER NOT NULL);",
+        "starterCode": "SELECT ip, COUNT(*) AS invalid_count FROM logs WHERE length(ip) - length(replace(ip, '.', '')) <> 3 GROUP BY ip ORDER BY invalid_count DESC, ip DESC;",
+        "referenceSolution": "WITH RECURSIVE split(log_id, ip, octet, rest, cnt) AS (SELECT log_id, ip, CASE WHEN instr(ip, '.') = 0 THEN ip ELSE substr(ip, 1, instr(ip, '.') - 1) END, CASE WHEN instr(ip, '.') = 0 THEN '' ELSE substr(ip, instr(ip, '.') + 1) END, CASE WHEN instr(ip, '.') = 0 THEN 1 ELSE 2 END FROM logs\nUNION ALL SELECT log_id, ip, CASE WHEN instr(rest, '.') = 0 THEN rest ELSE substr(rest, 1, instr(rest, '.') - 1) END, CASE WHEN instr(rest, '.') = 0 THEN '' ELSE substr(rest, instr(rest, '.') + 1) END, cnt + 1 FROM split WHERE rest <> ''),\nper_ip AS (SELECT log_id, ip, COUNT(*) AS octets, SUM(CASE WHEN octet = '' OR octet GLOB '*[^0-9]*' OR octet GLOB '0*[0-9]*' OR CAST(octet AS INTEGER) > 255 THEN 1 ELSE 0 END) AS bad FROM split GROUP BY log_id)\nSELECT ip, COUNT(*) AS invalid_count FROM per_ip WHERE octets <> 4 OR bad > 0 OR substr(ip, -1) = '.' GROUP BY ip ORDER BY invalid_count DESC, ip DESC;",
+        "timeoutMs": 8000,
+        "tests": [
+          {
+            "seed": "INSERT INTO logs VALUES (1,'192.168.1.1',200),(2,'256.1.2.3',404),(3,'192.168.001.1',200),(4,'192.168.1.1',200),(5,'192.168.1',500),(6,'256.1.2.3',404),(7,'192.168.001.1',200);"
+          },
+          {
+            "seed": "INSERT INTO logs VALUES (1,'0.0.0.0',200),(2,'01.0.0.0',200);"
+          },
+          {
+            "seed": "INSERT INTO logs VALUES (1,'1.2.3.4.5',200),(2,'1.2.3.4',200);"
+          }
+        ],
+        "orderMatters": true,
+        "checkColumnNames": true
+      }
+    },
+    {
+      "type": "sqlite",
+      "title": "3586. Find COVID Recovery Patients",
+      "content": {
+        "description": "Пациенты, у которых был положительный тест, а позже — отрицательный: `patient_id`, `patient_name`, `age`, `recovery_time` (дней от **первого** положительного до **первого** следующего отрицательного). Сортировка: `recovery_time` возр., имя возр.\n\n[LeetCode 3586](https://leetcode.com/problems/find-covid-recovery-patients/)",
+        "setup": "CREATE TABLE patients(patient_id INTEGER PRIMARY KEY, patient_name TEXT NOT NULL, age INTEGER NOT NULL);\nCREATE TABLE covid_tests(test_id INTEGER PRIMARY KEY, patient_id INTEGER NOT NULL, test_date TEXT NOT NULL, result TEXT NOT NULL);",
+        "starterCode": "SELECT p.patient_id, p.patient_name, p.age, 0 AS recovery_time FROM patients p JOIN covid_tests t ON t.patient_id = p.patient_id GROUP BY p.patient_id ORDER BY recovery_time, p.patient_name;",
+        "referenceSolution": "WITH pos AS (SELECT patient_id, MIN(test_date) AS fp FROM covid_tests WHERE result = 'Positive' GROUP BY patient_id),\nneg AS (SELECT t.patient_id, MIN(t.test_date) AS fn FROM covid_tests t JOIN pos ON pos.patient_id = t.patient_id WHERE t.result = 'Negative' AND t.test_date > pos.fp GROUP BY t.patient_id)\nSELECT p.patient_id, p.patient_name, p.age, CAST(ROUND(julianday(n.fn) - julianday(o.fp)) AS INTEGER) AS recovery_time FROM patients p JOIN pos o ON o.patient_id = p.patient_id JOIN neg n ON n.patient_id = p.patient_id ORDER BY recovery_time, p.patient_name;",
+        "timeoutMs": 8000,
+        "tests": [
+          {
+            "seed": "INSERT INTO patients VALUES (1,'Alice Smith',28),(2,'Bob Johnson',35),(3,'Carol Davis',42),(4,'David Wilson',31),(5,'Emma Brown',29);\nINSERT INTO covid_tests VALUES (1,1,'2023-01-15','Positive'),(2,1,'2023-01-25','Negative'),(3,2,'2023-02-01','Positive'),(4,2,'2023-02-05','Inconclusive'),(5,2,'2023-02-12','Negative'),(6,3,'2023-01-20','Negative'),(7,3,'2023-02-10','Positive'),(8,3,'2023-02-20','Negative'),(9,4,'2023-01-10','Positive'),(10,4,'2023-01-18','Positive'),(11,5,'2023-02-15','Negative'),(12,5,'2023-02-20','Negative');"
+          },
+          {
+            "seed": "INSERT INTO patients VALUES (1,'Only Pos',20);\nINSERT INTO covid_tests VALUES (1,1,'2023-01-01','Positive'),(2,1,'2023-01-05','Positive');"
+          },
+          {
+            "seed": "INSERT INTO patients VALUES (1,'Same Day',20);\nINSERT INTO covid_tests VALUES (1,1,'2023-01-01','Positive'),(2,1,'2023-01-01','Negative');"
+          }
+        ],
+        "orderMatters": true,
+        "checkColumnNames": true
+      }
+    },
+    {
+      "type": "sqlite",
+      "title": "3611. Find Overbooked Employees",
+      "content": {
+        "description": "Сотрудники, у которых **больше 50%** рабочей недели (40 ч) уходит на встречи: суммарно **> 20 ч** за календарную неделю (Пн–Вс), таких недель **≥ 2**. Колонки `employee_id`, `employee_name`, `department`, `meeting_heavy_weeks`. Сортировка: недели убыв., имя возр.\n\n[LeetCode 3611](https://leetcode.com/problems/find-overbooked-employees/)",
+        "setup": "CREATE TABLE employees(employee_id INTEGER PRIMARY KEY, employee_name TEXT NOT NULL, department TEXT NOT NULL);\nCREATE TABLE meetings(meeting_id INTEGER PRIMARY KEY, employee_id INTEGER NOT NULL, meeting_date TEXT NOT NULL, meeting_type TEXT NOT NULL, duration_hours REAL NOT NULL);",
+        "starterCode": "SELECT e.employee_id, e.employee_name, e.department, COUNT(*) AS meeting_heavy_weeks FROM meetings m JOIN employees e ON e.employee_id = m.employee_id WHERE m.duration_hours > 20 GROUP BY e.employee_id ORDER BY meeting_heavy_weeks DESC, e.employee_name;",
+        "referenceSolution": "WITH weekly AS (SELECT employee_id, strftime('%Y-%W', meeting_date) AS wk, SUM(duration_hours) AS hours FROM meetings GROUP BY employee_id, wk)\nSELECT e.employee_id, e.employee_name, e.department, COUNT(*) AS meeting_heavy_weeks FROM weekly w JOIN employees e ON e.employee_id = w.employee_id WHERE w.hours > 20 GROUP BY e.employee_id HAVING COUNT(*) >= 2 ORDER BY meeting_heavy_weeks DESC, e.employee_name;",
+        "timeoutMs": 8000,
+        "tests": [
+          {
+            "seed": "INSERT INTO employees VALUES (1,'Alice Johnson','Engineering'),(2,'Bob Smith','Marketing'),(3,'Carol Davis','Sales'),(4,'David Wilson','Engineering'),(5,'Emma Brown','HR');\nINSERT INTO meetings VALUES (1,1,'2023-06-05','Team',8.0),(2,1,'2023-06-06','Client',6.0),(3,1,'2023-06-07','Training',7.0),(4,1,'2023-06-12','Team',12.0),(5,1,'2023-06-13','Client',9.0),(6,2,'2023-06-05','Team',15.0),(7,2,'2023-06-06','Client',8.0),(8,2,'2023-06-12','Training',10.0),(9,3,'2023-06-05','Team',4.0),(10,3,'2023-06-06','Client',3.0),(11,4,'2023-06-05','Team',25.0),(12,4,'2023-06-19','Client',22.0),(13,5,'2023-06-05','Training',2.0);"
+          },
+          {
+            "seed": "INSERT INTO employees VALUES (1,'One Week','X');\nINSERT INTO meetings VALUES (1,1,'2023-06-05','Team',21.0);"
+          },
+          {
+            "seed": "INSERT INTO employees VALUES (1,'Two Weeks','X');\nINSERT INTO meetings VALUES (1,1,'2023-06-05','Team',11.0),(2,1,'2023-06-06','Team',10.0),(3,1,'2023-06-12','Team',25.0);"
+          }
+        ],
+        "orderMatters": true,
+        "checkColumnNames": true
+      }
+    },
+    {
+      "type": "sqlite",
+      "title": "3617. Find Students with Study Spiral Pattern",
+      "content": {
+        "description": "Студенты, которые изучают ≥ 3 разных предмета повторяющимся циклом (минимум 2 полных цикла, ≥ 6 сессий), причём все соседние сессии идут без разрыва больше 2 дней. Колонки `student_id`, `student_name`, `major`, `cycle_length`, `total_study_hours`. Сортировка: `cycle_length` убыв., часы убыв.\n\n[LeetCode 3617](https://leetcode.com/problems/find-students-with-study-spiral-pattern/)",
+        "setup": "CREATE TABLE students(student_id INTEGER PRIMARY KEY, student_name TEXT NOT NULL, major TEXT NOT NULL);\nCREATE TABLE study_sessions(session_id INTEGER PRIMARY KEY, student_id INTEGER NOT NULL, subject TEXT NOT NULL, session_date TEXT NOT NULL, hours_studied REAL NOT NULL);",
+        "starterCode": "SELECT s.student_id, s.student_name, s.major, COUNT(DISTINCT ss.subject) AS cycle_length, SUM(ss.hours_studied) AS total_study_hours FROM students s JOIN study_sessions ss ON ss.student_id = s.student_id GROUP BY s.student_id HAVING COUNT(DISTINCT ss.subject) >= 3 ORDER BY cycle_length DESC, total_study_hours DESC;",
+        "referenceSolution": "WITH ranked AS (SELECT student_id, session_id, session_date, subject, hours_studied, julianday(session_date) - julianday(LAG(session_date) OVER (PARTITION BY student_id ORDER BY session_date, session_id)) AS gap, ROW_NUMBER() OVER (PARTITION BY student_id ORDER BY session_date, session_id) AS idx FROM study_sessions),\ncontig AS (SELECT student_id FROM ranked GROUP BY student_id HAVING SUM(CASE WHEN gap > 2 THEN 1 ELSE 0 END) = 0),\nstats AS (SELECT r.student_id, COUNT(*) AS cnt, COUNT(DISTINCT r.subject) AS k FROM ranked r JOIN contig c ON c.student_id = r.student_id GROUP BY r.student_id HAVING COUNT(DISTINCT r.subject) >= 3 AND COUNT(*) >= 2 * COUNT(DISTINCT r.subject) AND COUNT(*) % COUNT(DISTINCT r.subject) = 0),\ngood AS (SELECT st.student_id, st.k FROM stats st WHERE NOT EXISTS (SELECT 1 FROM ranked cur JOIN ranked cyc ON cyc.student_id = cur.student_id AND cyc.idx = ((cur.idx - 1) % st.k) + 1 WHERE cur.student_id = st.student_id AND cur.subject <> cyc.subject))\nSELECT s.student_id, s.student_name, s.major, g.k AS cycle_length, ROUND((SELECT SUM(r.hours_studied) FROM ranked r WHERE r.student_id = g.student_id), 2) AS total_study_hours FROM good g JOIN students s ON s.student_id = g.student_id ORDER BY cycle_length DESC, total_study_hours DESC;",
+        "timeoutMs": 8000,
+        "tests": [
+          {
+            "seed": "INSERT INTO students VALUES (1,'Alice Chen','Computer Science'),(2,'Bob Johnson','Mathematics'),(3,'Carol Davis','Physics'),(4,'David Wilson','Chemistry'),(5,'Emma Brown','Biology');\nINSERT INTO study_sessions VALUES (1,1,'Math','2023-10-01',2.5),(2,1,'Physics','2023-10-02',3.0),(3,1,'Chemistry','2023-10-03',2.0),(4,1,'Math','2023-10-04',2.5),(5,1,'Physics','2023-10-05',3.0),(6,1,'Chemistry','2023-10-06',2.0),(7,2,'Algebra','2023-10-01',4.0),(8,2,'Calculus','2023-10-02',3.5),(9,2,'Statistics','2023-10-03',2.5),(10,2,'Geometry','2023-10-04',3.0),(11,2,'Algebra','2023-10-05',4.0),(12,2,'Calculus','2023-10-06',3.5),(13,2,'Statistics','2023-10-07',2.5),(14,2,'Geometry','2023-10-08',3.0),(15,3,'Biology','2023-10-01',2.0),(16,3,'Chemistry','2023-10-02',2.5),(17,3,'Biology','2023-10-03',2.0),(18,3,'Chemistry','2023-10-04',2.5),(19,4,'Organic','2023-10-01',3.0),(20,4,'Physical','2023-10-05',2.5);"
+          },
+          {
+            "seed": "INSERT INTO students VALUES (9,'Broken Cycle','X'),(10,'Gappy','X');\nINSERT INTO study_sessions VALUES (1,9,'A','2023-10-01',1.0),(2,9,'B','2023-10-02',1.0),(3,9,'C','2023-10-03',1.0),(4,9,'A','2023-10-04',1.0),(5,9,'B','2023-10-05',1.0),(6,9,'D','2023-10-06',1.0),(7,10,'A','2023-10-01',1.0),(8,10,'B','2023-10-02',1.0),(9,10,'C','2023-10-03',1.0),(10,10,'A','2023-10-09',1.0),(11,10,'B','2023-10-10',1.0),(12,10,'C','2023-10-11',1.0);"
+          },
+          {
+            "seed": "INSERT INTO students VALUES (7,'Valid','X');\nINSERT INTO study_sessions VALUES (1,7,'A','2023-10-01',1.0),(2,7,'B','2023-10-02',1.0),(3,7,'C','2023-10-03',1.0),(4,7,'A','2023-10-04',1.0),(5,7,'B','2023-10-05',1.0),(6,7,'C','2023-10-06',1.0);"
+          }
+        ],
+        "orderMatters": true,
+        "checkColumnNames": true
+      }
+    },
+    {
+      "type": "sqlite",
+      "title": "3626. Find Stores with Inventory Imbalance",
+      "content": {
+        "description": "Магазины (≥ 3 товара), где количество **самого дорогого** товара меньше, чем **самого дешёвого**: колонки `store_id`, `store_name`, `location`, `most_exp_product`, `cheapest_product`, `imbalance_ratio` (округлить до 2). Сортировка: ratio убыв., имя магазина возр.\n\n[LeetCode 3626](https://leetcode.com/problems/find-stores-with-inventory-imbalance/)",
+        "setup": "CREATE TABLE stores(store_id INTEGER PRIMARY KEY, store_name TEXT NOT NULL, location TEXT NOT NULL);\nCREATE TABLE inventory(inventory_id INTEGER PRIMARY KEY, store_id INTEGER NOT NULL, product_name TEXT NOT NULL, quantity INTEGER NOT NULL, price REAL NOT NULL);",
+        "starterCode": "WITH t AS (SELECT store_id, product_name, quantity, RANK() OVER (PARTITION BY store_id ORDER BY price DESC, quantity DESC) AS rk_exp, RANK() OVER (PARTITION BY store_id ORDER BY price ASC, quantity DESC) AS rk_cheap, COUNT(*) OVER (PARTITION BY store_id) AS cnt FROM inventory)\nSELECT s.store_id, s.store_name, s.location, e.product_name AS most_exp_product, c.product_name AS cheapest_product, ROUND(c.quantity * 1.0 / e.quantity, 2) AS imbalance_ratio FROM t e JOIN t c ON c.store_id = e.store_id AND c.rk_cheap = 1 JOIN stores s ON s.store_id = e.store_id WHERE e.rk_exp = 1 ORDER BY imbalance_ratio DESC, s.store_name;",
+        "referenceSolution": "WITH t AS (SELECT store_id, product_name, quantity, RANK() OVER (PARTITION BY store_id ORDER BY price DESC, quantity DESC) AS rk_exp, RANK() OVER (PARTITION BY store_id ORDER BY price ASC, quantity DESC) AS rk_cheap, COUNT(*) OVER (PARTITION BY store_id) AS cnt FROM inventory)\nSELECT s.store_id, s.store_name, s.location, e.product_name AS most_exp_product, c.product_name AS cheapest_product, ROUND(c.quantity * 1.0 / e.quantity, 2) AS imbalance_ratio FROM t e JOIN t c ON c.store_id = e.store_id AND c.rk_cheap = 1 JOIN stores s ON s.store_id = e.store_id WHERE e.rk_exp = 1 AND e.cnt >= 3 AND e.quantity < c.quantity ORDER BY imbalance_ratio DESC, s.store_name;",
+        "timeoutMs": 8000,
+        "tests": [
+          {
+            "seed": "INSERT INTO stores VALUES (1,'Downtown Tech','New York'),(2,'Suburb Mall','Chicago'),(3,'City Center','Los Angeles'),(4,'Corner Shop','Miami'),(5,'Plaza Store','Seattle');\nINSERT INTO inventory VALUES (1,1,'Laptop',5,999.99),(2,1,'Mouse',50,19.99),(3,1,'Keyboard',25,79.99),(4,1,'Monitor',15,299.99),(5,2,'Phone',3,699.99),(6,2,'Charger',100,25.99),(7,2,'Case',75,15.99),(8,2,'Headphones',20,149.99),(9,3,'Tablet',2,499.99),(10,3,'Stylus',80,29.99),(11,3,'Cover',60,39.99),(12,4,'Watch',10,299.99),(13,4,'Band',25,49.99),(14,5,'Camera',8,599.99),(15,5,'Lens',12,199.99);"
+          },
+          {
+            "seed": "INSERT INTO stores VALUES (1,'Balanced','X'),(2,'Small','Y');\nINSERT INTO inventory VALUES (1,1,'Exp',10,100.0),(2,1,'Mid',5,50.0),(3,1,'Cheap',3,10.0),(4,2,'Only',1,5.0),(5,2,'Other',2,6.0);"
+          },
+          {
+            "seed": "INSERT INTO stores VALUES (1,'Tie','Z');\nINSERT INTO inventory VALUES (1,1,'A',3,10.0),(2,1,'B',3,10.0),(3,1,'C',3,10.0);"
+          }
+        ],
+        "orderMatters": true,
+        "checkColumnNames": true,
+        "floatTolerance": 0.01
+      }
+    },
+    {
+      "type": "sqlite",
+      "title": "3642. Find Books with Polarized Opinions",
+      "content": {
+        "description": "Книги (≥ 5 сессий) с оценками и ≥ 4, и ≤ 2, где доля крайних оценок (≤ 2 или ≥ 4) **≥ 0.6**: колонки `book_id`, `title`, `author`, `genre`, `pages`, `rating_spread`, `polarization_score` (округлить до 2). Сортировка: score убыв., title убыв.\n\n[LeetCode 3642](https://leetcode.com/problems/find-books-with-polarized-opinions/)",
+        "setup": "CREATE TABLE books(book_id INTEGER PRIMARY KEY, title TEXT NOT NULL, author TEXT NOT NULL, genre TEXT NOT NULL, pages INTEGER NOT NULL);\nCREATE TABLE reading_sessions(session_id INTEGER PRIMARY KEY, book_id INTEGER NOT NULL, reader_name TEXT NOT NULL, pages_read INTEGER NOT NULL, session_rating INTEGER NOT NULL);",
+        "starterCode": "SELECT b.book_id, b.title, b.author, b.genre, b.pages, MAX(s.session_rating) - MIN(s.session_rating) AS rating_spread, ROUND((SUM(CASE WHEN s.session_rating <= 2 THEN 1 ELSE 0 END) + SUM(CASE WHEN s.session_rating >= 4 THEN 1 ELSE 0 END)) * 1.0 / COUNT(*), 2) AS polarization_score FROM books b JOIN reading_sessions s ON s.book_id = b.book_id GROUP BY b.book_id ORDER BY polarization_score DESC, b.title DESC;",
+        "referenceSolution": "SELECT b.book_id, b.title, b.author, b.genre, b.pages, MAX(s.session_rating) - MIN(s.session_rating) AS rating_spread, ROUND((SUM(CASE WHEN s.session_rating <= 2 THEN 1 ELSE 0 END) + SUM(CASE WHEN s.session_rating >= 4 THEN 1 ELSE 0 END)) * 1.0 / COUNT(*), 2) AS polarization_score FROM books b JOIN reading_sessions s ON s.book_id = b.book_id GROUP BY b.book_id HAVING COUNT(*) >= 5 AND MAX(s.session_rating) >= 4 AND MIN(s.session_rating) <= 2 AND 5 * (SUM(CASE WHEN s.session_rating <= 2 THEN 1 ELSE 0 END) + SUM(CASE WHEN s.session_rating >= 4 THEN 1 ELSE 0 END)) >= 3 * COUNT(*) ORDER BY polarization_score DESC, b.title DESC;",
+        "timeoutMs": 8000,
+        "tests": [
+          {
+            "seed": "INSERT INTO books VALUES (1,'The Great Gatsby','F. Scott','Fiction',180),(2,'To Kill a Mockingbird','Harper Lee','Fiction',281),(3,'1984','George Orwell','Dystopian',328),(4,'Pride and Prejudice','Jane Austen','Romance',432),(5,'The Catcher in the Rye','J.D. Salinger','Fiction',277);\nINSERT INTO reading_sessions VALUES (1,1,'Alice',50,5),(2,1,'Bob',60,1),(3,1,'Carol',40,4),(4,1,'David',30,2),(5,1,'Emma',45,5),(6,2,'Frank',80,4),(7,2,'Grace',70,4),(8,2,'Henry',90,5),(9,2,'Ivy',60,4),(10,2,'Jack',75,4),(11,3,'Kate',100,2),(12,3,'Liam',120,1),(13,3,'Mia',80,2),(14,3,'Noah',90,1),(15,3,'Olivia',110,4),(16,3,'Paul',95,5),(17,4,'Quinn',150,3),(18,4,'Ruby',140,3),(19,5,'Sam',80,1),(20,5,'Tara',70,2);"
+          },
+          {
+            "seed": "INSERT INTO books VALUES (1,'Mixed','A','X',100);\nINSERT INTO reading_sessions VALUES (1,1,'A',1,3),(2,1,'B',1,3),(3,1,'C',1,3),(4,1,'D',1,4),(5,1,'E',1,5);"
+          },
+          {
+            "seed": "INSERT INTO books VALUES (1,'All High','A','X',100);\nINSERT INTO reading_sessions VALUES (1,1,'A',1,4),(2,1,'B',1,5),(3,1,'C',1,4),(4,1,'D',1,5),(5,1,'E',1,4);"
+          }
+        ],
+        "orderMatters": true,
+        "checkColumnNames": true,
+        "floatTolerance": 0.01
+      }
+    },
+    {
+      "type": "sqlite",
+      "title": "3657. Find Loyal Customers",
+      "content": {
+        "description": "Лояльные клиенты: ≥ 3 покупки, активность ≥ 30 дней и доля возвратов < 20%. Колонка `customer_id`, сортировка по возрастанию.\n\n[LeetCode 3657](https://leetcode.com/problems/find-loyal-customers/)",
+        "setup": "CREATE TABLE customer_transactions(transaction_id INTEGER PRIMARY KEY, customer_id INTEGER NOT NULL, transaction_date TEXT NOT NULL, amount REAL NOT NULL, transaction_type TEXT NOT NULL);",
+        "starterCode": "SELECT customer_id FROM customer_transactions GROUP BY customer_id HAVING COUNT(*) >= 3 AND SUM(CASE WHEN transaction_type = 'refund' THEN 1 ELSE 0 END) * 1.0 / COUNT(*) < 0.2 ORDER BY customer_id;",
+        "referenceSolution": "SELECT customer_id FROM customer_transactions GROUP BY customer_id HAVING COUNT(*) >= 3 AND SUM(CASE WHEN transaction_type = 'refund' THEN 1 ELSE 0 END) * 1.0 / COUNT(*) < 0.2 AND (julianday(MAX(transaction_date)) - julianday(MIN(transaction_date))) >= 30 ORDER BY customer_id;",
+        "timeoutMs": 8000,
+        "tests": [
+          {
+            "seed": "INSERT INTO customer_transactions VALUES (1,101,'2024-01-05',150.00,'purchase'),(2,101,'2024-01-15',200.00,'purchase'),(3,101,'2024-02-10',180.00,'purchase'),(4,101,'2024-02-20',250.00,'purchase'),(5,102,'2024-01-10',100.00,'purchase'),(6,102,'2024-01-12',120.00,'purchase'),(7,102,'2024-01-15',80.00,'refund'),(8,102,'2024-01-18',90.00,'refund'),(9,102,'2024-02-15',130.00,'purchase'),(10,103,'2024-01-01',500.00,'purchase'),(11,103,'2024-01-02',450.00,'purchase'),(12,103,'2024-01-03',400.00,'purchase'),(13,104,'2024-01-01',200.00,'purchase'),(14,104,'2024-02-01',250.00,'purchase'),(15,104,'2024-02-15',300.00,'purchase'),(16,104,'2024-03-01',350.00,'purchase'),(17,104,'2024-03-10',280.00,'purchase'),(18,104,'2024-03-15',100.00,'refund');"
+          },
+          {
+            "seed": "INSERT INTO customer_transactions VALUES (1,1,'2024-01-01',10.0,'purchase'),(2,1,'2024-01-02',10.0,'purchase'),(3,1,'2024-01-03',10.0,'purchase');"
+          },
+          {
+            "seed": "INSERT INTO customer_transactions VALUES (1,2,'2024-01-01',10.0,'purchase'),(2,2,'2024-01-02',10.0,'purchase');"
+          }
+        ],
+        "orderMatters": true,
+        "checkColumnNames": true
+      }
+    },
+    {
+      "type": "sqlite",
+      "title": "3673. Find Zombie Sessions",
+      "content": {
+        "description": "«Зомби-сессии»: длительность **> 30** минут, ≥ 5 `scroll`, отношение `click`/`scroll` **< 0.20**, ни одной покупки. Колонки `session_id`, `user_id`, `session_duration_minutes`, `scroll_count`. Сортировка: scroll убыв., `session_id` возр.\n\n[LeetCode 3673](https://leetcode.com/problems/find-zombie-sessions/)",
+        "setup": "CREATE TABLE app_events(event_id INTEGER PRIMARY KEY, user_id INTEGER NOT NULL, event_timestamp TEXT NOT NULL, event_type TEXT NOT NULL, session_id TEXT NOT NULL, event_value INTEGER);",
+        "starterCode": "SELECT session_id, user_id, CAST(ROUND((julianday(MAX(event_timestamp)) - julianday(MIN(event_timestamp))) * 1440) AS INTEGER) AS session_duration_minutes, SUM(CASE WHEN event_type = 'scroll' THEN 1 ELSE 0 END) AS scroll_count FROM app_events GROUP BY session_id, user_id HAVING (julianday(MAX(event_timestamp)) - julianday(MIN(event_timestamp))) * 1440 > 30 AND SUM(CASE WHEN event_type = 'scroll' THEN 1 ELSE 0 END) >= 5 ORDER BY scroll_count DESC, session_id;",
+        "referenceSolution": "SELECT session_id, user_id, CAST(ROUND((julianday(MAX(event_timestamp)) - julianday(MIN(event_timestamp))) * 1440) AS INTEGER) AS session_duration_minutes, SUM(CASE WHEN event_type = 'scroll' THEN 1 ELSE 0 END) AS scroll_count FROM app_events GROUP BY session_id, user_id HAVING (julianday(MAX(event_timestamp)) - julianday(MIN(event_timestamp))) * 1440 > 30 AND SUM(CASE WHEN event_type = 'click' THEN 1 ELSE 0 END) * 1.0 / SUM(CASE WHEN event_type = 'scroll' THEN 1 ELSE 0 END) < 0.2 AND SUM(CASE WHEN event_type = 'purchase' THEN 1 ELSE 0 END) = 0 AND SUM(CASE WHEN event_type = 'scroll' THEN 1 ELSE 0 END) >= 5 ORDER BY scroll_count DESC, session_id;",
+        "timeoutMs": 8000,
+        "tests": [
+          {
+            "seed": "INSERT INTO app_events VALUES (1,201,'2024-03-01 10:00:00','app_open','S001',NULL),(2,201,'2024-03-01 10:05:00','scroll','S001',500),(3,201,'2024-03-01 10:10:00','scroll','S001',750),(4,201,'2024-03-01 10:15:00','scroll','S001',600),(5,201,'2024-03-01 10:20:00','scroll','S001',800),(6,201,'2024-03-01 10:25:00','scroll','S001',550),(7,201,'2024-03-01 10:30:00','scroll','S001',900),(8,201,'2024-03-01 10:35:00','app_close','S001',NULL),(9,202,'2024-03-01 11:00:00','app_open','S002',NULL),(10,202,'2024-03-01 11:02:00','click','S002',NULL),(11,202,'2024-03-01 11:05:00','scroll','S002',400),(12,202,'2024-03-01 11:08:00','click','S002',NULL),(13,202,'2024-03-01 11:10:00','scroll','S002',350),(14,202,'2024-03-01 11:15:00','purchase','S002',50),(15,202,'2024-03-01 11:20:00','app_close','S002',NULL),(16,203,'2024-03-01 12:00:00','app_open','S003',NULL),(17,203,'2024-03-01 12:10:00','scroll','S003',1000),(18,203,'2024-03-01 12:20:00','scroll','S003',1200),(19,203,'2024-03-01 12:25:00','click','S003',NULL),(20,203,'2024-03-01 12:30:00','scroll','S003',800),(21,203,'2024-03-01 12:40:00','scroll','S003',900),(22,203,'2024-03-01 12:50:00','scroll','S003',1100),(23,203,'2024-03-01 13:00:00','app_close','S003',NULL),(24,204,'2024-03-01 14:00:00','app_open','S004',NULL),(25,204,'2024-03-01 14:05:00','scroll','S004',600),(26,204,'2024-03-01 14:08:00','scroll','S004',700),(27,204,'2024-03-01 14:10:00','click','S004',NULL),(28,204,'2024-03-01 14:12:00','app_close','S004',NULL);"
+          },
+          {
+            "seed": "INSERT INTO app_events VALUES (1,1,'2024-01-01 10:00:00','app_open','Z1',NULL),(2,1,'2024-01-01 10:40:00','scroll','Z1',10),(3,1,'2024-01-01 10:41:00','scroll','Z1',10),(4,1,'2024-01-01 10:42:00','scroll','Z1',10),(5,1,'2024-01-01 10:43:00','scroll','Z1',10),(6,1,'2024-01-01 10:44:00','scroll','Z1',10);"
+          },
+          {
+            "seed": "INSERT INTO app_events VALUES (1,2,'2024-01-01 10:00:00','app_open','N1',NULL),(2,2,'2024-01-01 10:45:00','scroll','N1',10),(3,2,'2024-01-01 10:46:00','click','N1',NULL),(4,2,'2024-01-01 10:47:00','click','N1',NULL),(5,2,'2024-01-01 10:48:00','scroll','N1',10),(6,2,'2024-01-01 10:49:00','scroll','N1',10),(7,2,'2024-01-01 10:50:00','scroll','N1',10);"
+          }
+        ],
+        "orderMatters": true,
+        "checkColumnNames": true
+      }
+    },
+    {
+      "type": "sqlite",
+      "title": "3705. Find Golden Hour Customers",
+      "content": {
+        "description": "«Золотые» клиенты: ≥ 3 заказа, ≥ 60% заказов в часы пик (`11:00`–`14:00` или `18:00`–`21:00`), средняя оценка оценённых заказов ≥ 4.0 и оценено ≥ 50% заказов. Колонки `customer_id`, `total_orders`, `peak_hour_percentage`, `average_rating`. Сортировка: рейтинг убыв., `customer_id` убыв.\n\n[LeetCode 3705](https://leetcode.com/problems/find-golden-hour-customers/)",
+        "setup": "CREATE TABLE restaurant_orders(order_id INTEGER PRIMARY KEY, customer_id INTEGER NOT NULL, order_timestamp TEXT NOT NULL, order_amount REAL NOT NULL, payment_method TEXT NOT NULL, order_rating INTEGER);",
+        "starterCode": "SELECT customer_id, COUNT(*) AS total_orders, CAST(ROUND(SUM(CASE WHEN substr(order_timestamp, 12, 5) BETWEEN '11:00' AND '14:00' OR substr(order_timestamp, 12, 5) BETWEEN '18:00' AND '21:00' THEN 1 ELSE 0 END) * 100.0 / COUNT(*), 0) AS INTEGER) AS peak_hour_percentage, ROUND(AVG(order_rating), 2) AS average_rating FROM restaurant_orders GROUP BY customer_id HAVING COUNT(*) >= 3 AND SUM(CASE WHEN substr(order_timestamp, 12, 5) BETWEEN '11:00' AND '14:00' OR substr(order_timestamp, 12, 5) BETWEEN '18:00' AND '21:00' THEN 1 ELSE 0 END) * 5 >= 3 * COUNT(*) AND AVG(order_rating) >= 4.0 ORDER BY average_rating DESC, customer_id DESC;",
+        "referenceSolution": "SELECT customer_id, COUNT(*) AS total_orders, CAST(ROUND(SUM(CASE WHEN substr(order_timestamp, 12, 5) BETWEEN '11:00' AND '14:00' OR substr(order_timestamp, 12, 5) BETWEEN '18:00' AND '21:00' THEN 1 ELSE 0 END) * 100.0 / COUNT(*), 0) AS INTEGER) AS peak_hour_percentage, ROUND(AVG(order_rating), 2) AS average_rating FROM restaurant_orders GROUP BY customer_id HAVING COUNT(*) >= 3 AND SUM(CASE WHEN substr(order_timestamp, 12, 5) BETWEEN '11:00' AND '14:00' OR substr(order_timestamp, 12, 5) BETWEEN '18:00' AND '21:00' THEN 1 ELSE 0 END) * 5 >= 3 * COUNT(*) AND AVG(order_rating) >= 4.0 AND SUM(CASE WHEN order_rating IS NOT NULL THEN 1 ELSE 0 END) * 1.0 / COUNT(*) >= 0.5 ORDER BY average_rating DESC, customer_id DESC;",
+        "timeoutMs": 8000,
+        "tests": [
+          {
+            "seed": "INSERT INTO restaurant_orders VALUES (1,101,'2024-03-01 12:30:00',25.50,'card',5),(2,101,'2024-03-02 19:15:00',32.00,'app',4),(3,101,'2024-03-03 13:45:00',28.75,'card',5),(4,101,'2024-03-04 20:30:00',41.00,'app',NULL),(5,102,'2024-03-01 11:30:00',18.50,'cash',4),(6,102,'2024-03-02 12:00:00',22.00,'card',3),(7,102,'2024-03-03 15:30:00',19.75,'cash',NULL),(8,103,'2024-03-01 19:00:00',55.00,'app',5),(9,103,'2024-03-02 20:45:00',48.50,'app',4),(10,103,'2024-03-03 18:30:00',62.00,'card',5),(11,104,'2024-03-01 10:00:00',15.00,'cash',3),(12,104,'2024-03-02 09:30:00',18.00,'cash',2),(13,104,'2024-03-03 16:00:00',20.00,'card',3),(14,105,'2024-03-01 12:15:00',30.00,'app',4),(15,105,'2024-03-02 13:00:00',35.50,'app',5),(16,105,'2024-03-03 11:45:00',28.00,'card',4);"
+          },
+          {
+            "seed": "INSERT INTO restaurant_orders VALUES (1,201,'2024-01-01 12:00:00',10.0,'card',5),(2,201,'2024-01-02 13:00:00',10.0,'card',5),(3,201,'2024-01-03 18:30:00',10.0,'card',5),(4,201,'2024-01-04 19:00:00',10.0,'card',NULL);"
+          },
+          {
+            "seed": "INSERT INTO restaurant_orders VALUES (1,301,'2024-01-01 09:00:00',10.0,'cash',5),(2,301,'2024-01-02 09:00:00',10.0,'cash',5),(3,301,'2024-01-03 09:00:00',10.0,'cash',5);"
+          },
+          {
+            "seed": "INSERT INTO restaurant_orders VALUES (1,401,'2024-02-01 12:00:00',10.0,'card',5),(2,401,'2024-02-02 13:00:00',10.0,'card',5),(3,401,'2024-02-03 18:30:00',10.0,'card',NULL),(4,401,'2024-02-04 09:00:00',10.0,'cash',NULL),(5,401,'2024-02-05 08:00:00',10.0,'cash',NULL);"
+          }
+        ],
+        "orderMatters": true,
+        "checkColumnNames": true,
+        "floatTolerance": 0.01
+      }
+    },
+    {
+      "type": "sqlite",
+      "title": "3716. Find Churn Risk Customers",
+      "content": {
+        "description": "Клиенты «в зоне риска»: последнее событие не `cancel`, есть хотя бы один `downgrade`, текущая выручка < 50% исторического максимума и стаж ≥ 60 дней. Колонки `user_id`, `current_plan`, `current_monthly_amount`, `max_historical_amount`, `days_as_subscriber`. Сортировка: дни убыв., `user_id` возр.\n\n[LeetCode 3716](https://leetcode.com/problems/find-churn-risk-customers/)",
+        "setup": "CREATE TABLE subscription_events(event_id INTEGER PRIMARY KEY, user_id INTEGER NOT NULL, event_date TEXT NOT NULL, event_type TEXT NOT NULL, plan_name TEXT, monthly_amount REAL NOT NULL);",
+        "starterCode": "SELECT user_id, MAX(plan_name) AS current_plan, MAX(monthly_amount) AS current_monthly_amount, MAX(monthly_amount) AS max_historical_amount, 0 AS days_as_subscriber FROM subscription_events GROUP BY user_id ORDER BY days_as_subscriber DESC, user_id;",
+        "referenceSolution": "WITH last_event AS (SELECT user_id, event_type, plan_name, monthly_amount, ROW_NUMBER() OVER (PARTITION BY user_id ORDER BY event_date DESC, event_id DESC) AS rn FROM subscription_events),\nhist AS (SELECT user_id, MIN(event_date) AS start_date, MAX(event_date) AS last_date, MAX(monthly_amount) AS max_amount, SUM(CASE WHEN event_type = 'downgrade' THEN 1 ELSE 0 END) AS downgrades FROM subscription_events GROUP BY user_id)\nSELECT l.user_id, l.plan_name AS current_plan, ROUND(l.monthly_amount, 2) AS current_monthly_amount, ROUND(h.max_amount, 2) AS max_historical_amount, CAST(ROUND(julianday(h.last_date) - julianday(h.start_date)) AS INTEGER) AS days_as_subscriber FROM last_event l JOIN hist h ON h.user_id = l.user_id WHERE l.rn = 1 AND l.event_type <> 'cancel' AND h.downgrades >= 1 AND l.monthly_amount < 0.5 * h.max_amount AND (julianday(h.last_date) - julianday(h.start_date)) >= 60 ORDER BY days_as_subscriber DESC, l.user_id;",
+        "timeoutMs": 8000,
+        "tests": [
+          {
+            "seed": "INSERT INTO subscription_events VALUES (1,501,'2024-01-01','start','premium',29.99),(2,501,'2024-02-15','downgrade','standard',19.99),(3,501,'2024-03-20','downgrade','basic',9.99),(4,502,'2024-01-05','start','standard',19.99),(5,502,'2024-02-10','upgrade','premium',29.99),(6,502,'2024-03-15','downgrade','basic',9.99),(7,503,'2024-01-10','start','basic',9.99),(8,503,'2024-02-20','upgrade','standard',19.99),(9,503,'2024-03-25','upgrade','premium',29.99),(10,504,'2024-01-15','start','premium',29.99),(11,504,'2024-03-01','downgrade','standard',19.99),(12,504,'2024-03-30','cancel',NULL,0.00),(13,505,'2024-02-01','start','basic',9.99),(14,505,'2024-02-28','upgrade','standard',19.99),(15,506,'2024-01-20','start','premium',29.99),(16,506,'2024-03-10','downgrade','basic',9.99);"
+          },
+          {
+            "seed": "INSERT INTO subscription_events VALUES (1,601,'2024-01-01','start','premium',100.0),(2,601,'2024-04-01','downgrade','basic',10.0);"
+          },
+          {
+            "seed": "INSERT INTO subscription_events VALUES (1,602,'2024-01-01','start','premium',100.0),(2,602,'2024-02-01','downgrade','basic',10.0),(3,602,'2024-03-01','cancel',NULL,0.0);"
+          }
+        ],
+        "orderMatters": true,
+        "checkColumnNames": true,
+        "floatTolerance": 0.01
+      }
+    },
+    {
+      "type": "sqlite",
+      "title": "3793. Find Users with High Token Usage",
+      "content": {
+        "description": "По каждому `user_id`: `prompt_count` и `avg_tokens` (округлить до 2). Только пользователи с ≥ 3 промптами, у которых есть промпт с числом токенов выше собственного среднего. Сортировка: среднее убыв., `user_id` возр.\n\n[LeetCode 3793](https://leetcode.com/problems/find-users-with-high-token-usage/)",
+        "setup": "CREATE TABLE prompts(user_id INTEGER NOT NULL, prompt TEXT NOT NULL, tokens INTEGER NOT NULL, PRIMARY KEY(user_id, prompt));",
+        "starterCode": "SELECT user_id, COUNT(*) AS prompt_count, ROUND(AVG(tokens), 2) AS avg_tokens FROM prompts GROUP BY user_id HAVING COUNT(*) >= 3 ORDER BY avg_tokens DESC, user_id;",
+        "referenceSolution": "SELECT user_id, COUNT(*) AS prompt_count, ROUND(AVG(tokens), 2) AS avg_tokens FROM prompts GROUP BY user_id HAVING COUNT(*) >= 3 AND MAX(tokens) > AVG(tokens) ORDER BY avg_tokens DESC, user_id;",
+        "timeoutMs": 8000,
+        "tests": [
+          {
+            "seed": "INSERT INTO prompts VALUES (1,'Write a blog outline',120),(1,'Generate SQL query',80),(1,'Summarize an article',200),(2,'Create resume bullet',60),(2,'Improve LinkedIn bio',70),(3,'Explain neural networks',300),(3,'Generate interview Q&A',250),(3,'Write cover letter',180),(3,'Optimize Python code',220);"
+          },
+          {
+            "seed": "INSERT INTO prompts VALUES (1,'a',100),(1,'b',100),(1,'c',100);"
+          },
+          {
+            "seed": "INSERT INTO prompts VALUES (1,'a',100),(1,'b',100),(1,'c',100),(1,'d',200);"
+          }
+        ],
+        "orderMatters": true,
+        "checkColumnNames": true,
+        "floatTolerance": 0.01
+      }
+    },
+    {
+      "type": "sqlite",
+      "title": "3808. Find Emotionally Consistent Users",
+      "content": {
+        "description": "Пользователи с ≥ 5 реакциями, у которых **≥ 60%** реакций одного типа: колонки `user_id`, `dominant_reaction`, `reaction_ratio` (округлить до 2). Сортировка: ratio убыв., `user_id` возр.\n\n[LeetCode 3808](https://leetcode.com/problems/find-emotionally-consistent-users/)",
+        "setup": "CREATE TABLE reactions(user_id INTEGER NOT NULL, content_id INTEGER NOT NULL, reaction TEXT NOT NULL, PRIMARY KEY(user_id, content_id));",
+        "starterCode": "WITH t AS (SELECT user_id, reaction, COUNT(*) AS cnt FROM reactions GROUP BY user_id, reaction)\nSELECT t.user_id, t.reaction AS dominant_reaction, ROUND(t.cnt * 1.0 / (SELECT SUM(cnt) FROM (SELECT user_id, reaction, COUNT(*) AS cnt FROM reactions GROUP BY user_id, reaction) x WHERE x.user_id = t.user_id), 2) AS reaction_ratio FROM t ORDER BY reaction_ratio DESC, t.user_id;",
+        "referenceSolution": "WITH t AS (SELECT user_id, reaction, COUNT(*) AS cnt FROM reactions GROUP BY user_id, reaction),\ns AS (SELECT user_id, MAX(cnt) AS mx, SUM(cnt) AS total FROM t GROUP BY user_id HAVING SUM(cnt) >= 5 AND 5 * MAX(cnt) >= 3 * SUM(cnt))\nSELECT s.user_id, t.reaction AS dominant_reaction, ROUND(t.cnt * 1.0 / s.total, 2) AS reaction_ratio FROM s JOIN t ON t.user_id = s.user_id WHERE t.cnt = s.mx ORDER BY reaction_ratio DESC, s.user_id;",
+        "timeoutMs": 8000,
+        "tests": [
+          {
+            "seed": "INSERT INTO reactions VALUES (1,101,'like'),(1,102,'like'),(1,103,'like'),(1,104,'wow'),(1,105,'like'),(2,201,'like'),(2,202,'wow'),(2,203,'sad'),(2,204,'like'),(2,205,'wow'),(3,301,'love'),(3,302,'love'),(3,303,'love'),(3,304,'love'),(3,305,'love');"
+          },
+          {
+            "seed": "INSERT INTO reactions VALUES (1,1,'like'),(1,2,'like'),(1,3,'like'),(1,4,'like');"
+          },
+          {
+            "seed": "INSERT INTO reactions VALUES (1,1,'like'),(1,2,'like'),(1,3,'like'),(1,4,'wow'),(1,5,'wow');"
+          }
+        ],
+        "orderMatters": true,
+        "checkColumnNames": true,
+        "floatTolerance": 0.01
+      }
+    },
+    {
+      "type": "sqlite",
+      "title": "3832. Find Users with Persistent Behavior Patterns",
+      "content": {
+        "description": "Самый длинный интервал (≥ 5 дней) подряд, где у пользователя **ровно одно** действие в день и одно и то же действие каждый день: `user_id`, `action`, `streak_length`, `start_date`, `end_date`. Сортировка: длина убыв., `user_id` возр.\n\n[LeetCode 3832](https://leetcode.com/problems/find-users-with-persistent-behavior-patterns/)",
+        "setup": "CREATE TABLE activity(user_id INTEGER NOT NULL, action_date TEXT NOT NULL, action TEXT NOT NULL, PRIMARY KEY(user_id, action_date, action));",
+        "starterCode": "WITH grp AS (SELECT user_id, action, action_date, date(action_date, '-' || ROW_NUMBER() OVER (PARTITION BY user_id, action ORDER BY action_date) || ' days') AS g FROM activity)\nSELECT user_id, action, COUNT(*) AS streak_length, MIN(action_date) AS start_date, MAX(action_date) AS end_date FROM grp GROUP BY user_id, action, g HAVING COUNT(*) >= 3 ORDER BY streak_length DESC, user_id;",
+        "referenceSolution": "WITH single AS (SELECT user_id, action_date, action FROM activity WHERE (SELECT COUNT(*) FROM activity a2 WHERE a2.user_id = activity.user_id AND a2.action_date = activity.action_date) = 1),\ngrp AS (SELECT user_id, action, action_date, date(action_date, '-' || ROW_NUMBER() OVER (PARTITION BY user_id, action ORDER BY action_date) || ' days') AS g FROM single),\nstreaks AS (SELECT user_id, action, COUNT(*) AS streak_length, MIN(action_date) AS start_date, MAX(action_date) AS end_date, ROW_NUMBER() OVER (PARTITION BY user_id ORDER BY COUNT(*) DESC) AS rn FROM grp GROUP BY user_id, action, g HAVING COUNT(*) >= 5)\nSELECT user_id, action, streak_length, start_date, end_date FROM streaks WHERE rn = 1 ORDER BY streak_length DESC, user_id;",
+        "timeoutMs": 8000,
+        "tests": [
+          {
+            "seed": "INSERT INTO activity VALUES (1,'2024-01-01','login'),(1,'2024-01-02','login'),(1,'2024-01-03','login'),(1,'2024-01-04','login'),(1,'2024-01-05','login'),(1,'2024-01-06','logout'),(2,'2024-01-01','click'),(2,'2024-01-02','click'),(2,'2024-01-03','click'),(2,'2024-01-04','click'),(3,'2024-01-01','view'),(3,'2024-01-02','view'),(3,'2024-01-03','view'),(3,'2024-01-04','view'),(3,'2024-01-05','view'),(3,'2024-01-06','view'),(3,'2024-01-07','view');"
+          },
+          {
+            "seed": "INSERT INTO activity VALUES (1,'2024-01-01','a'),(1,'2024-01-01','b'),(1,'2024-01-02','a'),(1,'2024-01-03','a'),(1,'2024-01-04','a'),(1,'2024-01-05','a'),(1,'2024-01-06','a');"
+          },
+          {
+            "seed": "INSERT INTO activity VALUES (1,'2024-01-01','a'),(1,'2024-01-02','a'),(1,'2024-01-03','a'),(1,'2024-01-04','a'),(1,'2024-01-05','a');"
+          }
+        ],
+        "orderMatters": true,
+        "checkColumnNames": true
+      }
+    },
+    {
+      "type": "quiz",
+      "title": "Итоговый тест модуля",
+      "content": {
+        "question": "Как в приложении получить разницу в днях между датами `a` и `b`?",
+        "options": [
+          "DATEDIFF(a, b)",
+          "julianday(a) - julianday(b)",
+          "date(a) - date(b)",
+          "TIMESTAMPDIFF(DAY, b, a)"
+        ],
+        "correctIndices": [
+          1
+        ]
+      }
+    }
+  ]
+}

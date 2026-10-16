@@ -1,5 +1,6 @@
 ---
 branch: feature/vt-86-regex-engine-hardening
+merged: "56424b5"
 ---
 
 # Отчёт vt-86 — Укрепить regex-двиок

@@ -1,5 +1,6 @@
 ---
 branch: feature/vt-96-prompt-practice-step-relevance
+merged: "55f9c14"
 ---
 
 # Отчёт vt-96 — Уместность практических шагов (JS, SQL, Regex) в промтах генерации курса

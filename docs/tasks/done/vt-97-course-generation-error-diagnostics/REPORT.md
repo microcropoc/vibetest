@@ -1,5 +1,6 @@
 ---
 branch: feature/vt-97-course-generation-error-diagnostics
+merged: "e5bf400"
 ---
 
 # Отчёт vt-97 — Диагностика ошибки генерации курса (промт и ответ модели)

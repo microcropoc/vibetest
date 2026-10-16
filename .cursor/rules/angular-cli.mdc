@@ -40,14 +40,7 @@ ng test
 
 **Protected app:** never modify anything in `vibetest-app/` unless the current branch is `feature/vt-{n}-{slug}` and the matching task exists in `docs/tasks/in-progress/vt-{n}-{slug}/`. Changes outside `vibetest-app/` may be made and committed on `main` without a task.
 
-**Merge** only on explicit request (“merge vt-{n}”, “merge to main”) — also authorizes doc move, squash, push:
-
-1. Move `in-progress/vt-{n}-{slug}/` → `done/` + final `REPORT.md`
-2. `git rebase main` (conflicts on branch only)
-3. Squash (`git reset --soft main && git commit`); message `vt-{n}: {short summary}` — show before commit
-4. `git switch main && git merge --ff-only feature/…`, push, delete branch
-
-Merged code must not land in `main` while folder is still `in-progress/`.
+**Merge:** only on explicit request (`/task-merge`, “merge vt-{n}”, “merge to main”); merged code must not land in `main` while folder is still `in-progress/`. Пошаговый workflow — команда `.cursor/commands/task-merge.md`.
 
 ## Never
 

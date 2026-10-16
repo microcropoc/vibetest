@@ -1,5 +1,6 @@
 ---
 branch: feature/vt-87-regex-leetcode-format
+merged: "15f12b0"
 ---
 
 # Отчёт vt-87 — Regex-шаг в формате LeetCode / HackerRank

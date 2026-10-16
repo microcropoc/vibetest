@@ -1,0 +1,114 @@
+{
+  "schemaVersion": 1,
+  "title": "Alternative Queries",
+  "steps": [
+    {
+      "type": "theory",
+      "title": "Рекурсия и генерация строк",
+      "content": "## Alternative Queries\n\n- Параметр **`N`**: таблица **`params(n)`** в seed.\n- **`WITH RECURSIVE`**: строки 1..N, проверка делителей для простых.\n- Треугольники: `printf` для пробелов и повторов символов."
+    },
+    {
+      "type": "svg",
+      "title": "Схема: Alternative Queries",
+      "content": {
+        "caption": "RECURSIVE генерирует 1..N без таблицы чисел",
+        "description": "Простые — NOT EXISTS делителя d < x.",
+        "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 280 80\" width=\"100%\" role=\"img\" aria-label=\"Alternative Queries\"><rect id=\"hr06-box\" x=\"40\" y=\"15\" width=\"200\" height=\"50\" rx=\"4\" fill=\"#e3f2fd\" stroke=\"#1565c0\"/><text x=\"140\" y=\"45\" text-anchor=\"middle\" font-size=\"12\" fill=\"#0d47a1\">Alternative Queries</text></svg>"
+      }
+    },
+    {
+      "type": "sqlite",
+      "title": "Draw The Triangle 1",
+      "content": {
+        "description": "Параметр `N` в `params`. **Равнобедренный** треугольник из `*` высотой `N` (строка `i`: `N-i` пробелов и `2*i-1` звёзд). **Важен порядок строк**.\n\n[HackerRank: Draw The Triangle 1](https://www.hackerrank.com/challenges/draw-the-triangle-1/problem)",
+        "setup": "CREATE TABLE params(n INTEGER NOT NULL);",
+        "starterCode": "SELECT '*' FROM params;",
+        "referenceSolution": "WITH RECURSIVE rows(i) AS (\n  SELECT 1\n  UNION ALL\n  SELECT i + 1 FROM rows WHERE i < (SELECT n FROM params)\n)\nSELECT printf('%*s%s', (SELECT n FROM params) - i, '', printf('%.*s', 2 * i - 1, '********************************')) AS line\nFROM rows;",
+        "timeoutMs": 8000,
+        "tests": [
+          {
+            "seed": "INSERT INTO params VALUES (3);"
+          },
+          {
+            "seed": "INSERT INTO params VALUES (1);"
+          },
+          {
+            "seed": "INSERT INTO params VALUES (5);"
+          },
+          {
+            "seed": "INSERT INTO params VALUES (2);"
+          }
+        ],
+        "orderMatters": true
+      }
+    },
+    {
+      "type": "sqlite",
+      "title": "Draw The Triangle 2",
+      "content": {
+        "description": "Параметр `N` в `params`. Строка `i` (1..N): число `i`, повторённое `i` раз подряд **без пробелов**.\n\n[HackerRank: Draw The Triangle 2](https://www.hackerrank.com/challenges/draw-the-triangle-2/problem)",
+        "setup": "CREATE TABLE params(n INTEGER NOT NULL);",
+        "starterCode": "SELECT n FROM params;",
+        "referenceSolution": "WITH RECURSIVE rows(i) AS (\n  SELECT 1\n  UNION ALL\n  SELECT i + 1 FROM rows WHERE i < (SELECT n FROM params)\n)\nSELECT REPLACE(printf('%0*d', i, 0), '0', CAST(i AS TEXT)) AS line\nFROM rows;",
+        "timeoutMs": 8000,
+        "tests": [
+          {
+            "seed": "INSERT INTO params VALUES (3);"
+          },
+          {
+            "seed": "INSERT INTO params VALUES (1);"
+          },
+          {
+            "seed": "INSERT INTO params VALUES (4);"
+          },
+          {
+            "seed": "INSERT INTO params VALUES (2);"
+          }
+        ],
+        "orderMatters": true
+      }
+    },
+    {
+      "type": "sqlite",
+      "title": "Print Prime Numbers",
+      "content": {
+        "description": "Параметр `N` в `params`. **Простые** числа `< N` в одной строке через пробел, по возрастанию.\n\n[HackerRank: Print Prime Numbers](https://www.hackerrank.com/challenges/print-prime-numbers/problem)",
+        "setup": "CREATE TABLE params(n INTEGER NOT NULL);",
+        "starterCode": "SELECT n FROM params;",
+        "referenceSolution": "WITH RECURSIVE nums(x) AS (\n  SELECT 2 WHERE 2 < (SELECT n FROM params)\n  UNION ALL\n  SELECT x + 1 FROM nums WHERE x + 1 < (SELECT n FROM params)\n),\nprimes(p) AS (\n  SELECT x FROM nums\n  WHERE NOT EXISTS (\n    SELECT 1 FROM nums d WHERE d.x > 1 AND d.x < nums.x AND nums.x % d.x = 0\n  )\n)\nSELECT GROUP_CONCAT(p, ' ') FROM primes;",
+        "timeoutMs": 8000,
+        "tests": [
+          {
+            "seed": "INSERT INTO params VALUES (10);"
+          },
+          {
+            "seed": "INSERT INTO params VALUES (2);"
+          },
+          {
+            "seed": "INSERT INTO params VALUES (20);"
+          },
+          {
+            "seed": "INSERT INTO params VALUES (15);"
+          }
+        ],
+        "orderMatters": false
+      }
+    },
+    {
+      "type": "quiz",
+      "title": "Итоговый тест модуля",
+      "content": {
+        "question": "Откуда берётся N в draw-the-triangle?",
+        "options": [
+          "Из переменной @N",
+          "Из seed: INSERT INTO params VALUES (N)",
+          "Из LIMIT N",
+          "Из ORDER BY N"
+        ],
+        "correctIndices": [
+          1
+        ]
+      }
+    }
+  ]
+}

@@ -24,6 +24,11 @@ export const BUNDLED_COURSES: readonly BundledCourseEntry[] = [
     "title": "C# для опытного разработчика: собеседование в Ozon"
   },
   {
+    "courseId": "1948b3bd-c93a-4f9c-acdd-d16e34d50724",
+    "file": "hackerrank-sql.json",
+    "title": "HackerRank SQL"
+  },
+  {
     "courseId": "6bc56204-d1ae-41ec-bee1-e5bf082486de",
     "file": "javascript-for-csharp.json",
     "title": "JavaScript для C#-разработчика"

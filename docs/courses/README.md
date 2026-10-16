@@ -13,6 +13,7 @@
 | [csharp-ozon-interview.json](./csharp-ozon-interview.json) | **C# для опытного разработчика: собеседование в Ozon** — 21 модуль (intro + 20 тем: CLR … архитектура), theory, svg, вопросы с собеседования, quiz, .NET 8 |
 | [sqlite-flagship.json](./sqlite-flagship.json) | **SQL на SQLite** — 20 модулей (theory, svg, sqlite, quiz): SELECT … оконные функции, CTE, DML/UPSERT, DDL, индексы и EXPLAIN QUERY PLAN, транзакции, JSON, отличия от MySQL/PostgreSQL; 61 задача в формате LeetCode |
 | [leetcode-sql.json](./leetcode-sql.json) | **LeetCode SQL** — intro + 12 модулей: учебный план SQL 50 (01–07) и остальные бесплатные SQL/Database-задачи LeetCode, сгруппированные по темам (08–12); 105 sqlite-задач с ссылками на оригинал, русскими условиями и seed-тестами |
+| [hackerrank-sql.json](./hackerrank-sql.json) | **HackerRank SQL** — intro + 6 модулей (Basic Select … Alternative Queries); 58 задач HackerRank SQL как sqlite-шаги под SQLite 3 / sql.js, русские условия, ссылки на `hackerrank.com/challenges/…` |
 
 ## Исходники и сборка
 
@@ -25,6 +26,7 @@
 - [csharp-ozon-interview/](./csharp-ozon-interview/)
 - [sqlite-flagship/](./sqlite-flagship/)
 - [leetcode-sql/](./leetcode-sql/)
+- [hackerrank-sql/](./hackerrank-sql/)
 
 - `course.json` — заголовок и описание курса
 - `NN-slug.module.json` — один модуль ([module-import.schema.json](../schemas/module-import.schema.json))
@@ -50,6 +52,17 @@ npm run build:courses
 ```
 
 Ручная правка `leetcode-sql/*.module.json` без обновления `.mts` будет перезаписана при следующей генерации.
+
+**HackerRank SQL:** модули в [hackerrank-sql/](./hackerrank-sql/) генерируются из `vibetest-app/tools/hackerrank-sql-modules-data.mts`:
+
+```bash
+cd vibetest-app
+npm run generate:hackerrank-sql-course
+npm run build:courses
+npm run generate:bundled-courses
+```
+
+Ручная правка `hackerrank-sql/*.module.json` без обновления `.mts` будет перезаписана при следующей генерации.
 
 Перед коммитом убедитесь, что `*.json` в корне `docs/courses/` совпадают с выводом сборки (проверяет `sample-courses.spec.ts`).
 

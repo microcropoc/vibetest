@@ -1,0 +1,167 @@
+{
+  "schemaVersion": 1,
+  "title": "Advanced Join",
+  "steps": [
+    {
+      "type": "theory",
+      "title": "Симметрия, UNION, окна",
+      "content": "## Advanced Join\n\n- Self-join для симметричных пар.\n- **`UNION`** vs **`UNION ALL`** для списков title.\n- Накопительная сумма: **`SUM(...) OVER (ORDER BY …)`**."
+    },
+    {
+      "type": "svg",
+      "title": "Схема: Advanced Join",
+      "content": {
+        "caption": "Self-join находит пары (id, f_id) и (f_id, id)",
+        "description": "Running total — окно с UNBOUNDED PRECEDING.",
+        "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 280 80\" width=\"100%\" role=\"img\" aria-label=\"Advanced Join\"><rect id=\"hr05-box\" x=\"40\" y=\"15\" width=\"200\" height=\"50\" rx=\"4\" fill=\"#e3f2fd\" stroke=\"#1565c0\"/><text x=\"140\" y=\"45\" text-anchor=\"middle\" font-size=\"12\" fill=\"#0d47a1\">Advanced Join</text></svg>"
+      }
+    },
+    {
+      "type": "sqlite",
+      "title": "SQL Project Planning",
+      "content": {
+        "description": "Пары `(task_id, start_day, end_day)` задач, которые **перекрываются по дням** (один и тот же `day` в `task_start` и `task_end`). Сортировка по `task_id`, `start_day`.\n\n[HackerRank: SQL Project Planning](https://www.hackerrank.com/challenges/sql-project-planning/problem)",
+        "setup": "CREATE TABLE task_start(task_id INTEGER NOT NULL, start_day INTEGER NOT NULL, PRIMARY KEY(task_id, start_day));\nCREATE TABLE task_end(task_id INTEGER NOT NULL, end_day INTEGER NOT NULL, PRIMARY KEY(task_id, end_day));",
+        "starterCode": "SELECT s.task_id, s.start_day, e.end_day FROM task_start s JOIN task_end e ON s.task_id = e.task_id ORDER BY s.task_id, s.start_day;",
+        "referenceSolution": "SELECT DISTINCT s.task_id, s.start_day, e.end_day\nFROM task_start s\nJOIN task_end e ON s.task_id = e.task_id\nWHERE s.start_day = e.end_day\nORDER BY s.task_id, s.start_day;",
+        "timeoutMs": 8000,
+        "tests": [
+          {
+            "seed": "INSERT INTO task_start VALUES (1,10),(1,20),(2,5);\nINSERT INTO task_end VALUES (1,10),(1,15),(2,5);"
+          },
+          {
+            "seed": "INSERT INTO task_start VALUES (1,1);\nINSERT INTO task_end VALUES (1,2);"
+          },
+          {
+            "seed": "INSERT INTO task_start VALUES (3,7),(3,8);\nINSERT INTO task_end VALUES (3,7),(3,9);"
+          },
+          {
+            "seed": "INSERT INTO task_start VALUES (1,100);\nINSERT INTO task_end VALUES (1,100);"
+          }
+        ],
+        "orderMatters": true
+      }
+    },
+    {
+      "type": "sqlite",
+      "title": "Placements",
+      "content": {
+        "description": "Студенты из `Students`, **не** попавшие в `Placements`. Верните `id`, `name`. Сортировка по `id`.\n\n[HackerRank: Placements](https://www.hackerrank.com/challenges/placements/problem)",
+        "setup": "CREATE TABLE Students(id INTEGER PRIMARY KEY, name TEXT NOT NULL, age INTEGER NOT NULL);\nCREATE TABLE Placements(id INTEGER PRIMARY KEY, student_id INTEGER NOT NULL, company_id INTEGER NOT NULL);",
+        "starterCode": "SELECT S.id, S.name FROM Students S JOIN Placements P ON S.id = P.student_id ORDER BY S.id;",
+        "referenceSolution": "SELECT S.id, S.name FROM Students S LEFT JOIN Placements P ON S.id = P.student_id WHERE P.student_id IS NULL ORDER BY S.id;",
+        "timeoutMs": 8000,
+        "tests": [
+          {
+            "seed": "INSERT INTO Students VALUES (1,\"Amy\",20),(2,\"Bob\",21),(3,\"Cal\",22);\nINSERT INTO Placements VALUES (1,1,10);"
+          },
+          {
+            "seed": "INSERT INTO Students VALUES (1,\"Solo\",20);"
+          },
+          {
+            "seed": "INSERT INTO Students VALUES (1,\"A\",1),(2,\"B\",2);\nINSERT INTO Placements VALUES (1,2,1);"
+          },
+          {
+            "seed": "INSERT INTO Students VALUES (3,\"Z\",30),(1,\"A\",10);\nINSERT INTO Placements VALUES (1,3,1);"
+          }
+        ],
+        "orderMatters": true
+      }
+    },
+    {
+      "type": "sqlite",
+      "title": "Symmetric Pairs",
+      "content": {
+        "description": "Пары `(id, f_id)` из `Functions`, для которых существует `(f_id, id)` и `id < f_id`. Сортировка по `id`.\n\n[HackerRank: Symmetric Pairs](https://www.hackerrank.com/challenges/symmetric-pairs/problem)",
+        "setup": "CREATE TABLE Functions(id INTEGER NOT NULL, f_id INTEGER NOT NULL, PRIMARY KEY(id, f_id));",
+        "starterCode": "SELECT id, f_id FROM Functions ORDER BY id;",
+        "referenceSolution": "SELECT f1.id, f1.f_id\nFROM Functions f1\nJOIN Functions f2 ON f1.id = f2.f_id AND f1.f_id = f2.id\nWHERE f1.id < f1.f_id\nORDER BY f1.id;",
+        "timeoutMs": 8000,
+        "tests": [
+          {
+            "seed": "INSERT INTO Functions VALUES (1,2),(2,1),(3,4);"
+          },
+          {
+            "seed": "INSERT INTO Functions VALUES (10,20),(20,10);"
+          },
+          {
+            "seed": "INSERT INTO Functions VALUES (1,1);"
+          },
+          {
+            "seed": "INSERT INTO Functions VALUES (5,6),(6,5),(5,7);"
+          }
+        ],
+        "orderMatters": true
+      }
+    },
+    {
+      "type": "sqlite",
+      "title": "Interviews",
+      "content": {
+        "description": "**Различные** названия должностей (`title`) из `Companies` и `Challenges` (объединение). Сортировка по `title`.\n\n[HackerRank: Interviews](https://www.hackerrank.com/challenges/interviews/problem)",
+        "setup": "CREATE TABLE Companies(company_code INTEGER PRIMARY KEY, title TEXT NOT NULL, founder TEXT NOT NULL);\nCREATE TABLE Challenges(challenge_id INTEGER PRIMARY KEY, company_code INTEGER NOT NULL, title TEXT NOT NULL);",
+        "starterCode": "SELECT title FROM Companies UNION ALL SELECT title FROM Challenges ORDER BY title;",
+        "referenceSolution": "SELECT DISTINCT title FROM Companies\nUNION\nSELECT DISTINCT title FROM Challenges\nORDER BY title;",
+        "timeoutMs": 8000,
+        "tests": [
+          {
+            "seed": "INSERT INTO Companies VALUES (1,'CEO','A'),(2,'CTO','B');\nINSERT INTO Challenges VALUES (1,1,'CTO'),(2,2,'Dev');"
+          },
+          {
+            "seed": "INSERT INTO Companies VALUES (1,'Solo','X');"
+          },
+          {
+            "seed": "INSERT INTO Challenges VALUES (1,1,'A'),(2,1,'A');"
+          },
+          {
+            "seed": "INSERT INTO Companies VALUES (1,'Z','Y'),(2,'A','Y');\nINSERT INTO Challenges VALUES (1,1,'M');"
+          }
+        ],
+        "orderMatters": true
+      }
+    },
+    {
+      "type": "sqlite",
+      "title": "15 Days of Learning SQL",
+      "content": {
+        "description": "По каждому `contest_id`: `contest_date`, `total_submissions`, **накопительная** сумма `total_submissions` (`running_total`). Сортировка по `contest_date`.\n\n[HackerRank: 15 Days of Learning SQL](https://www.hackerrank.com/challenges/15-days-of-learning-sql/problem)",
+        "setup": "CREATE TABLE Contests(contest_id INTEGER PRIMARY KEY, hacker_id INTEGER NOT NULL, name TEXT NOT NULL, start_date TEXT NOT NULL, end_date TEXT NOT NULL);\nCREATE TABLE Submissions(submission_id INTEGER PRIMARY KEY, hacker_id INTEGER NOT NULL, challenge_id INTEGER NOT NULL, score INTEGER NOT NULL, submission_date TEXT NOT NULL);\nCREATE TABLE Challenges(challenge_id INTEGER PRIMARY KEY, contest_id INTEGER NOT NULL, name TEXT NOT NULL);",
+        "starterCode": "SELECT C.contest_id, C.start_date, COUNT(S.submission_id) FROM Contests C JOIN Challenges CH ON C.contest_id = CH.contest_id JOIN Submissions S ON CH.challenge_id = S.challenge_id GROUP BY C.contest_id ORDER BY C.start_date;",
+        "referenceSolution": "WITH daily AS (\n  SELECT C.contest_id, C.start_date AS contest_date, COUNT(S.submission_id) AS total_submissions\n  FROM Contests C\n  JOIN Challenges CH ON C.contest_id = CH.contest_id\n  JOIN Submissions S ON CH.challenge_id = S.challenge_id\n  GROUP BY C.contest_id, C.start_date\n)\nSELECT contest_id, contest_date, total_submissions,\n  SUM(total_submissions) OVER (ORDER BY contest_date ROWS UNBOUNDED PRECEDING) AS running_total\nFROM daily\nORDER BY contest_date;",
+        "timeoutMs": 8000,
+        "tests": [
+          {
+            "seed": "INSERT INTO Contests VALUES (1,1,'A','2016-03-01','2016-03-15'),(2,2,'B','2016-03-08','2016-03-20');\nINSERT INTO Challenges VALUES (1,1,'X'),(2,2,'Y');\nINSERT INTO Submissions VALUES (1,1,1,10,'2016-03-01'),(2,1,1,10,'2016-03-02'),(3,2,2,10,'2016-03-08');"
+          },
+          {
+            "seed": "INSERT INTO Contests VALUES (1,1,'S','2016-01-01','2016-01-02');\nINSERT INTO Challenges VALUES (1,1,'C');\nINSERT INTO Submissions VALUES (1,1,1,5,'2016-01-01');"
+          },
+          {
+            "seed": "INSERT INTO Contests VALUES (1,1,'A','2016-02-01','2016-02-02'),(2,1,'B','2016-02-03','2016-02-04');\nINSERT INTO Challenges VALUES (1,1,'a'),(2,2,'b');\nINSERT INTO Submissions VALUES (1,1,1,1,'2016-02-01'),(2,1,2,1,'2016-02-03');"
+          },
+          {
+            "seed": "INSERT INTO Contests VALUES (1,1,'Z','2016-12-01','2016-12-31');\nINSERT INTO Challenges VALUES (1,1,'q');\nINSERT INTO Submissions VALUES (1,1,1,3,'2016-12-01'),(2,1,1,3,'2016-12-01');"
+          }
+        ],
+        "orderMatters": true,
+        "checkColumnNames": true
+      }
+    },
+    {
+      "type": "quiz",
+      "title": "Итоговый тест модуля",
+      "content": {
+        "question": "Как получить running total по дате?",
+        "options": [
+          "SUM(x) GROUP BY date",
+          "SUM(x) OVER (ORDER BY date ROWS UNBOUNDED PRECEDING)",
+          "COUNT(*) OVER ()",
+          "MAX(x) OVER (PARTITION BY date)"
+        ],
+        "correctIndices": [
+          1
+        ]
+      }
+    }
+  ]
+}

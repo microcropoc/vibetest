@@ -1,0 +1,5 @@
+{
+  "schemaVersion": 1,
+  "title": "HackerRank SQL",
+  "description": "Полный раздел SQL Domain на HackerRank: шесть подразделов (Basic Select, Advanced Select, Aggregation, Basic Join, Advanced Join, Alternative Queries), 58 sqlite-задач с русскими условиями, ссылками на оригинал и автопроверкой в браузере (SQLite 3 / sql.js)."
+}

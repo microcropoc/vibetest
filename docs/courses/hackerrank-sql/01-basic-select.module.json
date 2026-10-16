@@ -1,0 +1,558 @@
+{
+  "schemaVersion": 1,
+  "title": "Basic Select",
+  "steps": [
+    {
+      "type": "theory",
+      "title": "SELECT, WHERE, DISTINCT",
+      "content": "## Basic Select\n\n- **`SELECT`**, **`WHERE`**, **`ORDER BY`**, **`DISTINCT`**, **`LIMIT`**.\n- HackerRank часто использует таблицы `CITY`, `STATION`, `STUDENTS`.\n- Для гласных в `STATION` — **`REGEXP`** (JS RegExp в приложении): `^` / `$`, классы `[AEIOUaeiou]`."
+    },
+    {
+      "type": "svg",
+      "title": "Схема: Basic Select",
+      "content": {
+        "caption": "WHERE отсеивает строки до проекции",
+        "description": "Чётность `ID` — `ID % 2 = 0` в SQLite.",
+        "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 280 80\" width=\"100%\" role=\"img\" aria-label=\"Basic Select\"><rect id=\"hr01-box\" x=\"40\" y=\"15\" width=\"200\" height=\"50\" rx=\"4\" fill=\"#e3f2fd\" stroke=\"#1565c0\"/><text x=\"140\" y=\"45\" text-anchor=\"middle\" font-size=\"12\" fill=\"#0d47a1\">Basic Select</text></svg>"
+      }
+    },
+    {
+      "type": "sqlite",
+      "title": "Revising the Select Query",
+      "content": {
+        "description": "Выведите **все** поля из `CITY`, где `COUNTRYCODE = 'USA'` и `POPULATION > 100000`.\n\n[HackerRank: Revising the Select Query](https://www.hackerrank.com/challenges/revising-the-select-query/problem)",
+        "setup": "CREATE TABLE CITY(ID INTEGER PRIMARY KEY, NAME TEXT NOT NULL, COUNTRYCODE TEXT NOT NULL, DISTRICT TEXT NOT NULL, POPULATION INTEGER NOT NULL);",
+        "starterCode": "SELECT * FROM CITY WHERE COUNTRYCODE = 'USA' OR POPULATION > 100000;",
+        "referenceSolution": "SELECT * FROM CITY WHERE COUNTRYCODE = 'USA' AND POPULATION > 100000;",
+        "timeoutMs": 8000,
+        "tests": [
+          {
+            "seed": "INSERT INTO CITY VALUES (1,'NYC','USA','NY',8000000),(2,'Paris','FRA','Paris',2000000),(3,'LA','USA','CA',4000000),(4,'Boston','USA','MA',500000);"
+          },
+          {
+            "seed": "INSERT INTO CITY VALUES (1,'Small','USA','X',50000);"
+          },
+          {
+            "seed": "INSERT INTO CITY VALUES (1,'Big','DEU','Berlin',5000000);"
+          },
+          {
+            "seed": "INSERT INTO CITY VALUES (1,'A','USA','D',150000),(2,'B','USA','D',150000);"
+          }
+        ],
+        "orderMatters": false
+      }
+    },
+    {
+      "type": "sqlite",
+      "title": "Revising the Select Query II",
+      "content": {
+        "description": "Верните `NAME` и `COUNTRYCODE` для городов с `POPULATION > 120000` и `COUNTRYCODE = 'USA'`. Сортировка по `NAME`.\n\n[HackerRank: Revising the Select Query II](https://www.hackerrank.com/challenges/revising-the-select-query-ii/problem)",
+        "setup": "CREATE TABLE CITY(ID INTEGER PRIMARY KEY, NAME TEXT NOT NULL, COUNTRYCODE TEXT NOT NULL, DISTRICT TEXT NOT NULL, POPULATION INTEGER NOT NULL);",
+        "starterCode": "SELECT NAME, COUNTRYCODE FROM CITY WHERE POPULATION > 120000 AND COUNTRYCODE = 'USA' ORDER BY NAME DESC;",
+        "referenceSolution": "SELECT NAME, COUNTRYCODE FROM CITY WHERE POPULATION > 120000 AND COUNTRYCODE = 'USA' ORDER BY NAME;",
+        "timeoutMs": 8000,
+        "tests": [
+          {
+            "seed": "INSERT INTO CITY VALUES (1,'Scranton','USA','PA',50000),(2,'Portland','USA','OR',600000),(3,'Albany','USA','NY',90000);"
+          },
+          {
+            "seed": "INSERT INTO CITY VALUES (1,'Zed','USA','X',200000),(2,'Ann','USA','X',200000);"
+          },
+          {
+            "seed": "INSERT INTO CITY VALUES (1,'Solo','USA','X',150000);"
+          },
+          {
+            "seed": "INSERT INTO CITY VALUES (1,'Tiny','USA','X',100000);"
+          }
+        ],
+        "orderMatters": true
+      }
+    },
+    {
+      "type": "sqlite",
+      "title": "Select All",
+      "content": {
+        "description": "Выведите **все** столбцы и **все** строки таблицы `CITY`.\n\n[HackerRank: Select All](https://www.hackerrank.com/challenges/select-all-sql/problem)",
+        "setup": "CREATE TABLE CITY(ID INTEGER PRIMARY KEY, NAME TEXT NOT NULL, COUNTRYCODE TEXT NOT NULL, DISTRICT TEXT NOT NULL, POPULATION INTEGER NOT NULL);",
+        "starterCode": "SELECT NAME FROM CITY;",
+        "referenceSolution": "SELECT * FROM CITY;",
+        "timeoutMs": 8000,
+        "tests": [
+          {
+            "seed": "INSERT INTO CITY VALUES (1,'A','X','D',1);"
+          },
+          {
+            "seed": "INSERT INTO CITY VALUES (1,'A','X','D',1),(2,'B','Y','E',2);"
+          },
+          {
+            "seed": "SELECT 1;"
+          },
+          {
+            "seed": "INSERT INTO CITY VALUES (9,'Z','ZZ','Z',999);"
+          }
+        ],
+        "orderMatters": false
+      }
+    },
+    {
+      "type": "sqlite",
+      "title": "Select by ID",
+      "content": {
+        "description": "Выведите все поля города с `ID = 1661`.\n\n[HackerRank: Select by ID](https://www.hackerrank.com/challenges/select-by-id/problem)",
+        "setup": "CREATE TABLE CITY(ID INTEGER PRIMARY KEY, NAME TEXT NOT NULL, COUNTRYCODE TEXT NOT NULL, DISTRICT TEXT NOT NULL, POPULATION INTEGER NOT NULL);",
+        "starterCode": "SELECT * FROM CITY WHERE ID = 1660;",
+        "referenceSolution": "SELECT * FROM CITY WHERE ID = 1661;",
+        "timeoutMs": 8000,
+        "tests": [
+          {
+            "seed": "INSERT INTO CITY VALUES (1661,'Target','X','D',100);"
+          },
+          {
+            "seed": "INSERT INTO CITY VALUES (1660,'Other','X','D',100),(1661,'Target','X','D',100);"
+          },
+          {
+            "seed": "INSERT INTO CITY VALUES (1661,'A','Y','Z',1),(1662,'B','Y','Z',2);"
+          },
+          {
+            "seed": "INSERT INTO CITY VALUES (1,'Only','X','D',1);"
+          }
+        ],
+        "orderMatters": false
+      }
+    },
+    {
+      "type": "sqlite",
+      "title": "Japanese Cities' Attributes",
+      "content": {
+        "description": "Все атрибуты городов с `COUNTRYCODE = 'JPN'`.\n\n[HackerRank: Japanese Cities' Attributes](https://www.hackerrank.com/challenges/japanese-cities-attributes/problem)",
+        "setup": "CREATE TABLE CITY(ID INTEGER PRIMARY KEY, NAME TEXT NOT NULL, COUNTRYCODE TEXT NOT NULL, DISTRICT TEXT NOT NULL, POPULATION INTEGER NOT NULL);",
+        "starterCode": "SELECT * FROM CITY WHERE COUNTRYCODE = 'JPN' OR COUNTRYCODE = 'CHN';",
+        "referenceSolution": "SELECT * FROM CITY WHERE COUNTRYCODE = 'JPN';",
+        "timeoutMs": 8000,
+        "tests": [
+          {
+            "seed": "INSERT INTO CITY VALUES (1,'Tokyo','JPN','Tokyo',9000000),(2,'Osaka','JPN','Osaka',3000000);"
+          },
+          {
+            "seed": "INSERT INTO CITY VALUES (1,'Beijing','CHN','Beijing',20000000);"
+          },
+          {
+            "seed": "INSERT INTO CITY VALUES (1,'Kyoto','JPN','Kyoto',1500000),(2,'Paris','FRA','Paris',2000000);"
+          },
+          {
+            "seed": "INSERT INTO CITY VALUES (1,'Nagoya','JPN','Aichi',2300000);"
+          }
+        ],
+        "orderMatters": false
+      }
+    },
+    {
+      "type": "sqlite",
+      "title": "Japanese Cities' Names",
+      "content": {
+        "description": "Только `NAME` городов Японии (`COUNTRYCODE = 'JPN'`).\n\n[HackerRank: Japanese Cities' Names](https://www.hackerrank.com/challenges/japanese-cities-names/problem)",
+        "setup": "CREATE TABLE CITY(ID INTEGER PRIMARY KEY, NAME TEXT NOT NULL, COUNTRYCODE TEXT NOT NULL, DISTRICT TEXT NOT NULL, POPULATION INTEGER NOT NULL);",
+        "starterCode": "SELECT NAME, COUNTRYCODE FROM CITY WHERE COUNTRYCODE = 'JPN';",
+        "referenceSolution": "SELECT NAME FROM CITY WHERE COUNTRYCODE = 'JPN';",
+        "timeoutMs": 8000,
+        "tests": [
+          {
+            "seed": "INSERT INTO CITY VALUES (1,'Tokyo','JPN','Tokyo',9000000),(2,'Osaka','JPN','Osaka',3000000);"
+          },
+          {
+            "seed": "INSERT INTO CITY VALUES (1,'Paris','FRA','Paris',2000000);"
+          },
+          {
+            "seed": "INSERT INTO CITY VALUES (1,'Kyoto','JPN','Kyoto',1500000);"
+          },
+          {
+            "seed": "INSERT INTO CITY VALUES (1,'A','JPN','D',1),(2,'B','JPN','D',2);"
+          }
+        ],
+        "orderMatters": false
+      }
+    },
+    {
+      "type": "sqlite",
+      "title": "Weather Observation Station 1",
+      "content": {
+        "description": "Для записей с **чётным** `ID` верните `CITY` и `LONG_W` (как longitude). Сортировка по `ID`.\n\n[HackerRank: Weather Observation Station 1](https://www.hackerrank.com/challenges/weather-observation-station-1/problem)",
+        "setup": "CREATE TABLE STATION(ID INTEGER PRIMARY KEY, CITY TEXT NOT NULL, STATE TEXT NOT NULL, LAT_N REAL NOT NULL, LONG_W REAL NOT NULL);",
+        "starterCode": "SELECT CITY, LONG_W FROM STATION WHERE ID % 2 = 1 ORDER BY ID;",
+        "referenceSolution": "SELECT CITY, LONG_W FROM STATION WHERE ID % 2 = 0 ORDER BY ID;",
+        "timeoutMs": 8000,
+        "tests": [
+          {
+            "seed": "INSERT INTO STATION VALUES (1,'A','ST',10,20),(2,'B','ST',11,21),(3,'C','ST',12,22);"
+          },
+          {
+            "seed": "INSERT INTO STATION VALUES (2,'Even','ST',0,0);"
+          },
+          {
+            "seed": "INSERT INTO STATION VALUES (1,'Odd','ST',1,1),(4,'Four','ST',2,2);"
+          },
+          {
+            "seed": "INSERT INTO STATION VALUES (10,'Ten','ST',5,5);"
+          }
+        ],
+        "orderMatters": true
+      }
+    },
+    {
+      "type": "sqlite",
+      "title": "Weather Observation Station 3",
+      "content": {
+        "description": "**Различные** `CITY` для станций с чётным `ID`.\n\n[HackerRank: Weather Observation Station 3](https://www.hackerrank.com/challenges/weather-observation-station-3/problem)",
+        "setup": "CREATE TABLE STATION(ID INTEGER PRIMARY KEY, CITY TEXT NOT NULL, STATE TEXT NOT NULL, LAT_N REAL NOT NULL, LONG_W REAL NOT NULL);",
+        "starterCode": "SELECT CITY FROM STATION WHERE ID % 2 = 0;",
+        "referenceSolution": "SELECT DISTINCT CITY FROM STATION WHERE ID % 2 = 0;",
+        "timeoutMs": 8000,
+        "tests": [
+          {
+            "seed": "INSERT INTO STATION VALUES (2,'Dup','ST',1,1),(4,'Dup','ST',2,2),(1,'Odd','ST',0,0);"
+          },
+          {
+            "seed": "INSERT INTO STATION VALUES (2,'A','ST',1,1),(4,'B','ST',1,1);"
+          },
+          {
+            "seed": "INSERT INTO STATION VALUES (1,'OnlyOdd','ST',0,0);"
+          },
+          {
+            "seed": "INSERT INTO STATION VALUES (6,'Solo','ST',0,0);"
+          }
+        ],
+        "orderMatters": false
+      }
+    },
+    {
+      "type": "sqlite",
+      "title": "Weather Observation Station 4",
+      "content": {
+        "description": "Сколько городов (`CITY`) **начинаются с гласной** (A, E, I, O, U)?\n\n[HackerRank: Weather Observation Station 4](https://www.hackerrank.com/challenges/weather-observation-station-4/problem)",
+        "setup": "CREATE TABLE STATION(ID INTEGER PRIMARY KEY, CITY TEXT NOT NULL, STATE TEXT NOT NULL, LAT_N REAL NOT NULL, LONG_W REAL NOT NULL);",
+        "starterCode": "SELECT COUNT(*) FROM STATION WHERE CITY REGEXP '^[BCDFGHJKLMNPQRSTVWXYZ]';",
+        "referenceSolution": "SELECT COUNT(CITY) FROM STATION WHERE CITY REGEXP '^[AEIOUaeiou]';",
+        "timeoutMs": 8000,
+        "tests": [
+          {
+            "seed": "INSERT INTO STATION VALUES (1,'Apple','ST',0,0),(2,'Boston','ST',0,0),(3,'Eggs','ST',0,0);"
+          },
+          {
+            "seed": "INSERT INTO STATION VALUES (1,'Zed','ST',0,0);"
+          },
+          {
+            "seed": "INSERT INTO STATION VALUES (1,'Ulm','ST',0,0),(2,'Ulm','ST',0,0);"
+          },
+          {
+            "seed": "INSERT INTO STATION VALUES (1,'Alpha','ST',0,0),(2,'Beta','ST',0,0),(3,'Omega','ST',0,0),(4,'Chi','ST',0,0);"
+          }
+        ],
+        "orderMatters": false
+      }
+    },
+    {
+      "type": "sqlite",
+      "title": "Weather Observation Station 5",
+      "content": {
+        "description": "Среди **северных** станций (`LAT_N > 0`) найдите город, **не** начинающийся с гласной, с **минимальным** именем по алфавиту. Одна строка `CITY`.\n\n[HackerRank: Weather Observation Station 5](https://www.hackerrank.com/challenges/weather-observation-station-5/problem)",
+        "setup": "CREATE TABLE STATION(ID INTEGER PRIMARY KEY, CITY TEXT NOT NULL, STATE TEXT NOT NULL, LAT_N REAL NOT NULL, LONG_W REAL NOT NULL);",
+        "starterCode": "SELECT CITY FROM STATION WHERE LAT_N > 0 AND CITY REGEXP '^[AEIOUaeiou]' ORDER BY CITY LIMIT 1;",
+        "referenceSolution": "SELECT CITY FROM STATION WHERE LAT_N > 0 AND CITY NOT REGEXP '^[AEIOUaeiou]' ORDER BY CITY LIMIT 1;",
+        "timeoutMs": 8000,
+        "tests": [
+          {
+            "seed": "INSERT INTO STATION VALUES (1,'Apple','ST',40,10),(2,'Boston','ST',42,-70),(3,'Zulu','ST',45,10);"
+          },
+          {
+            "seed": "INSERT INTO STATION VALUES (1,'Alpha','ST',10,0),(2,'Beta','ST',20,0);"
+          },
+          {
+            "seed": "INSERT INTO STATION VALUES (1,'Miami','ST',25,-80);"
+          },
+          {
+            "seed": "INSERT INTO STATION VALUES (1,'Denver','ST',39,-105),(2,'Chicago','ST',41,-87);"
+          }
+        ],
+        "orderMatters": false
+      }
+    },
+    {
+      "type": "sqlite",
+      "title": "Weather Observation Station 6",
+      "content": {
+        "description": "Города, **не** начинающиеся с гласной. Сортировка по `CITY`.\n\n[HackerRank: Weather Observation Station 6](https://www.hackerrank.com/challenges/weather-observation-station-6/problem)",
+        "setup": "CREATE TABLE STATION(ID INTEGER PRIMARY KEY, CITY TEXT NOT NULL, STATE TEXT NOT NULL, LAT_N REAL NOT NULL, LONG_W REAL NOT NULL);",
+        "starterCode": "SELECT CITY FROM STATION WHERE CITY REGEXP '^[AEIOUaeiou]' ORDER BY CITY;",
+        "referenceSolution": "SELECT CITY FROM STATION WHERE CITY NOT REGEXP '^[AEIOUaeiou]' ORDER BY CITY;",
+        "timeoutMs": 8000,
+        "tests": [
+          {
+            "seed": "INSERT INTO STATION VALUES (1,'Apple','ST',0,0),(2,'Boston','ST',0,0),(3,'Eggs','ST',0,0);"
+          },
+          {
+            "seed": "INSERT INTO STATION VALUES (1,'Zed','ST',0,0);"
+          },
+          {
+            "seed": "INSERT INTO STATION VALUES (1,'Alpha','ST',0,0);"
+          },
+          {
+            "seed": "INSERT INTO STATION VALUES (1,'Beta','ST',0,0),(2,'Gamma','ST',0,0);"
+          }
+        ],
+        "orderMatters": true
+      }
+    },
+    {
+      "type": "sqlite",
+      "title": "Weather Observation Station 7",
+      "content": {
+        "description": "**Различные** города, **заканчивающиеся** на гласную. Сортировка по `CITY`.\n\n[HackerRank: Weather Observation Station 7](https://www.hackerrank.com/challenges/weather-observation-station-7/problem)",
+        "setup": "CREATE TABLE STATION(ID INTEGER PRIMARY KEY, CITY TEXT NOT NULL, STATE TEXT NOT NULL, LAT_N REAL NOT NULL, LONG_W REAL NOT NULL);",
+        "starterCode": "SELECT CITY FROM STATION WHERE CITY REGEXP '[AEIOUaeiou]$' ORDER BY CITY;",
+        "referenceSolution": "SELECT DISTINCT CITY FROM STATION WHERE CITY REGEXP '[AEIOUaeiou]$' ORDER BY CITY;",
+        "timeoutMs": 8000,
+        "tests": [
+          {
+            "seed": "INSERT INTO STATION VALUES (1,'Alpha','ST',0,0),(2,'Alpha','ST',1,1),(3,'Beta','ST',0,0);"
+          },
+          {
+            "seed": "INSERT INTO STATION VALUES (1,'Zoo','ST',0,0);"
+          },
+          {
+            "seed": "INSERT INTO STATION VALUES (1,'End','ST',0,0);"
+          },
+          {
+            "seed": "INSERT INTO STATION VALUES (1,'A','ST',0,0),(2,'E','ST',0,0);"
+          }
+        ],
+        "orderMatters": true
+      }
+    },
+    {
+      "type": "sqlite",
+      "title": "Weather Observation Station 8",
+      "content": {
+        "description": "Города с **северной** широтой (`LAT_N > 0`) и **восточной** долготой (`LONG_W > 0`). Сортировка по `CITY`.\n\n[HackerRank: Weather Observation Station 8](https://www.hackerrank.com/challenges/weather-observation-station-8/problem)",
+        "setup": "CREATE TABLE STATION(ID INTEGER PRIMARY KEY, CITY TEXT NOT NULL, STATE TEXT NOT NULL, LAT_N REAL NOT NULL, LONG_W REAL NOT NULL);",
+        "starterCode": "SELECT CITY FROM STATION WHERE LAT_N > 0 OR LONG_W > 0 ORDER BY CITY;",
+        "referenceSolution": "SELECT CITY FROM STATION WHERE LAT_N > 0 AND LONG_W > 0 ORDER BY CITY;",
+        "timeoutMs": 8000,
+        "tests": [
+          {
+            "seed": "INSERT INTO STATION VALUES (1,'A','ST',10,10),(2,'B','ST',-10,10),(3,'C','ST',10,-10);"
+          },
+          {
+            "seed": "INSERT INTO STATION VALUES (1,'Only','ST',1,1);"
+          },
+          {
+            "seed": "INSERT INTO STATION VALUES (1,'X','ST',5,5),(2,'Y','ST',5,5);"
+          },
+          {
+            "seed": "INSERT INTO STATION VALUES (1,'Z','ST',-1,-1);"
+          }
+        ],
+        "orderMatters": true
+      }
+    },
+    {
+      "type": "sqlite",
+      "title": "Weather Observation Station 9",
+      "content": {
+        "description": "Города с `LAT_N < 0` и `LONG_W > 0`. Верните `CITY`, `LAT_N` и `LONG_W`, округлённые до **2** знаков. Сортировка по `CITY`.\n\n[HackerRank: Weather Observation Station 9](https://www.hackerrank.com/challenges/weather-observation-station-9/problem)",
+        "setup": "CREATE TABLE STATION(ID INTEGER PRIMARY KEY, CITY TEXT NOT NULL, STATE TEXT NOT NULL, LAT_N REAL NOT NULL, LONG_W REAL NOT NULL);",
+        "starterCode": "SELECT CITY, LAT_N, LONG_W FROM STATION WHERE LAT_N < 0 OR LONG_W > 0 ORDER BY CITY;",
+        "referenceSolution": "SELECT CITY, ROUND(LAT_N, 2), ROUND(LONG_W, 2) FROM STATION WHERE LAT_N < 0 AND LONG_W > 0 ORDER BY CITY;",
+        "timeoutMs": 8000,
+        "tests": [
+          {
+            "seed": "INSERT INTO STATION VALUES (1,'A','ST',-33.456,77.891),(2,'B','ST',10,10);"
+          },
+          {
+            "seed": "INSERT INTO STATION VALUES (1,'Solo','ST',-1.005,2.555);"
+          },
+          {
+            "seed": "INSERT INTO STATION VALUES (1,'Z','ST',-0.1,0.1),(2,'Y','ST',-5.555,9.999);"
+          },
+          {
+            "seed": "INSERT INTO STATION VALUES (1,'M','ST',5,5);"
+          }
+        ],
+        "orderMatters": true,
+        "floatTolerance": 0.01
+      }
+    },
+    {
+      "type": "sqlite",
+      "title": "Weather Observation Station 10",
+      "content": {
+        "description": "Города **не** на экваторе (`LAT_N <> 0`). Сортировка: `LAT_N` по убыванию, затем `CITY` по возрастанию.\n\n[HackerRank: Weather Observation Station 10](https://www.hackerrank.com/challenges/weather-observation-station-10/problem)",
+        "setup": "CREATE TABLE STATION(ID INTEGER PRIMARY KEY, CITY TEXT NOT NULL, STATE TEXT NOT NULL, LAT_N REAL NOT NULL, LONG_W REAL NOT NULL);",
+        "starterCode": "SELECT CITY FROM STATION WHERE LAT_N > 0 ORDER BY CITY;",
+        "referenceSolution": "SELECT CITY FROM STATION WHERE LAT_N <> 0 ORDER BY LAT_N DESC, CITY ASC;",
+        "timeoutMs": 8000,
+        "tests": [
+          {
+            "seed": "INSERT INTO STATION VALUES (1,'A','ST',10,0),(2,'B','ST',-5,0),(3,'C','ST',0,0);"
+          },
+          {
+            "seed": "INSERT INTO STATION VALUES (1,'North','ST',40,0),(2,'South','ST',-30,0);"
+          },
+          {
+            "seed": "INSERT INTO STATION VALUES (1,'Eq','ST',0,0);"
+          },
+          {
+            "seed": "INSERT INTO STATION VALUES (1,'Z','ST',5,0),(2,'A','ST',5,0);"
+          }
+        ],
+        "orderMatters": true
+      }
+    },
+    {
+      "type": "sqlite",
+      "title": "Weather Observation Station 11",
+      "content": {
+        "description": "**Различные** `CITY` не на экваторе. Сортировка по `CITY`.\n\n[HackerRank: Weather Observation Station 11](https://www.hackerrank.com/challenges/weather-observation-station-11/problem)",
+        "setup": "CREATE TABLE STATION(ID INTEGER PRIMARY KEY, CITY TEXT NOT NULL, STATE TEXT NOT NULL, LAT_N REAL NOT NULL, LONG_W REAL NOT NULL);",
+        "starterCode": "SELECT CITY FROM STATION WHERE LAT_N <> 0 ORDER BY CITY;",
+        "referenceSolution": "SELECT DISTINCT CITY FROM STATION WHERE LAT_N <> 0 ORDER BY CITY;",
+        "timeoutMs": 8000,
+        "tests": [
+          {
+            "seed": "INSERT INTO STATION VALUES (1,'Dup','ST',10,0),(2,'Dup','ST',20,0),(3,'Eq','ST',0,0);"
+          },
+          {
+            "seed": "INSERT INTO STATION VALUES (1,'A','ST',1,0);"
+          },
+          {
+            "seed": "INSERT INTO STATION VALUES (1,'B','ST',-1,0),(2,'C','ST',2,0);"
+          },
+          {
+            "seed": "INSERT INTO STATION VALUES (1,'OnlyEq','ST',0,0);"
+          }
+        ],
+        "orderMatters": true
+      }
+    },
+    {
+      "type": "sqlite",
+      "title": "Weather Observation Station 12",
+      "content": {
+        "description": "Для каждой станции верните `CITY`, `LAT_N` и `LONG_W`, округлённые до **2** десятичных знаков. Сортировка по `ID`.\n\n[HackerRank: Weather Observation Station 12](https://www.hackerrank.com/challenges/weather-observation-station-12/problem)",
+        "setup": "CREATE TABLE STATION(ID INTEGER PRIMARY KEY, CITY TEXT NOT NULL, STATE TEXT NOT NULL, LAT_N REAL NOT NULL, LONG_W REAL NOT NULL);",
+        "starterCode": "SELECT CITY, LAT_N, LONG_W FROM STATION WHERE ID < 0 ORDER BY ID;",
+        "referenceSolution": "SELECT CITY, ROUND(LAT_N, 2), ROUND(LONG_W, 2) FROM STATION ORDER BY ID;",
+        "timeoutMs": 8000,
+        "tests": [
+          {
+            "seed": "INSERT INTO STATION VALUES (1,'A','ST',33.4567,77.8912);"
+          },
+          {
+            "seed": "INSERT INTO STATION VALUES (1,'B','ST',-1.005,2.5555),(2,'C','ST',0,0);"
+          },
+          {
+            "seed": "INSERT INTO STATION VALUES (3,'D','ST',10.999,20.001);"
+          },
+          {
+            "seed": "INSERT INTO STATION VALUES (1,'E','ST',0.004,0.006);"
+          }
+        ],
+        "orderMatters": true,
+        "floatTolerance": 0.01
+      }
+    },
+    {
+      "type": "sqlite",
+      "title": "Higher Than 75 Marks",
+      "content": {
+        "description": "Имена студентов с `MARKS > 75`. Сортировка: `MARKS` по убыванию, `NAME` по возрастанию.\n\n[HackerRank: Higher Than 75 Marks](https://www.hackerrank.com/challenges/higher-than-75-marks/problem)",
+        "setup": "CREATE TABLE STUDENTS(ID INTEGER PRIMARY KEY, NAME TEXT NOT NULL, MARKS INTEGER NOT NULL);",
+        "starterCode": "SELECT NAME FROM STUDENTS WHERE MARKS >= 75 ORDER BY MARKS DESC, NAME ASC;",
+        "referenceSolution": "SELECT NAME FROM STUDENTS WHERE MARKS > 75 ORDER BY MARKS DESC, NAME ASC;",
+        "timeoutMs": 8000,
+        "tests": [
+          {
+            "seed": "INSERT INTO STUDENTS VALUES (1,'Amy',80),(2,'Bob',76),(3,'Cal',75),(4,'Dan',90);"
+          },
+          {
+            "seed": "INSERT INTO STUDENTS VALUES (1,'Zed',80),(2,'Ann',80);"
+          },
+          {
+            "seed": "INSERT INTO STUDENTS VALUES (1,'Low',70);"
+          },
+          {
+            "seed": "INSERT INTO STUDENTS VALUES (1,'Solo',100);"
+          }
+        ],
+        "orderMatters": true
+      }
+    },
+    {
+      "type": "sqlite",
+      "title": "Employee Names",
+      "content": {
+        "description": "Имена сотрудников, **начинающиеся с гласной**. Сортировка по `Name`.\n\n[HackerRank: Employee Names](https://www.hackerrank.com/challenges/employee-names/problem)",
+        "setup": "CREATE TABLE Employees(ID INTEGER PRIMARY KEY, Name TEXT NOT NULL);",
+        "starterCode": "SELECT Name FROM Employees WHERE Name REGEXP '^[BCDFGHJKLMNPQRSTVWXYZ]' ORDER BY Name;",
+        "referenceSolution": "SELECT Name FROM Employees WHERE Name REGEXP '^[AEIOUaeiou]' ORDER BY Name;",
+        "timeoutMs": 8000,
+        "tests": [
+          {
+            "seed": "INSERT INTO Employees VALUES (1,'Amy'),(2,'Bob'),(3,'Eve');"
+          },
+          {
+            "seed": "INSERT INTO Employees VALUES (1,'Zed');"
+          },
+          {
+            "seed": "INSERT INTO Employees VALUES (1,'Anna'),(2,'Aaron');"
+          },
+          {
+            "seed": "INSERT INTO Employees VALUES (1,'Ben');"
+          }
+        ],
+        "orderMatters": true
+      }
+    },
+    {
+      "type": "sqlite",
+      "title": "Employee Salaries",
+      "content": {
+        "description": "Имена и зарплаты с `Salary > 2000`. Сортировка по `Salary`.\n\n[HackerRank: Employee Salaries](https://www.hackerrank.com/challenges/employee-salaries/problem)",
+        "setup": "CREATE TABLE Employees(ID INTEGER PRIMARY KEY, Name TEXT NOT NULL, Salary INTEGER NOT NULL);",
+        "starterCode": "SELECT Name, Salary FROM Employees WHERE Salary >= 2000 ORDER BY Salary;",
+        "referenceSolution": "SELECT Name, Salary FROM Employees WHERE Salary > 2000 ORDER BY Salary;",
+        "timeoutMs": 8000,
+        "tests": [
+          {
+            "seed": "INSERT INTO Employees VALUES (1,'A',2000),(2,'B',2001),(3,'C',1500);"
+          },
+          {
+            "seed": "INSERT INTO Employees VALUES (1,'Solo',5000);"
+          },
+          {
+            "seed": "INSERT INTO Employees VALUES (1,'X',2001),(2,'Y',3000);"
+          },
+          {
+            "seed": "INSERT INTO Employees VALUES (1,'Low',1000);"
+          }
+        ],
+        "orderMatters": true
+      }
+    },
+    {
+      "type": "quiz",
+      "title": "Итоговый тест модуля",
+      "content": {
+        "question": "Как выбрать города, **не** начинающиеся с гласной?",
+        "options": [
+          "WHERE CITY NOT REGEXP '^[AEIOUaeiou]'",
+          "WHERE CITY LIKE 'A%'",
+          "WHERE SUBSTR(CITY, 1, 1) = NULL",
+          "WHERE CITY IN (vowels)"
+        ],
+        "correctIndices": [
+          0
+        ]
+      }
+    }
+  ]
+}

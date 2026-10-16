@@ -1,0 +1,485 @@
+{
+  "schemaVersion": 1,
+  "title": "Aggregation",
+  "steps": [
+    {
+      "type": "theory",
+      "title": "Агрегаты и STATION 2–20",
+      "content": "## Aggregation\n\n- `COUNT`, `SUM`, `AVG`; **`CAST(AVG(...) AS INTEGER)`** — округление вниз.\n- `GROUP BY`, `HAVING`, подзапросы с `MIN`/`MAX`.\n- Станции 13–20: медиана через `OFFSET`, разница диапазонов, `BETWEEN`."
+    },
+    {
+      "type": "svg",
+      "title": "Схема: Aggregation",
+      "content": {
+        "caption": "GROUP BY сворачивает строки",
+        "description": "Исключение min/max — фильтр NOT IN (min UNION max).",
+        "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 280 80\" width=\"100%\" role=\"img\" aria-label=\"Aggregation\"><rect id=\"hr03-box\" x=\"40\" y=\"15\" width=\"200\" height=\"50\" rx=\"4\" fill=\"#e3f2fd\" stroke=\"#1565c0\"/><text x=\"140\" y=\"45\" text-anchor=\"middle\" font-size=\"12\" fill=\"#0d47a1\">Aggregation</text></svg>"
+      }
+    },
+    {
+      "type": "sqlite",
+      "title": "Revising Aggregations - The Count Function",
+      "content": {
+        "description": "Сколько записей в таблице `CITY`? Одно число.\n\n[HackerRank: Revising Aggregations - The Count Function](https://www.hackerrank.com/challenges/revising-aggregations-the-count-function/problem)",
+        "setup": "CREATE TABLE CITY(ID INTEGER PRIMARY KEY, NAME TEXT NOT NULL, COUNTRYCODE TEXT NOT NULL, DISTRICT TEXT NOT NULL, POPULATION INTEGER NOT NULL);",
+        "starterCode": "SELECT COUNT(DISTINCT NAME) FROM CITY;",
+        "referenceSolution": "SELECT COUNT(*) FROM CITY;",
+        "timeoutMs": 8000,
+        "tests": [
+          {
+            "seed": "INSERT INTO CITY VALUES (1,'A','X','D',1),(2,'B','X','D',2);"
+          },
+          {
+            "seed": "INSERT INTO CITY VALUES (1,'Solo','X','D',1);"
+          },
+          {
+            "seed": "SELECT 1;"
+          },
+          {
+            "seed": "INSERT INTO CITY VALUES (1,'A','X','D',1),(2,'A','X','D',2);"
+          }
+        ],
+        "orderMatters": false
+      }
+    },
+    {
+      "type": "sqlite",
+      "title": "Revising Aggregations - The Sum Function",
+      "content": {
+        "description": "Сумма `POPULATION` всех городов с `COUNTRYCODE = 'JPN'`.\n\n[HackerRank: Revising Aggregations - The Sum Function](https://www.hackerrank.com/challenges/revising-aggregations-the-sum-function/problem)",
+        "setup": "CREATE TABLE CITY(ID INTEGER PRIMARY KEY, NAME TEXT NOT NULL, COUNTRYCODE TEXT NOT NULL, DISTRICT TEXT NOT NULL, POPULATION INTEGER NOT NULL);",
+        "starterCode": "SELECT SUM(POPULATION) FROM CITY WHERE COUNTRYCODE = 'CHN';",
+        "referenceSolution": "SELECT SUM(POPULATION) FROM CITY WHERE COUNTRYCODE = 'JPN';",
+        "timeoutMs": 8000,
+        "tests": [
+          {
+            "seed": "INSERT INTO CITY VALUES (1,'Tokyo','JPN','T',9000000),(2,'Osaka','JPN','O',3000000);"
+          },
+          {
+            "seed": "INSERT INTO CITY VALUES (1,'Beijing','CHN','B',20000000);"
+          },
+          {
+            "seed": "INSERT INTO CITY VALUES (1,'Kyoto','JPN','K',1500000);"
+          },
+          {
+            "seed": "INSERT INTO CITY VALUES (1,'A','JPN','D',100),(2,'B','JPN','D',200);"
+          }
+        ],
+        "orderMatters": false
+      }
+    },
+    {
+      "type": "sqlite",
+      "title": "Revising Aggregations - Averages",
+      "content": {
+        "description": "Средняя `POPULATION` всех городов, **округлённая вниз** до целого (`CAST(AVG(...) AS INTEGER)`).\n\n[HackerRank: Revising Aggregations - Averages](https://www.hackerrank.com/challenges/revising-aggregations-averages/problem)",
+        "setup": "CREATE TABLE CITY(ID INTEGER PRIMARY KEY, NAME TEXT NOT NULL, COUNTRYCODE TEXT NOT NULL, DISTRICT TEXT NOT NULL, POPULATION INTEGER NOT NULL);",
+        "starterCode": "SELECT ROUND(AVG(POPULATION)) FROM CITY;",
+        "referenceSolution": "SELECT CAST(AVG(POPULATION) AS INTEGER) FROM CITY;",
+        "timeoutMs": 8000,
+        "tests": [
+          {
+            "seed": "INSERT INTO CITY VALUES (1,'A','X','D',100),(2,'B','X','D',101);"
+          },
+          {
+            "seed": "INSERT INTO CITY VALUES (1,'A','X','D',10),(2,'B','X','D',11),(3,'C','X','D',12);"
+          },
+          {
+            "seed": "INSERT INTO CITY VALUES (1,'Solo','X','D',999);"
+          },
+          {
+            "seed": "INSERT INTO CITY VALUES (1,'A','X','D',1),(2,'B','X','D',2);"
+          }
+        ],
+        "orderMatters": false
+      }
+    },
+    {
+      "type": "sqlite",
+      "title": "Average Population",
+      "content": {
+        "description": "Для каждой пары (`NAME` города как `CITY`, `DISTRICT`) средняя `POPULATION`, округлённая **вниз** до целого. Сортировка по `CITY`, затем `DISTRICT`.\n\n[HackerRank: Average Population](https://www.hackerrank.com/challenges/average-population/problem)",
+        "setup": "CREATE TABLE CITY(ID INTEGER PRIMARY KEY, NAME TEXT NOT NULL, COUNTRYCODE TEXT NOT NULL, DISTRICT TEXT NOT NULL, POPULATION INTEGER NOT NULL);",
+        "starterCode": "SELECT NAME, DISTRICT, AVG(POPULATION) FROM CITY GROUP BY NAME, DISTRICT ORDER BY NAME, DISTRICT;",
+        "referenceSolution": "SELECT NAME AS CITY, DISTRICT, CAST(AVG(POPULATION) AS INTEGER) FROM CITY GROUP BY NAME, DISTRICT ORDER BY NAME, DISTRICT;",
+        "timeoutMs": 8000,
+        "tests": [
+          {
+            "seed": "INSERT INTO CITY VALUES (1,'A','X','D1',100),(2,'A','X','D1',200),(3,'A','X','D2',300);"
+          },
+          {
+            "seed": "INSERT INTO CITY VALUES (1,'B','X','X',50);"
+          },
+          {
+            "seed": "INSERT INTO CITY VALUES (1,'Z','X','D',10),(2,'Z','X','D',11);"
+          },
+          {
+            "seed": "INSERT INTO CITY VALUES (1,'M','X','N',1),(2,'M','X','N',2),(3,'M','X','O',10);"
+          }
+        ],
+        "orderMatters": true
+      }
+    },
+    {
+      "type": "sqlite",
+      "title": "Japan Population",
+      "content": {
+        "description": "Сумма населения по каждому `DISTRICT` для `COUNTRYCODE = 'JPN'`. Сортировка по `DISTRICT`.\n\n[HackerRank: Japan Population](https://www.hackerrank.com/challenges/japan-population/problem)",
+        "setup": "CREATE TABLE CITY(ID INTEGER PRIMARY KEY, NAME TEXT NOT NULL, COUNTRYCODE TEXT NOT NULL, DISTRICT TEXT NOT NULL, POPULATION INTEGER NOT NULL);",
+        "starterCode": "SELECT DISTRICT, SUM(POPULATION) FROM CITY WHERE COUNTRYCODE = 'CHN' GROUP BY DISTRICT ORDER BY DISTRICT;",
+        "referenceSolution": "SELECT DISTRICT, SUM(POPULATION) FROM CITY WHERE COUNTRYCODE = 'JPN' GROUP BY DISTRICT ORDER BY DISTRICT;",
+        "timeoutMs": 8000,
+        "tests": [
+          {
+            "seed": "INSERT INTO CITY VALUES (1,'Tokyo','JPN','Tokyo',9000000),(2,'Osaka','JPN','Osaka',3000000);"
+          },
+          {
+            "seed": "INSERT INTO CITY VALUES (1,'Kyoto','JPN','Kyoto',1500000),(2,'Nara','JPN','Kyoto',500000);"
+          },
+          {
+            "seed": "INSERT INTO CITY VALUES (1,'A','CHN','X',1);"
+          },
+          {
+            "seed": "INSERT INTO CITY VALUES (1,'S','JPN','Solo',100);"
+          }
+        ],
+        "orderMatters": true
+      }
+    },
+    {
+      "type": "sqlite",
+      "title": "Population Density Difference",
+      "content": {
+        "description": "Разница между **максимальной** и **минимальной** плотностью (`POPULATION / SURFACEAREA`) среди стран `CONTINENT = 'Asia'`. Округлите до ближайшего целого.\n\n[HackerRank: Population Density Difference](https://www.hackerrank.com/challenges/population-density-difference/problem)",
+        "setup": "CREATE TABLE COUNTRY(CODE TEXT PRIMARY KEY, NAME TEXT NOT NULL, CONTINENT TEXT NOT NULL, REGION TEXT NOT NULL, SURFACEAREA REAL NOT NULL);\nCREATE TABLE CITY(ID INTEGER PRIMARY KEY, NAME TEXT NOT NULL, COUNTRYCODE TEXT NOT NULL, DISTRICT TEXT NOT NULL, POPULATION INTEGER NOT NULL);",
+        "starterCode": "SELECT MAX(C.POPULATION * 1.0 / CO.SURFACEAREA) - MIN(C.POPULATION * 1.0 / CO.SURFACEAREA) FROM CITY C JOIN COUNTRY CO ON C.COUNTRYCODE = CO.CODE WHERE CO.CONTINENT = 'Europe';",
+        "referenceSolution": "SELECT CAST(ROUND(\n  MAX(C.POPULATION * 1.0 / CO.SURFACEAREA) - MIN(C.POPULATION * 1.0 / CO.SURFACEAREA)\n) AS INTEGER)\nFROM CITY C\nJOIN COUNTRY CO ON C.COUNTRYCODE = CO.CODE\nWHERE CO.CONTINENT = 'Asia';",
+        "timeoutMs": 8000,
+        "tests": [
+          {
+            "seed": "INSERT INTO COUNTRY VALUES ('A1','Big','Asia','R',1000),('A2','Small','Asia','R',500);\nINSERT INTO CITY VALUES (1,'C1','A1','D',500000),(2,'C2','A2','D',100000);"
+          },
+          {
+            "seed": "INSERT INTO COUNTRY VALUES ('X','Only','Asia','R',100);\nINSERT INTO CITY VALUES (1,'T','X','D',1000);"
+          },
+          {
+            "seed": "INSERT INTO COUNTRY VALUES ('A','A','Asia','R',10),('B','B','Europe','R',10);\nINSERT INTO CITY VALUES (1,'T','A','D',100),(2,'U','B','D',100);"
+          },
+          {
+            "seed": "INSERT INTO COUNTRY VALUES ('P','P','Asia','R',200),('Q','Q','Asia','R',400);\nINSERT INTO CITY VALUES (1,'a','P','d',1000),(2,'b','Q','d',8000);"
+          }
+        ],
+        "orderMatters": false
+      }
+    },
+    {
+      "type": "sqlite",
+      "title": "The Blunder",
+      "content": {
+        "description": "Сamantha посчитала среднюю зарплату, **удалив все нули** из строкового представления зарплаты. Верните `CEIL(истинное среднее) - CEIL(искажённое среднее)`.\n\n[HackerRank: The Blunder](https://www.hackerrank.com/challenges/the-blunder/problem)",
+        "setup": "CREATE TABLE EMPLOYEES(ID INTEGER PRIMARY KEY, NAME TEXT NOT NULL, SALARY INTEGER NOT NULL);",
+        "starterCode": "SELECT CEIL(AVG(SALARY)) FROM EMPLOYEES;",
+        "referenceSolution": "SELECT CEIL(AVG(SALARY)) - CEIL(AVG(CAST(REPLACE(CAST(SALARY AS TEXT), '0', '') AS REAL)))\nFROM EMPLOYEES\nWHERE REPLACE(CAST(SALARY AS TEXT), '0', '') <> '';",
+        "timeoutMs": 8000,
+        "tests": [
+          {
+            "seed": "INSERT INTO EMPLOYEES VALUES (1,\"A\",1000),(2,\"B\",2000),(3,\"C\",3000);"
+          },
+          {
+            "seed": "INSERT INTO EMPLOYEES VALUES (1,\"X\",1010),(2,\"Y\",2020);"
+          },
+          {
+            "seed": "INSERT INTO EMPLOYEES VALUES (1,\"S\",5050);"
+          },
+          {
+            "seed": "INSERT INTO EMPLOYEES VALUES (1,\"A\",100),(2,\"B\",200);"
+          }
+        ],
+        "orderMatters": false
+      }
+    },
+    {
+      "type": "sqlite",
+      "title": "Top Earners",
+      "content": {
+        "description": "Максимальная зарплата и число сотрудников с **этой** зарплатой. Колонки: `salary`, `count`.\n\n[HackerRank: Top Earners](https://www.hackerrank.com/challenges/top-earners/problem)",
+        "setup": "CREATE TABLE EMPLOYEES(ID INTEGER PRIMARY KEY, NAME TEXT NOT NULL, SALARY INTEGER NOT NULL);",
+        "starterCode": "SELECT MAX(SALARY) AS salary, COUNT(*) AS count FROM EMPLOYEES;",
+        "referenceSolution": "SELECT SALARY AS salary, COUNT(*) AS count FROM EMPLOYEES GROUP BY SALARY ORDER BY salary DESC LIMIT 1;",
+        "timeoutMs": 8000,
+        "tests": [
+          {
+            "seed": "INSERT INTO EMPLOYEES VALUES (1,\"A\",100),(2,\"B\",200),(3,\"C\",200);"
+          },
+          {
+            "seed": "INSERT INTO EMPLOYEES VALUES (1,\"S\",500);"
+          },
+          {
+            "seed": "INSERT INTO EMPLOYEES VALUES (1,\"A\",10),(2,\"B\",20),(3,\"C\",20);"
+          },
+          {
+            "seed": "INSERT INTO EMPLOYEES VALUES (1,\"X\",1),(2,\"Y\",2);"
+          }
+        ],
+        "orderMatters": false,
+        "checkColumnNames": true
+      }
+    },
+    {
+      "type": "sqlite",
+      "title": "Weather Observation Station 2",
+      "content": {
+        "description": "Средние `LAT_N` и `LONG_W` по таблице `STATION`, каждое округлено до **2** знаков.\n\n[HackerRank: Weather Observation Station 2](https://www.hackerrank.com/challenges/weather-observation-station-2/problem)",
+        "setup": "CREATE TABLE STATION(ID INTEGER PRIMARY KEY, CITY TEXT NOT NULL, STATE TEXT NOT NULL, LAT_N REAL NOT NULL, LONG_W REAL NOT NULL);",
+        "starterCode": "SELECT ROUND(AVG(LAT_N), 0), ROUND(AVG(LONG_W), 0) FROM STATION;",
+        "referenceSolution": "SELECT ROUND(AVG(LAT_N), 2), ROUND(AVG(LONG_W), 2) FROM STATION;",
+        "timeoutMs": 8000,
+        "tests": [
+          {
+            "seed": "INSERT INTO STATION VALUES (1,\"A\",\"S\",10,20),(2,\"B\",\"S\",20,30);"
+          },
+          {
+            "seed": "INSERT INTO STATION VALUES (1,\"S\",\"S\",1.005,2.555);"
+          },
+          {
+            "seed": "INSERT INTO STATION VALUES (1,\"X\",\"S\",0,0);"
+          },
+          {
+            "seed": "INSERT INTO STATION VALUES (1,\"A\",\"S\",-5,5),(2,\"B\",\"S\",5,-5);"
+          }
+        ],
+        "orderMatters": false,
+        "floatTolerance": 0.01
+      }
+    },
+    {
+      "type": "sqlite",
+      "title": "Weather Observation Station 13",
+      "content": {
+        "description": "Сумма `LAT_N` по `STATION`, **исключив** глобальный минимум и максимум широты.\n\n[HackerRank: Weather Observation Station 13](https://www.hackerrank.com/challenges/weather-observation-station-13/problem)",
+        "setup": "CREATE TABLE STATION(ID INTEGER PRIMARY KEY, CITY TEXT NOT NULL, STATE TEXT NOT NULL, LAT_N REAL NOT NULL, LONG_W REAL NOT NULL);",
+        "starterCode": "SELECT SUM(LAT_N) FROM STATION;",
+        "referenceSolution": "SELECT SUM(LAT_N) FROM STATION WHERE LAT_N NOT IN (SELECT MIN(LAT_N) FROM STATION UNION SELECT MAX(LAT_N) FROM STATION);",
+        "timeoutMs": 8000,
+        "tests": [
+          {
+            "seed": "INSERT INTO STATION VALUES (1,\"A\",\"S\",1,0),(2,\"B\",\"S\",5,0),(3,\"C\",\"S\",10,0);"
+          },
+          {
+            "seed": "INSERT INTO STATION VALUES (1,\"S\",\"S\",7,0);"
+          },
+          {
+            "seed": "INSERT INTO STATION VALUES (1,\"A\",\"S\",0,0),(2,\"B\",\"S\",10,0);"
+          },
+          {
+            "seed": "INSERT INTO STATION VALUES (1,\"X\",\"S\",2,0),(2,\"Y\",\"S\",3,0),(3,\"Z\",\"S\",4,0);"
+          }
+        ],
+        "orderMatters": false
+      }
+    },
+    {
+      "type": "sqlite",
+      "title": "Weather Observation Station 14",
+      "content": {
+        "description": "Средняя `LAT_N` (округлить до **2** знаков) среди станций с `LAT_N > 38.2445`. Одно число.\n\n[HackerRank: Weather Observation Station 14](https://www.hackerrank.com/challenges/weather-observation-station-14/problem)",
+        "setup": "CREATE TABLE STATION(ID INTEGER PRIMARY KEY, CITY TEXT NOT NULL, STATE TEXT NOT NULL, LAT_N REAL NOT NULL, LONG_W REAL NOT NULL);",
+        "starterCode": "SELECT ROUND(AVG(LAT_N), 2) FROM STATION WHERE LAT_N > 38.2445 AND LONG_W > 0;",
+        "referenceSolution": "SELECT ROUND(AVG(LAT_N), 2) FROM STATION WHERE LAT_N > 38.2445;",
+        "timeoutMs": 8000,
+        "tests": [
+          {
+            "seed": "INSERT INTO STATION VALUES (1,\"Low\",\"S\",30,0),(2,\"High\",\"S\",40,0),(3,\"Mid\",\"S\",39,0);"
+          },
+          {
+            "seed": "INSERT INTO STATION VALUES (1,\"A\",\"S\",38.3,0);"
+          },
+          {
+            "seed": "INSERT INTO STATION VALUES (1,\"Top\",\"S\",50,0),(2,\"Next\",\"S\",45,0);"
+          },
+          {
+            "seed": "INSERT INTO STATION VALUES (1,\"Solo\",\"S\",39.5,0);"
+          }
+        ],
+        "orderMatters": false,
+        "floatTolerance": 0.01
+      }
+    },
+    {
+      "type": "sqlite",
+      "title": "Weather Observation Station 15",
+      "content": {
+        "description": "Город с **максимальной** `LAT_N` среди **западного полушария** (`LONG_W < 0`) и **северного** (`LAT_N > 0`). Колонки `CITY`, `LAT_N`, `LONG_W`.\n\n[HackerRank: Weather Observation Station 15](https://www.hackerrank.com/challenges/weather-observation-station-15/problem)",
+        "setup": "CREATE TABLE STATION(ID INTEGER PRIMARY KEY, CITY TEXT NOT NULL, STATE TEXT NOT NULL, LAT_N REAL NOT NULL, LONG_W REAL NOT NULL);",
+        "starterCode": "SELECT CITY, LAT_N, LONG_W FROM STATION WHERE LONG_W < 0 ORDER BY LAT_N LIMIT 1;",
+        "referenceSolution": "SELECT CITY, LAT_N, LONG_W FROM STATION WHERE LONG_W < 0 AND LAT_N > 0 ORDER BY LAT_N DESC LIMIT 1;",
+        "timeoutMs": 8000,
+        "tests": [
+          {
+            "seed": "INSERT INTO STATION VALUES (1,\"A\",\"S\",40,-70),(2,\"B\",\"S\",30,-80),(3,\"C\",\"S\",50,10);"
+          },
+          {
+            "seed": "INSERT INTO STATION VALUES (1,\"South\",\"S\",-10,-50);"
+          },
+          {
+            "seed": "INSERT INTO STATION VALUES (1,\"Win\",\"S\",45,-100),(2,\"Lose\",\"S\",44,-100);"
+          },
+          {
+            "seed": "INSERT INTO STATION VALUES (1,\"Only\",\"S\",10,-1);"
+          }
+        ],
+        "orderMatters": false
+      }
+    },
+    {
+      "type": "sqlite",
+      "title": "Weather Observation Station 16",
+      "content": {
+        "description": "Станции с `LAT_N > 38.7880` и `LONG_W > 77.2318`. `LAT_N` — целая часть (truncate), `LONG_W` — округление **вверх** до 2 знаков (`CEIL(x*100)/100.0`). Сортировка по `LAT_N`.\n\n[HackerRank: Weather Observation Station 16](https://www.hackerrank.com/challenges/weather-observation-station-16/problem)",
+        "setup": "CREATE TABLE STATION(ID INTEGER PRIMARY KEY, CITY TEXT NOT NULL, STATE TEXT NOT NULL, LAT_N REAL NOT NULL, LONG_W REAL NOT NULL);",
+        "starterCode": "SELECT ROUND(LAT_N, 2), ROUND(LONG_W, 2) FROM STATION WHERE LAT_N > 38.7880 AND LONG_W > 77.2318 ORDER BY LAT_N;",
+        "referenceSolution": "SELECT CAST(LAT_N AS INTEGER) AS LAT_N, CEIL(LONG_W * 100) / 100.0 AS LONG_W FROM STATION WHERE LAT_N > 38.7880 AND LONG_W > 77.2318 ORDER BY LAT_N;",
+        "timeoutMs": 8000,
+        "tests": [
+          {
+            "seed": "INSERT INTO STATION VALUES (1,\"A\",\"S\",40.123,80.456);"
+          },
+          {
+            "seed": "INSERT INTO STATION VALUES (1,\"A\",\"S\",39.9,78.1),(2,\"B\",\"S\",50.2,90.0);"
+          },
+          {
+            "seed": "INSERT INTO STATION VALUES (1,\"X\",\"S\",38,77);"
+          },
+          {
+            "seed": "INSERT INTO STATION VALUES (1,\"P\",\"S\",45.999,88.001);"
+          }
+        ],
+        "orderMatters": true,
+        "floatTolerance": 0.02
+      }
+    },
+    {
+      "type": "sqlite",
+      "title": "Weather Observation Station 17",
+      "content": {
+        "description": "Сумма `LAT_N` для станций с `LAT_N` между `38.7880` и `137.234` и `LONG_W` между `-122.477` и `-45.756` (включительно). Округлите до **2** знаков.\n\n[HackerRank: Weather Observation Station 17](https://www.hackerrank.com/challenges/weather-observation-station-17/problem)",
+        "setup": "CREATE TABLE STATION(ID INTEGER PRIMARY KEY, CITY TEXT NOT NULL, STATE TEXT NOT NULL, LAT_N REAL NOT NULL, LONG_W REAL NOT NULL);",
+        "starterCode": "SELECT SUM(LAT_N) FROM STATION WHERE LAT_N > 38.7880 AND LAT_N < 137.234;",
+        "referenceSolution": "SELECT ROUND(SUM(LAT_N), 2) FROM STATION WHERE LAT_N BETWEEN 38.7880 AND 137.234 AND LONG_W BETWEEN -122.477 AND -45.756;",
+        "timeoutMs": 8000,
+        "tests": [
+          {
+            "seed": "INSERT INTO STATION VALUES (1,\"A\",\"S\",40,-100),(2,\"B\",\"S\",50,-90);"
+          },
+          {
+            "seed": "INSERT INTO STATION VALUES (1,\"Out\",\"S\",10,10);"
+          },
+          {
+            "seed": "INSERT INTO STATION VALUES (1,\"Edge\",\"S\",38.788,-122.477);"
+          },
+          {
+            "seed": "INSERT INTO STATION VALUES (1,\"X\",\"S\",100,0);"
+          }
+        ],
+        "orderMatters": false,
+        "floatTolerance": 0.01
+      }
+    },
+    {
+      "type": "sqlite",
+      "title": "Weather Observation Station 18",
+      "content": {
+        "description": "Города **не** из Калифорнии (`STATE <> 'CA'`). Сортировка по `CITY`.\n\n[HackerRank: Weather Observation Station 18](https://www.hackerrank.com/challenges/weather-observation-station-18/problem)",
+        "setup": "CREATE TABLE STATION(ID INTEGER PRIMARY KEY, CITY TEXT NOT NULL, STATE TEXT NOT NULL, LAT_N REAL NOT NULL, LONG_W REAL NOT NULL);",
+        "starterCode": "SELECT CITY FROM STATION WHERE STATE = 'CA' ORDER BY CITY;",
+        "referenceSolution": "SELECT CITY FROM STATION WHERE STATE <> 'CA' ORDER BY CITY;",
+        "timeoutMs": 8000,
+        "tests": [
+          {
+            "seed": "INSERT INTO STATION VALUES (1,'LA','CA',0,0),(2,'NY','NY',0,0);"
+          },
+          {
+            "seed": "INSERT INTO STATION VALUES (1,'OnlyCA','CA',0,0);"
+          },
+          {
+            "seed": "INSERT INTO STATION VALUES (1,'A','TX',0,0),(2,'B','TX',0,0);"
+          },
+          {
+            "seed": "INSERT INTO STATION VALUES (1,'Z','FL',0,0);"
+          }
+        ],
+        "orderMatters": true
+      }
+    },
+    {
+      "type": "sqlite",
+      "title": "Weather Observation Station 19",
+      "content": {
+        "description": "Разница между `(MAX(LAT_N) - MIN(LAT_N))` и `(MAX(LONG_W) - MIN(LONG_W))` по `STATION`. Округлите до **4** знаков.\n\n[HackerRank: Weather Observation Station 19](https://www.hackerrank.com/challenges/weather-observation-station-19/problem)",
+        "setup": "CREATE TABLE STATION(ID INTEGER PRIMARY KEY, CITY TEXT NOT NULL, STATE TEXT NOT NULL, LAT_N REAL NOT NULL, LONG_W REAL NOT NULL);",
+        "starterCode": "SELECT MAX(LAT_N) - MIN(LAT_N) FROM STATION;",
+        "referenceSolution": "SELECT ROUND((MAX(LAT_N) - MIN(LAT_N)) - (MAX(LONG_W) - MIN(LONG_W)), 4) FROM STATION;",
+        "timeoutMs": 8000,
+        "tests": [
+          {
+            "seed": "INSERT INTO STATION VALUES (1,\"A\",\"S\",0,0),(2,\"B\",\"S\",10,5);"
+          },
+          {
+            "seed": "INSERT INTO STATION VALUES (1,\"S\",\"S\",7,3);"
+          },
+          {
+            "seed": "INSERT INTO STATION VALUES (1,\"A\",\"S\",-5,10),(2,\"B\",\"S\",5,-10);"
+          },
+          {
+            "seed": "INSERT INTO STATION VALUES (1,\"X\",\"S\",1,1),(2,\"Y\",\"S\",2,4);"
+          }
+        ],
+        "orderMatters": false,
+        "floatTolerance": 0.0001
+      }
+    },
+    {
+      "type": "sqlite",
+      "title": "Weather Observation Station 20",
+      "content": {
+        "description": "**Медиана** `LAT_N` для северных станций (`LAT_N > 0`). Одно число, округлённое до **4** знаков (нижний средний элемент при чётном числе строк).\n\n[HackerRank: Weather Observation Station 20](https://www.hackerrank.com/challenges/weather-observation-station-20/problem)",
+        "setup": "CREATE TABLE STATION(ID INTEGER PRIMARY KEY, CITY TEXT NOT NULL, STATE TEXT NOT NULL, LAT_N REAL NOT NULL, LONG_W REAL NOT NULL);",
+        "starterCode": "SELECT AVG(LAT_N) FROM STATION WHERE LAT_N > 0;",
+        "referenceSolution": "SELECT ROUND(\n  (SELECT LAT_N FROM STATION WHERE LAT_N > 0 ORDER BY LAT_N LIMIT 1 OFFSET (SELECT (COUNT(*) - 1) / 2 FROM STATION WHERE LAT_N > 0)),\n  4\n);",
+        "timeoutMs": 8000,
+        "tests": [
+          {
+            "seed": "INSERT INTO STATION VALUES (1,\"A\",\"S\",1,0),(2,\"B\",\"S\",3,0),(3,\"C\",\"S\",5,0);"
+          },
+          {
+            "seed": "INSERT INTO STATION VALUES (1,\"S\",\"S\",10,0);"
+          },
+          {
+            "seed": "INSERT INTO STATION VALUES (1,\"A\",\"S\",2,0),(2,\"B\",\"S\",4,0),(3,\"C\",\"S\",6,0),(4,\"D\",\"S\",8,0);"
+          },
+          {
+            "seed": "INSERT INTO STATION VALUES (1,\"N\",\"S\",-1,0),(2,\"P\",\"S\",7,0);"
+          }
+        ],
+        "orderMatters": false,
+        "floatTolerance": 0.0001
+      }
+    },
+    {
+      "type": "quiz",
+      "title": "Итоговый тест модуля",
+      "content": {
+        "question": "Чем `COUNT(*)` отличается от `COUNT(DISTINCT col)`?",
+        "options": [
+          "COUNT(*) считает строки, COUNT(DISTINCT) — уникальные значения",
+          "Ничем",
+          "COUNT(*) игнорирует NULL",
+          "COUNT(DISTINCT) быстрее всегда"
+        ],
+        "correctIndices": [
+          0
+        ]
+      }
+    }
+  ]
+}

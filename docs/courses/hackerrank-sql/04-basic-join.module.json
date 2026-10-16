@@ -1,0 +1,248 @@
+{
+  "schemaVersion": 1,
+  "title": "Basic Join",
+  "steps": [
+    {
+      "type": "theory",
+      "title": "JOIN и отчёты",
+      "content": "## Basic Join\n\n- **`INNER JOIN`**, **`LEFT JOIN`**, `HAVING` после группировки.\n- Отчёты по оценкам — `CASE` + сортировка.\n- HackerRank contest schema: `Hackers`, `Submissions`, `Challenges`."
+    },
+    {
+      "type": "svg",
+      "title": "Схема: Basic Join",
+      "content": {
+        "caption": "JOIN связывает ключи двух таблиц",
+        "description": "Leaderboard: SUM(score) с HAVING > 0.",
+        "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 280 80\" width=\"100%\" role=\"img\" aria-label=\"Basic Join\"><rect id=\"hr04-box\" x=\"40\" y=\"15\" width=\"200\" height=\"50\" rx=\"4\" fill=\"#e3f2fd\" stroke=\"#1565c0\"/><text x=\"140\" y=\"45\" text-anchor=\"middle\" font-size=\"12\" fill=\"#0d47a1\">Basic Join</text></svg>"
+      }
+    },
+    {
+      "type": "sqlite",
+      "title": "Population Census",
+      "content": {
+        "description": "Сумма `POPULATION` городов стран, у которых `NAME` **начинается с `P`** (таблицы `CITY`, `COUNTRY`).\n\n[HackerRank: Population Census](https://www.hackerrank.com/challenges/population-census/problem)",
+        "setup": "CREATE TABLE COUNTRY(CODE TEXT PRIMARY KEY, NAME TEXT NOT NULL, CONTINENT TEXT NOT NULL, REGION TEXT NOT NULL, SURFACEAREA REAL NOT NULL);\nCREATE TABLE CITY(ID INTEGER PRIMARY KEY, NAME TEXT NOT NULL, COUNTRYCODE TEXT NOT NULL, DISTRICT TEXT NOT NULL, POPULATION INTEGER NOT NULL);",
+        "starterCode": "SELECT SUM(C.POPULATION) FROM CITY C JOIN COUNTRY CO ON C.COUNTRYCODE = CO.CODE WHERE CO.NAME LIKE 'A%';",
+        "referenceSolution": "SELECT SUM(C.POPULATION) FROM CITY C JOIN COUNTRY CO ON C.COUNTRYCODE = CO.CODE WHERE CO.NAME LIKE 'P%';",
+        "timeoutMs": 8000,
+        "tests": [
+          {
+            "seed": "INSERT INTO COUNTRY VALUES ('PA','Pakistan','Asia','South',800000);\nINSERT INTO CITY VALUES (1,'Karachi','PA','S',15000000);"
+          },
+          {
+            "seed": "INSERT INTO COUNTRY VALUES ('US','United States','North America','NA',9000000);\nINSERT INTO CITY VALUES (1,'NYC','US','NY',8000000);"
+          },
+          {
+            "seed": "INSERT INTO COUNTRY VALUES ('PT','Portugal','Europe','E',90000),('FR','France','Europe','E',500000);\nINSERT INTO CITY VALUES (1,'Lisbon','PT','L',500000),(2,'Paris','FR','P',2000000);"
+          },
+          {
+            "seed": "INSERT INTO COUNTRY VALUES ('PL','Poland','Europe','E',300000);\nINSERT INTO CITY VALUES (1,'Warsaw','PL','M',1700000);"
+          }
+        ],
+        "orderMatters": false
+      }
+    },
+    {
+      "type": "sqlite",
+      "title": "African Cities",
+      "content": {
+        "description": "Имена городов (`City`) в **Africa** (`CONTINENT = 'Africa'`). Сортировка по `City`.\n\n[HackerRank: African Cities](https://www.hackerrank.com/challenges/african-cities/problem)",
+        "setup": "CREATE TABLE COUNTRY(CODE TEXT PRIMARY KEY, NAME TEXT NOT NULL, CONTINENT TEXT NOT NULL, REGION TEXT NOT NULL);\nCREATE TABLE CITY(ID INTEGER PRIMARY KEY, NAME TEXT NOT NULL, COUNTRYCODE TEXT NOT NULL, DISTRICT TEXT NOT NULL, POPULATION INTEGER NOT NULL);",
+        "starterCode": "SELECT CITY.NAME FROM CITY JOIN COUNTRY ON CITY.COUNTRYCODE = COUNTRY.CODE WHERE COUNTRY.CONTINENT = 'Asia' ORDER BY CITY.NAME;",
+        "referenceSolution": "SELECT CITY.NAME AS City FROM CITY JOIN COUNTRY ON CITY.COUNTRYCODE = COUNTRY.CODE WHERE COUNTRY.CONTINENT = 'Africa' ORDER BY CITY.NAME;",
+        "timeoutMs": 8000,
+        "tests": [
+          {
+            "seed": "INSERT INTO COUNTRY VALUES ('EG','Egypt','Africa','North');\nINSERT INTO CITY VALUES (1,'Cairo','EG','C',9000000);"
+          },
+          {
+            "seed": "INSERT INTO COUNTRY VALUES ('JP','Japan','Asia','East');\nINSERT INTO CITY VALUES (1,'Tokyo','JP','T',9000000);"
+          },
+          {
+            "seed": "INSERT INTO COUNTRY VALUES ('ZA','South Africa','Africa','South'),('NG','Nigeria','Africa','West');\nINSERT INTO CITY VALUES (1,'Joburg','ZA','G',4000000),(2,'Lagos','NG','L',10000000);"
+          },
+          {
+            "seed": "INSERT INTO COUNTRY VALUES ('KE','Kenya','Africa','East');\nINSERT INTO CITY VALUES (1,'Nairobi','KE','N',3000000);"
+          }
+        ],
+        "orderMatters": true,
+        "checkColumnNames": true
+      }
+    },
+    {
+      "type": "sqlite",
+      "title": "Average Population of Each Continent",
+      "content": {
+        "description": "По каждому `CONTINENT`: средняя `POPULATION` городов, **округлённая вниз** до целого. Сортировка по `CONTINENT`.\n\n[HackerRank: Average Population of Each Continent](https://www.hackerrank.com/challenges/average-population-of-each-continent/problem)",
+        "setup": "CREATE TABLE COUNTRY(CODE TEXT PRIMARY KEY, NAME TEXT NOT NULL, CONTINENT TEXT NOT NULL, REGION TEXT NOT NULL, SURFACEAREA REAL NOT NULL);\nCREATE TABLE CITY(ID INTEGER PRIMARY KEY, NAME TEXT NOT NULL, COUNTRYCODE TEXT NOT NULL, DISTRICT TEXT NOT NULL, POPULATION INTEGER NOT NULL);",
+        "starterCode": "SELECT CO.CONTINENT, AVG(C.POPULATION) FROM CITY C JOIN COUNTRY CO ON C.COUNTRYCODE = CO.CODE GROUP BY CO.CONTINENT ORDER BY CO.CONTINENT DESC;",
+        "referenceSolution": "SELECT CO.CONTINENT, CAST(AVG(C.POPULATION) AS INTEGER) FROM CITY C JOIN COUNTRY CO ON C.COUNTRYCODE = CO.CODE GROUP BY CO.CONTINENT ORDER BY CO.CONTINENT;",
+        "timeoutMs": 8000,
+        "tests": [
+          {
+            "seed": "INSERT INTO COUNTRY VALUES ('A','A','Asia','R',1),('B','B','Europe','R',1);\nINSERT INTO CITY VALUES (1,'X','A','D',100),(2,'Y','A','D',200),(3,'Z','B','D',50);"
+          },
+          {
+            "seed": "INSERT INTO COUNTRY VALUES ('C','C','Africa','R',1);\nINSERT INTO CITY VALUES (1,'Solo','C','D',999);"
+          },
+          {
+            "seed": "INSERT INTO COUNTRY VALUES ('U','U','North America','R',1);\nINSERT INTO CITY VALUES (1,'A','U','D',10),(2,'B','U','D',20);"
+          },
+          {
+            "seed": "INSERT INTO COUNTRY VALUES ('P','P','Asia','R',1),('Q','Q','Asia','R',1);\nINSERT INTO CITY VALUES (1,'a','P','d',1),(2,'b','Q','d',3);"
+          }
+        ],
+        "orderMatters": true
+      }
+    },
+    {
+      "type": "sqlite",
+      "title": "The Report",
+      "content": {
+        "description": "Для каждого студента с `MARKS > 0` верните **`Grade`**, **`NAME`**. Шкала: `MARKS >= 90 → 1`, `>= 80 → 2`, `>= 70 → 3`, `>= 60 → 4`, `>= 50 → 5`, `>= 40 → 6`, `>= 30 → 7`, `>= 20 → 8`, `>= 10 → 9`, `< 10 → 10`. Сортировка: `Grade` возр., `NAME` возр.\n\n[HackerRank: The Report](https://www.hackerrank.com/challenges/the-report/problem)",
+        "setup": "CREATE TABLE STUDENTS(ID INTEGER PRIMARY KEY, NAME TEXT NOT NULL, MARKS INTEGER NOT NULL);",
+        "starterCode": "SELECT MARKS, NAME FROM STUDENTS WHERE MARKS > 0 ORDER BY MARKS DESC, NAME;",
+        "referenceSolution": "SELECT\n  CASE\n    WHEN MARKS >= 90 THEN 1\n    WHEN MARKS >= 80 THEN 2\n    WHEN MARKS >= 70 THEN 3\n    WHEN MARKS >= 60 THEN 4\n    WHEN MARKS >= 50 THEN 5\n    WHEN MARKS >= 40 THEN 6\n    WHEN MARKS >= 30 THEN 7\n    WHEN MARKS >= 20 THEN 8\n    WHEN MARKS >= 10 THEN 9\n    ELSE 10\n  END AS Grade,\n  NAME\nFROM STUDENTS\nWHERE MARKS > 0\nORDER BY Grade ASC, NAME ASC;",
+        "timeoutMs": 8000,
+        "tests": [
+          {
+            "seed": "INSERT INTO STUDENTS VALUES (1,'Amy',90),(2,'Bob',82),(3,'Cal',67);"
+          },
+          {
+            "seed": "INSERT INTO STUDENTS VALUES (1,'Zed',95),(2,'Ann',95);"
+          },
+          {
+            "seed": "INSERT INTO STUDENTS VALUES (1,'Zero',0),(2,'Low',5);"
+          },
+          {
+            "seed": "INSERT INTO STUDENTS VALUES (1,'A',100);"
+          }
+        ],
+        "orderMatters": true,
+        "checkColumnNames": true
+      }
+    },
+    {
+      "type": "sqlite",
+      "title": "Top Competitors",
+      "content": {
+        "description": "Студенты с `MARKS >= 70`: `Name` и метка **`The Minion(s)`**, иначе **`The Coffee Bean(s)`**. Сортировка по `Name`.\n\n[HackerRank: Top Competitors](https://www.hackerrank.com/challenges/top-competitors/problem)",
+        "setup": "CREATE TABLE STUDENTS(ID INTEGER PRIMARY KEY, NAME TEXT NOT NULL, MARKS INTEGER NOT NULL);",
+        "starterCode": "SELECT NAME, 'The Coffee Bean(s)' FROM STUDENTS ORDER BY NAME;",
+        "referenceSolution": "SELECT NAME,\n  CASE WHEN MARKS >= 70 THEN 'The Minion(s)' ELSE 'The Coffee Bean(s)' END\nFROM STUDENTS\nORDER BY NAME;",
+        "timeoutMs": 8000,
+        "tests": [
+          {
+            "seed": "INSERT INTO STUDENTS VALUES (1,'Amy',90),(2,'Bob',60);"
+          },
+          {
+            "seed": "INSERT INTO STUDENTS VALUES (1,'Solo',70);"
+          },
+          {
+            "seed": "INSERT INTO STUDENTS VALUES (1,'A',69),(2,'B',70);"
+          },
+          {
+            "seed": "INSERT INTO STUDENTS VALUES (1,'Zed',100);"
+          }
+        ],
+        "orderMatters": true
+      }
+    },
+    {
+      "type": "sqlite",
+      "title": "Ollivander's Inventory",
+      "content": {
+        "description": "Связь `Wands.id = Wands_Property.magic_wand_id`. Группировка по `(W.code, WP.age, идеальность: WP.min_safety_level <= WP.max_safety_level)`. Для **идеальных** палочек — `MIN(W.coins_needed)`, для **неидеальных** — `MAX(W.coins_needed)`; колонки **`code`**, **`age`**, **`coins`**. Сортировка: `code`, `age`, `coins`.\n\n[HackerRank: Ollivander's Inventory](https://www.hackerrank.com/challenges/ollivanders-inventory/problem)",
+        "setup": "CREATE TABLE Wands(id INTEGER PRIMARY KEY, code INTEGER NOT NULL, coins_needed INTEGER NOT NULL, power INTEGER NOT NULL, age INTEGER NOT NULL);\nCREATE TABLE Wands_Property(magic_wand_id INTEGER PRIMARY KEY, age INTEGER NOT NULL, is_rare INTEGER NOT NULL, min_safety_level INTEGER NOT NULL, max_safety_level INTEGER NOT NULL);",
+        "starterCode": "SELECT W.code, WP.age, MIN(W.coins_needed) FROM Wands W JOIN Wands_Property WP ON W.id = WP.magic_wand_id GROUP BY W.code, WP.age ORDER BY W.code, WP.age;",
+        "referenceSolution": "SELECT W.code, WP.age,\n  CASE WHEN WP.min_safety_level <= WP.max_safety_level THEN MIN(W.coins_needed) ELSE MAX(W.coins_needed) END AS coins\nFROM Wands W\nJOIN Wands_Property WP ON W.id = WP.magic_wand_id\nGROUP BY W.code, WP.age, WP.min_safety_level <= WP.max_safety_level\nORDER BY W.code, WP.age, coins;",
+        "timeoutMs": 8000,
+        "tests": [
+          {
+            "seed": "INSERT INTO Wands VALUES (1,10,5,100,5),(2,10,8,100,5);\nINSERT INTO Wands_Property VALUES (1,5,0,1,3),(2,5,0,4,2);"
+          },
+          {
+            "seed": "INSERT INTO Wands VALUES (1,1,3,10,1);\nINSERT INTO Wands_Property VALUES (1,1,0,1,5);"
+          },
+          {
+            "seed": "INSERT INTO Wands VALUES (1,2,4,10,2),(2,2,9,10,2);\nINSERT INTO Wands_Property VALUES (1,2,0,5,3),(2,2,0,1,4);"
+          },
+          {
+            "seed": "INSERT INTO Wands VALUES (1,3,7,10,3);\nINSERT INTO Wands_Property VALUES (1,3,1,2,2);"
+          }
+        ],
+        "orderMatters": true
+      }
+    },
+    {
+      "type": "sqlite",
+      "title": "Challenges",
+      "content": {
+        "description": "Список имён задач (`Challenges`) с `contest_id`. Сортировка: `contest_id`, `Challenges`.\n\n[HackerRank: Challenges](https://www.hackerrank.com/challenges/challenges/problem)",
+        "setup": "CREATE TABLE Contests(contest_id INTEGER PRIMARY KEY, hacker_id INTEGER NOT NULL, name TEXT NOT NULL);\nCREATE TABLE Challenges(challenge_id INTEGER PRIMARY KEY, contest_id INTEGER NOT NULL, name TEXT NOT NULL);",
+        "starterCode": "SELECT C.name FROM Challenges C ORDER BY C.name;",
+        "referenceSolution": "SELECT C.contest_id, C.name AS Challenges FROM Challenges C ORDER BY C.contest_id, C.name;",
+        "timeoutMs": 8000,
+        "tests": [
+          {
+            "seed": "INSERT INTO Contests VALUES (1,1,'Spring');\nINSERT INTO Challenges VALUES (1,1,'Alpha'),(2,1,'Beta');"
+          },
+          {
+            "seed": "INSERT INTO Contests VALUES (2,2,'Fall');\nINSERT INTO Challenges VALUES (3,2,'Zed'),(4,2,'Ann');"
+          },
+          {
+            "seed": "INSERT INTO Contests VALUES (1,1,'A'),(2,2,'B');\nINSERT INTO Challenges VALUES (1,2,'Solo');"
+          },
+          {
+            "seed": "INSERT INTO Contests VALUES (1,1,'X');\nINSERT INTO Challenges VALUES (1,1,'A'),(2,1,'A');"
+          }
+        ],
+        "orderMatters": true,
+        "checkColumnNames": true
+      }
+    },
+    {
+      "type": "sqlite",
+      "title": "Contest Leaderboard",
+      "content": {
+        "description": "Для каждого участника с **положительной** суммой баллов: `hacker_id`, `name`, `total_score`. Сортировка: `total_score` убыв., `hacker_id` возр.\n\n[HackerRank: Contest Leaderboard](https://www.hackerrank.com/challenges/contest-leaderboard/problem)",
+        "setup": "CREATE TABLE Hackers(hacker_id INTEGER PRIMARY KEY, name TEXT NOT NULL);\nCREATE TABLE Submissions(submission_id INTEGER PRIMARY KEY, hacker_id INTEGER NOT NULL, challenge_id INTEGER NOT NULL, score INTEGER NOT NULL);\nCREATE TABLE Challenges(challenge_id INTEGER PRIMARY KEY, contest_id INTEGER NOT NULL, name TEXT NOT NULL);",
+        "starterCode": "SELECT h.hacker_id, h.name, SUM(s.score) AS total_score FROM Hackers h JOIN Submissions s ON h.hacker_id = s.hacker_id GROUP BY h.hacker_id, h.name ORDER BY total_score;",
+        "referenceSolution": "SELECT h.hacker_id, h.name, SUM(s.score) AS total_score\nFROM Hackers h\nJOIN Submissions s ON h.hacker_id = s.hacker_id\nGROUP BY h.hacker_id, h.name\nHAVING SUM(s.score) > 0\nORDER BY total_score DESC, h.hacker_id ASC;",
+        "timeoutMs": 8000,
+        "tests": [
+          {
+            "seed": "INSERT INTO Hackers VALUES (1,\"Amy\"),(2,\"Bob\"),(3,\"Cal\");\nINSERT INTO Challenges VALUES (1,1,\"A\"),(2,1,\"B\");\nINSERT INTO Submissions VALUES (1,1,1,30),(2,1,2,20),(3,2,1,0),(4,3,2,50);"
+          },
+          {
+            "seed": "INSERT INTO Hackers VALUES (1,\"Solo\");\nINSERT INTO Challenges VALUES (1,1,\"A\");\nINSERT INTO Submissions VALUES (1,1,1,10);"
+          },
+          {
+            "seed": "INSERT INTO Hackers VALUES (1,\"A\"),(2,\"B\");\nINSERT INTO Challenges VALUES (1,1,\"X\");\nINSERT INTO Submissions VALUES (1,1,1,5),(2,2,1,5);"
+          },
+          {
+            "seed": "INSERT INTO Hackers VALUES (1,\"Z\"),(2,\"A\");\nINSERT INTO Challenges VALUES (1,1,\"Q\");\nINSERT INTO Submissions VALUES (1,2,1,100),(2,1,1,100);"
+          }
+        ],
+        "orderMatters": true,
+        "checkColumnNames": true
+      }
+    },
+    {
+      "type": "quiz",
+      "title": "Итоговый тест модуля",
+      "content": {
+        "question": "Как найти студентов **без** placement?",
+        "options": [
+          "INNER JOIN Placements",
+          "LEFT JOIN Placements WHERE Placements.student_id IS NULL",
+          "CROSS JOIN",
+          "UNION"
+        ],
+        "correctIndices": [
+          1
+        ]
+      }
+    }
+  ]
+}

@@ -2,12 +2,12 @@ import { z } from 'zod';
 
 import {
   QuizContentSchema,
-  RegexContentSchema,
   SqliteContentSchema,
   SvgContentSchema,
   TheoryContentSchema,
 } from './generated/content-schemas.zod';
 import { JavascriptContentWithTargetSchema } from './javascript-content-target';
+import { RegexContentWithOptionsSchema } from './regex-content-options';
 
 const stepTitleSchema = z.string().min(1).max(200);
 
@@ -51,7 +51,7 @@ export const ImportStepSchema = z.discriminatedUnion('type', [
     .object({
       type: z.literal('regex'),
       title: stepTitleSchema,
-      content: RegexContentSchema,
+      content: RegexContentWithOptionsSchema,
     })
     .strict(),
 ]);

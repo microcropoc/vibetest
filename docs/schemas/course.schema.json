@@ -75,7 +75,7 @@
         "type": {
           "type": "string",
           "enum": ["theory", "svg", "quiz", "javascript", "sqlite", "regex"],
-          "description": "Тип шага: theory — Markdown-теория (строка content); svg — inline SVG (объект); quiz — тест с вариантами; javascript — JS-практика с dual-run проверкой; sqlite — SQL-практика в sql.js; regex — практика с RegExp.test. content обязан соответствовать выбранному type."
+          "description": "Тип шага: theory — Markdown-теория (строка content); svg — inline SVG (объект); quiz — тест с вариантами; javascript — JS-практика с dual-run проверкой; sqlite — SQL-практика в sql.js; regex — практика RegExp (mode: test, fullMatch, match, matchAll, replace, split). content обязан соответствовать выбранному type."
         },
         "title": {
           "type": "string",
@@ -409,7 +409,7 @@
     },
     "regexContent": {
       "type": "object",
-      "description": "Практика regex: starterCode и referenceSolution — строки паттернов; для каждого tests[].input сравнивается boolean RegExp.test(input) у ученика и эталона.",
+      "description": "Практика regex (ECMAScript RegExp в браузере): starterCode и referenceSolution — паттерн (строка для new RegExp или литерал /pattern/flags при answerFormat: literal). Для каждого tests[].input у ученика и эталона выполняется mode (default test — RegExp.test) и сравниваются сериализованные результаты. Не PCRE: нет atomic/possessive групп, рекурсии, conditionals, якорей \\A/\\Z. Флаг v и lookbehind — Safari 16.4+.",
       "required": ["description", "starterCode", "referenceSolution", "timeoutMs", "tests"],
       "additionalProperties": false,
       "properties": {
@@ -422,25 +422,50 @@
         "starterCode": {
           "type": "string",
           "maxLength": 2000,
-          "description": "Начальный паттерн (строка для RegExp)."
+          "description": "Начальный ответ в редакторе: патtern (answerFormat pattern) или литерал /pattern/flags (answerFormat literal)."
         },
         "referenceSolution": {
           "type": "string",
           "minLength": 1,
           "maxLength": 2000,
-          "description": "Эталонный паттерн."
+          "description": "Эталонный паттерн или литерал; должен проходить все tests."
+        },
+        "flags": {
+          "type": "string",
+          "maxLength": 8,
+          "pattern": "^(?:([gimsuvyd])(?!.*\\1))*$",
+          "description": "Флаги RegExp (g i m s u v y d), без повторов; только при answerFormat pattern (default). u и v вместе недопустимы (проверка при импорте). Для matchAll без g флаг g добавляется автоматически."
+        },
+        "answerFormat": {
+          "type": "string",
+          "enum": ["pattern", "literal"],
+          "description": "pattern (default): starterCode/referenceSolution — тело паттерна, флаги в content.flags. literal: ответ как /pattern/flags; content.flags не задают."
+        },
+        "mode": {
+          "type": "string",
+          "enum": ["test", "fullMatch", "match", "matchAll", "replace", "split"],
+          "description": "test (default): RegExp.test. fullMatch: вся строка совпадает. match: первый RegExp.exec (match, index, groups). matchAll: все совпадения (g добавляется при необходимости). replace: String.replace с content.replacement. split: String.split."
+        },
+        "replacement": {
+          "type": "string",
+          "maxLength": 2000,
+          "description": "Строка замены для mode replace ($1, $<name> и т.д.). Обязательна при mode replace; иначе не задавать."
+        },
+        "unordered": {
+          "type": "boolean",
+          "description": "true: для mode matchAll сравнение совпадений как мультимножество (порядок и index не важны). false/отсутствие — порядок массива важен."
         },
         "timeoutMs": {
           "type": "integer",
           "minimum": 100,
           "maximum": 30000,
-          "description": "Лимит времени на шаг (мс)."
+          "description": "Лимит времени на шаг (мс): regexInit + все tests одним deadline."
         },
         "tests": {
           "type": "array",
           "minItems": 1,
           "maxItems": 50,
-          "description": "Входные строки для проверки .test().",
+          "description": "Тест-кейсы: входная строка input для каждого mode.",
           "items": {
             "type": "object",
             "required": ["input"],
@@ -448,8 +473,8 @@
             "properties": {
               "input": {
                 "type": "string",
-                "maxLength": 2000,
-                "description": "Строка, передаваемая в RegExp.test."
+                "maxLength": 10000,
+                "description": "Входная строка для проверки (test, match, replace, split и т.д.)."
               }
             }
           }

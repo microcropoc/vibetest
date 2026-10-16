@@ -1,0 +1,27 @@
+<div class="regex-result-diff">
+  <section class="regex-result-diff__input">
+    <h3 class="regex-result-diff__title">Вход</h3>
+    <pre class="regex-result-diff__input-text" aria-label="Входная строка"><code>@for (segment of inputSegments(); track $index) {
+@if (segment.highlight) {
+<mark class="regex-result-diff__mark">{{ segment.text }}</mark>
+} @else {
+{{ segment.text }}
+}
+}</code></pre>
+    @if (inputTruncated()) {
+      <p class="regex-result-diff__truncated">Показана только часть входной строки.</p>
+    }
+  </section>
+
+  <div class="regex-result-diff__results">
+    @for (side of sides(); track side.key) {
+      <section class="regex-result-diff__side" [attr.data-side]="side.key">
+        <h3 class="regex-result-diff__title">{{ side.title }}</h3>
+        <pre class="regex-result-diff__value"><code>{{ formatResult(side.result) }}</code></pre>
+        @if (resultTruncated(side.result)) {
+          <p class="regex-result-diff__truncated">Показана только часть результата.</p>
+        }
+      </section>
+    }
+  </div>
+</div>

@@ -1,7 +1,10 @@
+import type { RegexCaseDiff } from '../../execution/regex-result';
 import type { SqliteCaseDiff } from '../../execution/sqlite-result-table';
 
 /** Step-specific explanation of a failed case, shown next to the message. */
-export type PracticeFailureDetails = { readonly kind: 'sqlite'; readonly diff: SqliteCaseDiff };
+export type PracticeFailureDetails =
+  | { readonly kind: 'sqlite'; readonly diff: SqliteCaseDiff }
+  | { readonly kind: 'regex'; readonly diff: RegexCaseDiff };
 
 export type PracticeRunResult =
   | {

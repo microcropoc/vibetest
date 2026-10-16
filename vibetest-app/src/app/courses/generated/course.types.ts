@@ -23,7 +23,7 @@ export type Step = {
 } & {
   stepId: Uuid;
   /**
-   * Тип шага: theory — Markdown-теория (строка content); svg — inline SVG (объект); quiz — тест с вариантами; javascript — JS-практика с dual-run проверкой; sqlite — SQL-практика в sql.js; regex — практика с RegExp.test. content обязан соответствовать выбранному type.
+   * Тип шага: theory — Markdown-теория (строка content); svg — inline SVG (объект); quiz — тест с вариантами; javascript — JS-практика с dual-run проверкой; sqlite — SQL-практика в sql.js; regex — практика RegExp (mode: test, fullMatch, match, matchAll, replace, split). content обязан соответствовать выбранному type.
    */
   type: "theory" | "svg" | "quiz" | "javascript" | "sqlite" | "regex";
   /**
@@ -34,7 +34,7 @@ export type Step = {
 } & {
   stepId: Uuid;
   /**
-   * Тип шага: theory — Markdown-теория (строка content); svg — inline SVG (объект); quiz — тест с вариантами; javascript — JS-практика с dual-run проверкой; sqlite — SQL-практика в sql.js; regex — практика с RegExp.test. content обязан соответствовать выбранному type.
+   * Тип шага: theory — Markdown-теория (строка content); svg — inline SVG (объект); quiz — тест с вариантами; javascript — JS-практика с dual-run проверкой; sqlite — SQL-практика в sql.js; regex — практика RegExp (mode: test, fullMatch, match, matchAll, replace, split). content обязан соответствовать выбранному type.
    */
   type: "theory" | "svg" | "quiz" | "javascript" | "sqlite" | "regex";
   /**

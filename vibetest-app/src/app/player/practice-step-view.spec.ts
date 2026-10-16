@@ -131,6 +131,30 @@ describe('practiceFeedbackFromResult', () => {
       sqlDiff: diff,
     });
   });
+
+  it('passes the regex result diff of the failed case to the view', () => {
+    const diff = {
+      mode: 'test' as const,
+      inputPreview: 'x',
+      inputTruncated: false,
+      user: { kind: 'test' as const, value: false },
+      expected: { kind: 'test' as const, value: true },
+    };
+    expect(
+      practiceFeedbackFromResult({
+        ok: false,
+        failedTestIndex: 0,
+        totalTests: 1,
+        message: 'RegExp.test results do not match',
+        details: { kind: 'regex', diff },
+      }),
+    ).toEqual({
+      kind: 'error',
+      message: 'Проверка 1 не пройдена: RegExp.test results do not match',
+      tests: { passed: 0, total: 1 },
+      regexDiff: diff,
+    });
+  });
 });
 
 describe('practiceRuntimeErrorFeedback', () => {

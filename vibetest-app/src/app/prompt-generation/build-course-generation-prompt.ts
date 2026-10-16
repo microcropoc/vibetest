@@ -19,6 +19,13 @@ export const INSTRUCTION_MARKDOWN = `Markdown в текстовых полях �
 - Не вставляй сырой HTML в Markdown-поля: литеральные угловые скобки и HTML-теги — только внутри inline code или fenced-блоков.
 - Regex-паттерны, SQL, фрагменты с символами *, _, \\ — оборачивай в inline code или fenced-блок, иначе Markdown изменит текст (например a\\.b без backticks станет a.b).`;
 
+export const INSTRUCTION_REGEX_PRACTICE = `Regex-практика (шаги regex; движок — ECMAScript RegExp в браузере, не PCRE):
+- answerFormat pattern (default): starterCode/referenceSolution — тело паттерна, флаги в content.flags (g i m s u v y d). literal: ответ как /pattern/flags; content.flags не задавать.
+- mode (default test): test — RegExp.test; fullMatch — вся строка; match — первый exec (groups); matchAll — все совпадения (g добавляется автоматически); replace — String.replace (обязателен content.replacement); split — String.split.
+- unordered: true только для matchAll — сравнение как мультимножество совпадений.
+- tests[].input до 10000 символов. Нет atomic/possessive групп, рекурсии, conditionals, \\A/\\Z. Флаг v и lookbehind — Safari 16.4+.
+- starterCode не проходит tests; referenceSolution проходит все tests.`;
+
 export const INSTRUCTION_SQLITE_PRACTICE = `SQL-практика (шаги sqlite; движок — SQLite в браузере, не MySQL):
 - SQL в диалекте SQLite: strftime/date вместо DATE_FORMAT, IFNULL/COALESCE, || или concat; целочисленное деление 5/2 = 2 — для дробей умножай на 1.0.
 - setup — только CREATE TABLE; данные — в tests[].seed каждого кейса; первый кейс — пример из условия, далее граничные случаи (пустые таблицы, NULL, дубликаты, ничьи).
@@ -94,6 +101,7 @@ export function buildCourseGenerationPrompt(
     INSTRUCTION_CONTENT,
     INSTRUCTION_MARKDOWN,
     INSTRUCTION_SQLITE_PRACTICE,
+    INSTRUCTION_REGEX_PRACTICE,
     outputFormatInstruction('import-DTO', false),
     jsonSyntaxInstruction(false),
     selfCheckInstruction('course-import.schema.json', false),

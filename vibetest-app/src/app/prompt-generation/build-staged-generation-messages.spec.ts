@@ -5,6 +5,7 @@ import { outlineWithModules } from '../course-generation/__fixtures__/outline-fi
 import {
   buildCourseGenerationPrompt,
   finalUserReminder,
+  INSTRUCTION_REGEX_PRACTICE,
   INSTRUCTION_SQLITE_PRACTICE,
 } from './build-course-generation-prompt';
 import {
@@ -86,15 +87,22 @@ describe('buildModuleMessages', () => {
     expect(messages.user.endsWith(finalUserReminder('module-import DTO', false))).toBe(true);
   });
 
-  it('carries the SQL practice rules into course and module generation, not the outline', () => {
+  it('carries the SQL and regex practice rules into course and module generation, not the outline', () => {
     expect(buildModuleMessages(OUTLINE, 1, SCHEMA).system).toContain(INSTRUCTION_SQLITE_PRACTICE);
+    expect(buildModuleMessages(OUTLINE, 1, SCHEMA).system).toContain(INSTRUCTION_REGEX_PRACTICE);
     expect(buildFirstModuleCourseMessages('Курс', OUTLINE, SCHEMA).system).toContain(
       INSTRUCTION_SQLITE_PRACTICE,
     );
+    expect(buildFirstModuleCourseMessages('Курс', OUTLINE, SCHEMA).system).toContain(
+      INSTRUCTION_REGEX_PRACTICE,
+    );
     expect(buildOutlineMessages('Курс', SCHEMA).system).not.toContain(INSTRUCTION_SQLITE_PRACTICE);
+    expect(buildOutlineMessages('Курс', SCHEMA).system).not.toContain(INSTRUCTION_REGEX_PRACTICE);
     expect(buildCourseGenerationPrompt('Курс', SCHEMA)).toContain(INSTRUCTION_SQLITE_PRACTICE);
+    expect(buildCourseGenerationPrompt('Курс', SCHEMA)).toContain(INSTRUCTION_REGEX_PRACTICE);
     expect(INSTRUCTION_SQLITE_PRACTICE).toContain('checkQuery');
     expect(INSTRUCTION_SQLITE_PRACTICE).toContain('params');
+    expect(INSTRUCTION_REGEX_PRACTICE).toContain('matchAll');
   });
 
   it('adds retry issues before the final reminder', () => {

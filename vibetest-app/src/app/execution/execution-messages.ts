@@ -121,12 +121,89 @@ const sqliteRunCaseSchema = z
   })
   .strict();
 
+const regexPracticeModeSchema = z.enum([
+  'test',
+  'fullMatch',
+  'match',
+  'matchAll',
+  'replace',
+  'split',
+]);
+
+const regexAnswerFormatSchema = z.enum(['pattern', 'literal']);
+
+const regexMatchItemSchema = z
+  .object({
+    match: z.string(),
+    index: z.number().int().min(0),
+    groups: z.array(z.union([z.string(), z.null()])),
+    namedGroups: z.record(z.string(), z.union([z.string(), z.null()])).optional(),
+  })
+  .strict();
+
+const regexSerializedResultSchema = z.discriminatedUnion('kind', [
+  z
+    .object({
+      kind: z.literal('test'),
+      value: z.boolean(),
+    })
+    .strict(),
+  z
+    .object({
+      kind: z.literal('fullMatch'),
+      value: z.boolean(),
+    })
+    .strict(),
+  z
+    .object({
+      kind: z.literal('match'),
+      match: regexMatchItemSchema.nullable(),
+    })
+    .strict(),
+  z
+    .object({
+      kind: z.literal('matchAll'),
+      matches: z.array(regexMatchItemSchema),
+      totalCount: z.number().int().min(0),
+    })
+    .strict(),
+  z
+    .object({
+      kind: z.literal('replace'),
+      output: z.string(),
+      truncated: z.boolean(),
+    })
+    .strict(),
+  z
+    .object({
+      kind: z.literal('split'),
+      items: z.array(z.string()),
+      totalCount: z.number().int().min(0),
+    })
+    .strict(),
+]);
+
+const regexCaseDiffSchema = z
+  .object({
+    mode: regexPracticeModeSchema,
+    inputPreview: z.string(),
+    inputTruncated: z.boolean(),
+    user: regexSerializedResultSchema,
+    expected: regexSerializedResultSchema,
+  })
+  .strict();
+
 const regexInitSchema = z
   .object({
     type: z.literal('regexInit'),
     id: messageIdSchema,
     userPattern: z.string(),
     referencePattern: z.string(),
+    flags: z.string().optional(),
+    answerFormat: regexAnswerFormatSchema.optional(),
+    mode: regexPracticeModeSchema.optional(),
+    replacement: z.string().optional(),
+    unordered: z.boolean().optional(),
   })
   .strict();
 
@@ -230,6 +307,7 @@ export const ExecutionResponseSchema = z.discriminatedUnion('type', [
       userResult: z.boolean().optional(),
       referenceResult: z.boolean().optional(),
       message: z.string().optional(),
+      diff: regexCaseDiffSchema.optional(),
       userMs: z.number().min(0),
       referenceMs: z.number().min(0),
     })

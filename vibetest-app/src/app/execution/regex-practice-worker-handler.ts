@@ -25,6 +25,11 @@ export function handleRegexPracticeWorkerMessage(
         state.session = openRegexPracticeSession({
           userPattern: request.userPattern,
           referencePattern: request.referencePattern,
+          flags: request.flags,
+          answerFormat: request.answerFormat,
+          mode: request.mode,
+          replacement: request.replacement,
+          unordered: request.unordered,
         });
         postMessage({ type: 'regexInited', id: request.id });
       } catch (error: unknown) {
@@ -56,6 +61,7 @@ export function handleRegexPracticeWorkerMessage(
         userResult: outcome.userResult,
         referenceResult: outcome.referenceResult,
         message: outcome.message,
+        diff: outcome.diff,
         userMs: outcome.userMs,
         referenceMs: outcome.referenceMs,
       });

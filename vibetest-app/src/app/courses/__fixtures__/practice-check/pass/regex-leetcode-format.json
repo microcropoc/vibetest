@@ -1,0 +1,137 @@
+{
+  "schemaVersion": 1,
+  "title": "Practice check: regex LeetCode format",
+  "description": "Fixture for regex modes, flags, literal, replace, unordered matchAll.",
+  "modules": [
+    {
+      "title": "Regex LeetCode format",
+      "steps": [
+        {
+          "type": "regex",
+          "title": "Test with ignore-case flag",
+          "content": {
+            "description": "Match hello case-insensitively.",
+            "starterCode": "^world$",
+            "referenceSolution": "^hello$",
+            "flags": "i",
+            "mode": "test",
+            "timeoutMs": 2000,
+            "tests": [
+              { "input": "hello" },
+              { "input": "HELLO" }
+            ]
+          }
+        },
+        {
+          "type": "regex",
+          "title": "Full string match",
+          "content": {
+            "description": "Entire string must be digits.",
+            "starterCode": "\\d",
+            "referenceSolution": "^\\d+$",
+            "mode": "fullMatch",
+            "timeoutMs": 2000,
+            "tests": [
+              { "input": "123" },
+              { "input": "12a" }
+            ]
+          }
+        },
+        {
+          "type": "regex",
+          "title": "First match with group",
+          "content": {
+            "description": "Capture digits.",
+            "starterCode": "(\\d)",
+            "referenceSolution": "(\\d+)",
+            "mode": "match",
+            "timeoutMs": 2000,
+            "tests": [{ "input": "ab12cd" }]
+          }
+        },
+        {
+          "type": "regex",
+          "title": "MatchAll ordered",
+          "content": {
+            "description": "All digit runs in order.",
+            "starterCode": "\\d",
+            "referenceSolution": "\\d+",
+            "mode": "matchAll",
+            "timeoutMs": 2000,
+            "tests": [{ "input": "a1b22c333" }]
+          }
+        },
+        {
+          "type": "regex",
+          "title": "MatchAll unordered multiset",
+          "content": {
+            "description": "Two letter tokens, order ignored.",
+            "starterCode": "[a-z]",
+            "referenceSolution": "[a-z]+",
+            "mode": "matchAll",
+            "unordered": true,
+            "timeoutMs": 2000,
+            "tests": [{ "input": "aa bb" }]
+          }
+        },
+        {
+          "type": "regex",
+          "title": "Replace with capture",
+          "content": {
+            "description": "Wrap words in brackets.",
+            "starterCode": "\\w+",
+            "referenceSolution": "(\\w+)",
+            "mode": "replace",
+            "replacement": "[$1]",
+            "timeoutMs": 2000,
+            "tests": [{ "input": "one two" }]
+          }
+        },
+        {
+          "type": "regex",
+          "title": "Split on delimiters",
+          "content": {
+            "description": "Split on comma or semicolon.",
+            "starterCode": ",",
+            "referenceSolution": "[,;]+",
+            "mode": "split",
+            "timeoutMs": 2000,
+            "tests": [{ "input": "a,b;c" }]
+          }
+        },
+        {
+          "type": "regex",
+          "title": "Literal answer format",
+          "content": {
+            "description": "Answer as /pattern/flags.",
+            "starterCode": "/foo/",
+            "referenceSolution": "/foo/i",
+            "answerFormat": "literal",
+            "mode": "test",
+            "timeoutMs": 2000,
+            "tests": [
+              { "input": "FOO" },
+              { "input": "bar" }
+            ]
+          }
+        },
+        {
+          "type": "regex",
+          "title": "Long input test",
+          "content": {
+            "description": "Many repeated letters.",
+            "starterCode": "^a$",
+            "referenceSolution": "^a+$",
+            "mode": "test",
+            "timeoutMs": 5000,
+            "tests": [
+              {
+                "input": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+              }
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

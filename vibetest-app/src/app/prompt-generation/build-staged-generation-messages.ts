@@ -5,6 +5,7 @@ import type { ImportIssue } from '../courses/import-types';
 import {
   INSTRUCTION_MARKDOWN,
   INSTRUCTION_SEMANTICS,
+  INSTRUCTION_REGEX_PRACTICE,
   INSTRUCTION_SQLITE_PRACTICE,
   authorDescriptionBlock,
   finalUserReminder,
@@ -160,6 +161,7 @@ export function buildFirstModuleCourseMessages(
 - Формат — import-DTO: schemaVersion равен 1, без полей courseId, moduleId, stepId и createdAt.`,
         INSTRUCTION_MARKDOWN,
         INSTRUCTION_SQLITE_PRACTICE,
+        INSTRUCTION_REGEX_PRACTICE,
         outputFormatInstruction(COURSE_LABEL, structuredOutput),
         jsonSyntaxInstruction(structuredOutput),
         selfCheckInstruction('course-import.schema.json', structuredOutput),
@@ -199,6 +201,7 @@ export function buildModuleMessages(
 - Формат — module-import DTO: schemaVersion равен 1, без полей moduleId и stepId.`,
         INSTRUCTION_MARKDOWN,
         INSTRUCTION_SQLITE_PRACTICE,
+        INSTRUCTION_REGEX_PRACTICE,
         outputFormatInstruction(MODULE_LABEL, structuredOutput),
         jsonSyntaxInstruction(structuredOutput),
         selfCheckInstruction('module-import.schema.json', structuredOutput),

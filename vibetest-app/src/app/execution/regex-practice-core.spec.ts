@@ -10,8 +10,8 @@ describe('regex practice core', () => {
       userPattern: '^\\d+$',
       referencePattern: '^\\d+$',
     });
-    expect(session.userPattern.test('123')).toBe(true);
-    expect(session.referencePattern.test('abc')).toBe(false);
+    expect(session.userRegExp.test('123')).toBe(true);
+    expect(session.referenceRegExp.test('abc')).toBe(false);
   });
 
   it('throws RegexPatternCompileError for invalid user pattern', () => {

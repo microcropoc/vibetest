@@ -50,6 +50,9 @@
       @if (result.sqlDiff; as diff) {
         <app-sql-result-diff [diff]="diff" />
       }
+      @if (result.regexDiff; as regexDiff) {
+        <app-regex-result-diff [diff]="regexDiff" />
+      }
     </div>
   } @else if (showFailure()) {
     <p class="practice-step-shell__result practice-step-shell__result--error" role="alert">

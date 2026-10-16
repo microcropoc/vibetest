@@ -99,6 +99,11 @@ export async function runRegexReferenceSelfCheck(
     session = openRegexPracticeSession({
       userPattern,
       referencePattern: step.content.referenceSolution,
+      flags: step.content.flags,
+      answerFormat: step.content.answerFormat,
+      mode: step.content.mode,
+      replacement: step.content.replacement,
+      unordered: step.content.unordered,
     });
   } catch (error: unknown) {
     const message =
@@ -111,7 +116,12 @@ export async function runRegexReferenceSelfCheck(
   for (let i = 0; i < step.content.tests.length; i += 1) {
     const outcome = runRegexPracticeCase(session, { input: step.content.tests[i].input });
     if (!outcome.pass) {
-      return practiceRunFailure(i, totalTests, outcome.message ?? 'Test case failed');
+      return practiceRunFailure(
+        i,
+        totalTests,
+        outcome.message ?? 'Test case failed',
+        outcome.diff === undefined ? undefined : { kind: 'regex', diff: outcome.diff },
+      );
     }
   }
   return practiceRunSuccess(totalTests, REFERENCE_SELF_CHECK_TIMINGS);

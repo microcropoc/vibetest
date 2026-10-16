@@ -1,4 +1,4 @@
-import { compileRegexPattern, regexTestMatch } from './regex-pattern';
+import { compileRegexAnswer, compileRegexPattern, parseRegexLiteral, regexTestMatch } from './regex-pattern';
 
 describe('regex pattern helpers', () => {
   it('compiles valid patterns', () => {
@@ -7,6 +7,13 @@ describe('regex pattern helpers', () => {
 
   it('throws on invalid patterns', () => {
     expect(() => compileRegexPattern('(')).toThrow(SyntaxError);
+  });
+
+  it('parses literals with slash inside a character class', () => {
+    expect(parseRegexLiteral('/[a/b]/i')).toEqual({ pattern: '[a/b]', flags: 'i' });
+    expect(parseRegexLiteral('/https?:[/][/]/')).toEqual({ pattern: 'https?:[/][/]', flags: '' });
+    const nested = parseRegexLiteral('/[[a-z]--[/]]/v');
+    expect(nested).toEqual({ pattern: '[[a-z]--[/]]', flags: 'v' });
   });
 
   it('matches when user and reference booleans agree', () => {

@@ -1,0 +1,24 @@
+{
+  "schemaVersion": 1,
+  "title": "Practice check: broken regex literal reference",
+  "description": "Reference literal is invalid.",
+  "modules": [
+    {
+      "title": "Regex",
+      "steps": [
+        {
+          "type": "regex",
+          "title": "Bad literal",
+          "content": {
+            "description": "Invalid reference.",
+            "starterCode": "/ok/",
+            "referenceSolution": "/unclosed",
+            "answerFormat": "literal",
+            "timeoutMs": 2000,
+            "tests": [{ "input": "x" }]
+          }
+        }
+      ]
+    }
+  ]
+}

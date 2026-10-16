@@ -3,6 +3,7 @@ import { TestBed } from '@angular/core/testing';
 
 import type { PracticeCodeEditorLanguage } from '../code-editor/practice-code-editor-language';
 import { MarkdownContentComponent } from '../markdown-content/markdown-content';
+import { RegexResultDiffComponent } from '../regex-result-diff/regex-result-diff';
 import { SqlResultDiffComponent } from '../sql-result-diff/sql-result-diff';
 import { PracticeStepShellComponent } from './practice-step-shell';
 
@@ -44,7 +45,14 @@ describe('PracticeStepShellComponent', () => {
       imports: [PracticeStepShellComponent],
     })
       .overrideComponent(PracticeStepShellComponent, {
-        set: { imports: [CodeEditorStub, MarkdownContentComponent, SqlResultDiffComponent] },
+        set: {
+          imports: [
+            CodeEditorStub,
+            MarkdownContentComponent,
+            RegexResultDiffComponent,
+            SqlResultDiffComponent,
+          ],
+        },
       })
       .compileComponents();
   });
@@ -111,6 +119,38 @@ describe('PracticeStepShellComponent', () => {
     expect(diff?.textContent).toContain('Ожидается');
     const status = fixture.nativeElement.querySelector('[role="status"]') as HTMLElement | null;
     expect(status?.textContent).toContain('Тесты: 0 из 1');
+    expect(status?.contains(diff)).toBe(false);
+  });
+
+  it('shows the regex result diff only when the feedback has one', async () => {
+    const fixture = TestBed.createComponent(PracticeStepShellComponent);
+    fixture.componentRef.setInput('step', {
+      ...javascriptStep,
+      type: 'regex' as const,
+      content: {
+        description: 'd',
+        starterCode: 'x',
+        referenceSolution: 'y',
+        timeoutMs: 1000,
+        tests: [{ input: 'a' }],
+      },
+    });
+    fixture.componentRef.setInput('feedback', {
+      kind: 'error',
+      message: 'Проверка 1 не пройдена: RegExp.test results do not match',
+      tests: { passed: 0, total: 1 },
+      regexDiff: {
+        mode: 'test',
+        inputPreview: 'a',
+        inputTruncated: false,
+        user: { kind: 'test', value: false },
+        expected: { kind: 'test', value: true },
+      },
+    });
+    await fixture.whenStable();
+    const diff = fixture.nativeElement.querySelector('app-regex-result-diff') as HTMLElement | null;
+    expect(diff?.textContent).toContain('Ваш результат');
+    const status = fixture.nativeElement.querySelector('[role="status"]') as HTMLElement | null;
     expect(status?.contains(diff)).toBe(false);
   });
 

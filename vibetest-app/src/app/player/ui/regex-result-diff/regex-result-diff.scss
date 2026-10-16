@@ -1,0 +1,58 @@
+.regex-result-diff {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin-top: 0.75rem;
+  min-width: 0;
+}
+
+.regex-result-diff__title {
+  margin: 0 0 0.35rem;
+  font-size: 0.9375rem;
+  font-weight: 600;
+}
+
+.regex-result-diff__input-text,
+.regex-result-diff__value {
+  margin: 0;
+  max-width: 100%;
+  max-height: 12rem;
+  overflow: auto;
+  padding: 0.5rem 0.6rem;
+  border: 1px solid var(--color-border-strong);
+  border-radius: 4px;
+  background: var(--color-bg);
+  color: var(--color-text);
+  font-family: var(--font-code-family);
+  font-size: var(--font-code-size);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.regex-result-diff__mark {
+  background: var(--color-warning-bg, #fff3cd);
+  color: inherit;
+  padding: 0;
+}
+
+.regex-result-diff__results {
+  display: grid;
+  gap: 0.75rem;
+  min-width: 0;
+}
+
+.regex-result-diff__side {
+  min-width: 0;
+}
+
+.regex-result-diff__truncated {
+  margin: 0.25rem 0 0;
+  font-size: 0.8125rem;
+  color: var(--color-text-subtle);
+}
+
+@media (min-width: 48rem) {
+  .regex-result-diff__results {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}

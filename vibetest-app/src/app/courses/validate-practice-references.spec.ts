@@ -7,6 +7,7 @@ import { parseImportCourseText } from './import-parse';
 import type { Course } from './course.model';
 import {
   createInProcessPracticeReferenceValidationDeps,
+  runRegexReferenceSelfCheck,
   runSqliteReferenceSelfCheck,
 } from './practice-reference-in-process-runners.spec-helper';
 import { validatePracticeReferences } from './validate-practice-references';
@@ -63,6 +64,21 @@ describe('validatePracticeReferences', () => {
   it.each(listJsonFixtures('pass'))('passes fixture %s', async (_label, path) => {
     const issues = await validatePracticeReferences(courseFromFixturePath(path), deps);
     expect(issues).toEqual([]);
+  }, 60_000);
+
+  it('fails the starter code of every regex LeetCode-format fixture step', async () => {
+    const course = courseFromFixturePath(
+      join(practiceCheckRoot, 'pass', 'regex-leetcode-format.json'),
+    );
+    for (const mod of course.modules) {
+      for (const step of mod.steps) {
+        if (step.type !== 'regex') {
+          throw new Error(`unexpected step type ${step.type}`);
+        }
+        const result = await runRegexReferenceSelfCheck(step, step.content.starterCode);
+        expect(result.ok, step.title).toBe(false);
+      }
+    }
   }, 60_000);
 
   it('fails the starter code of every sqlite LeetCode-format fixture step', async () => {

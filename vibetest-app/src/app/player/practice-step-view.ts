@@ -1,5 +1,6 @@
 import type { Step } from '../courses/course.model';
 import { ExecutionTimeoutError } from '../execution/execution-errors';
+import type { RegexCaseDiff } from '../execution/regex-result';
 import type { SqliteCaseDiff } from '../execution/sqlite-result-table';
 
 import type { PracticeRunResult } from './step-engine/practice-run-result';
@@ -24,6 +25,8 @@ export type PracticeFeedback = {
   readonly timing?: PracticeFeedbackTiming;
   /** SQL step: the student's and the expected result of the failed case. */
   readonly sqlDiff?: SqliteCaseDiff;
+  /** Regex step: input preview and serialized user vs expected results. */
+  readonly regexDiff?: RegexCaseDiff;
 };
 
 export interface PracticeStepShellLabels {
@@ -48,10 +51,15 @@ export function practiceStepShellLabels(step: PracticeStep): PracticeStepShellLa
         hint: 'Введите запрос и нажмите «Запустить».',
       };
     case 'regex':
-      return {
-        editorLabel: 'Регулярное выражение',
-        hint: 'Введите pattern и нажмите «Запустить».',
-      };
+      return step.content.answerFormat === 'literal'
+        ? {
+            editorLabel: 'Регулярное выражение',
+            hint: 'Введите литерал /pattern/flags и нажмите «Запустить».',
+          }
+        : {
+            editorLabel: 'Регулярное выражение',
+            hint: 'Введите pattern и нажмите «Запустить».',
+          };
   }
 }
 
@@ -161,5 +169,11 @@ export function practiceFeedbackFromResult(result: PracticeRunResult): PracticeF
     message: practiceFailureMessage(result),
     tests: { passed: result.failedTestIndex, total: result.totalTests },
   };
-  return result.details?.kind === 'sqlite' ? { ...feedback, sqlDiff: result.details.diff } : feedback;
+  if (result.details?.kind === 'sqlite') {
+    return { ...feedback, sqlDiff: result.details.diff };
+  }
+  if (result.details?.kind === 'regex') {
+    return { ...feedback, regexDiff: result.details.diff };
+  }
+  return feedback;
 }

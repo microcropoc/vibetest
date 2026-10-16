@@ -1,13 +1,46 @@
-import { compileRegexPattern, regexTestMatch } from './regex-pattern';
+import { compileRegexAnswer } from './regex-pattern';
+import {
+  buildRegexCaseDiff,
+  evaluateRegexMode,
+  regexModeMismatchMessage,
+  regexSerializedResultsEqual,
+  type RegexAnswerFormat,
+  type RegexCaseDiff,
+  type RegexPracticeMode,
+  type RegexSerializedResult,
+} from './regex-result';
+
+export type {
+  RegexAnswerFormat,
+  RegexCaseDiff,
+  RegexMatchItem,
+  RegexPracticeMode,
+  RegexSerializedResult,
+} from './regex-result';
+
+export {
+  REGEX_DIFF_INPUT_MAX_CHARS,
+  REGEX_DIFF_MAX_ITEMS,
+  REGEX_DIFF_OUTPUT_MAX_CHARS,
+  highlightSpansForDiff,
+} from './regex-result';
 
 export interface RegexPracticeSessionConfig {
   readonly userPattern: string;
   readonly referencePattern: string;
+  readonly flags?: string;
+  readonly answerFormat?: RegexAnswerFormat;
+  readonly mode?: RegexPracticeMode;
+  readonly replacement?: string;
+  readonly unordered?: boolean;
 }
 
 export interface RegexPracticeSession {
-  readonly userPattern: RegExp;
-  readonly referencePattern: RegExp;
+  readonly userRegExp: RegExp;
+  readonly referenceRegExp: RegExp;
+  readonly mode: RegexPracticeMode;
+  readonly replacement: string;
+  readonly unordered: boolean;
 }
 
 export interface RegexPracticeCaseInput {
@@ -19,6 +52,7 @@ export interface RegexPracticeCaseOutcome {
   readonly userResult?: boolean;
   readonly referenceResult?: boolean;
   readonly message?: string;
+  readonly diff?: RegexCaseDiff;
   readonly userMs: number;
   readonly referenceMs: number;
 }
@@ -30,9 +64,17 @@ export class RegexPatternCompileError extends Error {
   }
 }
 
-function compilePattern(source: string): RegExp {
+function compileSide(
+  answer: string,
+  config: RegexPracticeSessionConfig,
+): RegExp {
   try {
-    return compileRegexPattern(source);
+    return compileRegexAnswer(
+      answer,
+      config.answerFormat ?? 'pattern',
+      config.flags,
+      config.mode ?? 'test',
+    );
   } catch (error: unknown) {
     const message =
       error instanceof SyntaxError
@@ -46,9 +88,20 @@ function compilePattern(source: string): RegExp {
 
 export function openRegexPracticeSession(config: RegexPracticeSessionConfig): RegexPracticeSession {
   return {
-    userPattern: compilePattern(config.userPattern),
-    referencePattern: compilePattern(config.referencePattern),
+    userRegExp: compileSide(config.userPattern, config),
+    referenceRegExp: compileSide(config.referencePattern, config),
+    mode: config.mode ?? 'test',
+    replacement: config.replacement ?? '',
+    unordered: config.unordered ?? false,
   };
+}
+
+function evaluateSide(
+  session: RegexPracticeSession,
+  re: RegExp,
+  input: string,
+): RegexSerializedResult {
+  return evaluateRegexMode(re, input, session.mode, session.replacement);
 }
 
 export function runRegexPracticeCase(
@@ -57,20 +110,34 @@ export function runRegexPracticeCase(
 ): RegexPracticeCaseOutcome {
   try {
     const userStart = performance.now();
-    const userResult = session.userPattern.test(input.input);
+    const userValue = evaluateSide(session, session.userRegExp, input.input);
     const userMs = performance.now() - userStart;
     const referenceStart = performance.now();
-    const referenceResult = session.referencePattern.test(input.input);
+    const referenceValue = evaluateSide(session, session.referenceRegExp, input.input);
     const referenceMs = performance.now() - referenceStart;
-    const pass = regexTestMatch(userResult, referenceResult);
-    return {
+    const pass = regexSerializedResultsEqual(
+      userValue,
+      referenceValue,
+      session.mode,
+      session.unordered,
+    );
+    const outcome: RegexPracticeCaseOutcome = {
       pass,
-      userResult,
-      referenceResult,
-      message: pass ? undefined : 'RegExp.test results do not match',
+      message: pass ? undefined : regexModeMismatchMessage(session.mode),
+      diff: pass
+        ? undefined
+        : buildRegexCaseDiff(session.mode, input.input, userValue, referenceValue),
       userMs,
       referenceMs,
     };
+    if (session.mode === 'test' && userValue.kind === 'test' && referenceValue.kind === 'test') {
+      return {
+        ...outcome,
+        userResult: userValue.value,
+        referenceResult: referenceValue.value,
+      };
+    }
+    return outcome;
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : 'Regex error';
     return { pass: false, message, userMs: 0, referenceMs: 0 };

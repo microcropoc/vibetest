@@ -56,6 +56,11 @@ export async function runRegexPractice(
         id: initId,
         userPattern,
         referencePattern: content.referenceSolution,
+        flags: content.flags,
+        answerFormat: content.answerFormat,
+        mode: content.mode,
+        replacement: content.replacement,
+        unordered: content.unordered,
       },
       remainingMs(deadlineMs),
     );
@@ -95,7 +100,12 @@ export async function runRegexPractice(
       }
       timing.add({ userMs: response.userMs, referenceMs: response.referenceMs });
       if (!response.pass) {
-        return practiceRunFailure(i, totalTests, response.message ?? 'Test case failed');
+        return practiceRunFailure(
+          i,
+          totalTests,
+          response.message ?? 'Test case failed',
+          response.diff === undefined ? undefined : { kind: 'regex', diff: response.diff },
+        );
       }
     }
 

@@ -9,6 +9,13 @@ description: Создать backlog-задачу vt-{n} в docs/tasks/backlog
 
 Если `$ARGUMENTS` пустой или недостаточен — задай 1–2 уточняющих вопроса и **не создавай файл**.
 
+## Ветка `main` (первый шаг)
+
+Перед нумерацией и сверкой — чтобы видеть все `vt-*` на актуальном `main`:
+
+- Если текущая ветка не `main` — при чистом дереве `git switch main && git pull --ff-only`; при незакоммиченных изменениях — спроси пользователя.
+- Если уже на `main` — при чистом дереве `git pull --ff-only`.
+
 ## Нумерация и slug
 
 1. Все `vt-*` в `docs/tasks/{backlog,in-progress,done,archive}/` (рекурсивно).
@@ -21,9 +28,8 @@ description: Создать backlog-задачу vt-{n} в docs/tasks/backlog
 3. Архитектура — `.cursor/rules/angular-cli.mdc`; DoD — проверяемый (`ng test --watch=false`, фикстуры, поведение).
 4. Противоречие или развилка — спроси **до** записи.
 
-## Ветка и коммит
+## Файл и коммит
 
-- Перед записью файла: если текущая ветка не `main` — при чистом дереве `git switch main && git pull --ff-only`; при незакоммиченных изменениях — спроси пользователя (коммит backlog должен попасть в `main`, не в feature-ветку).
 - Путь: `docs/tasks/backlog/vt-{n}-{slug}.md` по шаблону `docs/tasks/_template/backlog-task.md`.
 - Не переносить в `in-progress`, не создавать feature-ветку, не трогать `vibetest-app/`.
 - После создания на `main` — закоммить: `vt-{n}: add backlog task`.

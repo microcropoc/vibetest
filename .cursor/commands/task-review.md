@@ -18,10 +18,10 @@ description: Код-ревью vt-* — diff + замечания в REPORT «И
 ```bash
 git status --short
 git log --oneline main..HEAD
-git diff main
+git diff $(git merge-base main HEAD)
 ```
 
-(`git diff main` — закоммиченное на ветке и unstaged/staged относительно `main`.)
+(`git diff $(git merge-base main HEAD)` — закоммиченное на ветке, staged и unstaged относительно точки ответвления от `main`. Untracked из `git status --short` — прочитать отдельно.)
 
 ## Чеклист
 

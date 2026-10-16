@@ -15,7 +15,8 @@ description: Взять задачу в работу — in-progress, ветка
 2. Если есть `docs/tasks/in-progress/vt-{n}-{slug}/` — **сначала только `REPORT.md`** (не открывай `TASK.md` / SPEC до выбора):
    - Последний `### Ревью N (…)` содержит **`Замечаний нет.`** → **готово к merge**: ничего не менять, предложи `/task-merge`.
    - Последний `### Ревью N` **без** следующего `### Исправлено N` → **режим Б** (правки по ревью).
-   - Иначе → **режим А** (реализация / продолжение по TASK).
+   - Последний `### Ревью N` уже закрыт **`### Исправлено N`** → **ждёт ревью**: ничего не менять, предложи `/task-review`.
+   - Раундов `### Ревью` ещё нет → **режим А** (реализация / продолжение по TASK).
 3. Если задачи нет в `in-progress/` (только `backlog/`) → **режим А**.
 
 ## Режим Б — правки по ревью
@@ -31,7 +32,7 @@ description: Взять задачу в работу — in-progress, ветка
 
 1. `git switch main && git pull --ff-only`
 2. `git switch -c feature/vt-{n}-{slug}`
-3. `git mv docs/tasks/backlog/vt-{n}-{slug}.md` → `docs/tasks/in-progress/vt-{n}-{slug}/TASK.md`
+3. Создай папку `docs/tasks/in-progress/vt-{n}-{slug}/` (например `mkdir` / `New-Item -ItemType Directory`), затем `git mv docs/tasks/backlog/vt-{n}-{slug}.md` → `docs/tasks/in-progress/vt-{n}-{slug}/TASK.md`
 4. `REPORT.md` из `docs/tasks/_template/REPORT.md` (frontmatter `branch: feature/vt-{n}-{slug}`)
 
 ### Работа
@@ -47,4 +48,4 @@ description: Взять задачу в работу — in-progress, ветка
 
 ## Ответ в чате
 
-Режим (**А**, **Б** или **готово к merge**), ветка, сделано, тесты, хеш последнего коммита; для А — что осталось по TASK; для Б — закрытые пункты ревью.
+Режим (**А**, **Б**, **ждёт ревью** или **готово к merge**), ветка, сделано, тесты, хеш последнего коммита; для А — что осталось по TASK; для Б — закрытые пункты ревью.

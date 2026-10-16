@@ -1,3 +1,4 @@
+import { ExecutionTimeoutError } from '../../../execution/execution-errors';
 import type { ExecutionWorkerWrapperService } from '../../../execution/execution-worker-wrapper.service';
 import type { WorkerFactory } from '../../../execution/worker-factory';
 
@@ -10,6 +11,10 @@ import {
 import type { RegexStep } from './regex-step-engine';
 
 export type RegexPracticeResult = PracticeRunResult;
+
+/** Shown when a single test case exceeds its per-request timeout (often catastrophic backtracking). */
+export const REGEX_CASE_TIMEOUT_MESSAGE =
+  'Превышено время: возможен катастрофический бэктрекинг';
 
 export interface RegexPracticeRunnerDeps {
   readonly wrapper: ExecutionWorkerWrapperService;
@@ -64,15 +69,23 @@ export async function runRegexPractice(
     for (let i = 0; i < content.tests.length; i += 1) {
       const testCase = content.tests[i];
       const caseId = nextMessageId(i, 'case');
-      const response = await deps.wrapper.runRequest(
-        worker,
-        {
-          type: 'regexRunCase',
-          id: caseId,
-          input: testCase.input,
-        },
-        remainingMs(deadlineMs),
-      );
+      let response;
+      try {
+        response = await deps.wrapper.runRequest(
+          worker,
+          {
+            type: 'regexRunCase',
+            id: caseId,
+            input: testCase.input,
+          },
+          remainingMs(deadlineMs),
+        );
+      } catch (error: unknown) {
+        if (error instanceof ExecutionTimeoutError) {
+          return practiceRunFailure(i, totalTests, REGEX_CASE_TIMEOUT_MESSAGE);
+        }
+        throw error;
+      }
 
       if (response.type === 'error') {
         return practiceRunFailure(i, totalTests, response.message);

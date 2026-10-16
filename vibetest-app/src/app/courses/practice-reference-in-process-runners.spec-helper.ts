@@ -12,6 +12,12 @@ import type { JavascriptPracticeResult } from '../player/step-engine/javascript/
 import type { JavascriptStep } from '../player/step-engine/javascript/javascript-step-engine';
 import type { RegexPracticeResult } from '../player/step-engine/regex/regex-practice-runner';
 import type { RegexStep } from '../player/step-engine/regex/regex-step-engine';
+import {
+  openRegexPracticeSession,
+  RegexPatternCompileError,
+  runRegexPracticeCase,
+  type RegexPracticeSession,
+} from '../execution/regex-practice-core';
 import { loadSqlJs } from '../execution/sqlite-engine';
 import {
   openSqlitePracticeSession,
@@ -87,23 +93,25 @@ export async function runRegexReferenceSelfCheck(
   step: RegexStep,
   userPattern: string = step.content.referenceSolution,
 ): Promise<RegexPracticeResult> {
-  const referencePattern = step.content.referenceSolution;
-  let userRe: RegExp;
-  let referenceRe: RegExp;
+  const totalTests = step.content.tests.length;
+  let session: RegexPracticeSession;
   try {
-    userRe = new RegExp(userPattern);
-    referenceRe = new RegExp(referencePattern);
-  } catch {
-    return practiceRunFailure(0, step.content.tests.length, 'Invalid regular expression');
+    session = openRegexPracticeSession({
+      userPattern,
+      referencePattern: step.content.referenceSolution,
+    });
+  } catch (error: unknown) {
+    const message =
+      error instanceof RegexPatternCompileError
+        ? error.message
+        : 'Invalid regular expression';
+    return practiceRunFailure(0, totalTests, message);
   }
 
-  const totalTests = step.content.tests.length;
   for (let i = 0; i < step.content.tests.length; i += 1) {
-    const input = step.content.tests[i].input;
-    const userResult = userRe.test(input);
-    const referenceResult = referenceRe.test(input);
-    if (userResult !== referenceResult) {
-      return practiceRunFailure(i, totalTests, 'RegExp.test results do not match');
+    const outcome = runRegexPracticeCase(session, { input: step.content.tests[i].input });
+    if (!outcome.pass) {
+      return practiceRunFailure(i, totalTests, outcome.message ?? 'Test case failed');
     }
   }
   return practiceRunSuccess(totalTests, REFERENCE_SELF_CHECK_TIMINGS);

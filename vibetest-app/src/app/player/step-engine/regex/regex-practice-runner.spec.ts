@@ -1,6 +1,6 @@
 import { ExecutionWorkerWrapperService } from '../../../execution/execution-worker-wrapper.service';
 
-import { runRegexPractice } from './regex-practice-runner';
+import { REGEX_CASE_TIMEOUT_MESSAGE, runRegexPractice } from './regex-practice-runner';
 import type { RegexStep } from './regex-step-engine';
 
 class ScriptableMockWorker {
@@ -9,6 +9,8 @@ class ScriptableMockWorker {
   terminated = false;
   failOnCase = -1;
   invalidInit = false;
+  /** When true, regexRunCase never replies (simulates hung worker / ReDoS). */
+  silentCase = false;
 
   addEventListener(type: 'message' | 'error', listener: (event: MessageEvent | ErrorEvent) => void): void {
     if (type === 'message') {
@@ -44,6 +46,9 @@ class ScriptableMockWorker {
       return;
     }
     if (req.type === 'regexRunCase') {
+      if (this.silentCase) {
+        return;
+      }
       const index = Number.parseInt(req.id.split('-')[1] ?? '0', 10);
       if (index === this.failOnCase) {
         this.onmessage?.({
@@ -114,6 +119,31 @@ describe('runRegexPractice', () => {
       totalTests: 2,
       message: 'mock fail',
     });
+  });
+
+  it('maps case timeout to ReDoS message', async () => {
+    vi.useFakeTimers();
+    const mock = new ScriptableMockWorker();
+    mock.silentCase = true;
+    const wrapper = new ExecutionWorkerWrapperService();
+    const shortStep: RegexStep = {
+      ...regexStep,
+      content: { ...regexStep.content, timeoutMs: 200 },
+    };
+    const promise = runRegexPractice(shortStep, shortStep.content.starterCode, {
+      wrapper,
+      createWorker: () => mock as unknown as Worker,
+    });
+    await vi.advanceTimersByTimeAsync(250);
+    const result = await promise;
+    vi.useRealTimers();
+    expect(result).toEqual({
+      ok: false,
+      failedTestIndex: 0,
+      totalTests: 2,
+      message: REGEX_CASE_TIMEOUT_MESSAGE,
+    });
+    expect(mock.terminated).toBe(true);
   });
 
   it('surfaces init errors for invalid patterns', async () => {

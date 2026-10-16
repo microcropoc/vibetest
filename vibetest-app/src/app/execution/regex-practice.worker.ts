@@ -1,91 +1,19 @@
 import { parseExecutionRequest, requestIdFromUnknown } from './execution-messages';
-import { compileRegexPattern, regexTestMatch } from './regex-pattern';
+import {
+  createRegexPracticeWorkerState,
+  handleRegexPracticeWorkerMessage,
+} from './regex-practice-worker-handler';
 
 /// <reference lib="webworker" />
 
 declare const self: Worker;
 
-interface RegexRuntime {
-  readonly userPattern: RegExp;
-  readonly referencePattern: RegExp;
-}
-
-let runtime: RegexRuntime | undefined;
-
-function compileRuntime(userSource: string, referenceSource: string): RegexRuntime {
-  return {
-    userPattern: compileRegexPattern(userSource),
-    referencePattern: compileRegexPattern(referenceSource),
-  };
-}
+const state = createRegexPracticeWorkerState();
 
 self.addEventListener('message', (event: MessageEvent<unknown>) => {
   try {
     const request = parseExecutionRequest(event.data);
-    switch (request.type) {
-      case 'regexInit': {
-        try {
-          runtime = compileRuntime(request.userPattern, request.referencePattern);
-          self.postMessage({ type: 'regexInited', id: request.id });
-        } catch (error: unknown) {
-          runtime = undefined;
-          const message =
-            error instanceof SyntaxError
-              ? 'Invalid regular expression'
-              : error instanceof Error
-                ? error.message
-                : 'Invalid regular expression';
-          self.postMessage({
-            type: 'error',
-            id: request.id,
-            message,
-          });
-        }
-        break;
-      }
-      case 'regexRunCase': {
-        if (!runtime) {
-          self.postMessage({
-            type: 'error',
-            id: request.id,
-            message: 'Worker not initialized',
-          });
-          break;
-        }
-        try {
-          const userStart = performance.now();
-          const userResult = runtime.userPattern.test(request.input);
-          const userMs = performance.now() - userStart;
-          const referenceStart = performance.now();
-          const referenceResult = runtime.referencePattern.test(request.input);
-          const referenceMs = performance.now() - referenceStart;
-          const pass = regexTestMatch(userResult, referenceResult);
-          self.postMessage({
-            type: 'regexCaseResult',
-            id: request.id,
-            pass,
-            userResult,
-            referenceResult,
-            message: pass ? undefined : 'RegExp.test results do not match',
-            userMs,
-            referenceMs,
-          });
-        } catch (error: unknown) {
-          const message = error instanceof Error ? error.message : 'Regex error';
-          self.postMessage({
-            type: 'regexCaseResult',
-            id: request.id,
-            pass: false,
-            message,
-            userMs: 0,
-            referenceMs: 0,
-          });
-        }
-        break;
-      }
-      default:
-        break;
-    }
+    handleRegexPracticeWorkerMessage(request, (message) => self.postMessage(message), state);
   } catch {
     self.postMessage({
       type: 'error',

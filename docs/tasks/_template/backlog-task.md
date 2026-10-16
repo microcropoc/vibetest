@@ -15,7 +15,7 @@
 
 ## Технические заметки
 
-- Затрагиваемые доменные папки (`courses/`, `player/`, `progress/`, `execution/`, `storage/`, `shared/ui/`)
+- Затрагиваемые папки в `vibetest-app/src/app/<domain>/` (например `courses/`, `player/`, `execution/`, `storage/`, `shared/ui/`, `prompt-generation/`, …)
 - Используемые CLI-команды (`ng g …`)
 - Особенности реализации, если есть
 

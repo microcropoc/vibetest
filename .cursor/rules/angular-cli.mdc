@@ -5,13 +5,13 @@ alwaysApply: true
 
 # vibetest — Angular 22 SPA/PWA
 
-Offline-first course PWA. Spec: `docs/SPECIFICATION.md`. Tasks: `docs/tasks/`.
+Offline-first course PWA. Spec: `docs/SPECIFICATION.md`. Tasks: `docs/tasks/`. Task commands: `.cursor/commands/task-*.md`.
 
 ## Architecture & generation
 
 - **Standalone only** — no NgModules
 - **CLI** (`ng g`): component, service, guard, pipe. **Manual:** domain models, validators, Web Workers, pure functions, adapters, constants
-- **Domain folders** (vertical slices; add subfolders only when several files share a role — do not pre-create layers): `courses/`, `player/`, `progress/`, `execution/`, `storage/`, `shared/ui/`. **`storage/`** — infrastructure: Dexie schema, migrations, queries only here; domain types never import Dexie. **`execution/`** — Workers, message types, one wrapper service; components do not call `postMessage` directly
+- **Domain folders** under `vibetest-app/src/app/` (vertical slices; add subfolders only when several files share a role — do not pre-create layers). Core domains: `courses/`, `player/`, `progress/`, `execution/`, `storage/`, `shared/ui/`. Also: `course-generation/`, `prompt-generation/`, `import/`, `info/`, `settings/`, `statistics/`. **`storage/`** — infrastructure: Dexie schema, migrations, queries only here; domain types never import Dexie. **`execution/`** — Workers, message types, one wrapper service; components do not call `postMessage` directly
 - Domain: **pure functions** / types; **services:** DI, orchestration, side-effects (storage, Workers, HTTP later); `providedIn: 'root'` unless route-scoped `providers` when state must die with the route. One component, one job; no “service soup”
 - **Smart / dumb:** pages orchestrate; reusable UI via `input()` / `output()`; no HTTP/storage in `shared/ui` without reason
 - **Lazy:** pages via `loadComponent` / `loadChildren` — never eager-import a page in `app.ts` or `app.routes.ts`; wire new pages with `loadComponent`, not parent `imports`. Heavy step UIs in player: `@defer` or dynamic `import()`. Eager: shell, layout, `shared/ui`. No NgModules or barrel `index.ts` re-exporting lazy pages/steps
@@ -19,7 +19,7 @@ Offline-first course PWA. Spec: `docs/SPECIFICATION.md`. Tasks: `docs/tasks/`.
 ## Code style
 
 - TypeScript strict. **`any` forbidden** (`any[]`, `Record<string, any>`, `as any`, `input<any>()`, `$any()`), with or without eslint
-- **`unknown` at boundaries only:** `JSON.parse` (course import), Worker `MessageEvent.data`, IndexedDB rows (Dexie generics ≠ runtime), HTTP when added, untyped third-party. Immediately **`parseX(unknown): X`** (throws on mismatch) **/ `isX(v): v is X`** next to domain types (`courses/`, `execution/`, …); components get **`X`**, not `unknown`. Runtime validation: **Zod** — **`parseX`** / **`isX`** thin wrappers over generated schemas (`Schema.parse()` / `Schema.safeParse().success`); JSON Schema is source of truth, Zod schemas generated at build — do not edit generated files by hand
+- **`unknown` at boundaries only:** `JSON.parse` (course import), Worker `MessageEvent.data`, IndexedDB rows (Dexie generics ≠ runtime), HTTP when added, untyped third-party. Immediately **`parseX(unknown): X`** (throws on mismatch) **/ `isX(v): v is X`** next to domain types (`courses/`, `execution/`, …); components get **`X`**, not `unknown`. Runtime validation: **Zod** — **`parseX`** / **`isX`** thin wrappers over generated schemas (`Schema.parse()` / `Schema.safeParse().success`); JSON Schema in `docs/schemas/` is source of truth — after editing JSON Schema run `npm run generate:zod` in `vibetest-app/` and commit generated output; do not edit generated files by hand
 - No domain **`as T`** instead of parse; ok: `as const`, `as unknown` at boundary; **`as unknown as T` only inside `parseX`**
 - **Zoneless** (no `zone.js`): state — `signal()`, derived — `computed()` (not `effect()`). `effect()` only to sync outward (Dexie, Worker, DOM); never write a signal the effect reads. Domain types `readonly`; update via new objects, not mutation
 - `signal()` / `computed()`, `inject()`; `@if` / `@for` / `@switch`; Observables: `async` pipe or `toSignal()`; reactive forms for non-trivial input; SCSS, BEM-like, no inline template styles; avoid editing `angular.json` / `tsconfig*` without need
@@ -30,20 +30,24 @@ Offline-first course PWA. Spec: `docs/SPECIFICATION.md`. Tasks: `docs/tasks/`.
 
 ## Tests
 
+Run from `vibetest-app/`:
+
 ```bash
-ng test
+ng test --watch=false
 ```
 
-- Required: domain logic, storage, guards, pipes, non-trivial component logic; **behavior**, not internals; `*.spec.ts` colocated; domain tests without `TestBed`, components with `TestBed`; zoneless — `await fixture.whenStable()` not `detectChanges()`; one-off run `ng test --watch=false`; green before task done (when tests exist); config/types/simple markup — no test-first mandate
+- Required: domain logic, storage, guards, pipes, non-trivial component logic; **behavior**, not internals; `*.spec.ts` colocated; domain tests without `TestBed`, components with `TestBed`; zoneless — `await fixture.whenStable()` not `detectChanges()`; run `ng test --watch=false` whenever code or tests change; record result in task `REPORT.md` (`## Тесты`); green before task is done (when tests exist); config/types/simple markup — no test-first mandate
 
-## Git invariants
+## Task workflow
 
-**Protected app:** never modify anything in `vibetest-app/` unless the current branch is `feature/vt-{n}-{slug}` and the matching task exists in `docs/tasks/in-progress/vt-{n}-{slug}/`. Changes outside `vibetest-app/` may be made and committed on `main` without a task.
-
-**Merge:** only on explicit request (`/task-merge`, “merge vt-{n}”, “merge to main”); merged code must not land in `main` while folder is still `in-progress/`. Пошаговый workflow — команда `.cursor/commands/task-merge.md`.
+- **Lifecycle:** `docs/tasks/backlog/vt-{n}-{slug}.md` → `docs/tasks/in-progress/vt-{n}-{slug}/{TASK,REPORT}.md` → `docs/tasks/done/vt-{n}-{slug}/`; branch `feature/vt-{n}-{slug}`; commits `vt-{n}: …`
+- **Resolve task** from command input or current branch `feature/vt-{n}-{slug}`; if ambiguous — ask
+- **Review rounds** in `REPORT.md` under `## Изменения по ревью`: header `### Ревью N (YYYY-MM-DD)`, then either finding bullets or the line `Замечаний нет.`; after fixes add `### Исправлено N`. Latest round with `Замечаний нет.` means ready for `/task-merge`
+- **Protected app:** never modify `vibetest-app/` unless on `feature/vt-{n}-{slug}` with matching `docs/tasks/in-progress/vt-{n}-{slug}/`
+- **Merge:** only on explicit request (`/task-merge`, “merge vt-{n}”, “merge to main”); workflow in `.cursor/commands/task-merge.md`; merged code must not land in `main` while folder is still `in-progress/`
 
 ## Never
 
-- Direct commits touching `vibetest-app/` on `main` (merge commits on `main` only via explicit merge workflow)
+- Direct commits touching `vibetest-app/` on `main` (land app changes via `/task-merge` squash + `--ff-only` only)
 - Duplicate logic across domains
 - Secrets, `.env`, `node_modules/` in git

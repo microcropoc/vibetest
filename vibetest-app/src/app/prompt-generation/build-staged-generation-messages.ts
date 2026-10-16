@@ -4,6 +4,7 @@ import type { ImportIssue } from '../courses/import-types';
 
 import {
   INSTRUCTION_MARKDOWN,
+  INSTRUCTION_PRACTICE_RELEVANCE,
   INSTRUCTION_SEMANTICS,
   INSTRUCTION_REGEX_PRACTICE,
   INSTRUCTION_SQLITE_PRACTICE,
@@ -40,7 +41,7 @@ export const OUTLINE_MODULE_EXAMPLE = `Пример одного модуля (�
 ]}`;
 
 export const OUTLINE_SELF_CHECK =
-  'Перед ответом проверь каждый модуль: в steps есть type theory, svg и quiz.';
+  'Перед ответом проверь каждый модуль: в steps есть type theory, svg и quiz, а шаги javascript, sqlite и regex добавлены только там, где тема модуля напрямую учит именно JS, SQL или регулярным выражениям (иначе удали их или замени на theory/quiz).';
 const COURSE_LABEL = 'import-DTO';
 const MODULE_LABEL = 'module-import DTO';
 
@@ -117,9 +118,10 @@ export function buildOutlineMessages(
       [
         'Составь план курса для приложения VibeTest: модули и шаги без содержимого шагов. По этому плану затем будет сгенерирован каждый модуль.',
         INSTRUCTION_SEMANTICS,
+        INSTRUCTION_PRACTICE_RELEVANCE,
         `Требования к плану:
 - Весь план на русском языке: title и description курса, названия и summary модулей и шагов.
-- В каждом модуле минимум по одному шагу типов theory, svg и quiz; практика (javascript, sqlite, regex) — только если подходит теме.
+- В каждом модуле минимум по одному шагу типов theory, svg и quiz.
 - Размер: обычно 3–8 модулей и 4–10 шагов в модуле, если автор не просит иначе; каждый модуль потом генерируется одним ответом модели, поэтому не перегружай модуль.
 - Модули идут от простого к сложному; шаги внутри модуля — в порядке прохождения.
 - summary шага — о чём шаг, без самого содержимого: без текста теории, кода и вариантов ответа.`,
@@ -158,6 +160,7 @@ export function buildFirstModuleCourseMessages(
 - Весь курс на русском языке: title, description, название модуля, названия и контент шагов.
 - title и description курса — из плана.
 - В modules ровно один модуль — первый модуль плана; его title и шаги (типы, названия, порядок) — по плану.
+- Не добавляй шаги javascript, sqlite или regex, если их нет в плане этого модуля.
 - Формат — import-DTO: schemaVersion равен 1, без полей courseId, moduleId, stepId и createdAt.`,
         INSTRUCTION_MARKDOWN,
         INSTRUCTION_SQLITE_PRACTICE,
@@ -197,6 +200,7 @@ export function buildModuleMessages(
         `Требования к содержанию:
 - Весь модуль на русском языке: title, названия и контент шагов.
 - title модуля и шаги (типы, названия, порядок) — строго по плану для указанного модуля.
+- Не добавляй шаги javascript, sqlite или regex, если их нет в плане этого модуля.
 - Не повторяй материал других модулей плана.
 - Формат — module-import DTO: schemaVersion равен 1, без полей moduleId и stepId.`,
         INSTRUCTION_MARKDOWN,

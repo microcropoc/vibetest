@@ -5,6 +5,7 @@ import { outlineWithModules } from '../course-generation/__fixtures__/outline-fi
 import {
   buildCourseGenerationPrompt,
   finalUserReminder,
+  INSTRUCTION_PRACTICE_RELEVANCE,
   INSTRUCTION_REGEX_PRACTICE,
   INSTRUCTION_SQLITE_PRACTICE,
 } from './build-course-generation-prompt';
@@ -29,6 +30,7 @@ describe('buildOutlineMessages', () => {
 
     expect(messages.system).toContain('course-outline.schema.json');
     expect(messages.system).toContain('theory, svg и quiz');
+    expect(messages.system).toContain(INSTRUCTION_PRACTICE_RELEVANCE);
     expect(messages.system).toContain('3–8 модулей и 4–10 шагов');
     expect(messages.system).toContain(SCHEMA);
     expect(messages.system).not.toContain('Курс про regex');
@@ -67,6 +69,7 @@ describe('buildFirstModuleCourseMessages', () => {
 
     expect(messages.system).toContain('course-import.schema.json');
     expect(messages.system).toContain('ровно один модуль');
+    expect(messages.system).toContain('Не добавляй шаги javascript, sqlite или regex');
     expect(messages.user).toContain('Курс про regex');
     expect(messages.user).toContain(formatOutlineForPrompt(OUTLINE));
     expect(messages.user).toContain('модуль 1 из 3: «Основы»');
@@ -80,6 +83,7 @@ describe('buildModuleMessages', () => {
     const messages = buildModuleMessages(OUTLINE, 1, SCHEMA);
 
     expect(messages.system).toContain('module-import.schema.json');
+    expect(messages.system).toContain('Не добавляй шаги javascript, sqlite или regex');
     expect(messages.system).toContain(SCHEMA);
     expect(messages.user).toContain('Сгенерируй модуль 2 из 3: «Квантификаторы»');
     expect(messages.user).toContain('«Группы»');
@@ -100,6 +104,7 @@ describe('buildModuleMessages', () => {
     expect(buildOutlineMessages('Курс', SCHEMA).system).not.toContain(INSTRUCTION_REGEX_PRACTICE);
     expect(buildCourseGenerationPrompt('Курс', SCHEMA)).toContain(INSTRUCTION_SQLITE_PRACTICE);
     expect(buildCourseGenerationPrompt('Курс', SCHEMA)).toContain(INSTRUCTION_REGEX_PRACTICE);
+    expect(buildCourseGenerationPrompt('Курс', SCHEMA)).toContain(INSTRUCTION_PRACTICE_RELEVANCE);
     expect(INSTRUCTION_SQLITE_PRACTICE).toContain('checkQuery');
     expect(INSTRUCTION_SQLITE_PRACTICE).toContain('params');
     expect(INSTRUCTION_REGEX_PRACTICE).toContain('matchAll');

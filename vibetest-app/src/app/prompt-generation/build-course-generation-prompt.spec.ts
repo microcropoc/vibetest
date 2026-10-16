@@ -1,6 +1,11 @@
 import { describe, expect, it } from 'vitest';
 
-import { buildCourseGenerationPrompt } from './build-course-generation-prompt';
+import {
+  buildCourseGenerationPrompt,
+  INSTRUCTION_PRACTICE_RELEVANCE,
+  INSTRUCTION_REGEX_PRACTICE,
+  INSTRUCTION_SQLITE_PRACTICE,
+} from './build-course-generation-prompt';
 
 describe('buildCourseGenerationPrompt', () => {
   const schemaSnippet = '{\n  "schemaVersion": 1\n}';
@@ -62,5 +67,17 @@ describe('buildCourseGenerationPrompt', () => {
 
     expect(prompt).toContain('описание не указано');
     expect(prompt).toContain(schemaSnippet);
+  });
+
+  it('includes practice relevance rules and conditional practice engine instructions', () => {
+    const prompt = buildCourseGenerationPrompt('Курс про историю', schemaSnippet);
+
+    expect(prompt).toContain(INSTRUCTION_PRACTICE_RELEVANCE);
+    expect(prompt).toContain('строго по теме запроса');
+    expect(prompt).toContain('Не используй javascript для других языков');
+    expect(prompt).toContain(INSTRUCTION_SQLITE_PRACTICE);
+    expect(prompt).toContain(INSTRUCTION_REGEX_PRACTICE);
+    expect(INSTRUCTION_SQLITE_PRACTICE).toContain('ТОЛЬКО если в курсе или плане модуля есть шаги sqlite');
+    expect(INSTRUCTION_REGEX_PRACTICE).toContain('ТОЛЬКО если в курсе или плане модуля есть шаги regex');
   });
 });
